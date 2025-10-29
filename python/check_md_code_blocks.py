@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Check code blocks in Markdown files for syntax errors."""
+"""Markdownファイル内のコードブロックの構文エラーをチェックします。"""
 
 import argparse
 from enum import Enum
@@ -28,12 +28,12 @@ class Colors(str, Enum):
 
 
 def with_color(text: str, color: Colors) -> str:
-    """Prints a string with the specified color."""
+    """指定された色で文字列を出力します。"""
     return f"{color.value}{text}{Colors.CEND.value}"
 
 
 def extract_python_code_blocks(markdown_file_path: str) -> list[tuple[str, int]]:
-    """Extract Python code blocks from a Markdown file."""
+    """MarkdownファイルからPythonコードブロックを抽出します。"""
     with open(markdown_file_path, encoding="utf-8") as file:
         lines = file.readlines()
 
@@ -55,12 +55,12 @@ def extract_python_code_blocks(markdown_file_path: str) -> list[tuple[str, int]]
 
 
 def check_code_blocks(markdown_file_paths: list[str], exclude_patterns: list[str] | None = None) -> None:
-    """Check Python code blocks in a Markdown file for syntax errors."""
+    """Markdownファイル内のPythonコードブロックの構文エラーをチェックします。"""
     files_with_errors: list[str] = []
     exclude_patterns = exclude_patterns or []
 
     for markdown_file_path in markdown_file_paths:
-        # Skip files that match any exclude pattern
+        # 除外パターンに一致するファイルをスキップします。
         if any(pattern in markdown_file_path for pattern in exclude_patterns):
             logger.info(f"Skipping {markdown_file_path} (matches exclude pattern)")
             continue
@@ -70,7 +70,7 @@ def check_code_blocks(markdown_file_paths: list[str], exclude_patterns: list[str
             markdown_file_path_with_line_no = f"{markdown_file_path}:{line_no}"
             logger.info("Checking a code block in %s...", markdown_file_path_with_line_no)
 
-            # Skip blocks that don't import agent_framework modules or import lab modules
+            # agent_frameworkモジュールをインポートしていないか、labモジュールをインポートしているブロックをスキップします。
             if (all(
                 all(import_code not in code_block for import_code in [f"import {module}", f"from {module}"])
                 for module in ["agent_framework"]
@@ -82,7 +82,7 @@ def check_code_blocks(markdown_file_paths: list[str], exclude_patterns: list[str
                 temp_file.write(code_block.encode("utf-8"))
                 temp_file.flush()
 
-                # Run pyright on the temporary file using subprocess.run
+                # subprocess.runを使って一時ファイルに対してpyrightを実行します。
 
                 result = subprocess.run(["uv", "run", "pyright", temp_file.name], capture_output=True, text=True, cwd=".")  # nosec
                 if result.returncode != 0:
@@ -112,7 +112,7 @@ def check_code_blocks(markdown_file_paths: list[str], exclude_patterns: list[str
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check code blocks in Markdown files for syntax errors.")
-    # Argument is a list of markdown files containing glob patterns
+    # 引数はグロブパターンを含むMarkdownファイルのリストです。
     parser.add_argument("markdown_files", nargs="+", help="Markdown files to check.")
     parser.add_argument("--exclude", action="append", help="Exclude files containing this pattern.")
     args = parser.parse_args()

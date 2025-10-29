@@ -15,18 +15,18 @@ The LLM decides whether to retry the call or to respond with something else, bas
 
 
 def greet(name: Annotated[str, "Name to greet"]) -> str:
-    """Greet someone."""
+    """誰かに挨拶する。"""
     return f"Hello, {name}!"
 
 
-# we trick the AI into calling this function with 0 as denominator to trigger the exception
+# 0を分母にして例外を発生させるためにAIを騙してこの関数を呼び出させる。
 def safe_divide(
     a: Annotated[int, "Numerator"],
     b: Annotated[int, "Denominator"],
 ) -> str:
-    """Divide two numbers can be used with 0 as denominator."""
+    """0を分母にしても使える2つの数の除算。"""
     try:
-        result = a / b  # Will raise ZeroDivisionError
+        result = a / b  # ZeroDivisionErrorを発生させる。
     except ZeroDivisionError as exc:
         print(f"    Tool failed: with error: {exc}")
         raise

@@ -15,7 +15,7 @@ The following sample demonstrates how to create a simple, Azure AI agent that
 uses OpenAPI tools to answer user questions.
 """
 
-# Simulate a conversation with the agent
+# Agentとの会話をシミュレートします。
 USER_INPUTS = [
     "What is the name and population of the country that uses currency with abbreviation THB?",
     "What is the current weather in the capital city of that country?",
@@ -23,7 +23,7 @@ USER_INPUTS = [
 
 
 def load_openapi_specs() -> tuple[dict[str, Any], dict[str, Any]]:
-    """Load OpenAPI specification files."""
+    """OpenAPI仕様ファイルを読み込みます。"""
     resources_path = Path(__file__).parent.parent / "resources"
 
     with open(resources_path / "weather.json") as weather_file:
@@ -36,13 +36,13 @@ def load_openapi_specs() -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 async def main() -> None:
-    """Main function demonstrating Azure AI agent with OpenAPI tools."""
-    # 1. Load OpenAPI specifications (synchronous operation)
+    """OpenAPIツールを備えたAzure AI Agentを示すメイン関数です。"""
+    # 1. OpenAPI仕様を読み込みます（同期操作）。
     weather_openapi_spec, countries_openapi_spec = load_openapi_specs()
 
-    # 2. Use AzureAIAgentClient as async context manager for automatic cleanup
+    # 2. AzureAIAgentClientを非同期コンテキストマネージャーとして使用し自動クリーンアップを行います。
     async with AzureAIAgentClient(async_credential=AzureCliCredential()) as client:
-        # 3. Create OpenAPI tools using Azure AI's OpenApiTool
+        # 3. Azure AIのOpenApiToolを使ってOpenAPIツールを作成します。
         auth = OpenApiAnonymousAuthDetails()
 
         openapi_weather = OpenApiTool(
@@ -59,9 +59,9 @@ async def main() -> None:
             auth=auth,
         )
 
-        # 4. Create an agent with OpenAPI tools
-        # Note: We need to pass the Azure AI native OpenApiTool definitions directly
-        # since the agent framework doesn't have a HostedOpenApiTool wrapper yet
+        # 4. OpenAPIツールを持つAgentを作成します。
+        # 注意：AgentフレームワークにはまだHostedOpenApiToolラッパーがないため、Azure
+        # AIのOpenApiTool定義を直接渡す必要があります。
         async with ChatAgent(
             chat_client=client,
             name="OpenAPIAgent",
@@ -71,18 +71,18 @@ async def main() -> None:
                 "API to find information. When asked about weather, use the weather API. "
                 "Provide clear, informative answers based on the API results."
             ),
-            # Pass the raw tool definitions from Azure AI's OpenApiTool
+            # Azure AIのOpenApiToolからの生のツール定義を渡します。
             tools=[*openapi_countries.definitions, *openapi_weather.definitions],
         ) as agent:
-            # 5. Simulate conversation with the agent maintaining thread context
+            # 5. スレッドコンテキストを維持しながらAgentとの会話をシミュレートします。
             print("=== Azure AI Agent with OpenAPI Tools ===\n")
 
-            # Create a thread to maintain conversation context across multiple runs
+            # 複数の実行間で会話コンテキストを維持するためのスレッドを作成します。
             thread = agent.get_new_thread()
 
             for user_input in USER_INPUTS:
                 print(f"User: {user_input}")
-                # Pass the thread to maintain context across multiple agent.run() calls
+                # 複数のagent.run()呼び出し間でコンテキストを維持するためにスレッドを渡します。
                 response = await agent.run(user_input, thread=thread)
                 print(f"Agent: {response.text}\n")
 

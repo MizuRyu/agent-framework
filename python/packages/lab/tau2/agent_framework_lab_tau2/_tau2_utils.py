@@ -26,15 +26,16 @@ _original_set_state = Environment.set_state
 
 
 def convert_tau2_tool_to_ai_function(tau2_tool: Tool) -> AIFunction[Any, Any]:
-    """Convert a tau2 Tool to an AIFunction for agent framework compatibility.
+    """tau2のToolをAgentフレームワーク互換のAIFunctionに変換します。
 
-    Creates a wrapper that preserves the tool's interface while ensuring
-    results are deep-copied to prevent unintended mutations.
+    ツールのインターフェースを保持しつつ、
+    結果が意図しない変更を受けないように深いコピーを行うラッパーを作成します。
+
     """
 
     def wrapped_func(**kwargs: Any) -> Any:
         result = tau2_tool(**kwargs)
-        # Deep copy to prevent mutations of returned data
+        # 返されたデータの変更を防ぐために深いコピーを行う
         return result.model_copy(deep=True) if isinstance(result, BaseModel) else deepcopy(result)
 
     return AIFunction(
@@ -46,23 +47,24 @@ def convert_tau2_tool_to_ai_function(tau2_tool: Tool) -> AIFunction[Any, Any]:
 
 
 def convert_agent_framework_messages_to_tau2_messages(messages: list[ChatMessage]) -> list[Message]:
-    """Convert agent framework ChatMessages to tau2 Message objects.
+    """AgentフレームワークのChatMessagesをtau2のMessageオブジェクトに変換します。
 
-    Handles role mapping, text extraction, function calls, and function results.
-    Function results are converted to separate ToolMessage instances.
+    ロールのマッピング、テキスト抽出、関数呼び出し、関数結果を処理します。
+    関数結果は別のToolMessageインスタンスに変換されます。
+
     """
     tau2_messages = []
 
     for msg in messages:
         role_str = str(msg.role)
 
-        # Extract text content from all text-type contents
+        # すべてのテキストタイプのコンテンツからテキスト内容を抽出する
         text_content = None
         text_contents = [c for c in msg.contents if hasattr(c, "text") and hasattr(c, "type") and c.type == "text"]
         if text_contents:
             text_content = " ".join(c.text for c in text_contents)
 
-        # Extract function calls and convert to ToolCall objects
+        # 関数呼び出しを抽出し、ToolCallオブジェクトに変換する
         function_calls = [c for c in msg.contents if hasattr(c, "type") and c.type == "function_call"]
         tool_calls = None
         if function_calls:
@@ -77,10 +79,10 @@ def convert_agent_framework_messages_to_tau2_messages(messages: list[ChatMessage
                 )
                 tool_calls.append(tool_call)
 
-        # Extract function results for separate ToolMessage creation
+        # 関数結果を抽出し、別のToolMessage作成用にする
         function_results = [c for c in msg.contents if hasattr(c, "type") and c.type == "function_result"]
 
-        # Create main message based on role
+        # ロールに基づいてメインメッセージを作成する
         if role_str == "system":
             tau2_messages.append(SystemMessage(role="system", content=text_content))
         elif role_str == "user":
@@ -88,10 +90,10 @@ def convert_agent_framework_messages_to_tau2_messages(messages: list[ChatMessage
         elif role_str == "assistant":
             tau2_messages.append(AssistantMessage(role="assistant", content=text_content, tool_calls=tool_calls))
         elif role_str == "tool":
-            # Tool messages are handled as function results below
+            # ツールメッセージは以下で関数結果として処理される
             pass
 
-        # Convert function results to separate ToolMessage instances
+        # 関数結果を別のToolMessageインスタンスに変換する
         for fr in function_results:
             dumpable_content = _dump_function_result(fr.result)
             content = dumpable_content if isinstance(dumpable_content, str) else json.dumps(dumpable_content)
@@ -108,11 +110,12 @@ def convert_agent_framework_messages_to_tau2_messages(messages: list[ChatMessage
 
 
 def patch_env_set_state() -> None:
-    """Patch Environment.set_state to allow inconsistent tool call results.
+    """Environment.set_stateをパッチして不整合なツール呼び出し結果を許容する。
 
-    Modifies the original method to log warnings instead of raising errors
-    when actual tool results differ from expected results, enabling more
-    flexible testing and development workflows.
+    元のメソッドを変更し、実際のツール結果が期待結果と異なる場合に
+    エラーを発生させる代わりに警告をログに記録するようにし、
+    より柔軟なテストと開発ワークフローを可能にします。
+
     """
 
     def set_state(
@@ -127,7 +130,7 @@ def patch_env_set_state() -> None:
         def get_actions_from_messages(
             messages: list[Message],
         ) -> list[tuple[ToolCall, ToolMessage]]:
-            """Get the actions from the messages."""
+            """メッセージからアクションを取得する。"""
             messages = deepcopy(messages)[::-1]
             actions = []
             while messages:
@@ -168,7 +171,7 @@ def patch_env_set_state() -> None:
             if content != expected_content:
                 diff = f"Tool call:\n{tool_call}\n\nReturned:\n{response}\n\nExpected:\n{expected_response}"
                 if isinstance(content, str) and content.startswith("Error:"):
-                    # If the tool call resulted in an error, the difference can be ignored
+                    # ツール呼び出しがエラーになった場合、差異は無視できる
                     logger.warning(f"Tool call resulted in an error. Ignoring the difference.\n{diff}")
                 else:
                     raise ValueError(
@@ -196,29 +199,29 @@ def _dump_function_result(result: Any) -> Any:
 
 
 def _to_native(obj: Any) -> Any:
-    """Convert data retrieved from Panquet to data usable in AGL server."""
-    # 1) Arrays -> list (then recurse)
+    """Panquetから取得したデータをAGLサーバーで使用可能なデータに変換する。"""
+    # 1) 配列 -> list（再帰的に処理）
     if isinstance(obj, np.ndarray):
         return _to_native(obj.tolist())
 
-    # 2) NumPy scalar types -> Python scalars
+    # 2) NumPyのスカラー型 -> Pythonのスカラー型
     if isinstance(obj, np.generic):
         return _to_native(obj.item())
 
-    # 3) Dict-like -> dict
+    # 3) Dictライクなもの -> dict
     if isinstance(obj, Mapping):
         return {_to_native(k): _to_native(v) for k, v in obj.items()}
 
-    # 4) Lists/Tuples/Sets -> list
+    # 4) リスト/タプル/セット -> list
     if isinstance(obj, (list, tuple, set)):
         return [_to_native(x) for x in obj]
 
-    # 5) Anything else: leave as-is
+    # 5) その他はそのままにする
     return obj
 
 
 def _recursive_json_deserialize(obj: Any) -> Any:
-    """Recursively deserialize a JSON object."""
+    """JSONオブジェクトを再帰的にデシリアライズする。"""
     if isinstance(obj, str):
         try:
             deserialized = json.loads(obj)

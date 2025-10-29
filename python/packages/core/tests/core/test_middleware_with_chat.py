@@ -22,10 +22,10 @@ from .conftest import MockBaseChatClient
 
 
 class TestChatMiddleware:
-    """Test cases for chat middleware functionality."""
+    """チャットミドルウェア機能のテストケース。"""
 
     async def test_class_based_chat_middleware(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test class-based chat middleware with ChatClient."""
+        """ChatClientを使ったクラスベースのチャットミドルウェアのテスト。"""
         execution_order: list[str] = []
 
         class LoggingChatMiddleware(ChatMiddleware):
@@ -38,23 +38,23 @@ class TestChatMiddleware:
                 await next(context)
                 execution_order.append("chat_middleware_after")
 
-        # Add middleware to chat client
+        # チャットクライアントにミドルウェアを追加する
         chat_client_base.middleware = [LoggingChatMiddleware()]
 
-        # Execute chat client directly
+        # チャットクライアントを直接実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await chat_client_base.get_response(messages)
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
         assert len(response.messages) > 0
         assert response.messages[0].role == Role.ASSISTANT
 
-        # Verify middleware execution order
+        # ミドルウェアの実行順序を検証する
         assert execution_order == ["chat_middleware_before", "chat_middleware_after"]
 
     async def test_function_based_chat_middleware(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test function-based chat middleware with ChatClient."""
+        """ChatClientを使った関数ベースのチャットミドルウェアのテスト。"""
         execution_order: list[str] = []
 
         @chat_middleware
@@ -63,76 +63,76 @@ class TestChatMiddleware:
             await next(context)
             execution_order.append("function_middleware_after")
 
-        # Add middleware to chat client
+        # チャットクライアントにミドルウェアを追加する
         chat_client_base.middleware = [logging_chat_middleware]
 
-        # Execute chat client directly
+        # チャットクライアントを直接実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await chat_client_base.get_response(messages)
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
         assert len(response.messages) > 0
         assert response.messages[0].role == Role.ASSISTANT
 
-        # Verify middleware execution order
+        # ミドルウェアの実行順序を検証する
         assert execution_order == ["function_middleware_before", "function_middleware_after"]
 
     async def test_chat_middleware_can_modify_messages(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test that chat middleware can modify messages before sending to model."""
+        """チャットミドルウェアがモデルに送信する前にメッセージを変更できることをテストする。"""
 
         @chat_middleware
         async def message_modifier_middleware(
             context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]
         ) -> None:
-            # Modify the first message by adding a prefix
+            # 最初のメッセージにプレフィックスを追加して変更する
             if context.messages and len(context.messages) > 0:
                 original_text = context.messages[0].text or ""
                 context.messages[0] = ChatMessage(role=context.messages[0].role, text=f"MODIFIED: {original_text}")
             await next(context)
 
-        # Add middleware to chat client
+        # チャットクライアントにミドルウェアを追加する
         chat_client_base.middleware = [message_modifier_middleware]
 
-        # Execute chat client
+        # チャットクライアントを実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await chat_client_base.get_response(messages)
 
-        # Verify that the message was modified (MockChatClient echoes back the input)
+        # メッセージが変更されたことを検証する（MockChatClientは入力をそのまま返す）
         assert response is not None
         assert len(response.messages) > 0
-        # The mock client should receive the modified message
+        # モッククライアントは変更されたメッセージを受け取るはずである
         assert "MODIFIED: test message" in response.messages[0].text
 
     async def test_chat_middleware_can_override_response(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test that chat middleware can override the response."""
+        """チャットミドルウェアがレスポンスを上書きできることをテストする。"""
 
         @chat_middleware
         async def response_override_middleware(
             context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]
         ) -> None:
-            # Override the response without calling next()
+            # next()を呼ばずにレスポンスを上書きする
             context.result = ChatResponse(
                 messages=[ChatMessage(role=Role.ASSISTANT, text="Middleware overridden response")],
                 response_id="middleware-response-123",
             )
             context.terminate = True
 
-        # Add middleware to chat client
+        # チャットクライアントにミドルウェアを追加する
         chat_client_base.middleware = [response_override_middleware]
 
-        # Execute chat client
+        # チャットクライアントを実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await chat_client_base.get_response(messages)
 
-        # Verify that the response was overridden
+        # レスポンスが上書きされたことを検証する
         assert response is not None
         assert len(response.messages) > 0
         assert response.messages[0].text == "Middleware overridden response"
         assert response.response_id == "middleware-response-123"
 
     async def test_multiple_chat_middleware_execution_order(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test that multiple chat middleware execute in the correct order."""
+        """複数のチャットミドルウェアが正しい順序で実行されることをテストする。"""
         execution_order: list[str] = []
 
         @chat_middleware
@@ -147,22 +147,22 @@ class TestChatMiddleware:
             await next(context)
             execution_order.append("second_after")
 
-        # Add middleware to chat client (order should be preserved)
+        # チャットクライアントにミドルウェアを追加する（順序は保持されるべき）
         chat_client_base.middleware = [first_middleware, second_middleware]
 
-        # Execute chat client
+        # チャットクライアントを実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await chat_client_base.get_response(messages)
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
 
-        # Verify middleware execution order (nested execution)
+        # ミドルウェアの実行順序を検証する（ネストされた実行）
         expected_order = ["first_before", "second_before", "second_after", "first_after"]
         assert execution_order == expected_order
 
     async def test_chat_agent_with_chat_middleware(self) -> None:
-        """Test ChatAgent with chat middleware specified at agent level."""
+        """エージェントレベルでチャットミドルウェアを指定したChatAgentのテスト。"""
         execution_order: list[str] = []
 
         @chat_middleware
@@ -175,23 +175,23 @@ class TestChatMiddleware:
 
         chat_client = MockBaseChatClient()
 
-        # Create ChatAgent with chat middleware
+        # チャットミドルウェア付きのChatAgentを作成する
         agent = ChatAgent(chat_client=chat_client, middleware=[agent_level_chat_middleware])
 
-        # Execute the agent
+        # エージェントを実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await agent.run(messages)
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
         assert len(response.messages) > 0
         assert response.messages[0].role == Role.ASSISTANT
 
-        # Verify middleware execution order
+        # ミドルウェアの実行順序を検証する
         assert execution_order == ["agent_chat_middleware_before", "agent_chat_middleware_after"]
 
     async def test_chat_agent_with_multiple_chat_middleware(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test that ChatAgent can have multiple chat middleware."""
+        """ChatAgentが複数のチャットミドルウェアを持てることをテストする。"""
         execution_order: list[str] = []
 
         @chat_middleware
@@ -206,49 +206,49 @@ class TestChatMiddleware:
             await next(context)
             execution_order.append("second_after")
 
-        # Create ChatAgent with multiple chat middleware
+        # 複数のチャットミドルウェア付きのChatAgentを作成する
         agent = ChatAgent(chat_client=chat_client_base, middleware=[first_middleware, second_middleware])
 
-        # Execute the agent
+        # エージェントを実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await agent.run(messages)
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
 
-        # Verify both middleware executed (nested execution order)
+        # 両方のミドルウェアが実行されたことを検証する（ネストされた実行順序）
         expected_order = ["first_before", "second_before", "second_after", "first_after"]
         assert execution_order == expected_order
 
     async def test_chat_middleware_with_streaming(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test chat middleware with streaming responses."""
+        """ストリーミングレスポンスを伴うチャットミドルウェアのテスト。"""
         execution_order: list[str] = []
 
         @chat_middleware
         async def streaming_middleware(context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
             execution_order.append("streaming_before")
-            # Verify it's a streaming context
+            # ストリーミングコンテキストであることを検証する
             assert context.is_streaming is True
             await next(context)
             execution_order.append("streaming_after")
 
-        # Add middleware to chat client
+        # チャットクライアントにミドルウェアを追加する
         chat_client_base.middleware = [streaming_middleware]
 
-        # Execute streaming response
+        # ストリーミングレスポンスを実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         updates: list[object] = []
         async for update in chat_client_base.get_streaming_response(messages):
             updates.append(update)
 
-        # Verify we got updates
+        # 更新を受け取ったことを検証する
         assert len(updates) > 0
 
-        # Verify middleware executed
+        # ミドルウェアが実行されたことを検証する
         assert execution_order == ["streaming_before", "streaming_after"]
 
     async def test_run_level_middleware_isolation(self, chat_client_base: "MockBaseChatClient") -> None:
-        """Test that run-level middleware is isolated and doesn't persist across calls."""
+        """ランレベルミドルウェアが呼び出し間で持続せず分離されていることをテストする。"""
         execution_count = {"count": 0}
 
         @chat_middleware
@@ -256,56 +256,56 @@ class TestChatMiddleware:
             execution_count["count"] += 1
             await next(context)
 
-        # First call with run-level middleware
+        # ランレベルミドルウェアを使った最初の呼び出し
         messages = [ChatMessage(role=Role.USER, text="first message")]
         response1 = await chat_client_base.get_response(messages, middleware=[counting_middleware])
         assert response1 is not None
         assert execution_count["count"] == 1
 
-        # Second call WITHOUT run-level middleware - should not execute the middleware
+        # ランレベルミドルウェアなしの2回目の呼び出し - ミドルウェアは実行されないはず
         messages = [ChatMessage(role=Role.USER, text="second message")]
         response2 = await chat_client_base.get_response(messages)
         assert response2 is not None
-        assert execution_count["count"] == 1  # Should still be 1, not 2
+        assert execution_count["count"] == 1  # まだ1のままで、2にはならないはず
 
-        # Third call with run-level middleware again - should execute
+        # 再度ランレベルミドルウェアを使った3回目の呼び出し - 実行されるはず
         messages = [ChatMessage(role=Role.USER, text="third message")]
         response3 = await chat_client_base.get_response(messages, middleware=[counting_middleware])
         assert response3 is not None
-        assert execution_count["count"] == 2  # Should be 2 now
+        assert execution_count["count"] == 2  # 今度は2であるはず
 
     async def test_chat_client_middleware_can_access_and_override_custom_kwargs(
         self, chat_client_base: "MockBaseChatClient"
     ) -> None:
-        """Test that chat client middleware can access and override custom parameters like temperature."""
+        """チャットクライアントのミドルウェアがtemperatureなどのカスタムパラメータにアクセスし上書きできることをテストする。"""
         captured_kwargs: dict[str, Any] = {}
         modified_kwargs: dict[str, Any] = {}
 
         @chat_middleware
         async def kwargs_middleware(context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
-            # Capture the original kwargs
+            # 元のkwargsをキャプチャする
             captured_kwargs.update(context.kwargs)
 
-            # Modify some kwargs
+            # いくつかのkwargsを変更する
             context.kwargs["temperature"] = 0.9
             context.kwargs["max_tokens"] = 500
             context.kwargs["new_param"] = "added_by_middleware"
 
-            # Store modified kwargs for verification
+            # 検証のために変更されたkwargsを保存する
             modified_kwargs.update(context.kwargs)
 
             await next(context)
 
-        # Add middleware to chat client
+        # チャットクライアントにミドルウェアを追加する
         chat_client_base.middleware = [kwargs_middleware]
 
-        # Execute chat client with custom parameters
+        # カスタムパラメータ付きでチャットクライアントを実行する
         messages = [ChatMessage(role=Role.USER, text="test message")]
         response = await chat_client_base.get_response(
             messages, temperature=0.7, max_tokens=100, custom_param="test_value"
         )
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
         assert len(response.messages) > 0
 
@@ -313,14 +313,14 @@ class TestChatMiddleware:
         assert captured_kwargs["max_tokens"] == 100
         assert captured_kwargs["custom_param"] == "test_value"
 
-        # Verify middleware could modify the kwargs
+        # ミドルウェアがkwargsを変更できることを検証する
         assert modified_kwargs["temperature"] == 0.9
         assert modified_kwargs["max_tokens"] == 500
         assert modified_kwargs["new_param"] == "added_by_middleware"
-        assert modified_kwargs["custom_param"] == "test_value"  # Should still be there
+        assert modified_kwargs["custom_param"] == "test_value"  # まだ存在しているはず
 
     async def test_function_middleware_registration_on_chat_client(self) -> None:
-        """Test function middleware registered on ChatClient is executed during function calls."""
+        """ChatClientに登録された関数ミドルウェアが関数呼び出し時に実行されることをテストする。"""
         execution_order: list[str] = []
 
         @function_middleware
@@ -332,18 +332,18 @@ class TestChatMiddleware:
             await next(context)
             execution_order.append(f"function_middleware_after_{context.function.name}")
 
-        # Define a simple tool function
+        # シンプルなツール関数を定義する
         def sample_tool(location: str) -> str:
-            """Get weather for a location."""
+            """ある場所の天気を取得する。"""
             return f"Weather in {location}: sunny"
 
-        # Create function-invocation enabled chat client
+        # 関数呼び出し対応のチャットクライアントを作成する
         chat_client = use_chat_middleware(use_function_invocation(MockBaseChatClient))()
 
-        # Set function middleware directly on the chat client
+        # チャットクライアントに直接関数ミドルウェアを設定する
         chat_client.middleware = [test_function_middleware]
 
-        # Prepare responses that will trigger function invocation
+        # 関数呼び出しをトリガーするレスポンスを準備する
         function_call_response = ChatResponse(
             messages=[
                 ChatMessage(
@@ -364,23 +364,23 @@ class TestChatMiddleware:
 
         chat_client.run_responses = [function_call_response, final_response]
 
-        # Execute the chat client directly with tools - this should trigger function invocation and middleware
+        # ツールを使ってチャットクライアントを直接実行する - これにより関数呼び出しとミドルウェアがトリガーされるはず
         messages = [ChatMessage(role=Role.USER, text="What's the weather in San Francisco?")]
         response = await chat_client.get_response(messages, tools=[sample_tool])
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
         assert len(response.messages) > 0
-        assert chat_client.call_count == 2  # Two calls: function call + final response
+        assert chat_client.call_count == 2  # 2回の呼び出し：関数呼び出し＋最終レスポンス
 
-        # Verify function middleware was executed
+        # 関数ミドルウェアが実行されたことを検証する
         assert execution_order == [
             "function_middleware_before_sample_tool",
             "function_middleware_after_sample_tool",
         ]
 
     async def test_run_level_function_middleware(self) -> None:
-        """Test that function middleware passed to get_response method is also invoked."""
+        """get_responseメソッドに渡された関数ミドルウェアも呼び出されることをテストする。"""
         execution_order: list[str] = []
 
         @function_middleware
@@ -391,15 +391,15 @@ class TestChatMiddleware:
             await next(context)
             execution_order.append("run_level_function_middleware_after")
 
-        # Define a simple tool function
+        # シンプルなツール関数を定義する
         def sample_tool(location: str) -> str:
-            """Get weather for a location."""
+            """ある場所の天気を取得する。"""
             return f"Weather in {location}: sunny"
 
-        # Create function-invocation enabled chat client
+        # 関数呼び出し対応のチャットクライアントを作成する
         chat_client = use_function_invocation(MockBaseChatClient)()
 
-        # Prepare responses that will trigger function invocation
+        # 関数呼び出しをトリガーするレスポンスを準備する
         function_call_response = ChatResponse(
             messages=[
                 ChatMessage(
@@ -420,18 +420,18 @@ class TestChatMiddleware:
 
         chat_client.run_responses = [function_call_response, final_response]
 
-        # Execute the chat client directly with run-level middleware and tools
+        # ランレベルミドルウェアとツールを使ってチャットクライアントを直接実行する
         messages = [ChatMessage(role=Role.USER, text="What's the weather in New York?")]
         response = await chat_client.get_response(
             messages, tools=[sample_tool], middleware=[run_level_function_middleware]
         )
 
-        # Verify response
+        # レスポンスを検証する
         assert response is not None
         assert len(response.messages) > 0
-        assert chat_client.call_count == 2  # Two calls: function call + final response
+        assert chat_client.call_count == 2  # 2回の呼び出し：関数呼び出し＋最終レスポンス
 
-        # Verify run-level function middleware was executed once (during function invocation)
+        # ランレベル関数ミドルウェアが1回だけ実行されたことを検証する（関数呼び出し時）
         assert execution_order == [
             "run_level_function_middleware_before",
             "run_level_function_middleware_after",

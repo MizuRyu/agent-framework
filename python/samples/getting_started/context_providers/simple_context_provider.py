@@ -17,9 +17,10 @@ class UserInfo(BaseModel):
 
 class UserInfoMemory(ContextProvider):
     def __init__(self, chat_client: ChatClientProtocol, user_info: UserInfo | None = None, **kwargs: Any):
-        """Create the memory.
+        """メモリを作成します。
 
-        If you pass in kwargs, they will be attempted to be used to create a UserInfo object.
+        kwargsを渡すと、UserInfoオブジェクトを作成するために使用されます。
+
         """
 
         self._chat_client = chat_client
@@ -37,13 +38,13 @@ class UserInfoMemory(ContextProvider):
         invoke_exception: Exception | None = None,
         **kwargs: Any,
     ) -> None:
-        """Extract user information from messages after each agent call."""
-        # Check if we need to extract user info from user messages
+        """各Agent呼び出し後にメッセージからユーザー情報を抽出します。"""
+        # ユーザーメッセージからユーザー情報を抽出する必要があるか確認します
         user_messages = [msg for msg in request_messages if hasattr(msg, "role") and msg.role.value == "user"]  # type: ignore
 
         if (self.user_info.name is None or self.user_info.age is None) and user_messages:
             try:
-                # Use the chat client to extract structured information
+                # チャットクライアントを使って構造化情報を抽出します
                 result = await self._chat_client.get_response(
                     messages=request_messages,  # type: ignore
                     chat_options=ChatOptions(
@@ -52,7 +53,7 @@ class UserInfoMemory(ContextProvider):
                     ),
                 )
 
-                # Update user info with extracted data
+                # 抽出したデータでユーザー情報を更新します
                 if result.value and isinstance(result.value, UserInfo):
                     if self.user_info.name is None and result.value.name:
                         self.user_info.name = result.value.name
@@ -60,10 +61,10 @@ class UserInfoMemory(ContextProvider):
                         self.user_info.age = result.value.age
 
             except Exception:
-                pass  # Failed to extract, continue without updating
+                pass  # 抽出に失敗しました。更新せずに続行します
 
     async def invoking(self, messages: ChatMessage | MutableSequence[ChatMessage], **kwargs: Any) -> Context:
-        """Provide user information context before each agent call."""
+        """各Agent呼び出し前にユーザー情報コンテキストを提供します。"""
         instructions: list[str] = []
 
         if self.user_info.name is None:
@@ -80,11 +81,11 @@ class UserInfoMemory(ContextProvider):
         else:
             instructions.append(f"The user's age is {self.user_info.age}.")
 
-        # Return context with additional instructions
+        # 追加の指示を含むコンテキストを返します
         return Context(instructions=" ".join(instructions))
 
     def serialize(self) -> str:
-        """Serialize the user info for thread persistence."""
+        """スレッド永続化のためにユーザー情報をシリアライズします。"""
         return self.user_info.model_dump_json()
 
 
@@ -92,23 +93,23 @@ async def main():
     async with AzureCliCredential() as credential:
         chat_client = AzureAIAgentClient(async_credential=credential)
 
-        # Create the memory provider
+        # メモリproviderを作成します
         memory_provider = UserInfoMemory(chat_client)
 
-        # Create the agent with memory
+        # メモリ付きAgentを作成します
         async with ChatAgent(
             chat_client=chat_client,
             instructions="You are a friendly assistant. Always address the user by their name.",
             context_providers=memory_provider,
         ) as agent:
-            # Create a new thread for the conversation
+            # 会話用の新しいスレッドを作成します
             thread = agent.get_new_thread()
 
             print(await agent.run("Hello, what is the square root of 9?", thread=thread))
             print(await agent.run("My name is Ruaidhrí", thread=thread))
             print(await agent.run("I am 20 years old", thread=thread))
 
-            # Access the memory component via the thread's get_service method and inspect the memories
+            # スレッドのget_serviceメソッドを介してメモリコンポーネントにアクセスし、メモリを検査します
             user_info_memory = thread.context_provider.providers[0]  # type: ignore
             if user_info_memory:
                 print()

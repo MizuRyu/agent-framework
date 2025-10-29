@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for Purview client."""
+"""Purview client のテスト。"""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,11 +24,11 @@ from agent_framework_purview._models import (
 
 
 class TestPurviewClient:
-    """Test PurviewClient functionality."""
+    """PurviewClient の機能をテスト。"""
 
     @pytest.fixture
     def mock_credential(self) -> MagicMock:
-        """Create a mock async credential."""
+        """モックの非同期クレデンシャルを作成する。"""
         from azure.core.credentials_async import AsyncTokenCredential
 
         credential = MagicMock(spec=AsyncTokenCredential)
@@ -42,18 +42,18 @@ class TestPurviewClient:
 
     @pytest.fixture
     def settings(self) -> PurviewSettings:
-        """Create test settings."""
+        """テスト用の設定を作成する。"""
         return PurviewSettings(app_name="Test App", tenant_id="test-tenant", default_user_id="test-user")
 
     @pytest.fixture
     async def client(self, mock_credential: MagicMock, settings: PurviewSettings) -> PurviewClient:
-        """Create a PurviewClient with mock credential."""
+        """モッククレデンシャルを使って PurviewClient を作成する。"""
         client = PurviewClient(mock_credential, settings, timeout=10.0)
         yield client
         await client.close()
 
     async def test_client_initialization(self, mock_credential: MagicMock, settings: PurviewSettings) -> None:
-        """Test PurviewClient initialization."""
+        """PurviewClient の初期化をテスト。"""
         client = PurviewClient(mock_credential, settings)
 
         assert client._credential == mock_credential
@@ -64,13 +64,13 @@ class TestPurviewClient:
         await client.close()
 
     async def test_get_token_async_credential(self, client: PurviewClient, mock_credential: MagicMock) -> None:
-        """Test _get_token with async credential."""
+        """非同期クレデンシャルで _get_token をテスト。"""
         token = await client._get_token(tenant_id="test-tenant")
 
         assert token == "fake-token"
 
     async def test_get_token_sync_credential(self, settings: PurviewSettings) -> None:
-        """Test _get_token with sync credential."""
+        """同期クレデンシャルで _get_token をテスト。"""
         sync_credential = MagicMock()
         sync_credential.get_token = MagicMock(return_value=AccessToken("sync-token", 9999999999))
 
@@ -88,7 +88,7 @@ class TestPurviewClient:
         await client.close()
 
     async def test_get_user_info_from_token(self, client: PurviewClient) -> None:
-        """Test get_user_info_from_token extracts user info."""
+        """get_user_info_from_token がユーザー情報を抽出することをテスト。"""
         import base64
         import json
 
@@ -119,7 +119,7 @@ class TestPurviewClient:
     async def test_post_error_handling(
         self, client: PurviewClient, content_to_process_factory, status_code: int, exception_type: type[Exception]
     ) -> None:
-        """Test _post method handles different HTTP errors correctly."""
+        """_post メソッドが異なる HTTP エラーを正しく処理することをテスト。"""
         from agent_framework_purview._models import ProcessContentResponse
 
         content = content_to_process_factory()
@@ -147,7 +147,7 @@ class TestPurviewClient:
     async def test_process_content_success(
         self, client: PurviewClient, content_to_process_factory, mock_credential: MagicMock
     ) -> None:
-        """Test process_content method success path."""
+        """process_content メソッドの成功パスをテスト。"""
         content = content_to_process_factory("Test message")
         request = ProcessContentRequest(
             content_to_process=content,
@@ -166,7 +166,7 @@ class TestPurviewClient:
             assert response.protection_scope_state == "notModified"
 
     async def test_get_protection_scopes_success(self, client: PurviewClient) -> None:
-        """Test get_protection_scopes method success path."""
+        """get_protection_scopes メソッドの成功パスをテスト。"""
         location = PolicyLocation(**{"@odata.type": "microsoft.graph.policyLocationApplication", "value": "app-id"})
         request = ProtectionScopesRequest(
             user_id="user-123", tenant_id="tenant-456", locations=[location], correlation_id="corr-789"
@@ -183,7 +183,7 @@ class TestPurviewClient:
             assert response.scopes == []
 
     async def test_client_close(self, mock_credential: AsyncMock, settings: PurviewSettings) -> None:
-        """Test client properly closes HTTP client."""
+        """クライアントが HTTP クライアントを適切に閉じることをテスト。"""
         client = PurviewClient(mock_credential, settings)
 
         with patch.object(client._client, "aclose", new_callable=AsyncMock) as mock_close:
@@ -191,12 +191,12 @@ class TestPurviewClient:
             mock_close.assert_called_once()
 
     async def test_invalid_jwt_token_format(self, client: PurviewClient) -> None:
-        """Test that invalid JWT token format raises ValueError."""
+        """無効な JWT トークン形式が ValueError を発生させることをテスト。"""
         with pytest.raises(ValueError, match="Invalid JWT token format"):
             client._extract_token_info("invalid-token-without-dots")
 
     async def test_rate_limit_error(self, client: PurviewClient) -> None:
-        """Test that 429 status code raises PurviewRateLimitError."""
+        """429 ステータスコードが PurviewRateLimitError を発生させることをテスト。"""
         request = ProcessContentRequest(
             user_id="test-user",
             tenant_id="test-tenant",
@@ -216,7 +216,7 @@ class TestPurviewClient:
             await client.process_content(request)
 
     async def test_generic_request_error(self, client: PurviewClient) -> None:
-        """Test that non-200/201/202 status codes raise PurviewRequestError."""
+        """200/201/202 以外のステータスコードが PurviewRequestError を発生させることをテスト。"""
         request = ProcessContentRequest(
             user_id="test-user",
             tenant_id="test-tenant",

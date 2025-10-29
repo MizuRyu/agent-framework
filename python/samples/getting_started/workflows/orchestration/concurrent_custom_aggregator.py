@@ -52,9 +52,9 @@ async def main() -> None:
         name="legal",
     )
 
-    # Define a custom aggregator callback that uses the chat client to summarize
+    # チャットクライアントを使って要約するカスタム集約コールバックを定義します。
     async def summarize_results(results: list[Any]) -> str:
-        # Extract one final assistant message per agent
+        # 各Agentから最終的なアシスタントメッセージを1つ抽出します。
         expert_sections: list[str] = []
         for r in results:
             try:
@@ -64,7 +64,7 @@ async def main() -> None:
             except Exception as e:
                 expert_sections.append(f"{getattr(r, 'executor_id', 'expert')}: (error: {type(e).__name__}: {e})")
 
-        # Ask the model to synthesize a concise summary of the experts' outputs
+        # モデルに専門家の出力の簡潔な要約を合成するよう依頼します。
         system_msg = ChatMessage(
             Role.SYSTEM,
             text=(
@@ -75,16 +75,14 @@ async def main() -> None:
         user_msg = ChatMessage(Role.USER, text="\n\n".join(expert_sections))
 
         response = await chat_client.get_response([system_msg, user_msg])
-        # Return the model's final assistant text as the completion result
+        # モデルの最終的なアシスタントテキストを完了結果として返します。
         return response.messages[-1].text if response.messages else ""
 
-    # Build with a custom aggregator callback function
-    # - participants([...]) accepts AgentProtocol (agents) or Executor instances.
-    #   Each participant becomes a parallel branch (fan-out) from an internal dispatcher.
-    # - with_aggregator(...) overrides the default aggregator:
-    #   • Default aggregator -> returns list[ChatMessage] (one user + one assistant per agent)
-    #   • Custom callback    -> return value becomes workflow output (string here)
-    #   The callback can be sync or async; it receives list[AgentExecutorResponse].
+    # カスタム集約コールバック関数で構築します -
+    # participants([...])はAgentProtocol（agents）またはExecutorインスタンスを受け入れます。
+    # 各参加者は内部ディスパッチャーからの並列ブランチ（ファンアウト）になります。 - with_aggregator(...)はデフォルトの集約器を上書きします： •
+    # デフォルト集約器 -> list[ChatMessage]を返す（一人のユーザー＋一人のアシスタントが各Agentごとに） • カスタムコールバック ->
+    # 返り値がワークフローの出力になります（ここでは文字列） コールバックは同期または非同期で、list[AgentExecutorResponse]を受け取ります。
     workflow = (
         ConcurrentBuilder().participants([researcher, marketer, legal]).with_aggregator(summarize_results).build()
     )
@@ -94,7 +92,7 @@ async def main() -> None:
 
     if outputs:
         print("===== Final Consolidated Output =====")
-        print(outputs[0])  # Get the first (and typically only) output
+        print(outputs[0])  # 最初の（通常は唯一の）出力を取得します。
 
     """
     Sample Output:

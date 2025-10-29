@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for Purview middleware."""
+"""Purview middleware のテスト。"""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,34 +12,34 @@ from agent_framework_purview import PurviewPolicyMiddleware, PurviewSettings
 
 
 class TestPurviewPolicyMiddleware:
-    """Test PurviewPolicyMiddleware functionality."""
+    """PurviewPolicyMiddleware の機能をテスト。"""
 
     @pytest.fixture
     def mock_credential(self) -> AsyncMock:
-        """Create a mock async credential."""
+        """モックの非同期クレデンシャルを作成する。"""
         credential = AsyncMock()
         credential.get_token = AsyncMock(return_value=AccessToken("fake-token", 9999999999))
         return credential
 
     @pytest.fixture
     def settings(self) -> PurviewSettings:
-        """Create test settings."""
+        """テスト用の設定を作成する。"""
         return PurviewSettings(app_name="Test App", tenant_id="test-tenant")
 
     @pytest.fixture
     def middleware(self, mock_credential: AsyncMock, settings: PurviewSettings) -> PurviewPolicyMiddleware:
-        """Create PurviewPolicyMiddleware instance."""
+        """PurviewPolicyMiddleware インスタンスを作成する。"""
         return PurviewPolicyMiddleware(mock_credential, settings)
 
     @pytest.fixture
     def mock_agent(self) -> MagicMock:
-        """Create a mock agent."""
+        """モックの Agent を作成する。"""
         agent = MagicMock()
         agent.name = "test-agent"
         return agent
 
     def test_middleware_initialization(self, mock_credential: AsyncMock, settings: PurviewSettings) -> None:
-        """Test PurviewPolicyMiddleware initialization."""
+        """PurviewPolicyMiddleware の初期化をテスト。"""
         middleware = PurviewPolicyMiddleware(mock_credential, settings)
 
         assert middleware._client is not None
@@ -48,7 +48,7 @@ class TestPurviewPolicyMiddleware:
     async def test_middleware_allows_clean_prompt(
         self, middleware: PurviewPolicyMiddleware, mock_agent: MagicMock
     ) -> None:
-        """Test middleware allows prompt that passes policy check."""
+        """ポリシーチェックを通過するプロンプトをミドルウェアが許可することをテスト。"""
         context = AgentRunContext(agent=mock_agent, messages=[ChatMessage(role=Role.USER, text="Hello, how are you?")])
 
         with patch.object(middleware._processor, "process_messages", return_value=(False, "user-123")):
@@ -68,7 +68,7 @@ class TestPurviewPolicyMiddleware:
     async def test_middleware_blocks_prompt_on_policy_violation(
         self, middleware: PurviewPolicyMiddleware, mock_agent: MagicMock
     ) -> None:
-        """Test middleware blocks prompt that violates policy."""
+        """ポリシー違反のプロンプトをミドルウェアがブロックすることをテスト。"""
         context = AgentRunContext(
             agent=mock_agent, messages=[ChatMessage(role=Role.USER, text="Sensitive information")]
         )
@@ -90,7 +90,7 @@ class TestPurviewPolicyMiddleware:
             assert "blocked by policy" in context.result.messages[0].text.lower()
 
     async def test_middleware_checks_response(self, middleware: PurviewPolicyMiddleware, mock_agent: MagicMock) -> None:
-        """Test middleware checks agent response for policy violations."""
+        """ミドルウェアが Agent のレスポンスをポリシー違反についてチェックすることをテスト。"""
         context = AgentRunContext(agent=mock_agent, messages=[ChatMessage(role=Role.USER, text="Hello")])
 
         call_count = 0
@@ -119,7 +119,7 @@ class TestPurviewPolicyMiddleware:
     async def test_middleware_handles_result_without_messages(
         self, middleware: PurviewPolicyMiddleware, mock_agent: MagicMock
     ) -> None:
-        """Test middleware handles result that doesn't have messages attribute."""
+        """messages 属性を持たない結果をミドルウェアが処理することをテスト。"""
         context = AgentRunContext(agent=mock_agent, messages=[ChatMessage(role=Role.USER, text="Hello")])
 
         with patch.object(middleware._processor, "process_messages", return_value=(False, "user-123")):
@@ -134,7 +134,7 @@ class TestPurviewPolicyMiddleware:
     async def test_middleware_processor_receives_correct_activity(
         self, middleware: PurviewPolicyMiddleware, mock_agent: MagicMock
     ) -> None:
-        """Test middleware passes correct activity type to processor."""
+        """ミドルウェアが正しいアクティビティタイプをプロセッサに渡すことをテスト。"""
         from agent_framework_purview._models import Activity
 
         context = AgentRunContext(agent=mock_agent, messages=[ChatMessage(role=Role.USER, text="Test")])
@@ -153,7 +153,7 @@ class TestPurviewPolicyMiddleware:
     async def test_middleware_handles_pre_check_exception(
         self, middleware: PurviewPolicyMiddleware, mock_agent: MagicMock
     ) -> None:
-        """Test that exceptions in pre-check are logged but don't stop processing."""
+        """pre-check 内の例外がログに記録されるが処理を停止しないことをテスト。"""
         context = AgentRunContext(agent=mock_agent, messages=[ChatMessage(role=Role.USER, text="Test")])
 
         with patch.object(
@@ -165,17 +165,17 @@ class TestPurviewPolicyMiddleware:
 
             await middleware.process(context, mock_next)
 
-            # Should have been called twice (pre-check raises, then post-check also raises)
+            # 2回呼ばれているはず（pre-check が例外を発生、その後 post-check も例外を発生）
             assert mock_process.call_count == 2
-            # Context should not be terminated
+            # Context は終了されるべきでない
             assert not context.terminate
-            # Result should be set by mock_next
+            # 結果は mock_next によって設定されるべき
             assert context.result is not None
 
     async def test_middleware_handles_post_check_exception(
         self, middleware: PurviewPolicyMiddleware, mock_agent: MagicMock
     ) -> None:
-        """Test that exceptions in post-check are logged but don't affect result."""
+        """post-check 内の例外がログに記録されるが結果に影響しないことをテスト。"""
         context = AgentRunContext(agent=mock_agent, messages=[ChatMessage(role=Role.USER, text="Test")])
 
         call_count = 0
@@ -184,8 +184,8 @@ class TestPurviewPolicyMiddleware:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return (False, "user-123")  # Pre-check succeeds
-            raise Exception("Post-check error")  # Post-check fails
+                return (False, "user-123")  # Pre-check が成功する
+            raise Exception("Post-check error")  # Post-check が失敗する
 
         with patch.object(middleware._processor, "process_messages", side_effect=mock_process_messages):
 
@@ -194,8 +194,8 @@ class TestPurviewPolicyMiddleware:
 
             await middleware.process(context, mock_next)
 
-            # Should have been called twice (pre and post)
+            # 2回呼ばれているはず（pre と post）
             assert call_count == 2
-            # Result should still be set
+            # 結果はまだ設定されているはず
             assert context.result is not None
             assert hasattr(context.result, "messages")

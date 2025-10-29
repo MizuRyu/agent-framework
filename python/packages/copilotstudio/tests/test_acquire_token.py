@@ -9,31 +9,31 @@ from agent_framework_copilotstudio._acquire_token import DEFAULT_SCOPES, acquire
 
 
 class TestAcquireToken:
-    """Test class for token acquisition functionality."""
+    """トークン取得機能のテストクラス。"""
 
     def test_acquire_token_missing_client_id(self) -> None:
-        """Test that acquire_token raises ServiceException when client_id is missing."""
+        """client_idが欠落している場合にacquire_tokenがServiceExceptionを発生させることをテスト。"""
         with pytest.raises(ServiceException, match="Client ID is required for token acquisition"):
             acquire_token(client_id="", tenant_id="test-tenant-id")
 
     def test_acquire_token_missing_tenant_id(self) -> None:
-        """Test that acquire_token raises ServiceException when tenant_id is missing."""
+        """tenant_idが欠落している場合にacquire_tokenがServiceExceptionを発生させることをテスト。"""
         with pytest.raises(ServiceException, match="Tenant ID is required for token acquisition"):
             acquire_token(client_id="test-client-id", tenant_id="")
 
     def test_acquire_token_none_client_id(self) -> None:
-        """Test that acquire_token raises ServiceException when client_id is None."""
+        """client_idがNoneの場合にacquire_tokenがServiceExceptionを発生させることをテスト。"""
         with pytest.raises(ServiceException, match="Client ID is required for token acquisition"):
             acquire_token(client_id=None, tenant_id="test-tenant-id")  # type: ignore
 
     def test_acquire_token_none_tenant_id(self) -> None:
-        """Test that acquire_token raises ServiceException when tenant_id is None."""
+        """tenant_idがNoneの場合にacquire_tokenがServiceExceptionを発生させることをテスト。"""
         with pytest.raises(ServiceException, match="Tenant ID is required for token acquisition"):
             acquire_token(client_id="test-client-id", tenant_id=None)  # type: ignore
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_silent_success(self, mock_pca_class: MagicMock) -> None:
-        """Test successful silent token acquisition."""
+        """正常なサイレントトークン取得のテスト。"""
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
@@ -59,7 +59,7 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_silent_success_with_username(self, mock_pca_class: MagicMock) -> None:
-        """Test successful silent token acquisition with username."""
+        """username付きの正常なサイレントトークン取得のテスト。"""
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
@@ -81,8 +81,8 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_silent_success_with_custom_scopes(self, mock_pca_class: MagicMock) -> None:
-        """Test successful silent token acquisition with custom scopes."""
-        # Setup
+        """カスタムスコープ付きの正常なサイレントトークン取得のテスト。"""
+        # セットアップ。
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
@@ -105,12 +105,12 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_interactive_success_no_accounts(self, mock_pca_class: MagicMock) -> None:
-        """Test successful interactive token acquisition when no cached accounts exist."""
-        # Setup
+        """キャッシュされたアカウントが存在しない場合の正常なインタラクティブトークン取得のテスト。"""
+        # セットアップ。
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
-        mock_pca.get_accounts.return_value = []  # No cached accounts
+        mock_pca.get_accounts.return_value = []  # キャッシュされたアカウントなし。
 
         mock_token_response = {"access_token": "test-interactive-token-67890"}
         mock_pca.acquire_token_interactive.return_value = mock_token_response
@@ -125,18 +125,18 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_fallback_to_interactive_after_silent_fails(self, mock_pca_class: MagicMock) -> None:
-        """Test fallback to interactive authentication when silent acquisition fails."""
+        """サイレント取得が失敗した場合のインタラクティブ認証へのフォールバックをテスト。"""
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
         mock_account = MagicMock()
         mock_pca.get_accounts.return_value = [mock_account]
 
-        # Silent acquisition fails with error response
+        # エラー応答でサイレント取得が失敗。
         mock_silent_error_response = {"error": "invalid_grant", "error_description": "Token expired"}
         mock_pca.acquire_token_silent.return_value = mock_silent_error_response
 
-        # Interactive acquisition succeeds
+        # インタラクティブ取得が成功。
         mock_interactive_response = {"access_token": "test-interactive-token-67890"}
         mock_pca.acquire_token_interactive.return_value = mock_interactive_response
 
@@ -151,17 +151,17 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_fallback_to_interactive_after_silent_exception(self, mock_pca_class: MagicMock) -> None:
-        """Test fallback to interactive authentication when silent acquisition throws exception."""
+        """サイレント取得が例外をスローした場合のインタラクティブ認証へのフォールバックをテスト。"""
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
         mock_account = MagicMock()
         mock_pca.get_accounts.return_value = [mock_account]
 
-        # Silent acquisition throws exception
+        # サイレント取得が例外をスロー。
         mock_pca.acquire_token_silent.side_effect = Exception("Network error")
 
-        # Interactive acquisition succeeds
+        # インタラクティブ取得が成功。
         mock_interactive_response = {"access_token": "test-interactive-token-67890"}
         mock_pca.acquire_token_interactive.return_value = mock_interactive_response
 
@@ -176,13 +176,13 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_interactive_error_response(self, mock_pca_class: MagicMock) -> None:
-        """Test that acquire_token handles error responses from interactive authentication."""
+        """インタラクティブ認証からのエラー応答をacquire_tokenが処理することをテスト。"""
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
-        mock_pca.get_accounts.return_value = []  # No cached accounts
+        mock_pca.get_accounts.return_value = []  # キャッシュされたアカウントなし。
 
-        # Interactive acquisition returns error
+        # インタラクティブ取得がエラーを返す。
         mock_error_response = {"error": "access_denied", "error_description": "User denied consent"}
         mock_pca.acquire_token_interactive.return_value = mock_error_response
 
@@ -194,13 +194,13 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_interactive_exception(self, mock_pca_class: MagicMock) -> None:
-        """Test that acquire_token handles exceptions from interactive authentication."""
+        """インタラクティブ認証からの例外をacquire_tokenが処理することをテスト。"""
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
-        mock_pca.get_accounts.return_value = []  # No cached accounts
+        mock_pca.get_accounts.return_value = []  # キャッシュされたアカウントなし。
 
-        # Interactive acquisition throws exception
+        # インタラクティブ取得が例外をスロー。
         mock_pca.acquire_token_interactive.side_effect = Exception("Authentication service unavailable")
 
         with pytest.raises(ServiceException, match="Failed to acquire authentication token"):
@@ -211,7 +211,7 @@ class TestAcquireToken:
 
     @patch("agent_framework_copilotstudio._acquire_token.PublicClientApplication")
     def test_acquire_token_with_token_cache(self, mock_pca_class: MagicMock) -> None:
-        """Test acquire_token with custom token cache."""
+        """カスタムトークンキャッシュを使用したacquire_tokenのテスト。"""
         mock_pca = MagicMock()
         mock_pca_class.return_value = mock_pca
 
@@ -237,7 +237,7 @@ class TestAcquireToken:
         )
 
     def test_default_scopes_constant(self) -> None:
-        """Test that DEFAULT_SCOPES constant is properly defined."""
+        """DEFAULT_SCOPES定数が正しく定義されていることをテスト。"""
         assert DEFAULT_SCOPES == ["https://api.powerplatform.com/.default"]
         assert isinstance(DEFAULT_SCOPES, list)
         assert len(DEFAULT_SCOPES) == 1

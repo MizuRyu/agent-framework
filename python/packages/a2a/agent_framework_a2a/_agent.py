@@ -59,14 +59,15 @@ def _get_uri_data(uri: str) -> str:
 
 
 class A2AAgent(BaseAgent):
-    """Agent2Agent (A2A) protocol implementation.
+    """Agent2Agent (A2A) プロトコルの実装です。
 
-    Wraps an A2A Client to connect the Agent Framework with external A2A-compliant agents
-    via HTTP/JSON-RPC. Converts framework ChatMessages to A2A Messages on send, and converts
-    A2A responses (Messages/Tasks) back to framework types. Inherits BaseAgent capabilities
-    while managing the underlying A2A protocol communication.
+    A2A ClientをラップしてAgent Frameworkを外部のA2A準拠エージェントとHTTP/JSON-RPC経由で接続します。
+    送信時にフレームワークのChatMessagesをA2A Messagesに変換し、
+    A2Aのレスポンス（Messages/Tasks）をフレームワークの型に戻します。
+    BaseAgentの機能を継承しつつ、基盤となるA2Aプロトコル通信を管理します。
 
-    Can be initialized with a URL, AgentCard, or existing A2A Client instance.
+    URL、AgentCard、または既存のA2A Clientインスタンスで初期化可能です。
+
     """
 
     def __init__(
@@ -82,18 +83,19 @@ class A2AAgent(BaseAgent):
         auth_interceptor: AuthInterceptor | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the A2AAgent.
+        """A2AAgentを初期化します。
 
-        Keyword Args:
-            name: The name of the agent.
-            id: The unique identifier for the agent, will be created automatically if not provided.
-            description: A brief description of the agent's purpose.
-            agent_card: The agent card for the agent.
-            url: The URL for the A2A server.
-            client: The A2A client for the agent.
-            http_client: Optional httpx.AsyncClient to use.
-            auth_interceptor: Optional authentication interceptor for secured endpoints.
-            kwargs: any additional properties, passed to BaseAgent.
+        キーワード引数:
+            name: エージェントの名前。
+            id: エージェントの一意識別子。指定しない場合は自動生成されます。
+            description: エージェントの目的の簡単な説明。
+            agent_card: エージェントのエージェントカード。
+            url: A2AサーバーのURL。
+            client: エージェントのA2Aクライアント。
+            http_client: 使用するOptionalなhttpx.AsyncClient。
+            auth_interceptor: セキュアなエンドポイント用のOptionalな認証インターセプター。
+            kwargs: BaseAgentに渡される追加のプロパティ。
+
         """
         super().__init__(id=id, name=name, description=description, **kwargs)
         self._http_client: httpx.AsyncClient | None = http_client
@@ -104,10 +106,10 @@ class A2AAgent(BaseAgent):
         if agent_card is None:
             if url is None:
                 raise ValueError("Either agent_card or url must be provided")
-            # Create minimal agent card from URL
+            # URLから最小限のエージェントカードを作成します。
             agent_card = minimal_agent_card(url, [TransportProtocol.jsonrpc])
 
-        # Create or use provided httpx client
+        # 提供されたhttpxクライアントを作成または使用します。
         if http_client is None:
             timeout = httpx.Timeout(
                 connect=10.0,  # 10 seconds to establish connection
@@ -117,10 +119,10 @@ class A2AAgent(BaseAgent):
             )
             headers = prepend_agent_framework_to_user_agent()
             http_client = httpx.AsyncClient(timeout=timeout, headers=headers)
-            self._http_client = http_client  # Store for cleanup
+            self._http_client = http_client  # クリーンアップ用に保存します。
             self._close_http_client = True
 
-        # Create A2A client using factory
+        # ファクトリーを使ってA2Aクライアントを作成します。
         config = ClientConfig(
             httpx_client=http_client,
             supported_transports=[TransportProtocol.jsonrpc],
@@ -130,7 +132,7 @@ class A2AAgent(BaseAgent):
         self.client = factory.create(agent_card, interceptors=interceptors)  # type: ignore
 
     async def __aenter__(self) -> "A2AAgent":
-        """Async context manager entry."""
+        """非同期コンテキストマネージャのエントリー。"""
         return self
 
     async def __aexit__(
@@ -139,8 +141,8 @@ class A2AAgent(BaseAgent):
         exc_val: BaseException | None,
         exc_tb: Any,
     ) -> None:
-        """Async context manager exit with httpx client cleanup."""
-        # Close our httpx client if we created it
+        """非同期コンテキストマネージャの終了時にhttpxクライアントをクリーンアップします。"""
+        # 自分で作成したhttpxクライアントを閉じます。
         if self._http_client is not None and self._close_http_client:
             await self._http_client.aclose()
 
@@ -151,23 +153,23 @@ class A2AAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Get a response from the agent.
+        """エージェントからレスポンスを取得します。
 
-        This method returns the final result of the agent's execution
-        as a single AgentRunResponse object. The caller is blocked until
-        the final result is available.
+        このメソッドはエージェントの実行の最終結果を単一のAgentRunResponseオブジェクトとして返します。
+        呼び出し元は最終結果が利用可能になるまでブロックされます。
 
-        Args:
-            messages: The message(s) to send to the agent.
+        引数:
+            messages: エージェントに送信するメッセージ。
 
-        Keyword Args:
-            thread: The conversation thread associated with the message(s).
-            kwargs: Additional keyword arguments.
+        キーワード引数:
+            thread: メッセージに関連付けられた会話スレッド。
+            kwargs: 追加のキーワード引数。
 
-        Returns:
-            An agent response item.
+        戻り値:
+            エージェントのレスポンスアイテム。
+
         """
-        # Collect all updates and use framework to consolidate updates into response
+        # すべての更新を収集し、フレームワークを使って更新をレスポンスに統合します。
         updates = [update async for update in self.run_stream(messages, thread=thread, **kwargs)]
         return AgentRunResponse.from_agent_run_response_updates(updates)
 
@@ -178,20 +180,21 @@ class A2AAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Run the agent as a stream.
+        """エージェントをストリームとして実行します。
 
-        This method will return the intermediate steps and final results of the
-        agent's execution as a stream of AgentRunResponseUpdate objects to the caller.
+        このメソッドはエージェントの実行の中間ステップと最終結果を
+        AgentRunResponseUpdateオブジェクトのストリームとして呼び出し元に返します。
 
-        Args:
-            messages: The message(s) to send to the agent.
+        引数:
+            messages: エージェントに送信するメッセージ。
 
-        Keyword Args:
-            thread: The conversation thread associated with the message(s).
-            kwargs: Additional keyword arguments.
+        キーワード引数:
+            thread: メッセージに関連付けられた会話スレッド。
+            kwargs: 追加のキーワード引数。
 
-        Yields:
-            An agent response item.
+        yield:
+            エージェントのレスポンスアイテム。
+
         """
         messages = self._normalize_messages(messages)
         a2a_message = self._chat_message_to_a2a_message(messages[-1])
@@ -200,7 +203,7 @@ class A2AAgent(BaseAgent):
 
         async for item in response_stream:
             if isinstance(item, Message):
-                # Process A2A Message
+                # A2A Messageを処理します。
                 contents = self._a2a_parts_to_contents(item.parts)
                 yield AgentRunResponseUpdate(
                     contents=contents,
@@ -211,11 +214,11 @@ class A2AAgent(BaseAgent):
             elif isinstance(item, tuple) and len(item) == 2:  # ClientEvent = (Task, UpdateEvent)
                 task, _update_event = item
                 if isinstance(task, Task) and task.status.state in TERMINAL_TASK_STATES:
-                    # Convert Task artifacts to ChatMessages and yield as separate updates
+                    # TaskのアーティファクトをChatMessagesに変換し、個別の更新としてyieldします。
                     task_messages = self._task_to_chat_messages(task)
                     if task_messages:
                         for message in task_messages:
-                            # Use the artifact's ID from raw_representation as message_id for unique identification
+                            # raw_representationのアーティファクトのIDをmessage_idとして使用し、一意に識別します。
                             artifact_id = getattr(message.raw_representation, "artifact_id", None)
                             yield AgentRunResponseUpdate(
                                 contents=message.contents,
@@ -225,7 +228,7 @@ class A2AAgent(BaseAgent):
                                 raw_representation=task,
                             )
                     else:
-                        # Empty task
+                        # 空のタスクです。
                         yield AgentRunResponseUpdate(
                             contents=[],
                             role=Role.ASSISTANT,
@@ -233,25 +236,26 @@ class A2AAgent(BaseAgent):
                             raw_representation=task,
                         )
             else:
-                # Unknown response type
+                # 不明なレスポンスのタイプです。
                 msg = f"Only Message and Task responses are supported from A2A agents. Received: {type(item)}"
                 raise NotImplementedError(msg)
 
     def _chat_message_to_a2a_message(self, message: ChatMessage) -> A2AMessage:
-        """Convert a ChatMessage to an A2A Message.
+        """ChatMessageをA2A Messageに変換します。
 
-        Transforms Agent Framework ChatMessage objects into A2A protocol Messages by:
-        - Converting all message contents to appropriate A2A Part types
-        - Mapping text content to TextPart objects
-        - Converting file references (URI/data/hosted_file) to FilePart objects
-        - Preserving metadata and additional properties from the original message
-        - Setting the role to 'user' as framework messages are treated as user input
+        Agent FrameworkのChatMessageオブジェクトをA2AプロトコルのMessageに変換します。
+        - すべてのメッセージ内容を適切なA2A Partタイプに変換
+        - テキスト内容をTextPartオブジェクトにマッピング
+        - ファイル参照（URI/data/hosted_file）をFilePartオブジェクトに変換
+        - 元のメッセージのメタデータや追加プロパティを保持
+        - フレームワークのメッセージはユーザー入力として扱うためroleを'user'に設定
+
         """
         parts: list[A2APart] = []
         if not message.contents:
             raise ValueError("ChatMessage.contents is empty; cannot convert to A2AMessage.")
 
-        # Process ALL contents
+        # すべての内容を処理します。
         for content in message.contents:
             match content.type:
                 case "text":
@@ -319,10 +323,11 @@ class A2AAgent(BaseAgent):
         )
 
     def _a2a_parts_to_contents(self, parts: Sequence[A2APart]) -> list[Contents]:
-        """Convert A2A Parts to Agent Framework Contents.
+        """A2A PartsをAgent FrameworkのContentsに変換します。
 
-        Transforms A2A protocol Parts into framework-native Content objects,
-        handling text, file (URI/bytes), and data parts with metadata preservation.
+        A2AプロトコルのPartsをフレームワークネイティブのContentオブジェクトに変換し、
+        テキスト、ファイル（URI/バイト）、データパーツをメタデータを保持しつつ処理します。
+
         """
         contents: list[Contents] = []
         for part in parts:
@@ -368,7 +373,7 @@ class A2AAgent(BaseAgent):
         return contents
 
     def _task_to_chat_messages(self, task: Task) -> list[ChatMessage]:
-        """Convert A2A Task artifacts to ChatMessages with ASSISTANT role."""
+        """A2A TaskのアーティファクトをASSISTANTロールのChatMessagesに変換します。"""
         messages: list[ChatMessage] = []
 
         if task.artifacts is not None:
@@ -378,7 +383,7 @@ class A2AAgent(BaseAgent):
         return messages
 
     def _artifact_to_chat_message(self, artifact: Artifact) -> ChatMessage:
-        """Convert A2A Artifact to ChatMessage using part contents."""
+        """A2A Artifactをパーツの内容を使ってChatMessageに変換します。"""
         contents = self._a2a_parts_to_contents(artifact.parts)
         return ChatMessage(
             role=Role.ASSISTANT,

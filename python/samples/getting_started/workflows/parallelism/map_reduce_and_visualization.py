@@ -40,54 +40,55 @@ Prerequisites:
 - Optional for SVG export: install the viz extra for agent framework workflow.
 """
 
-# Define the temporary directory for storing intermediate results
+# 中間結果を保存するための一時ディレクトリを定義します。
 DIR = os.path.dirname(__file__)
 TEMP_DIR = os.path.join(DIR, "tmp")
-# Ensure the temporary directory exists
+# 一時ディレクトリが存在することを確認します。
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# Define a key for the shared state to store the data to be processed
+# 処理対象のデータを格納するための共有Stateのキーを定義します。
 SHARED_STATE_DATA_KEY = "data_to_be_processed"
 
 
 class SplitCompleted:
-    """Marker type published when splitting finishes. Triggers map executors."""
+    """分割が完了したときに発行されるマーカータイプ。これがmap executorをトリガーします。"""
 
     ...
 
 
 class Split(Executor):
-    """Splits data into roughly equal chunks based on the number of mapper nodes."""
+    """mapperノードの数に基づいてデータをほぼ等しいチャンクに分割します。"""
 
     def __init__(self, map_executor_ids: list[str], id: str | None = None):
-        """Store mapper ids so we can assign non overlapping ranges per mapper."""
+        """mapperごとに重複しない範囲を割り当てるためにmapperのIDを保存します。"""
         super().__init__(id=id or "split")
         self._map_executor_ids = map_executor_ids
 
     @handler
     async def split(self, data: str, ctx: WorkflowContext[SplitCompleted]) -> None:
-        """Tokenize input and assign contiguous index ranges to each mapper via shared state.
+        """入力をトークン化し、共有Stateを介して各mapperに連続したインデックス範囲を割り当てます。
 
         Args:
-            data: The raw text to process.
-            ctx: Workflow context to persist shared state and send messages.
+            data: 処理する生テキスト。
+            ctx: 共有Stateを永続化しメッセージを送信するためのワークフローコンテキスト。
+
         """
-        # Process data into a list of words and remove empty lines or words.
+        # データを単語のリストに処理し、空行や空の単語を削除します。
         word_list = self._preprocess(data)
 
-        # Store tokenized words once so all mappers can read by index.
+        # トークン化された単語を一度保存し、すべてのmapperがインデックスで読み取れるようにします。
         await ctx.set_shared_state(SHARED_STATE_DATA_KEY, word_list)
 
-        # Divide indices into contiguous slices for each mapper.
+        # インデックスを各mapperのための連続したスライスに分割します。
         map_executor_count = len(self._map_executor_ids)
-        chunk_size = len(word_list) // map_executor_count  # Assumes count > 0.
+        chunk_size = len(word_list) // map_executor_count  # count > 0であることを前提としています。
 
         async def _process_chunk(i: int) -> None:
-            """Assign the slice for mapper i, then signal that splitting is done."""
+            """mapper iにスライスを割り当て、その後分割完了を通知します。"""
             start_index = i * chunk_size
             end_index = start_index + chunk_size if i < map_executor_count - 1 else len(word_list)
 
-            # The mapper reads its slice from shared state keyed by its own executor id.
+            # mapperは自身のexecutor idをキーとした共有Stateからスライスを読み取ります。
             await ctx.set_shared_state(self._map_executor_ids[i], (start_index, end_index))
             await ctx.send_message(SplitCompleted(), self._map_executor_ids[i])
 
@@ -95,36 +96,37 @@ class Split(Executor):
         await asyncio.gather(*tasks)
 
     def _preprocess(self, data: str) -> list[str]:
-        """Normalize lines and split on whitespace. Return a flat list of tokens."""
+        """行を正規化し空白で分割します。フラットなトークンリストを返します。"""
         line_list = [line.strip() for line in data.splitlines() if line.strip()]
         return [word for line in line_list for word in line.split() if word]
 
 
 @dataclass
 class MapCompleted:
-    """Signal that a mapper wrote its intermediate pairs to file."""
+    """mapperが中間ペアをファイルに書き込んだことを通知します。"""
 
     file_path: str
 
 
 class Map(Executor):
-    """Maps each token to a count of 1 and writes pairs to a per mapper file."""
+    """各トークンをカウント1にマップし、mapperごとのファイルにペアを書き込みます。"""
 
     @handler
     async def map(self, _: SplitCompleted, ctx: WorkflowContext[MapCompleted]) -> None:
-        """Read the assigned slice, emit (word, 1) pairs, and persist to disk.
+        """割り当てられたスライスを読み取り、(word, 1)ペアを出力しディスクに永続化します。
 
         Args:
-            _: SplitCompleted marker indicating maps can begin.
-            ctx: Workflow context for shared state access and messaging.
+            _: SplitCompletedマーカーでmapの開始を示します。
+            ctx: 共有Stateアクセスとメッセージングのためのワークフローコンテキスト。
+
         """
-        # Retrieve tokens and our assigned slice.
+        # トークンと割り当てられたスライスを取得します。
         data_to_be_processed: list[str] = await ctx.get_shared_state(SHARED_STATE_DATA_KEY)
         chunk_start, chunk_end = await ctx.get_shared_state(self.id)
 
         results = [(item, 1) for item in data_to_be_processed[chunk_start:chunk_end]]
 
-        # Write this mapper's results as simple text lines for easy debugging.
+        # このmapperの結果を単純なテキスト行として書き込み、デバッグを容易にします。
         file_path = os.path.join(TEMP_DIR, f"map_results_{self.id}.txt")
         async with aiofiles.open(file_path, "w") as f:
             await f.writelines([f"{item}: {count}\n" for item, count in results])
@@ -134,32 +136,33 @@ class Map(Executor):
 
 @dataclass
 class ShuffleCompleted:
-    """Signal that a shuffle partition file is ready for a specific reducer."""
+    """特定のreducer用のshuffleパーティションファイルが準備できたことを通知します。"""
 
     file_path: str
     reducer_id: str
 
 
 class Shuffle(Executor):
-    """Groups intermediate pairs by key and partitions them across reducers."""
+    """中間ペアをキーごとにグループ化し、reducer間でパーティション分割します。"""
 
     def __init__(self, reducer_ids: list[str], id: str | None = None):
-        """Remember reducer ids so we can partition work deterministically."""
+        """作業を決定論的にパーティション分割するためにreducerのIDを記憶します。"""
         super().__init__(id=id or "shuffle")
         self._reducer_ids = reducer_ids
 
     @handler
     async def shuffle(self, data: list[MapCompleted], ctx: WorkflowContext[ShuffleCompleted]) -> None:
-        """Aggregate mapper outputs and write one partition file per reducer.
+        """mapperの出力を集約し、reducerごとに1つのパーティションファイルを書き込みます。
 
         Args:
-            data: MapCompleted records with file paths for each mapper output.
-            ctx: Workflow context to emit per reducer ShuffleCompleted messages.
+            data: 各mapper出力のファイルパスを含むMapCompletedレコード。
+            ctx: reducerごとのShuffleCompletedメッセージを発行するためのワークフローコンテキスト。
+
         """
         chunks = await self._preprocess(data)
 
         async def _process_chunk(chunk: list[tuple[str, list[int]]], index: int) -> None:
-            """Write one grouped partition for reducer index and notify that reducer."""
+            """reducerのインデックスに対して1つのグループ化されたパーティションを書き込み、そのreducerに通知します。"""
             file_path = os.path.join(TEMP_DIR, f"shuffle_results_{index}.txt")
             async with aiofiles.open(file_path, "w") as f:
                 await f.writelines([f"{key}: {value}\n" for key, value in chunk])
@@ -169,12 +172,13 @@ class Shuffle(Executor):
         await asyncio.gather(*tasks)
 
     async def _preprocess(self, data: list[MapCompleted]) -> list[list[tuple[str, list[int]]]]:
-        """Load all mapper files, group by key, sort keys, and partition for reducers.
+        """すべてのmapperファイルを読み込み、キーでグループ化し、キーをソートし、reducer用にパーティション分割します。
 
         Returns:
-            List of partitions. Each partition is a list of (key, [1, 1, ...]) tuples.
+            パーティションのリスト。各パーティションは(key, [1, 1, ...])タプルのリストです。
+
         """
-        # Load all intermediate pairs.
+        # すべての中間ペアを読み込みます。
         map_results: list[tuple[str, int]] = []
         for result in data:
             async with aiofiles.open(result.file_path, "r") as f:
@@ -182,16 +186,16 @@ class Shuffle(Executor):
                     (line.strip().split(": ")[0], int(line.strip().split(": ")[1])) for line in await f.readlines()
                 ])
 
-        # Group values by token.
+        # 値をトークンごとにグループ化します。
         intermediate_results: defaultdict[str, list[int]] = defaultdict(list[int])
         for key, value in map_results:
             intermediate_results[key].append(value)
 
-        # Deterministic ordering helps with debugging and test stability.
+        # 決定論的な順序付けはデバッグとテストの安定性に役立ちます。
         aggregated_results = [(key, values) for key, values in intermediate_results.items()]
         aggregated_results.sort(key=lambda x: x[0])
 
-        # Partition keys across reducers as evenly as possible.
+        # キーをできるだけ均等にreducer間でパーティション分割します。
         reduce_executor_count = len(self._reducer_ids)
         chunk_size = len(aggregated_results) // reduce_executor_count
         remaining = len(aggregated_results) % reduce_executor_count
@@ -207,37 +211,38 @@ class Shuffle(Executor):
 
 @dataclass
 class ReduceCompleted:
-    """Signal that a reducer wrote final counts for its partition."""
+    """reducerが自身のパーティションの最終カウントを書き込んだことを通知します。"""
 
     file_path: str
 
 
 class Reduce(Executor):
-    """Sums grouped counts per key for its assigned partition."""
+    """割り当てられたパーティションのキーごとにグループ化されたカウントを合計します。"""
 
     @handler
     async def _execute(self, data: ShuffleCompleted, ctx: WorkflowContext[ReduceCompleted]) -> None:
-        """Read one shuffle partition and reduce it to totals.
+        """1つのshuffleパーティションを読み込み、合計にreduceします。
 
         Args:
-            data: ShuffleCompleted with the partition file path and target reducer id.
-            ctx: Workflow context used to emit ReduceCompleted with our output file path.
+            data: パーティションファイルパスと対象reducer idを含むShuffleCompleted。
+            ctx: 出力ファイルパスを含むReduceCompletedを発行するためのワークフローコンテキスト。
+
         """
         if data.reducer_id != self.id:
-            # This partition belongs to a different reducer. Skip.
+            # このパーティションは別のreducerに属しています。スキップします。
             return
 
-        # Read grouped values from the shuffle output.
+        # shuffle出力からグループ化された値を読み取ります。
         async with aiofiles.open(data.file_path, "r") as f:
             lines = await f.readlines()
 
-        # Sum values per key. Values are serialized Python lists like [1, 1, ...].
+        # キーごとに値を合計します。値は[1, 1, ...]のようなシリアライズされたPythonリストです。
         reduced_results: dict[str, int] = defaultdict(int)
         for line in lines:
             key, value = line.split(": ")
             reduced_results[key] = sum(ast.literal_eval(value))
 
-        # Persist our partition totals.
+        # パーティションの合計を永続化します。
         file_path = os.path.join(TEMP_DIR, f"reduced_results_{self.id}.txt")
         async with aiofiles.open(file_path, "w") as f:
             await f.writelines([f"{key}: {value}\n" for key, value in reduced_results.items()])
@@ -246,17 +251,17 @@ class Reduce(Executor):
 
 
 class CompletionExecutor(Executor):
-    """Joins all reducer outputs and yields the final output."""
+    """すべてのreducer出力を結合し、最終出力を生成します。"""
 
     @handler
     async def complete(self, data: list[ReduceCompleted], ctx: WorkflowContext[Never, list[str]]) -> None:
-        """Collect reducer output file paths and yield final output."""
+        """reducerの出力ファイルパスを収集し、最終出力を生成します。"""
         await ctx.yield_output([result.file_path for result in data])
 
 
 async def main():
-    """Construct the map reduce workflow, visualize it, then run it over a sample file."""
-    # Step 1: Create the executors.
+    """map reduceワークフローを構築し、可視化し、サンプルファイルで実行します。"""
+    # ステップ1: Executorを作成します。
     map_operations = [Map(id=f"map_executor_{i}") for i in range(3)]
     split_operation = Split(
         [map_operation.id for map_operation in map_operations],
@@ -269,7 +274,7 @@ async def main():
     )
     completion_executor = CompletionExecutor(id="completion_executor")
 
-    # Step 2: Build the workflow graph using fan out and fan in edges.
+    # ステップ2: fan outおよびfan inエッジを使ってワークフローグラフを構築します。
     workflow = (
         WorkflowBuilder()
         .set_start_executor(split_operation)
@@ -280,29 +285,29 @@ async def main():
         .build()
     )
 
-    # Step 2.5: Visualize the workflow (optional)
+    # ステップ2.5: ワークフローを可視化します（オプション）
     print("Generating workflow visualization...")
     viz = WorkflowViz(workflow)
-    # Print out the Mermaid string.
+    # Mermaid文字列を出力します。
     print("Mermaid string: \n=======")
     print(viz.to_mermaid())
     print("=======")
-    # Print out the DiGraph string.
+    # DiGraph文字列を出力します。
     print("DiGraph string: \n=======")
     print(viz.to_digraph())
     print("=======")
     try:
-        # Export the DiGraph visualization as SVG.
+        # DiGraphの可視化をSVGとしてエクスポートします。
         svg_file = viz.export(format="svg")
         print(f"SVG file saved to: {svg_file}")
     except ImportError:
         print("Tip: Install 'viz' extra to export workflow visualization: pip install agent-framework[viz] --pre")
 
-    # Step 3: Open the text file and read its content.
+    # ステップ3: テキストファイルを開いて内容を読み取ります。
     async with aiofiles.open(os.path.join(DIR, "../resources", "long_text.txt"), "r") as f:
         raw_text = await f.read()
 
-    # Step 4: Run the workflow with the raw text as input.
+    # ステップ4: 生テキストを入力としてワークフローを実行します。
     async for event in workflow.run_stream(raw_text):
         print(f"Event: {event}")
         if isinstance(event, WorkflowOutputEvent):

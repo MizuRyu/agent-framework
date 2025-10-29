@@ -13,22 +13,22 @@ from agent_framework import (
 
 
 def test_telemetry_disabled_env_var():
-    """Test that the telemetry disabled environment variable is correctly defined."""
+    """テレメトリ無効化の環境変数が正しく定義されていることをテストします。"""
     assert USER_AGENT_TELEMETRY_DISABLED_ENV_VAR == "AGENT_FRAMEWORK_USER_AGENT_DISABLED"
 
 
 def test_user_agent_key():
-    """Test that the user agent key is correctly defined."""
+    """ユーザーエージェントキーが正しく定義されていることをテストします。"""
     assert USER_AGENT_KEY == "User-Agent"
 
 
 def test_agent_framework_user_agent_format():
-    """Test that the agent framework user agent is correctly formatted."""
+    """Agent framework のユーザーエージェントが正しくフォーマットされていることをテストします。"""
     assert AGENT_FRAMEWORK_USER_AGENT.startswith("agent-framework-python/")
 
 
 def test_app_info_when_telemetry_enabled():
-    """Test that APP_INFO is set when telemetry is enabled."""
+    """テレメトリが有効な場合に APP_INFO が設定されていることをテストします。"""
     with patch("agent_framework._telemetry.IS_TELEMETRY_ENABLED", True):
         import importlib
 
@@ -43,10 +43,10 @@ def test_app_info_when_telemetry_enabled():
 
 
 def test_app_info_when_telemetry_disabled():
-    """Test that APP_INFO is None when telemetry is disabled."""
-    # Test the logic directly since APP_INFO is set at module import time
+    """テレメトリが無効な場合に APP_INFO が None であることをテストします。"""
+    # APP_INFO はモジュールインポート時に設定されるため、ロジックを直接テストします。
     with patch("agent_framework._telemetry.IS_TELEMETRY_ENABLED", False):
-        # Simulate the module's logic for APP_INFO
+        # APP_INFO のモジュールロジックをシミュレートします。
         test_app_info = (
             {
                 "agent-framework-version": "python/test",
@@ -61,7 +61,7 @@ def test_app_info_when_telemetry_disabled():
 
 
 def test_prepend_to_existing_user_agent():
-    """Test prepending to existing User-Agent header."""
+    """既存の User-Agent ヘッダーへのプレフィックス追加をテストします。"""
     headers = {"User-Agent": "existing-agent/1.0"}
     result = prepend_agent_framework_to_user_agent(headers)
 
@@ -71,7 +71,7 @@ def test_prepend_to_existing_user_agent():
 
 
 def test_prepend_to_empty_headers():
-    """Test prepending to headers without User-Agent."""
+    """User-Agent ヘッダーがないヘッダーへのプレフィックス追加をテストします。"""
     headers = {"Content-Type": "application/json"}
     result = prepend_agent_framework_to_user_agent(headers)
 
@@ -81,7 +81,7 @@ def test_prepend_to_empty_headers():
 
 
 def test_prepend_to_empty_dict():
-    """Test prepending to empty headers dict."""
+    """空のヘッダー辞書へのプレフィックス追加をテストします。"""
     headers = {}
     result = prepend_agent_framework_to_user_agent(headers)
 
@@ -90,9 +90,9 @@ def test_prepend_to_empty_dict():
 
 
 def test_modifies_original_dict():
-    """Test that the function modifies the original headers dict."""
+    """関数が元のヘッダー辞書を変更することをテストします。"""
     headers = {"Other-Header": "value"}
     result = prepend_agent_framework_to_user_agent(headers)
 
-    assert result is headers  # Same object
+    assert result is headers  # 同じオブジェクト
     assert "User-Agent" in headers

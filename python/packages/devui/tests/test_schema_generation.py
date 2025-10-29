@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Test schema generation for different input types."""
+"""異なる入力タイプに対するスキーマ生成をテストします。"""
 
 import sys
 from dataclasses import dataclass
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-# Add parent package to path
+# 親パッケージをパスに追加します。
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent_framework_devui._utils import generate_input_schema
@@ -34,31 +34,31 @@ class PersonData:
 
 
 def test_builtin_types_schema_generation():
-    """Test schema generation for built-in types."""
-    # Test str schema
+    """組み込みタイプに対するスキーマ生成をテストします。"""
+    # strスキーマをテストします。
     str_schema = generate_input_schema(str)
     assert str_schema is not None
     assert isinstance(str_schema, dict)
 
-    # Test dict schema
+    # dictスキーマをテストします。
     dict_schema = generate_input_schema(dict)
     assert dict_schema is not None
     assert isinstance(dict_schema, dict)
 
-    # Test int schema
+    # intスキーマをテストします。
     int_schema = generate_input_schema(int)
     assert int_schema is not None
     assert isinstance(int_schema, dict)
 
 
 def test_dataclass_schema_generation():
-    """Test schema generation for dataclass."""
+    """dataclassに対するスキーマ生成をテストします。"""
     schema = generate_input_schema(InputData)
 
     assert schema is not None
     assert isinstance(schema, dict)
 
-    # Basic schema structure checks
+    # 基本的なスキーマ構造のチェック。
     if "properties" in schema:
         properties = schema["properties"]
         assert "text" in properties
@@ -66,7 +66,7 @@ def test_dataclass_schema_generation():
 
 
 def test_chat_message_schema_generation():
-    """Test schema generation for ChatMessage (SerializationMixin)."""
+    """ChatMessage（SerializationMixin）に対するスキーマ生成をテストします。"""
     try:
         from agent_framework import ChatMessage
 
@@ -79,7 +79,7 @@ def test_chat_message_schema_generation():
 
 
 def test_pydantic_model_schema_generation():
-    """Test schema generation for Pydantic models."""
+    """Pydanticモデルに対するスキーマ生成をテストします。"""
     try:
         from pydantic import BaseModel, Field
 
@@ -92,7 +92,7 @@ def test_pydantic_model_schema_generation():
         assert schema is not None
         assert isinstance(schema, dict)
 
-        # Check if properties exist
+        # プロパティの存在をチェックします。
         if "properties" in schema:
             properties = schema["properties"]
             assert "name" in properties
@@ -104,13 +104,13 @@ def test_pydantic_model_schema_generation():
 
 
 def test_nested_dataclass_schema_generation():
-    """Test schema generation for nested dataclass."""
+    """ネストしたdataclassに対するスキーマ生成をテストします。"""
     schema = generate_input_schema(PersonData)
 
     assert schema is not None
     assert isinstance(schema, dict)
 
-    # Basic schema structure checks
+    # 基本的なスキーマ構造のチェック。
     if "properties" in schema:
         properties = schema["properties"]
         assert "name" in properties
@@ -119,19 +119,19 @@ def test_nested_dataclass_schema_generation():
 
 
 def test_schema_generation_error_handling():
-    """Test schema generation with invalid inputs."""
-    # Test with a non-type object - should handle gracefully
+    """無効な入力に対するスキーマ生成をテストします。"""
+    # 非タイプオブジェクトでテストします - 問題なく処理できるはずです。
     try:
-        # Use a non-type object that might cause issues
+        # 問題を引き起こす可能性のある非タイプオブジェクトを使用します。
         schema = generate_input_schema("not_a_type")  # type: ignore
-        # If it doesn't raise an exception, the result should be valid
+        # 例外が発生しなければ、結果は有効であるべきです。
         if schema is not None:
             assert isinstance(schema, dict)
     except (TypeError, ValueError, AttributeError):
-        # It's acceptable for this to raise an error
+        # エラーが発生しても許容されます。
         pass
 
 
 if __name__ == "__main__":
-    # Simple test runner for manual execution
+    # 手動実行用のシンプルなテストランナー。
     pytest.main([__file__, "-v"])

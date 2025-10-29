@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Stream responses from Copilot Studio agents in SK and AF."""
+"""SKとAFでCopilot Studio Agentからのレスポンスをストリームします。"""
 
 import asyncio
 
@@ -11,7 +11,7 @@ async def run_semantic_kernel() -> None:
         name="TourGuide",
         instructions="Provide travel recommendations in short bursts.",
     )
-    # SK streaming yields chunks with message metadata.
+    # SKのストリーミングはメッセージメタデータを含むチャンクを生成します。
     print("[SK][stream]", end=" ")
     async for chunk in agent.invoke_stream("Plan a day in Copenhagen for foodies."):
         if chunk.message:
@@ -26,7 +26,7 @@ async def run_agent_framework() -> None:
         name="TourGuide",
         instructions="Provide travel recommendations in short bursts.",
     )
-    # AF streaming provides incremental AgentRunResponseUpdate objects.
+    # AFのストリーミングは増分のAgentRunResponseUpdateオブジェクトを提供します。
     print("[AF][stream]", end=" ")
     async for update in agent.run_stream("Plan a day in Copenhagen for foodies."):
         if update.text:

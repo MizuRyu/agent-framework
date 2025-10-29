@@ -37,25 +37,25 @@ Execution order: Agent middleware (outermost) -> Run middleware (innermost) -> A
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
-# Agent-level middleware (applied to ALL runs)
+# AgentレベルのMiddleware（すべての実行に適用）
 class SecurityAgentMiddleware(AgentMiddleware):
-    """Agent-level security middleware that validates all requests."""
+    """すべてのRequestを検証するAgentレベルのセキュリティMiddleware。"""
 
     async def process(self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]) -> None:
         print("[SecurityMiddleware] Checking security for all requests...")
 
-        # Check for security violations in the last user message
+        # 最後のユーザーメッセージにセキュリティ違反がないかチェックする
         last_message = context.messages[-1] if context.messages else None
         if last_message and last_message.text:
             query = last_message.text.lower()
             if any(word in query for word in ["password", "secret", "credentials"]):
                 print("[SecurityMiddleware] Security violation detected! Blocking request.")
-                return  # Don't call next() to prevent execution
+                return  # 実行を防ぐためにnext()を呼び出さない
 
         print("[SecurityMiddleware] Security check passed.")
         context.metadata["security_validated"] = True
@@ -66,7 +66,7 @@ async def performance_monitor_middleware(
     context: AgentRunContext,
     next: Callable[[AgentRunContext], Awaitable[None]],
 ) -> None:
-    """Agent-level performance monitoring for all runs."""
+    """すべての実行に対するAgentレベルのパフォーマンス監視。"""
     print("[PerformanceMonitor] Starting performance monitoring...")
     start_time = time.time()
 
@@ -78,18 +78,18 @@ async def performance_monitor_middleware(
     context.metadata["execution_time"] = duration
 
 
-# Run-level middleware (applied to specific runs only)
+# RunレベルMiddleware（特定の実行にのみ適用）
 class HighPriorityMiddleware(AgentMiddleware):
-    """Run-level middleware for high priority requests."""
+    """高優先度RequestのためのRunレベルMiddleware。"""
 
     async def process(self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]) -> None:
         print("[HighPriority] Processing high priority request with expedited handling...")
 
-        # Read metadata set by agent-level middleware
+        # AgentレベルMiddlewareによって設定されたメタデータを読み取る
         if context.metadata.get("security_validated"):
             print("[HighPriority] Security validation confirmed from agent middleware")
 
-        # Set high priority flag
+        # 高優先度フラグを設定する
         context.metadata["priority"] = "high"
         context.metadata["expedited"] = True
 
@@ -101,12 +101,12 @@ async def debugging_middleware(
     context: AgentRunContext,
     next: Callable[[AgentRunContext], Awaitable[None]],
 ) -> None:
-    """Run-level debugging middleware for troubleshooting specific runs."""
+    """特定の実行のトラブルシューティングのためのRunレベルデバッグMiddleware。"""
     print("[Debug] Debug mode enabled for this run")
     print(f"[Debug] Messages count: {len(context.messages)}")
     print(f"[Debug] Is streaming: {context.is_streaming}")
 
-    # Log existing metadata from agent middleware
+    # Agent Middlewareから既存のメタデータをログに記録する
     if context.metadata:
         print(f"[Debug] Existing metadata: {context.metadata}")
 
@@ -118,27 +118,27 @@ async def debugging_middleware(
 
 
 class CachingMiddleware(AgentMiddleware):
-    """Run-level caching middleware for expensive operations."""
+    """高コスト操作のためのRunレベルキャッシュMiddleware。"""
 
     def __init__(self) -> None:
         self.cache: dict[str, AgentRunResponse] = {}
 
     async def process(self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]) -> None:
-        # Create a simple cache key from the last message
+        # 最後のメッセージからシンプルなキャッシュキーを作成する
         last_message = context.messages[-1] if context.messages else None
         cache_key: str = last_message.text if last_message and last_message.text else "no_message"
 
         if cache_key in self.cache:
             print(f"[Cache] Cache HIT for: '{cache_key[:30]}...'")
             context.result = self.cache[cache_key]  # type: ignore
-            return  # Don't call next(), return cached result
+            return  # next()を呼ばずにキャッシュされた結果を返す
 
         print(f"[Cache] Cache MISS for: '{cache_key[:30]}...'")
         context.metadata["cache_key"] = cache_key
 
         await next(context)
 
-        # Cache the result if we have one
+        # 結果があればキャッシュする
         if context.result:
             self.cache[cache_key] = context.result  # type: ignore
             print("[Cache] Result cached for future use")
@@ -148,7 +148,7 @@ async def function_logging_middleware(
     context: FunctionInvocationContext,
     next: Callable[[FunctionInvocationContext], Awaitable[None]],
 ) -> None:
-    """Function middleware that logs all function calls."""
+    """すべての関数呼び出しをログに記録するFunction Middleware。"""
     function_name = context.function.name
     args = context.arguments
     print(f"[FunctionLog] Calling function: {function_name} with args: {args}")
@@ -159,18 +159,17 @@ async def function_logging_middleware(
 
 
 async def main() -> None:
-    """Example demonstrating agent-level and run-level middleware."""
+    """AgentレベルとRunレベルMiddlewareを示す例。"""
     print("=== Agent-Level and Run-Level Middleware Example ===\n")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
             name="WeatherAgent",
             instructions="You are a helpful weather assistant.",
             tools=get_weather,
-            # Agent-level middleware: applied to ALL runs
+            # AgentレベルMiddleware：すべての実行に適用
             middleware=[
                 SecurityAgentMiddleware(),
                 performance_monitor_middleware,
@@ -184,7 +183,7 @@ async def main() -> None:
         print("   - FunctionLogging (logs all function calls)")
         print()
 
-        # Run 1: Normal query with no run-level middleware
+        # Run 1: RunレベルMiddlewareなしの通常クエリ
         print("=" * 60)
         print("RUN 1: Normal query (agent-level middleware only)")
         print("=" * 60)
@@ -194,7 +193,7 @@ async def main() -> None:
         print(f"Agent: {result.text if result.text else 'No response'}")
         print()
 
-        # Run 2: High priority request with run-level middleware
+        # Run 2: RunレベルMiddleware付きの高優先度Request
         print("=" * 60)
         print("RUN 2: High priority request (agent + run-level middleware)")
         print("=" * 60)
@@ -207,7 +206,7 @@ async def main() -> None:
         print(f"Agent: {result.text if result.text else 'No response'}")
         print()
 
-        # Run 3: Debug mode with run-level debugging middleware
+        # Run 3: RunレベルデバッグMiddleware付きのデバッグモード
         print("=" * 60)
         print("RUN 3: Debug mode (agent + run-level debugging)")
         print("=" * 60)
@@ -220,7 +219,7 @@ async def main() -> None:
         print(f"Agent: {result.text if result.text else 'No response'}")
         print()
 
-        # Run 4: Multiple run-level middleware
+        # Run 4: 複数のRunレベルMiddleware
         print("=" * 60)
         print("RUN 4: Multiple run-level middleware (caching + debug)")
         print("=" * 60)
@@ -234,11 +233,11 @@ async def main() -> None:
         print(f"Agent: {result.text if result.text else 'No response'}")
         print()
 
-        # Run 5: Test cache hit with same query
+        # Run 5: 同じクエリでのキャッシュヒットテスト
         print("=" * 60)
         print("RUN 5: Test cache hit (same query as Run 4)")
         print("=" * 60)
-        print(f"User: {query}")  # Same query as Run 4
+        print(f"User: {query}")  # Run 4と同じクエリ
         result = await agent.run(
             query,
             middleware=[caching],  # Same caching middleware instance
@@ -246,7 +245,7 @@ async def main() -> None:
         print(f"Agent: {result.text if result.text else 'No response'}")
         print()
 
-        # Run 6: Security violation test
+        # Run 6: セキュリティ違反テスト
         print("=" * 60)
         print("RUN 6: Security test (should be blocked by agent middleware)")
         print("=" * 60)
@@ -256,7 +255,7 @@ async def main() -> None:
         print(f"Agent: {result.text if result.text else 'Request was blocked by security middleware'}")
         print()
 
-        # Run 7: Normal query again (no run-level middleware interference)
+        # Run 7: 再び通常クエリ（RunレベルMiddlewareの干渉なし）
         print("=" * 60)
         print("RUN 7: Normal query again (agent-level middleware only)")
         print("=" * 60)

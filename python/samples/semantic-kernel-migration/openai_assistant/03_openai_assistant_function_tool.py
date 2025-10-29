@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Implement a function tool for OpenAI Assistants in SK and AF."""
+"""SKとAFでOpenAI Assistants向けの関数ツールを実装します。"""
 
 import asyncio
 import os
@@ -9,7 +9,7 @@ ASSISTANT_MODEL = os.environ.get("OPENAI_ASSISTANT_MODEL", "gpt-4o-mini")
 
 
 async def fake_weather_lookup(city: str, day: str) -> dict[str, Any]:
-    """Pretend to call a weather service."""
+    """天気サービスを呼び出すふりをします。"""
     return {
         "city": city,
         "day": day,
@@ -26,7 +26,7 @@ async def run_semantic_kernel() -> None:
     class WeatherPlugin:
         @kernel_function(name="get_forecast", description="Look up the forecast for a city and day.")
         async def fake_weather_lookup(city: str, day: str) -> dict[str, Any]:
-            """Pretend to call a weather service."""
+            """天気サービスを呼び出すふりをします。"""
             return {
                 "city": city,
                 "day": day,
@@ -36,7 +36,7 @@ async def run_semantic_kernel() -> None:
             }
 
     client = OpenAIAssistantAgent.create_client()
-    # Tool schema is registered on the assistant definition.
+    # ツールスキーマはアシスタント定義に登録されます。
     definition = await client.beta.assistants.create(
         model=ASSISTANT_MODEL,
         name="WeatherHelper",
@@ -66,7 +66,7 @@ async def run_agent_framework() -> None:
         return await fake_weather_lookup(city, day)
 
     assistants_client = OpenAIAssistantsClient()
-    # AF converts the decorated function into an assistant-compatible tool.
+    # AFはデコレートされた関数をアシスタント対応ツールに変換します。
     async with assistants_client.create_agent(
         name="WeatherHelper",
         instructions="Call get_forecast to fetch weather details.",

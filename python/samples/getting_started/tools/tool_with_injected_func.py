@@ -1,22 +1,19 @@
 # Copyright (c) Microsoft. All rights reserved.
 # type: ignore
 """
-AIFunction Tool with Dependency Injection Example
+依存性注入を用いたAIFunction Toolの例
 
-This example demonstrates how to create an AIFunction tool using the agent framework's
-dependency injection system. Instead of providing the function at initialization time,
-the actual callable function is injected during deserialization from a dictionary definition.
+この例は、agentフレームワークの依存性注入システムを使ってAIFunctionツールを作成する方法を示す。
+初期化時に関数を提供する代わりに、実際の呼び出し可能な関数は辞書定義からのデシリアライズ時に注入される。
 
-Note:
-    The serialization and deserialization feature used in this example is currently
-    in active development. The API may change in future versions as we continue 
-    to improve and extend its functionality. Please refer to the latest documentation
-    for any updates to the dependency injection patterns.
+注意:
+    この例で使われているシリアライズとデシリアライズの機能は現在開発中である。
+    今後のバージョンでAPIが変更される可能性があり、機能の改善と拡張が続けられる予定である。
+    依存性注入パターンの最新情報については最新のドキュメントを参照されたい。
 
-Usage:
-    Run this script to see how an AIFunction tool can be created from a dictionary
-    definition with the function injected at runtime. The agent will use this tool
-    to perform arithmetic operations.
+使い方:
+    このスクリプトを実行すると、辞書定義から関数を実行時に注入してAIFunctionツールを作成する方法がわかる。
+    Agentはこのツールを使って算術演算を行う。
 """
 
 import asyncio
@@ -41,20 +38,16 @@ definition = {
 
 
 async def main() -> None:
-    """Main function demonstrating creating a tool with an injected function."""
+    """関数を注入してツールを作成することを示すメイン関数。"""
 
     def func(a, b) -> int:
-        """Add two numbers together."""
+        """2つの数を加算する。"""
         return a + b
 
-    # Create the AIFunction tool using dependency injection
-    # The 'definition' dictionary contains the serialized tool configuration,
-    # while the actual function implementation is provided via dependencies.
-    # 
-    # Dependency structure: {"ai_function": {"name:add_numbers": {"func": func}}}
-    # - "ai_function": matches the tool type identifier
-    # - "name:add_numbers": instance-specific injection targeting tools with name="add_numbers"
-    # - "func": the parameter name that will receive the injected function
+    # 依存性注入を使ってAIFunctionツールを作成する 'definition'辞書はシリアライズされたツール設定を含み、
+    # 実際の関数実装はdependencies経由で提供される。  依存性構造: {"ai_function": {"name:add_numbers":
+    # {"func": func}}} - "ai_function": ツールタイプ識別子に一致 - "name:add_numbers":
+    # name="add_numbers"のツールに対するインスタンス固有の注入 - "func": 注入される関数を受け取るパラメータ名
     tool = AIFunction.from_dict(definition, dependencies={"ai_function": {"name:add_numbers": {"func": func}}})
 
     agent = OpenAIResponsesClient().create_agent(

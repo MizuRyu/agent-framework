@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Command line interface for Agent Framework DevUI."""
+"""Agent Framework DevUIのコマンドラインインターフェース。"""
 
 import argparse
 import logging
@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 def setup_logging(level: str = "INFO") -> None:
-    """Configure logging for the server."""
+    """サーバーのロギングを設定する。"""
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     logging.basicConfig(level=getattr(logging, level.upper()), format=log_format, datefmt="%Y-%m-%d %H:%M:%S")
 
 
 def create_cli_parser() -> argparse.ArgumentParser:
-    """Create the command line argument parser."""
+    """コマンドライン引数パーサーを作成する。"""
     parser = argparse.ArgumentParser(
         prog="devui",
         description="Launch Agent Framework DevUI - Debug interface with OpenAI compatible API",
@@ -61,7 +61,7 @@ Examples:
 
 
 def get_version() -> str:
-    """Get the package version."""
+    """パッケージのバージョンを取得する。"""
     try:
         from . import __version__
 
@@ -71,7 +71,7 @@ def get_version() -> str:
 
 
 def validate_directory(directory: str) -> str:
-    """Validate and normalize the entities directory."""
+    """entitiesディレクトリを検証し正規化する。"""
     if not directory:
         directory = "."
 
@@ -89,7 +89,7 @@ def validate_directory(directory: str) -> str:
 
 
 def print_startup_info(entities_dir: str, host: str, port: int, ui_enabled: bool, reload: bool) -> None:
-    """Print startup information."""
+    """起動情報を出力する。"""
     print("🤖 Agent Framework DevUI")  # noqa: T201
     print("=" * 50)  # noqa: T201
     print(f"📁 Entities directory: {entities_dir}")  # noqa: T201
@@ -101,23 +101,23 @@ def print_startup_info(entities_dir: str, host: str, port: int, ui_enabled: bool
 
 
 def main() -> None:
-    """Main CLI entry point."""
+    """メインのCLIエントリポイント。"""
     parser = create_cli_parser()
     args = parser.parse_args()
 
-    # Setup logging
+    # ロギングをセットアップする
     setup_logging(args.log_level)
 
-    # Validate directory
+    # ディレクトリを検証する
     entities_dir = validate_directory(args.directory)
 
-    # Extract parameters directly from args
+    # argsから直接パラメータを抽出する
     ui_enabled = not args.headless
 
-    # Print startup info
+    # 起動情報を出力する
     print_startup_info(entities_dir, args.host, args.port, ui_enabled, args.reload)
 
-    # Import and start server
+    # インポートしてサーバーを起動する
     try:
         from . import serve
 

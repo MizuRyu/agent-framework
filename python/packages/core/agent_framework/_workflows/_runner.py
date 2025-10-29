@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class Runner:
-    """A class to run a workflow in Pregel supersteps."""
+    """Pregelのsuperstepsでworkflowを実行するためのClass。"""
 
     def __init__(
         self,
@@ -37,15 +37,16 @@ class Runner:
         max_iterations: int = 100,
         workflow_id: str | None = None,
     ) -> None:
-        """Initialize the runner with edges, shared state, and context.
+        """エッジ、共有State、ContextでRunnerを初期化します。
 
         Args:
-            edge_groups: The edge groups of the workflow.
-            executors: Map of executor IDs to executor instances.
-            shared_state: The shared state for the workflow.
-            ctx: The runner context for the workflow.
-            max_iterations: The maximum number of iterations to run.
-            workflow_id: The workflow ID for checkpointing.
+            edge_groups: workflowのエッジグループ。
+            executors: Executor IDからExecutorインスタンスへのマップ。
+            shared_state: workflowの共有State。
+            ctx: workflowのRunner Context。
+            max_iterations: 実行する最大イテレーション数。
+            workflow_id: チェックポイント用のworkflow ID。
+
         """
         self._executors = executors
         self._edge_runners = [create_edge_runner(group, executors) for group in edge_groups]
@@ -56,36 +57,36 @@ class Runner:
         self._shared_state = shared_state
         self._workflow_id = workflow_id
         self._running = False
-        self._resumed_from_checkpoint = False  # Track whether we resumed
+        self._resumed_from_checkpoint = False  # 再開したかどうかを追跡します
         self.graph_signature_hash: str | None = None
 
-        # Set workflow ID in context if provided
+        # workflow IDが提供されていればContextに設定します
         if workflow_id:
             self._ctx.set_workflow_id(workflow_id)
 
     @property
     def context(self) -> RunnerContext:
-        """Get the workflow context."""
+        """workflowのContextを取得します。"""
         return self._ctx
 
     def reset_iteration_count(self) -> None:
-        """Reset the iteration count to zero."""
+        """イテレーションカウントをゼロにリセットします。"""
         self._iteration = 0
 
     async def run_until_convergence(self) -> AsyncGenerator[WorkflowEvent, None]:
-        """Run the workflow until no more messages are sent."""
+        """メッセージが送信されなくなるまでworkflowを実行します。"""
         if self._running:
             raise RuntimeError("Runner is already running.")
 
         self._running = True
         try:
-            # Emit any events already produced prior to entering loop
+            # ループに入る前に既に生成されたイベントを発行します
             if await self._ctx.has_events():
                 logger.info("Yielding pre-loop events")
                 for event in await self._ctx.drain_events():
                     yield event
 
-            # Create first checkpoint if there are messages from initial execution
+            # 初期実行からメッセージがあれば最初のチェックポイントを作成します
             if await self._ctx.has_messages() and self._ctx.has_checkpointing():
                 if not self._resumed_from_checkpoint:
                     logger.info("Creating checkpoint after initial execution")
@@ -96,37 +97,36 @@ class Runner:
             while self._iteration < self._max_iterations:
                 logger.info(f"Starting superstep {self._iteration + 1}")
 
-                # Run iteration concurrently with live event streaming: we poll
-                # for new events while the iteration coroutine progresses.
+                # ライブイベントストリーミングと並行してイテレーションを実行します：イテレーションのコルーチンが進行する間に新しいイベントをポーリングします。
                 iteration_task = asyncio.create_task(self._run_iteration())
                 while not iteration_task.done():
                     try:
-                        # Wait briefly for any new event; timeout allows progress checks
+                        # 新しいイベントを短時間待機します；タイムアウトは進行状況のチェックを可能にします
                         event = await asyncio.wait_for(self._ctx.next_event(), timeout=0.05)
                         yield event
                     except asyncio.TimeoutError:
-                        # Periodically continue to let iteration advance
+                        # 定期的にイテレーションの進行を継続させます
                         continue
 
-                # Propagate errors from iteration, but first surface any pending events
+                # イテレーションからのエラーを伝播しますが、まず保留中のイベントを表面化させます
                 try:
                     await iteration_task
                 except Exception:
-                    # Make sure failure-related events (like ExecutorFailedEvent) are surfaced
+                    # ExecutorFailedEventのような失敗関連イベントが表面化されることを保証します
                     if await self._ctx.has_events():
                         for event in await self._ctx.drain_events():
                             yield event
                     raise
                 self._iteration += 1
 
-                # Drain any straggler events emitted at tail end
+                # 最後に発生した遅延イベントを排出します
                 if await self._ctx.has_events():
                     for event in await self._ctx.drain_events():
                         yield event
 
                 logger.info(f"Completed superstep {self._iteration}")
 
-                # Create checkpoint after each superstep iteration
+                # 各superstepイテレーション後にチェックポイントを作成します
                 await self._create_checkpoint_if_enabled(f"superstep_{self._iteration}")
 
                 if not await self._ctx.has_messages():
@@ -137,16 +137,16 @@ class Runner:
 
             logger.info(f"Workflow completed after {self._iteration} supersteps")
             self._iteration = 0
-            self._resumed_from_checkpoint = False  # Reset resume flag for next run
+            self._resumed_from_checkpoint = False  # 次回実行のために再開フラグをリセットします
         finally:
             self._running = False
 
     async def _run_iteration(self) -> None:
         async def _deliver_messages(source_executor_id: str, messages: list[Message]) -> None:
-            """Outer loop to concurrently deliver messages from all sources to their targets."""
+            """すべてのソースからターゲットへのメッセージを並行して配信する外側ループ。"""
 
             async def _deliver_message_inner(edge_runner: EdgeRunner, message: Message) -> bool:
-                """Inner loop to deliver a single message through an edge runner."""
+                """エッジランナーを通じて単一メッセージを配信する内側ループ。"""
                 return await edge_runner.send_message(message, self._shared_state, self._ctx)
 
             def _normalize_message_payload(message: Message) -> None:
@@ -162,11 +162,11 @@ class Runner:
                     return
                 message.data = decoded
 
-            # Route all messages through normal workflow edges
+            # すべてのメッセージを通常のworkflowエッジを通じてルーティングします
             associated_edge_runners = self._edge_runner_map.get(source_executor_id, [])
             for message in messages:
                 _normalize_message_payload(message)
-                # Deliver a message through all edge runners associated with the source executor concurrently.
+                # ソースExecutorに関連付けられたすべてのエッジランナーを通じてメッセージを並行して配信します。
                 tasks = [_deliver_message_inner(edge_runner, message) for edge_runner in associated_edge_runners]
                 await asyncio.gather(*tasks)
 
@@ -175,12 +175,12 @@ class Runner:
         await asyncio.gather(*tasks)
 
     async def _create_checkpoint_if_enabled(self, checkpoint_type: str) -> str | None:
-        """Create a checkpoint if checkpointing is enabled and attach a label and metadata."""
+        """チェックポイントが有効な場合にチェックポイントを作成し、ラベルとメタデータを添付します。"""
         if not self._ctx.has_checkpointing():
             return None
 
         try:
-            # Auto-snapshot executor states
+            # ExecutorのStateを自動スナップショットします
             await self._auto_snapshot_executor_states()
             checkpoint_category = "initial" if checkpoint_type == "after_initial_execution" else "superstep"
             metadata = {
@@ -201,16 +201,15 @@ class Runner:
             return None
 
     async def _auto_snapshot_executor_states(self) -> None:
-        """Populate executor state by calling snapshot hooks on executors if available.
+        """Executorが利用可能な場合、Executorのスナップショットフックを呼び出してExecutorのStateを設定します。
 
-        TODO(@taochen#1614): this method is potentially problematic if executors also call
-        set_executor_state on the context directly. We should clarify the intended usage
-        pattern for executor state management.
+        TODO(@taochen#1614): ExecutorがContext上で直接set_executor_stateを呼び出す場合、このメソッドは問題を起こす可能性があります。Executor State管理の意図された使用パターンを明確にすべきです。
 
-        Convention:
-          - If an executor defines an async or sync method `snapshot_state(self) -> dict`, use it.
-          - Else if it has a plain attribute `state` that is a dict, use that.
-        Only JSON-serializable dicts should be provided by executors.
+        規約：
+          - Executorがasyncまたはsyncのメソッド`snapshot_state(self) -> dict`を定義していればそれを使用します。
+          - そうでなければ、dict型の単純な属性`state`があればそれを使用します。
+        ExecutorはJSONシリアライズ可能なdictのみを提供すべきです。
+
         """
         for exec_id, executor in self._executors.items():
             state_dict: dict[str, Any] | None = None
@@ -240,18 +239,18 @@ class Runner:
         checkpoint_id: str,
         checkpoint_storage: CheckpointStorage | None = None,
     ) -> bool:
-        """Restore workflow state from a checkpoint.
+        """チェックポイントからworkflowのStateを復元します。
 
         Args:
-            checkpoint_id: The ID of the checkpoint to restore from
-            checkpoint_storage: Optional storage to load checkpoints from when the
-                runner context itself is not configured with checkpointing.
+            checkpoint_id: 復元するチェックポイントのID
+            checkpoint_storage: ランナーContext自体がチェックポイントを設定していない場合にチェックポイントをロードするためのOptionalなストレージ
 
         Returns:
-            True if restoration was successful, False otherwise
+            復元が成功すればTrue、そうでなければFalse
+
         """
         try:
-            # Load the checkpoint
+            # チェックポイントをロードします
             checkpoint: WorkflowCheckpoint | None
             if self._ctx.has_checkpointing():
                 checkpoint = await self._ctx.load_checkpoint(checkpoint_id)
@@ -265,7 +264,7 @@ class Runner:
                 logger.error(f"Checkpoint {checkpoint_id} not found")
                 return False
 
-            # Validate the loaded checkpoint against the workflow
+            # ロードしたチェックポイントをworkflowに対して検証します
             graph_hash = getattr(self, "graph_signature_hash", None)
             checkpoint_hash = (checkpoint.metadata or {}).get("graph_signature")
             if graph_hash and checkpoint_hash and graph_hash != checkpoint_hash:
@@ -280,13 +279,13 @@ class Runner:
                 )
 
             self._workflow_id = checkpoint.workflow_id
-            # Restore shared state
+            # 共有Stateを復元します
             await self._shared_state.import_state(checkpoint.shared_state)
-            # Restore executor states using the restored shared state
+            # 復元した共有Stateを使ってExecutorのStateを復元します
             await self._restore_executor_states()
-            # Apply the checkpoint to the context
+            # チェックポイントをContextに適用します
             await self._ctx.apply_checkpoint(checkpoint)
-            # Mark the runner as resumed
+            # ランナーを再開済みとしてマークします
             self._mark_resumed(checkpoint.iteration_count)
 
             logger.info(f"Successfully restored workflow from checkpoint: {checkpoint_id}")
@@ -331,27 +330,29 @@ class Runner:
                 logger.debug(f"Executor {executor_id} does not support state restoration; skipping.")
 
     def _parse_edge_runners(self, edge_runners: list[EdgeRunner]) -> dict[str, list[EdgeRunner]]:
-        """Parse the edge runners of the workflow into a mapping where each source executor ID maps to its edge runners.
+        """workflowのエッジランナーを解析し、各ソースExecutor IDがそのエッジランナーのリストにマップされる辞書を作成します。
 
         Args:
-            edge_runners: A list of edge runners in the workflow.
+            edge_runners: workflow内のエッジランナーのリスト。
 
         Returns:
-            A dictionary mapping each source executor ID to a list of edge runners.
+            各ソースExecutor IDをエッジランナーのリストにマップする辞書。
+
         """
         parsed: defaultdict[str, list[EdgeRunner]] = defaultdict(list)
         for runner in edge_runners:
-            # Accessing protected attribute (_edge_group) intentionally for internal wiring.
+            # 内部配線のために保護された属性(_edge_group)に意図的にアクセスしています。
             for source_executor_id in runner._edge_group.source_executor_ids:  # type: ignore[attr-defined]
                 parsed[source_executor_id].append(runner)
 
         return parsed
 
     def _find_request_info_executor(self) -> "RequestInfoExecutor | None":
-        """Find the RequestInfoExecutor instance in this workflow.
+        """このworkflow内のRequestInfoExecutorインスタンスを探します。
 
         Returns:
-            The RequestInfoExecutor instance if found, None otherwise.
+            見つかればRequestInfoExecutorインスタンス、そうでなければNone。
+
         """
         from ._request_info_executor import RequestInfoExecutor
 
@@ -361,38 +362,40 @@ class Runner:
         return None
 
     def _is_message_to_request_info_executor(self, msg: "Message") -> bool:
-        """Check if message targets any RequestInfoExecutor in this workflow.
+        """メッセージがこのworkflow内のRequestInfoExecutorをターゲットにしているかどうかを確認します。
 
         Args:
-            msg: The message to check.
+            msg: 確認するメッセージ。
 
         Returns:
-            True if the message targets a RequestInfoExecutor, False otherwise.
+            メッセージがRequestInfoExecutorをターゲットにしていればTrue、そうでなければFalse。
+
         """
         from ._request_info_executor import RequestInfoExecutor
 
         if not msg.target_id:
             return False
 
-        # Check all executors to see if target_id matches a RequestInfoExecutor
+        # すべてのExecutorをチェックしてtarget_idがRequestInfoExecutorに一致するか確認します
         for executor in self._executors.values():
             if executor.id == msg.target_id and isinstance(executor, RequestInfoExecutor):
                 return True
         return False
 
     def _mark_resumed(self, iteration: int) -> None:
-        """Mark the runner as having resumed from a checkpoint.
+        """ランナーをチェックポイントから再開済みとしてマークします。
 
-        Optionally set the current iteration and max iterations.
+        オプションで現在のイテレーション数と最大イテレーション数を設定します。
+
         """
         self._resumed_from_checkpoint = True
         self._iteration = iteration
 
     async def _set_executor_state(self, executor_id: str, state: dict[str, Any]) -> None:
-        """Store executor state in shared state under a reserved key.
+        """予約されたキーの下に共有StateにExecutorのStateを保存します。
 
-        Executors call this with a JSON-serializable dict capturing the minimal
-        state needed to resume. It replaces any previously stored state.
+        Executorは再開に必要な最小限の状態をキャプチャしたJSONシリアライズ可能なdictをこれで呼び出します。以前に保存されたStateは置き換えられます。
+
         """
         has_existing_states = await self._shared_state.has(EXECUTOR_STATE_KEY)
         if has_existing_states:

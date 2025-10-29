@@ -16,18 +16,17 @@ TSettings = TypeVar("TSettings", bound="AFBaseSettings")
 
 
 class AFBaseSettings(BaseSettings):
-    """Base class for all settings classes in the Agent Framework.
+    """Agent Frameworkのすべての設定クラスの基底クラス。
 
-    A subclass creates it's fields and overrides the env_prefix class variable
-    with the prefix for the environment variables.
+    サブクラスはフィールドを作成し、環境変数のプレフィックスとしてenv_prefixクラス変数をオーバーライドします。
 
-    In the case where a value is specified for the same Settings field in multiple ways,
-    the selected value is determined as follows (in descending order of priority):
-    - Arguments passed to the Settings class initializer.
-    - Environment variables, e.g. my_prefix_special_function as described above.
-    - Variables loaded from a dotenv (.env) file.
-    - Variables loaded from the secrets directory.
-    - The default field values for the Settings model.
+    同じSettingsフィールドに複数の方法で値が指定された場合、選択される値は以下の優先順位（降順）で決定されます:
+    - Settingsクラスのイニシャライザに渡された引数。
+    - 環境変数（例: my_prefix_special_function）。
+    - dotenv (.env)ファイルから読み込まれた変数。
+    - secretsディレクトリから読み込まれた変数。
+    - Settingsモデルのデフォルトフィールド値。
+
     """
 
     env_prefix: ClassVar[str] = ""
@@ -43,14 +42,14 @@ class AFBaseSettings(BaseSettings):
         self,
         **kwargs: Any,
     ) -> None:
-        """Initialize the settings class."""
-        # Remove any None values from the kwargs so that defaults are used.
+        """settingsクラスを初期化します。"""
+        # kwargsからNoneの値を削除し、デフォルトが使用されるようにします。
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
         super().__init__(**kwargs)
 
     def __new__(cls: type["TSettings"], *args: Any, **kwargs: Any) -> "TSettings":
-        """Override the __new__ method to set the env_prefix."""
-        # for both, if supplied but None, set to default
+        """env_prefixを設定するために__new__メソッドをオーバーライドします。"""
+        # 両方とも、指定されていてNoneの場合はデフォルトに設定します。
         if "env_file_encoding" in kwargs and kwargs["env_file_encoding"] is not None:
             env_file_encoding = kwargs["env_file_encoding"]
         else:

@@ -10,11 +10,12 @@ from loguru import logger
 
 
 class SlidingWindowChatMessageStore(ChatMessageStore):
-    """A token-aware sliding window implementation of ChatMessageStore.
+    """ChatMessageStoreのトークン認識スライディングウィンドウ実装。
 
-    Maintains two message lists: complete history and truncated window.
-    Automatically removes oldest messages when token limit is exceeded.
-    Also removes leading tool messages to ensure valid conversation flow.
+    完全な履歴と切り詰められたウィンドウの2つのメッセージリストを維持。
+    トークン制限を超えた場合は自動的に最も古いメッセージを削除。
+    また、有効な会話フローを確保するために先頭のツールメッセージも削除。
+
     """
 
     def __init__(
@@ -27,9 +28,9 @@ class SlidingWindowChatMessageStore(ChatMessageStore):
         super().__init__(messages=messages)
         self.truncated_messages = self.messages.copy()
         self.max_tokens = max_tokens
-        self.system_message = system_message  # Included in token count
+        self.system_message = system_message  # トークン数に含まれる
         self.tool_definitions = tool_definitions
-        # An estimation based on a commonly used vocab table
+        # 一般的に使用される語彙表に基づく推定値
         self.encoding = tiktoken.get_encoding("o200k_base")
 
     async def add_messages(self, messages: Sequence[ChatMessage]) -> None:
@@ -39,40 +40,41 @@ class SlidingWindowChatMessageStore(ChatMessageStore):
         self.truncate_messages()
 
     async def list_messages(self) -> list[ChatMessage]:
-        """Get the current list of messages, which may be truncated."""
+        """現在のメッセージリストを取得（切り詰められている可能性あり）。"""
         return self.truncated_messages
 
     async def list_all_messages(self) -> list[ChatMessage]:
-        """Get all messages from the store including the truncated ones."""
+        """切り詰められたものも含めてストア内のすべてのメッセージを取得する。"""
         return self.messages
 
     def truncate_messages(self) -> None:
         while len(self.truncated_messages) > 0 and self.get_token_count() > self.max_tokens:
             logger.warning("Messages exceed max tokens. Truncating oldest message.")
             self.truncated_messages.pop(0)
-        # Remove leading tool messages
+        # 先頭のツールメッセージを削除する
         while len(self.truncated_messages) > 0 and self.truncated_messages[0].role == Role.TOOL:
             logger.warning("Removing leading tool message because tool result cannot be the first message.")
             self.truncated_messages.pop(0)
 
     def get_token_count(self) -> int:
-        """Estimate token count for a list of messages using tiktoken.
+        """tiktokenを使ってメッセージリストのトークン数を推定する。
 
         Returns:
-            Estimated token count
+            推定トークン数
+
         """
         total_tokens = 0
 
-        # Add system message tokens if provided
+        # システムメッセージのトークンを追加（提供されていれば）
         if self.system_message:
             total_tokens += len(self.encoding.encode(self.system_message))
-            total_tokens += 4  # Extra tokens for system message formatting
+            total_tokens += 4  # システムメッセージのフォーマット用の追加トークン
 
         for msg in self.truncated_messages:
-            # Add 4 tokens per message for role, formatting, etc.
+            # 役割やフォーマットなどでメッセージごとに4トークンを追加
             total_tokens += 4
 
-            # Handle different content types
+            # 異なるコンテンツタイプを処理する
             if hasattr(msg, "contents") and msg.contents:
                 for content in msg.contents:
                     if hasattr(content, "type"):
@@ -80,7 +82,7 @@ class SlidingWindowChatMessageStore(ChatMessageStore):
                             total_tokens += len(self.encoding.encode(content.text))
                         elif content.type == "function_call":
                             total_tokens += 4
-                            # Serialize function call and count tokens
+                            # 関数呼び出しをシリアライズし、トークン数をカウントする
                             func_call_data = {
                                 "name": content.name,
                                 "arguments": content.arguments,
@@ -88,23 +90,23 @@ class SlidingWindowChatMessageStore(ChatMessageStore):
                             total_tokens += self.estimate_any_object_token_count(func_call_data)
                         elif content.type == "function_result":
                             total_tokens += 4
-                            # Serialize function result and count tokens
+                            # 関数結果をシリアライズし、トークン数をカウントする
                             func_result_data = {
                                 "call_id": content.call_id,
                                 "result": content.result,
                             }
                             total_tokens += self.estimate_any_object_token_count(func_result_data)
                         else:
-                            # For other content types, serialize the whole content
+                            # その他のコンテンツタイプの場合は、コンテンツ全体をシリアライズする
                             total_tokens += self.estimate_any_object_token_count(content)
                     else:
-                        # Content without type, treat as text
+                        # タイプなしのコンテンツはテキストとして扱う
                         total_tokens += self.estimate_any_object_token_count(content)
             elif hasattr(msg, "text") and msg.text:
-                # Simple text message
+                # シンプルなテキストメッセージ
                 total_tokens += self.estimate_any_object_token_count(msg.text)
             else:
-                # Skip it
+                # スキップする
                 pass
 
         if total_tokens > self.max_tokens / 2:

@@ -1,8 +1,8 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Foundry-based weather agent for Agent Framework Debug UI.
+"""Agent Framework Debug UI用のFoundryベースのWeather Agent。
 
-This agent uses Azure AI Foundry with Azure CLI authentication.
-Make sure to run 'az login' before starting devui.
+このAgentはAzure AI FoundryとAzure CLI認証を使用します。
+devui開始前に必ず 'az login' を実行してください。
 """
 
 import os
@@ -17,7 +17,7 @@ from pydantic import Field
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     temperature = 22
     return f"The weather in {location} is {conditions[0]} with a high of {temperature}°C."
@@ -27,7 +27,7 @@ def get_forecast(
     location: Annotated[str, Field(description="The location to get the forecast for.")],
     days: Annotated[int, Field(description="Number of days for forecast")] = 3,
 ) -> str:
-    """Get weather forecast for multiple days."""
+    """複数日の天気予報を取得。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     forecast: list[str] = []
 
@@ -39,7 +39,7 @@ def get_forecast(
     return f"Weather forecast for {location}:\n" + "\n".join(forecast)
 
 
-# Agent instance following Agent Framework conventions
+# Agent Frameworkの規約に従ったAgentインスタンス
 agent = ChatAgent(
     name="FoundryWeatherAgent",
     chat_client=AzureAIAgentClient(
@@ -57,12 +57,12 @@ agent = ChatAgent(
 
 
 def main():
-    """Launch the Foundry weather agent in DevUI."""
+    """DevUIでFoundry Weather Agentを起動。"""
     import logging
 
     from agent_framework.devui import serve
 
-    # Setup logging
+    # ログ設定
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def main():
     logger.info("Entity ID: agent_FoundryWeatherAgent")
     logger.info("Note: Make sure 'az login' has been run for authentication")
 
-    # Launch server with the agent
+    # Agentでサーバーを起動
     serve(entities=[agent], port=8090, auto_open=True)
 
 

@@ -26,28 +26,29 @@ __all__ = ["AggregateContextProvider", "Context", "ContextProvider"]
 
 
 class Context:
-    """A class containing any context that should be provided to the AI model as supplied by a ContextProvider.
+    """ContextProviderによって提供される任意のコンテキストをAIモデルに提供するためのクラスです。
 
-    Each ContextProvider has the ability to provide its own context for each invocation.
-    The Context class contains the additional context supplied by the ContextProvider.
-    This context will be combined with context supplied by other providers before being passed to the AI model.
-    This context is per invocation, and will not be stored as part of the chat history.
+    各ContextProviderは、呼び出しごとに独自のコンテキストを提供する能力を持っています。
+    ContextクラスはContextProviderによって提供される追加のコンテキストを含みます。
+    このコンテキストは、他のプロバイダーによって提供されるコンテキストと組み合わされてからAIモデルに渡されます。
+    このコンテキストは呼び出しごとのものであり、チャット履歴の一部として保存されることはありません。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import Context, ChatMessage
 
-            # Create context with instructions
+            # 指示を含むコンテキストを作成
             context = Context(
                 instructions="Use a professional tone when responding.",
                 messages=[ChatMessage(content="Previous context", role="user")],
                 tools=[my_tool],
             )
 
-            # Access context properties
+            # コンテキストのプロパティにアクセス
             print(context.instructions)
             print(len(context.messages))
+
     """
 
     def __init__(
@@ -56,12 +57,13 @@ class Context:
         messages: Sequence[ChatMessage] | None = None,
         tools: Sequence[ToolProtocol] | None = None,
     ):
-        """Create a new Context object.
+        """新しいContextオブジェクトを作成します。
 
         Args:
-            instructions: The instructions to provide to the AI model.
-            messages: The list of messages to include in the context.
-            tools: The list of tools to provide to this run.
+            instructions: AIモデルに提供する指示。
+            messages: コンテキストに含めるメッセージのリスト。
+            tools: この実行に提供するツールのリスト。
+
         """
         self.instructions = instructions
         self.messages: Sequence[ChatMessage] = messages or []
@@ -72,17 +74,15 @@ class Context:
 
 
 class ContextProvider(ABC):
-    """Base class for all context providers.
+    """すべてのContextProviderの基底クラスです。
 
-    A context provider is a component that can be used to enhance the AI's context management.
-    It can listen to changes in the conversation and provide additional context to the AI model
-    just before invocation.
+    ContextProviderは、AIのコンテキスト管理を強化するために使用できるコンポーネントです。
+    会話の変化を監視し、呼び出し直前にAIモデルに追加のコンテキストを提供できます。
 
     Note:
-        ContextProvider is an abstract base class. You must subclass it and implement
-        the ``invoking()`` method to create a custom context provider. Ideally, you should
-        also implement the ``invoked()`` and ``thread_created()`` methods to track conversation
-        state, but these are optional.
+        ContextProviderは抽象基底クラスです。カスタムContextProviderを作成するには、
+        サブクラス化して``invoking()``メソッドを実装する必要があります。
+        理想的には、会話状態を追跡するために``invoked()``および``thread_created()``メソッドも実装すべきですが、これらは任意です。
 
     Examples:
         .. code-block:: python
@@ -92,27 +92,28 @@ class ContextProvider(ABC):
 
             class CustomContextProvider(ContextProvider):
                 async def invoking(self, messages, **kwargs):
-                    # Add custom instructions before each invocation
+                    # 各呼び出し前にカスタム指示を追加
                     return Context(instructions="Always be concise and helpful.", messages=[], tools=[])
 
 
-            # Use with a chat agent
+            # チャットAgentで使用
             async with CustomContextProvider() as provider:
                 agent = ChatAgent(chat_client=client, name="assistant", context_providers=provider)
+
     """
 
-    # Default prompt to be used by all context providers when assembling memories/instructions
+    # メモリや指示を組み立てる際にすべてのContextProviderが使用するデフォルトのprompt
     DEFAULT_CONTEXT_PROMPT: Final[str] = "## Memories\nConsider the following memories when answering user questions:"
 
     async def thread_created(self, thread_id: str | None) -> None:
-        """Called just after a new thread is created.
+        """新しいスレッドが作成された直後に呼び出されます。
 
-        Implementers can use this method to perform any operations required at the creation
-        of a new thread. For example, checking long-term storage for any data that is relevant
-        to the current session.
+        実装者はこのメソッドを使用して、新しいスレッド作成時に必要な操作を行うことができます。
+        例えば、現在のセッションに関連するデータを長期ストレージで確認するなどです。
 
         Args:
-            thread_id: The ID of the new thread.
+            thread_id: 新しいスレッドのID。
+
         """
         pass
 
@@ -123,45 +124,48 @@ class ContextProvider(ABC):
         invoke_exception: Exception | None = None,
         **kwargs: Any,
     ) -> None:
-        """Called after the agent has received a response from the underlying inference service.
+        """Agentが基盤となる推論サービスからレスポンスを受け取った後に呼び出されます。
 
-        You can inspect the request and response messages, and update the state of the context provider.
+        リクエストおよびレスポンスのメッセージを検査し、ContextProviderの状態を更新できます。
 
         Args:
-            request_messages: The messages that were sent to the model/agent.
-            response_messages: The messages that were returned by the model/agent.
-            invoke_exception: The exception that was thrown, if any.
+            request_messages: モデル/Agentに送信されたメッセージ。
+            response_messages: モデル/Agentから返されたメッセージ。
+            invoke_exception: 発生した例外（あれば）。
 
         Keyword Args:
-            kwargs: Additional keyword arguments (not used at present).
+            kwargs: 追加のキーワード引数（現在は未使用）。
+
         """
         pass
 
     @abstractmethod
     async def invoking(self, messages: ChatMessage | MutableSequence[ChatMessage], **kwargs: Any) -> Context:
-        """Called just before the model/agent is invoked.
+        """モデル/Agentが呼び出される直前に呼び出されます。
 
-        Implementers can load any additional context required at this time,
-        and they should return any context that should be passed to the agent.
+        実装者はこの時点で必要な追加コンテキストを読み込み、
+        Agentに渡すべきコンテキストを返すべきです。
 
         Args:
-            messages: The most recent messages that the agent is being invoked with.
+            messages: Agentが呼び出される最新のメッセージ。
 
         Keyword Args:
-            kwargs: Additional keyword arguments (not used at present).
+            kwargs: 追加のキーワード引数（現在は未使用）。
 
         Returns:
-            A Context object containing instructions, messages, and tools to include.
+            指示、メッセージ、ツールを含むContextオブジェクト。
+
         """
         pass
 
     async def __aenter__(self) -> "Self":
-        """Enter the async context manager.
+        """非同期コンテキストマネージャに入ります。
 
-        Override this method to perform any setup operations when the context provider is entered.
+        ContextProviderが開始される際のセットアップ操作を行うためにこのメソッドをオーバーライドしてください。
 
         Returns:
-            The ContextProvider instance for chaining.
+            チェーン用のContextProviderインスタンス。
+
         """
         return self
 
@@ -171,14 +175,15 @@ class ContextProvider(ABC):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        """Exit the async context manager.
+        """非同期コンテキストマネージャを終了します。
 
-        Override this method to perform any cleanup operations when the context provider is exited.
+        ContextProviderが終了される際のクリーンアップ操作を行うためにこのメソッドをオーバーライドしてください。
 
         Args:
-            exc_type: The exception type if an exception occurred, None otherwise.
-            exc_val: The exception value if an exception occurred, None otherwise.
-            exc_tb: The exception traceback if an exception occurred, None otherwise.
+            exc_type: 例外が発生した場合の例外タイプ、そうでなければNone。
+            exc_val: 例外が発生した場合の例外値、そうでなければNone。
+            exc_tb: 例外が発生した場合のトレースバック、そうでなければNone。
+
         """
         pass
 
@@ -187,42 +192,43 @@ class ContextProvider(ABC):
 
 
 class AggregateContextProvider(ContextProvider):
-    """A ContextProvider that contains multiple context providers.
+    """複数のContextProviderを含むContextProviderです。
 
-    It delegates events to multiple context providers and aggregates responses from those
-    events before returning. This allows you to combine multiple context providers into a
-    single provider.
+    複数のContextProviderにイベントを委譲し、それらのイベントからの応答を集約して返します。
+    これにより、複数のContextProviderを単一のプロバイダーにまとめることができます。
 
     Note:
-        An AggregateContextProvider is created automatically when you pass a single context
-        provider or a sequence of context providers to the agent constructor.
+        AggregateContextProviderは、単一のContextProviderまたはContextProviderのシーケンスを
+        Agentのコンストラクタに渡すと自動的に作成されます。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import AggregateContextProvider, ChatAgent
 
-            # Create multiple context providers
+            # 複数のContextProviderを作成
             provider1 = CustomContextProvider1()
             provider2 = CustomContextProvider2()
             provider3 = CustomContextProvider3()
 
-            # Pass them to the agent - AggregateContextProvider is created automatically
+            # Agentに渡す - AggregateContextProviderが自動的に作成される
             agent = ChatAgent(chat_client=client, name="assistant", context_providers=[provider1, provider2, provider3])
 
-            # Verify that an AggregateContextProvider was created
+            # AggregateContextProviderが作成されたことを検証
             assert isinstance(agent.context_providers, AggregateContextProvider)
 
-            # Add additional providers to the agent
+            # Agentに追加のプロバイダーを追加
             provider4 = CustomContextProvider4()
             agent.context_providers.add(provider4)
+
     """
 
     def __init__(self, context_providers: ContextProvider | Sequence[ContextProvider] | None = None) -> None:
-        """Initialize the AggregateContextProvider with context providers.
+        """AggregateContextProviderをContextProviderで初期化します。
 
         Args:
-            context_providers: The context provider(s) to add.
+            context_providers: 追加するContextProviderまたは複数のContextProvider。
+
         """
         if isinstance(context_providers, ContextProvider):
             self.providers = [context_providers]
@@ -231,10 +237,11 @@ class AggregateContextProvider(ContextProvider):
         self._exit_stack: AsyncExitStack | None = None
 
     def add(self, context_provider: ContextProvider) -> None:
-        """Add a new context provider.
+        """新しいContextProviderを追加します。
 
         Args:
-            context_provider: The context provider to add.
+            context_provider: 追加するContextProvider。
+
         """
         self.providers.append(context_provider)
 
@@ -277,15 +284,16 @@ class AggregateContextProvider(ContextProvider):
 
     @override
     async def __aenter__(self) -> "Self":
-        """Enter the async context manager and set up all providers.
+        """非同期コンテキストマネージャに入り、すべてのプロバイダーをセットアップします。
 
         Returns:
-            The AggregateContextProvider instance for chaining.
+            チェーン用のAggregateContextProviderインスタンス。
+
         """
         self._exit_stack = AsyncExitStack()
         await self._exit_stack.__aenter__()
 
-        # Enter all context providers
+        # すべてのContextProviderに入ります
         for provider in self.providers:
             await self._exit_stack.enter_async_context(provider)
 
@@ -298,12 +306,13 @@ class AggregateContextProvider(ContextProvider):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        """Exit the async context manager and clean up all providers.
+        """非同期コンテキストマネージャを終了し、すべてのプロバイダーをクリーンアップします。
 
         Args:
-            exc_type: The exception type if an exception occurred, None otherwise.
-            exc_val: The exception value if an exception occurred, None otherwise.
-            exc_tb: The exception traceback if an exception occurred, None otherwise.
+            exc_type: 例外が発生した場合の例外タイプ、そうでなければNone。
+            exc_val: 例外が発生した場合の例外値、そうでなければNone。
+            exc_tb: 例外が発生した場合のトレースバック、そうでなければNone。
+
         """
         if self._exit_stack is not None:
             await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)

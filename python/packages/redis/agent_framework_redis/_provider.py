@@ -32,10 +32,11 @@ else:
 
 
 class RedisProvider(ContextProvider):
-    """Redis context provider with dynamic, filterable schema.
+    """動的でフィルタ可能なスキーマを持つRedisコンテキストプロバイダー。
 
-    Stores context in Redis and retrieves scoped context.
-    Uses full-text or optional hybrid vector search to ground model responses.
+    Redisにコンテキストを保存し、スコープされたコンテキストを取得します。
+    フルテキストまたはオプションのハイブリッドベクター検索を使用してモデルの応答を基盤化します。
+
     """
 
     def __init__(
@@ -43,40 +44,41 @@ class RedisProvider(ContextProvider):
         redis_url: str = "redis://localhost:6379",
         index_name: str = "context",
         prefix: str = "context",
-        # Redis vectorizer configuration (optional, injected by client)
+        # Redisベクタイザの設定（オプション、クライアントによって注入される）
         redis_vectorizer: BaseVectorizer | None = None,
         vector_field_name: str | None = None,
         vector_algorithm: Literal["flat", "hnsw"] | None = None,
         vector_distance_metric: Literal["cosine", "ip", "l2"] | None = None,
-        # Partition fields (indexed for filtering)
+        # パーティションフィールド（フィルタリング用にインデックス化）
         application_id: str | None = None,
         agent_id: str | None = None,
         user_id: str | None = None,
         thread_id: str | None = None,
         scope_to_per_operation_thread_id: bool = False,
-        # Prompt and runtime
+        # Promptとランタイム
         context_prompt: str = ContextProvider.DEFAULT_CONTEXT_PROMPT,
         redis_index: Any = None,
         overwrite_index: bool = False,
     ):
-        """Create a Redis Context Provider.
+        """Redis Context Providerを作成します。
 
         Args:
-            redis_url: The Redis server URL.
-            index_name: The name of the Redis index.
-            prefix: The prefix for all keys in the Redis database.
-            redis_vectorizer: The vectorizer to use for Redis.
-            vector_field_name: The name of the vector field in Redis.
-            vector_algorithm: The algorithm to use for vector search.
-            vector_distance_metric: The distance metric to use for vector search.
-            application_id: The application ID to scope the context.
-            agent_id: The agent ID to scope the context.
-            user_id: The user ID to scope the context.
-            thread_id: The thread ID to scope the context.
-            scope_to_per_operation_thread_id: Whether to scope to the per-operation thread ID.
-            context_prompt: The context prompt to use for the provider.
-            redis_index: The Redis index to use for the provider.
-            overwrite_index: Whether to overwrite the existing Redis index.
+            redis_url: RedisサーバーのURL。
+            index_name: Redisインデックスの名前。
+            prefix: Redisデータベース内のすべてのキーのプレフィックス。
+            redis_vectorizer: Redisで使用するベクタイザ。
+            vector_field_name: Redis内のベクターフィールドの名前。
+            vector_algorithm: ベクター検索に使用するアルゴリズム。
+            vector_distance_metric: ベクター検索に使用する距離メトリック。
+            application_id: コンテキストをスコープするためのアプリケーションID。
+            agent_id: コンテキストをスコープするためのエージェントID。
+            user_id: コンテキストをスコープするためのユーザーID。
+            thread_id: コンテキストをスコープするためのスレッドID。
+            scope_to_per_operation_thread_id: 操作ごとのスレッドIDにスコープするかどうか。
+            context_prompt: プロバイダーで使用するコンテキストプロンプト。
+            redis_index: プロバイダーで使用するRedisインデックス。
+            overwrite_index: 既存のRedisインデックスを上書きするかどうか。
+
 
         """
         self.redis_url = redis_url
@@ -108,9 +110,9 @@ class RedisProvider(ContextProvider):
 
     @property
     def schema_dict(self) -> dict[str, Any]:
-        """Get the Redis schema dictionary, computing and caching it on first access."""
+        """Redisスキーマ辞書を取得し、初回アクセス時に計算してキャッシュします。"""
         if self._schema_dict is None:
-            # Get vector configuration from vectorizer if available
+            # 利用可能な場合はベクタイザからベクター設定を取得する
             vector_dims = self.redis_vectorizer.dims if self.redis_vectorizer is not None else None
             vector_datatype = self.redis_vectorizer.dtype if self.redis_vectorizer is not None else None
 
@@ -126,15 +128,16 @@ class RedisProvider(ContextProvider):
         return self._schema_dict
 
     def _build_filter_from_dict(self, filters: dict[str, str | None]) -> Any | None:
-        """Builds a combined filter expression from simple equality tags.
+        """単純な等価タグから結合フィルター式を構築します。
 
-        This ANDs non-empty tag filters and is used to scope all operations to app/agent/user/thread partitions.
+        これは空でないタグフィルターをAND結合し、すべての操作をapp/agent/user/threadパーティションにスコープするために使用されます。
 
         Args:
-            filters: Mapping of field name to value; falsy values are ignored.
+            filters: フィールド名から値へのマッピング。偽値は無視されます。
 
         Returns:
-            A combined filter expression or None if no filters are provided.
+            結合されたフィルター式、またはフィルターが提供されていない場合はNone。
+
         """
         parts = [Tag(k) == v for k, v in filters.items() if v]
         return reduce(and_, parts) if parts else None
@@ -150,38 +153,39 @@ class RedisProvider(ContextProvider):
         vector_algorithm: Literal["flat", "hnsw"] | None,
         vector_distance_metric: Literal["cosine", "ip", "l2"] | None,
     ) -> dict[str, Any]:
-        """Builds the RediSearch schema configuration dictionary.
+        """RediSearchスキーマ設定辞書を構築します。
 
-        Defines text and tag fields for messages plus an optional vector field enabling KNN/hybrid search.
+        メッセージ用のテキストおよびタグフィールドと、KNN/ハイブリッド検索を可能にするオプションのベクターフィールドを定義します。
 
         Keyword Args:
-            index_name: Index name.
-            prefix: Key prefix.
-            vector_field_name: Vector field name or None.
-            vector_dims: Vector dimensionality or None.
-            vector_datatype: Vector datatype or None.
-            vector_algorithm: Vector index algorithm or None.
-            vector_distance_metric: Vector distance metric or None.
+            index_name: インデックス名。
+            prefix: キープレフィックス。
+            vector_field_name: ベクターフィールド名またはNone。
+            vector_dims: ベクター次元数またはNone。
+            vector_datatype: ベクターデータ型またはNone。
+            vector_algorithm: ベクターインデックスアルゴリズムまたはNone。
+            vector_distance_metric: ベクター距離メトリックまたはNone。
 
         Returns:
-            Dict representing the index and fields configuration.
+            インデックスとフィールド設定を表す辞書。
+
         """
         fields: list[dict[str, Any]] = [
             {"name": "role", "type": "tag"},
             {"name": "mime_type", "type": "tag"},
             {"name": "content", "type": "text"},
-            # Conversation tracking
+            # 会話の追跡
             {"name": "conversation_id", "type": "tag"},
             {"name": "message_id", "type": "tag"},
             {"name": "author_name", "type": "tag"},
-            # Partition fields (TAG for fast filtering)
+            # パーティションフィールド（高速フィルタリング用のTAG）
             {"name": "application_id", "type": "tag"},
             {"name": "agent_id", "type": "tag"},
             {"name": "user_id", "type": "tag"},
             {"name": "thread_id", "type": "tag"},
         ]
 
-        # Add vector field only if configured (keeps provider runnable with no params)
+        # 設定されている場合のみベクターフィールドを追加（パラメータなしでもプロバイダーを実行可能に保つ）
         if vector_field_name is not None and vector_dims is not None:
             fields.append({
                 "name": vector_field_name,
@@ -205,38 +209,39 @@ class RedisProvider(ContextProvider):
         }
 
     async def _ensure_index(self) -> None:
-        """Initialize the search index.
+        """検索インデックスを初期化します。
 
-        - Connect to existing index if it exists and schema matches
-        - Create new index if it doesn't exist
-        - Overwrite if requested via overwrite_index=True
-        - Validate schema compatibility to prevent accidental data loss
+        - 既存のインデックスが存在しスキーマが一致する場合は接続
+        - 存在しない場合は新しいインデックスを作成
+        - overwrite_index=Trueで上書き
+        - 偶発的なデータ損失を防ぐためスキーマ互換性を検証
+
         """
         if self._index_initialized:
             return
 
-        # Check if index already exists
+        # インデックスが既に存在するかをチェックする
         index_exists = await self.redis_index.exists()
 
         if not self.overwrite_index and index_exists:
-            # Validate schema compatibility before connecting
+            # 接続前にスキーマ互換性を検証する
             await self._validate_schema_compatibility()
 
-        # Create the index (will connect to existing or create new)
+        # インデックスを作成する（既存に接続するか新規作成）
         await self.redis_index.create(overwrite=self.overwrite_index, drop=False)
 
         self._index_initialized = True
 
     async def _validate_schema_compatibility(self) -> None:
-        """Validate that existing index schema matches current configuration.
+        """既存のインデックススキーマが現在の設定と一致することを検証します。
 
-        Raises ServiceInitializationError if schemas don't match, with helpful guidance.
+        スキーマが一致しない場合はServiceInitializationErrorを発生させ、有用なガイダンスを提供します。
 
-        self._build_schema_dict returns a minimal schema while Redis returns an expanded
-        schema with all defaults filled in. To compare for incompatibilities, compare
-        significant parts of the schema by creating signatures with normalized default values.
+        self._build_schema_dictは最小限のスキーマを返しますが、Redisはすべてのデフォルトを埋めた拡張スキーマを返します。
+        非互換性を比較するために、正規化されたデフォルト値で署名を作成し、スキーマの重要部分を比較します。
+
         """
-        # Defaults for attr normalization
+        # attr正規化のデフォルト値
         TAG_DEFAULTS = {"separator": ",", "case_sensitive": False, "withsuffixtrie": False}
         TEXT_DEFAULTS = {"weight": 1.0, "no_stem": False}
 
@@ -253,11 +258,11 @@ class RedisProvider(ContextProvider):
 
         def _sig_vector(attrs: dict[str, Any] | None) -> dict[str, Any]:
             a = {**(attrs or {})}
-            # Require these to exist if vector field is present
+            # ベクターフィールドが存在する場合はこれらの存在を要求する
             return {k: a.get(k) for k in ("algorithm", "dims", "distance_metric", "datatype")}
 
         def _schema_signature(schema: dict[str, Any]) -> dict[str, Any]:
-            # Order-independent, minimal signature
+            # 順序に依存しない最小限の署名
             sig: dict[str, Any] = {"index": _significant_index(schema.get("index", {})), "fields": {}}
             for f in schema.get("fields", []):
                 name, ftype = f.get("name"), f.get("type")
@@ -270,7 +275,7 @@ class RedisProvider(ContextProvider):
                 elif ftype == "vector":
                     sig["fields"][name] = {"type": "vector", "attrs": _sig_vector(f.get("attrs"))}
                 else:
-                    # Unknown field types: compare by type only
+                    # 不明なフィールドタイプ：タイプのみで比較する
                     sig["fields"][name] = {"type": ftype}
             return sig
 
@@ -282,7 +287,7 @@ class RedisProvider(ContextProvider):
         current_sig = _schema_signature(current_schema)
 
         if existing_sig != current_sig:
-            # Add sigs to error message
+            # エラーメッセージに署名を追加する
             raise ServiceInitializationError(
                 "Existing Redis index schema is incompatible with the current configuration.\n"
                 f"Existing (significant): {json.dumps(existing_sig, indent=2, sort_keys=True)}\n"
@@ -296,45 +301,46 @@ class RedisProvider(ContextProvider):
         data: dict[str, Any] | list[dict[str, Any]],
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Inserts one or many documents with partition fields populated.
+        """パーティションフィールドを埋めて1つまたは複数のドキュメントを挿入します。
 
-        Fills default partition fields, optionally embeds content when configured, and loads documents in a batch.
+        デフォルトのパーティションフィールドを埋め、設定されていればコンテンツを埋め込み、バッチでドキュメントをロードします。
 
         Keyword Args:
-            data: Single document or list of documents to insert.
-            metadata: Optional metadata dictionary (unused placeholder).
+            data: 挿入する単一ドキュメントまたはドキュメントのリスト。
+            metadata: オプションのメタデータ辞書（未使用のプレースホルダー）。
 
         Raises:
-            ServiceInvalidRequestError: If required fields are missing or invalid.
+            ServiceInvalidRequestError: 必須フィールドが欠落または無効な場合。
+
         """
-        # Ensure provider has at least one scope set (symmetry with Mem0Provider)
+        # プロバイダーに少なくとも1つのスコープが設定されていることを保証する（Mem0Providerとの対称性）
         self._validate_filters()
         await self._ensure_index()
         docs = data if isinstance(data, list) else [data]
 
         prepared: list[dict[str, Any]] = []
         for doc in docs:
-            d = dict(doc)  # shallow copy
+            d = dict(doc)  # 浅いコピー
 
-            # Partition defaults
+            # パーティションのデフォルト値
             d.setdefault("application_id", self.application_id)
             d.setdefault("agent_id", self.agent_id)
             d.setdefault("user_id", self.user_id)
             d.setdefault("thread_id", self._effective_thread_id)
-            # Conversation defaults
+            # 会話のデフォルト値
             d.setdefault("conversation_id", self._conversation_id)
 
-            # Logical requirement
+            # 論理的要件
             if "content" not in d:
                 raise ServiceInvalidRequestError("add() requires a 'content' field in data")
 
-            # Vector field requirement (only if schema has one)
+            # ベクターフィールドの要件（スキーマに存在する場合のみ）
             if self.vector_field_name:
                 d.setdefault(self.vector_field_name, None)
 
             prepared.append(d)
 
-        # Batch embed contents for every message
+        # すべてのメッセージのコンテンツをバッチで埋め込む
         if self.redis_vectorizer and self.vector_field_name:
             text_list = [d["content"] for d in prepared]
             embeddings = await self.redis_vectorizer.aembed_many(text_list, batch_size=len(text_list))
@@ -343,7 +349,7 @@ class RedisProvider(ContextProvider):
                 field_name: str = self.vector_field_name
                 d[field_name] = vec
 
-        # Load all at once if supported
+        # サポートされていれば一括でロードする
         await self.redis_index.load(prepared)
         return
 
@@ -357,27 +363,28 @@ class RedisProvider(ContextProvider):
         num_results: int = 10,
         alpha: float = 0.7,
     ) -> list[dict[str, Any]]:
-        """Runs a text or hybrid vector-text search with optional filters.
+        """オプションのフィルター付きでテキストまたはハイブリッドベクターテキスト検索を実行します。
 
-        Builds a TextQuery or HybridQuery and automatically ANDs partition filters to keep results scoped and safe.
+        TextQueryまたはHybridQueryを構築し、パーティションフィルターを自動的にAND結合して結果をスコープし安全に保ちます。
 
         Args:
-            text: Query text.
+            text: クエリテキスト。
 
         Keyword Args:
-            text_scorer: Scorer to use for text ranking.
-            filter_expression: Additional filter expression to AND with partition filters.
-            return_fields: Fields to return in results.
-            num_results: Maximum number of results.
-            alpha: Hybrid balancing parameter when vectors are enabled.
+            text_scorer: テキストランキングに使用するスコアラー。
+            filter_expression: パーティションフィルターとAND結合する追加のフィルター式。
+            return_fields: 結果に返すフィールド。
+            num_results: 最大結果数。
+            alpha: ベクターが有効な場合のハイブリッドバランスパラメータ。
 
         Returns:
-            List of result dictionaries.
+            結果辞書のリスト。
 
         Raises:
-            ServiceInvalidRequestError: If input is invalid or the query fails.
+            ServiceInvalidRequestError: 入力が無効またはクエリが失敗した場合。
+
         """
-        # Enforce presence of at least one provider-level filter (symmetry with Mem0Provider)
+        # 少なくとも1つのプロバイダーレベルのフィルターが存在することを強制する（Mem0Providerとの対称性）
         await self._ensure_index()
         self._validate_filters()
 
@@ -397,7 +404,7 @@ class RedisProvider(ContextProvider):
         if filter_expression is not None:
             combined_filter = (combined_filter & filter_expression) if combined_filter else filter_expression
 
-        # Choose return fields
+        # 返却フィールドを選択する
         return_fields = (
             return_fields
             if return_fields is not None
@@ -406,7 +413,7 @@ class RedisProvider(ContextProvider):
 
         try:
             if self.redis_vectorizer and self.vector_field_name:
-                # Build hybrid query: combine full-text and vector similarity
+                # ハイブリッドクエリを構築する：フルテキストとベクター類似度を組み合わせる
                 vector = await self.redis_vectorizer.aembed(q)
                 query = HybridQuery(
                     text=q,
@@ -423,7 +430,7 @@ class RedisProvider(ContextProvider):
                 )
                 hybrid_results = await self.redis_index.query(query)
                 return cast(list[dict[str, Any]], hybrid_results)
-            # Text-only search
+            # テキストのみの検索
             query = TextQuery(
                 text=q,
                 text_field_name="content",
@@ -439,15 +446,16 @@ class RedisProvider(ContextProvider):
             raise ServiceInvalidRequestError(f"Redis text search failed: {exc}") from exc
 
     async def search_all(self, page_size: int = 200) -> list[dict[str, Any]]:
-        """Returns all documents in the index.
+        """インデックス内のすべてのドキュメントを返します。
 
-        Streams results via pagination to avoid excessive memory and response sizes.
+        ページネーションによるストリーミングで過剰なメモリ使用やレスポンスサイズを回避します。
 
         Args:
-            page_size: Page size used for pagination under the hood.
+            page_size: 内部でページネーションに使用されるページサイズ。
 
         Returns:
-            List of all documents.
+            すべてのドキュメントのリスト。
+
         """
         out: list[dict[str, Any]] = []
         async for batch in self.redis_index.paginate(
@@ -459,24 +467,26 @@ class RedisProvider(ContextProvider):
 
     @property
     def _effective_thread_id(self) -> str | None:
-        """Resolves the active thread id.
+        """アクティブなスレッドIDを解決します。
 
-        Returns per-operation thread id when scoping is enabled; otherwise the provider's thread id.
+        スコープが有効な場合は操作ごとのスレッドIDを返し、そうでなければプロバイダーのスレッドIDを返します。
+
         """
         return self._per_operation_thread_id if self.scope_to_per_operation_thread_id else self.thread_id
 
     @override
     async def thread_created(self, thread_id: str | None) -> None:
-        """Called when a new thread is created.
+        """新しいスレッドが作成されたときに呼び出されます。
 
-        Captures the per-operation thread id when scoping is enabled to enforce single-thread usage.
+        スコープが有効な場合に、単一スレッド使用を強制するために操作ごとのスレッドIDをキャプチャします。
 
         Args:
-            thread_id: The ID of the thread or None.
+            thread_id: スレッドのIDまたはNone。
+
         """
         self._validate_per_operation_thread_id(thread_id)
         self._per_operation_thread_id = self._per_operation_thread_id or thread_id
-        # Track current conversation id (Agent passes conversation_id here)
+        # 現在の会話IDを追跡します（Agentがここにconversation_idを渡します）
         self._conversation_id = thread_id or self._conversation_id
 
     @override
@@ -521,19 +531,20 @@ class RedisProvider(ContextProvider):
 
     @override
     async def invoking(self, messages: ChatMessage | MutableSequence[ChatMessage], **kwargs: Any) -> Context:
-        """Called before invoking the model to provide scoped context.
+        """モデルを呼び出す前にスコープ付きコンテキストを提供するために呼び出されます。
 
-        Concatenates recent messages into a query, fetches matching memories from Redis.
-        Prepends them as instructions.
+        最近のメッセージをクエリに連結し、Redisから一致するメモリを取得します。
+        それらを指示として先頭に追加します。
 
         Args:
-            messages: List of new messages in the thread.
+            messages: スレッド内の新しいメッセージのリスト。
 
         Keyword Args:
-            **kwargs: not used at present at present.
+            **kwargs: 現時点では使用されていません。
 
         Returns:
-            Context: Context object containing instructions with memories.
+            Context: メモリを含む指示を持つContextオブジェクト。
+
         """
         self._validate_filters()
         messages_list = [messages] if isinstance(messages, ChatMessage) else list(messages)
@@ -551,26 +562,29 @@ class RedisProvider(ContextProvider):
         )
 
     async def __aenter__(self) -> Self:
-        """Async context manager entry.
+        """非同期コンテキストマネージャのエントリー。
 
-        No special setup is required; provided for symmetry with the Mem0 provider.
+        特別なセットアップは不要です。Mem0プロバイダーとの対称性のために提供されています。
+
         """
         return self
 
     async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
-        """Async context manager exit.
+        """非同期コンテキストマネージャの終了。
 
-        No cleanup is required; indexes/keys remain unless explicitly cleared.
+        クリーンアップは不要です。インデックスやキーは明示的にクリアされない限り残ります。
+
         """
         return
 
     def _validate_filters(self) -> None:
-        """Validates that at least one filter is provided.
+        """少なくとも1つのフィルターが提供されていることを検証します。
 
-        Prevents unbounded operations by requiring a partition filter before reads or writes.
+        読み書きの前にパーティションフィルターを要求することで無制限の操作を防ぎます。
 
         Raises:
-            ServiceInitializationError: If no filters are provided.
+            ServiceInitializationError: フィルターが提供されていない場合。
+
         """
         if not self.agent_id and not self.user_id and not self.application_id and not self.thread_id:
             raise ServiceInitializationError(
@@ -578,15 +592,16 @@ class RedisProvider(ContextProvider):
             )
 
     def _validate_per_operation_thread_id(self, thread_id: str | None) -> None:
-        """Validates that a new thread ID doesn't conflict when scoped.
+        """スコープが有効な場合に新しいスレッドIDが競合しないことを検証します。
 
-        Prevents cross-thread data leakage by enforcing single-thread usage when per-operation scoping is enabled.
+        操作ごとのスコープが有効な場合に単一スレッド使用を強制し、スレッド間のデータ漏洩を防ぎます。
 
         Args:
-            thread_id: The new thread ID or None.
+            thread_id: 新しいスレッドIDまたはNone。
 
         Raises:
-            ValueError: If a new thread ID conflicts with the existing one.
+            ValueError: 新しいスレッドIDが既存のものと競合する場合。
+
         """
         if (
             self.scope_to_per_operation_thread_id

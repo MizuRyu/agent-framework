@@ -25,8 +25,8 @@ Prerequisites:
 
 
 async def main():
-    """Build and run a simple two node agent workflow: Writer then Reviewer."""
-    # Create the Azure chat client. AzureCliCredential uses your current az login.
+    """シンプルな2ノードAgentワークフローを構築し実行します: Writer から Reviewer へ。"""
+    # Azureチャットクライアントを作成します。AzureCliCredentialは現在のaz loginを使用します。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     writer_agent = chat_client.create_agent(
         instructions=(
@@ -44,20 +44,18 @@ async def main():
         name="reviewer",
     )
 
-    # Build the workflow using the fluent builder.
-    # Set the start node and connect an edge from writer to reviewer.
+    # フルーエントビルダーを使ってワークフローを構築します。 開始ノードを設定し、writerからreviewerへのエッジを接続します。
     workflow = WorkflowBuilder().set_start_executor(writer_agent).add_edge(writer_agent, reviewer_agent).build()
 
-    # Run the workflow with the user's initial message.
-    # For foundational clarity, use run (non streaming) and print the terminal event.
+    # ユーザーの初期メッセージでワークフローを実行します。 基礎的な明確さのために、run（非ストリーミング）を使い、終端イベントを出力します。
     events = await workflow.run("Create a slogan for a new electric SUV that is affordable and fun to drive.")
-    # Print agent run events and final outputs
+    # Agentの実行イベントと最終出力を表示します
     for event in events:
         if isinstance(event, AgentRunEvent):
             print(f"{event.executor_id}: {event.data}")
 
     print(f"{'=' * 60}\nWorkflow Outputs: {events.get_outputs()}")
-    # Summarize the final run state (e.g., COMPLETED)
+    # 最終的なrun状態を要約します（例: COMPLETED）
     print("Final state:", events.get_final_state())
 
     """

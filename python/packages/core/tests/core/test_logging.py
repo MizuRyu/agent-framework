@@ -8,26 +8,26 @@ from agent_framework.exceptions import AgentFrameworkException
 
 
 def test_get_logger():
-    """Test that the logger is created with the correct name."""
+    """正しい名前でloggerが作成されることをテストします。"""
     logger = get_logger()
     assert logger.name == "agent_framework"
 
 
 def test_get_logger_custom_name():
-    """Test that the logger can be created with a custom name."""
+    """カスタム名でloggerが作成できることをテストします。"""
     custom_name = "agent_framework.custom"
     logger = get_logger(custom_name)
     assert logger.name == custom_name
 
 
 def test_get_logger_invalid_name():
-    """Test that an exception is raised for an invalid logger name."""
+    """無効なlogger名に対して例外が発生することをテストします。"""
     with pytest.raises(AgentFrameworkException):
         get_logger("invalid_name")
 
 
 def test_log(caplog):
-    """Test that the logger can log messages and adheres to the expected format."""
+    """loggerがメッセージをログでき、期待されるフォーマットに従っていることをテストします。"""
     logger = get_logger()
     with caplog.at_level("DEBUG"):
         logger.debug("This is a debug message")

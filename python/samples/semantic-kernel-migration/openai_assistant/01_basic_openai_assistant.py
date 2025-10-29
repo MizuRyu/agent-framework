@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Create an OpenAI Assistant using SK and Agent Framework."""
+"""SKとAgent Frameworkを使ってOpenAI Assistantを作成します。"""
 
 import asyncio
 import os
@@ -11,7 +11,7 @@ async def run_semantic_kernel() -> None:
     from semantic_kernel.agents import AssistantAgentThread, OpenAIAssistantAgent
 
     client = OpenAIAssistantAgent.create_client()
-    # Provision the assistant on the OpenAI Assistants service.
+    # OpenAI Assistantsサービス上にアシスタントをプロビジョニングします。
     definition = await client.beta.assistants.create(
         model=ASSISTANT_MODEL,
         name="Helper",
@@ -31,7 +31,7 @@ async def run_agent_framework() -> None:
     from agent_framework.openai import OpenAIAssistantsClient
 
     assistants_client = OpenAIAssistantsClient()
-    # AF wraps the assistant lifecycle with an async context manager.
+    # AFは非同期コンテキストマネージャでアシスタントのライフサイクルをラップします。
     async with assistants_client.create_agent(
         name="Helper",
         instructions="Answer questions in one concise paragraph.",

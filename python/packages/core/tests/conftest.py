@@ -11,19 +11,19 @@ from pytest import fixture
 
 @fixture
 def enable_otel(request: Any) -> bool:
-    """Fixture that returns a boolean indicating if Otel is enabled."""
+    """Otel が有効かどうかを示すブール値を返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else True
 
 
 @fixture
 def enable_sensitive_data(request: Any) -> bool:
-    """Fixture that returns a boolean indicating if sensitive data is enabled."""
+    """機微データが有効かどうかを示すブール値を返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else True
 
 
 @fixture
 def span_exporter(monkeypatch, enable_otel: bool, enable_sensitive_data: bool) -> Generator[SpanExporter]:
-    """Fixture to remove environment variables for ObservabilitySettings."""
+    """ObservabilitySettings の環境変数を削除するフィクスチャ。"""
 
     env_vars = [
         "ENABLE_OTEL",
@@ -36,7 +36,7 @@ def span_exporter(monkeypatch, enable_otel: bool, enable_sensitive_data: bool) -
         monkeypatch.delenv(key, raising=False)  # type: ignore
     monkeypatch.setenv("ENABLE_OTEL", str(enable_otel))  # type: ignore
     if not enable_otel:
-        # we overwrite sensitive data for tests
+        # テストのために機微データを上書きする
         enable_sensitive_data = False
     monkeypatch.setenv("ENABLE_SENSITIVE_DATA", str(enable_sensitive_data))  # type: ignore
     import importlib
@@ -45,11 +45,11 @@ def span_exporter(monkeypatch, enable_otel: bool, enable_sensitive_data: bool) -
 
     import agent_framework.observability as observability
 
-    # Reload the module to ensure a clean state for tests, then create a
-    # fresh ObservabilitySettings instance and patch the module attribute.
+    # テストのためにクリーンな状態を保証するためモジュールをリロードし、新しい ObservabilitySettings
+    # インスタンスを作成してモジュール属性をパッチする。
     importlib.reload(observability)
 
-    # recreate observability settings with values from above and no file.
+    # 上記の値で ObservabilitySettings を再作成し、ファイルは使わない。
     observability_settings = observability.ObservabilitySettings(env_file_path="test.env")
     observability_settings._configure()  # pyright: ignore[reportPrivateUsage]
     monkeypatch.setattr(observability, "OBSERVABILITY_SETTINGS", observability_settings, raising=False)  # type: ignore
@@ -67,5 +67,5 @@ def span_exporter(monkeypatch, enable_otel: bool, enable_sensitive_data: bool) -
             tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))  # type: ignore
 
         yield exporter
-        # Clean up
+        # クリーンアップ
         exporter.clear()

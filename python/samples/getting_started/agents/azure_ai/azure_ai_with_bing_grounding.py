@@ -25,15 +25,15 @@ To set up Bing Grounding:
 
 
 async def main() -> None:
-    """Main function demonstrating Azure AI agent with Bing Grounding search."""
-    # 1. Create Bing Grounding search tool using HostedWebSearchTool
-    # The connection_name or ID will be automatically picked up from environment variable
+    """Bing Grounding 検索を持つ Azure AI エージェントを示すメイン関数。"""
+    # 1. HostedWebSearchTool を使って Bing Grounding 検索ツールを作成する connection_name または ID
+    # は環境変数から自動的に取得されます。
     bing_search_tool = HostedWebSearchTool(
         name="Bing Grounding Search",
         description="Search the web for current information using Bing",
     )
 
-    # 2. Use AzureAIAgentClient as async context manager for automatic cleanup
+    # 2. AzureAIAgentClient を非同期コンテキストマネージャーとして使用し、自動クリーンアップを行う
     async with (
         AzureAIAgentClient(async_credential=AzureCliCredential()) as client,
         ChatAgent(
@@ -47,7 +47,7 @@ async def main() -> None:
             tools=bing_search_tool,
         ) as agent,
     ):
-        # 4. Demonstrate agent capabilities with web search
+        # 4. Web 検索を使ったエージェントの機能を示す
         print("=== Azure AI Agent with Bing Grounding Search ===\n")
 
         user_input = "What is the most popular programming language?"

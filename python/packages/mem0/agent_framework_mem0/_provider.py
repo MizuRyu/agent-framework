@@ -20,7 +20,7 @@ else:
     from typing_extensions import override  # type: ignore[import] # pragma: no cover
 
 
-# Type aliases for Mem0 search response formats (v1.1 and v2; v1 is deprecated, but matches the type definition for v2)
+# Mem0検索レスポンスフォーマットの型エイリアス（v1.1およびv2；v1は非推奨ですがv2の型定義に一致します）
 class MemorySearchResponse_v1_1(TypedDict):
     results: list[dict[str, Any]]
     relations: NotRequired[list[dict[str, Any]]]
@@ -30,7 +30,7 @@ MemorySearchResponse_v2 = list[dict[str, Any]]
 
 
 class Mem0Provider(ContextProvider):
-    """Mem0 Context Provider."""
+    """Mem0 Context Provider。"""
 
     def __init__(
         self,
@@ -43,18 +43,18 @@ class Mem0Provider(ContextProvider):
         scope_to_per_operation_thread_id: bool = False,
         context_prompt: str = ContextProvider.DEFAULT_CONTEXT_PROMPT,
     ) -> None:
-        """Initializes a new instance of the Mem0Provider class.
+        """Mem0Providerクラスの新しいインスタンスを初期化します。
 
         Args:
-            mem0_client: A pre-created Mem0 MemoryClient or None to create a default client.
-            api_key: The API key for authenticating with the Mem0 API. If not
-                provided, it will attempt to use the MEM0_API_KEY environment variable.
-            application_id: The application ID for scoping memories or None.
-            agent_id: The agent ID for scoping memories or None.
-            thread_id: The thread ID for scoping memories or None.
-            user_id: The user ID for scoping memories or None.
-            scope_to_per_operation_thread_id: Whether to scope memories to per-operation thread ID.
-            context_prompt: The prompt to prepend to retrieved memories.
+            mem0_client: 事前に作成されたMem0 MemoryClient、またはデフォルトクライアントを作成するためのNone。
+            api_key: Mem0 API認証用のAPIキー。指定しない場合はMEM0_API_KEY環境変数を使用しようとします。
+            application_id: メモリのスコープ用のアプリケーションID、またはNone。
+            agent_id: メモリのスコープ用のエージェントID、またはNone。
+            thread_id: メモリのスコープ用のスレッドID、またはNone。
+            user_id: メモリのスコープ用のユーザーID、またはNone。
+            scope_to_per_operation_thread_id: メモリを操作ごとのスレッドIDにスコープするかどうか。
+            context_prompt: 取得したメモリに先行して付加するプロンプト。
+
         """
         should_close_client = False
         if mem0_client is None:
@@ -73,21 +73,22 @@ class Mem0Provider(ContextProvider):
         self._should_close_client = should_close_client
 
     async def __aenter__(self) -> "Self":
-        """Async context manager entry."""
+        """非同期コンテキストマネージャのエントリ。"""
         if self.mem0_client and isinstance(self.mem0_client, AbstractAsyncContextManager):
             await self.mem0_client.__aenter__()
         return self
 
     async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
-        """Async context manager exit."""
+        """非同期コンテキストマネージャの終了。"""
         if self._should_close_client and self.mem0_client and isinstance(self.mem0_client, AbstractAsyncContextManager):
             await self.mem0_client.__aexit__(exc_type, exc_val, exc_tb)
 
     async def thread_created(self, thread_id: str | None = None) -> None:
-        """Called when a new thread is created.
+        """新しいスレッドが作成されたときに呼び出されます。
 
         Args:
-            thread_id: The ID of the thread or None.
+            thread_id: スレッドのID、またはNone。
+
         """
         self._validate_per_operation_thread_id(thread_id)
         self._per_operation_thread_id = self._per_operation_thread_id or thread_id
@@ -131,16 +132,17 @@ class Mem0Provider(ContextProvider):
 
     @override
     async def invoking(self, messages: ChatMessage | MutableSequence[ChatMessage], **kwargs: Any) -> Context:
-        """Called before invoking the AI model to provide context.
+        """AIモデルを呼び出す前にコンテキストを提供するために呼び出されます。
 
         Args:
-            messages: List of new messages in the thread.
+            messages: スレッド内の新しいメッセージのリスト。
 
         Keyword Args:
-            **kwargs: not used at present.
+            **kwargs: 現在は使用されていません。
 
         Returns:
-            Context: Context object containing instructions with memories.
+            Context: メモリを含む指示を持つContextオブジェクト。
+
         """
         self._validate_filters()
         messages_list = [messages] if isinstance(messages, ChatMessage) else list(messages)
@@ -153,13 +155,13 @@ class Mem0Provider(ContextProvider):
             run_id=self._per_operation_thread_id if self.scope_to_per_operation_thread_id else self.thread_id,
         )
 
-        # Depending on the API version, the response schema varies slightly
+        # APIバージョンに応じてレスポンススキーマがわずかに異なります
         if isinstance(search_response, list):
             memories = search_response
         elif isinstance(search_response, dict) and "results" in search_response:
             memories = search_response["results"]
         else:
-            # Fallback for unexpected schema - return response as text as-is
+            # 予期しないスキーマに対するフォールバック - レスポンスをテキストとしてそのまま返します
             memories = [search_response]
 
         line_separated_memories = "\n".join(memory.get("memory", "") for memory in memories)
@@ -171,10 +173,11 @@ class Mem0Provider(ContextProvider):
         )
 
     def _validate_filters(self) -> None:
-        """Validates that at least one filter is provided.
+        """少なくとも1つのフィルターが提供されていることを検証します。
 
         Raises:
-            ServiceInitializationError: If no filters are provided.
+            ServiceInitializationError: フィルターが提供されていない場合。
+
         """
         if not self.agent_id and not self.user_id and not self.application_id and not self.thread_id:
             raise ServiceInitializationError(
@@ -182,13 +185,14 @@ class Mem0Provider(ContextProvider):
             )
 
     def _validate_per_operation_thread_id(self, thread_id: str | None) -> None:
-        """Validates that a new thread ID doesn't conflict with an existing one when scoped.
+        """スコープされている場合に新しいスレッドIDが既存のものと競合しないことを検証します。
 
         Args:
-            thread_id: The new thread ID or None.
+            thread_id: 新しいスレッドID、またはNone。
 
         Raises:
-            ValueError: If a new thread ID is provided when one already exists.
+            ValueError: 既にスレッドIDが存在する場合に新しいスレッドIDが提供された場合。
+
         """
         if (
             self.scope_to_per_operation_thread_id

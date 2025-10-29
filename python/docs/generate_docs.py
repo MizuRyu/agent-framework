@@ -13,9 +13,10 @@ load_dotenv()
 
 
 async def generate_af_docs(root_path: Path):
-    """Generate documentation for the Agent Framework using py2docfx.
+    """py2docfxを使ってAgent Frameworkのドキュメントを生成します。
 
-    This function runs the py2docfx command with the specified parameters.
+    この関数は指定されたパラメータでpy2docfxコマンドを実行します。
+
     """
     package = {
         "packages": [
@@ -85,7 +86,7 @@ async def generate_af_docs(root_path: Path):
 
 
 if __name__ == "__main__":
-    # Ensure the script is run from the correct directory
+    # スクリプトが正しいディレクトリから実行されていることを確認します。
     debug = False
     if debug:
         debugpy.listen(("localhost", 5678))
@@ -94,7 +95,7 @@ if __name__ == "__main__":
 
     current_path = Path(__file__).parent.parent.resolve()
     print(f"Current path: {current_path}")
-    # ensure the dist folder exists
+    # distフォルダが存在することを保証します。
     dist_path = current_path / "dist"
     if not dist_path.exists():
         print(" Please run `poe build` to generate the dist folder.")
@@ -103,5 +104,5 @@ if __name__ == "__main__":
         print(f"Setting PIP_FIND_LINKS to {dist_path.absolute()}")
         os.environ["PIP_FIND_LINKS"] = str(dist_path.absolute())
     print(f"Generating documentation in: {current_path / 'docs' / 'build'}")
-    # Generate the documentation
+    # ドキュメントを生成します。
     asyncio.run(generate_af_docs(current_path))

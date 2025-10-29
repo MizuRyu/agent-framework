@@ -24,47 +24,48 @@ Telemetry data that the workflow system emits includes:
 """
 
 
-# Executors for sequential workflow
+# シーケンシャルワークフロー用のexecutors
 class UpperCaseExecutor(Executor):
-    """An executor that converts text to uppercase."""
+    """テキストを大文字に変換するexecutor。"""
 
     @handler
     async def to_upper_case(self, text: str, ctx: WorkflowContext[str]) -> None:
-        """Execute the task by converting the input string to uppercase."""
+        """入力文字列を大文字に変換してタスクを実行します。"""
         print(f"UpperCaseExecutor: Processing '{text}'")
         result = text.upper()
         print(f"UpperCaseExecutor: Result '{result}'")
 
-        # Send the result to the next executor in the workflow.
+        # 結果をワークフロー内の次のexecutorに送信します。
         await ctx.send_message(result)
 
 
 class ReverseTextExecutor(Executor):
-    """An executor that reverses text."""
+    """テキストを逆順にするexecutor。"""
 
     @handler
     async def reverse_text(self, text: str, ctx: WorkflowContext[Never, str]) -> None:
-        """Execute the task by reversing the input string."""
+        """入力文字列を逆順にしてタスクを実行します。"""
         print(f"ReverseTextExecutor: Processing '{text}'")
         result = text[::-1]
         print(f"ReverseTextExecutor: Result '{result}'")
 
-        # Yield the output.
+        # 出力をyieldします。
         await ctx.yield_output(result)
 
 
 async def run_sequential_workflow() -> None:
-    """Run a simple sequential workflow demonstrating telemetry collection.
+    """テレメトリ収集を示すシンプルなシーケンシャルワークフローを実行します。
 
-    This workflow processes a string through two executors in sequence:
-    1. UpperCaseExecutor converts the input to uppercase
-    2. ReverseTextExecutor reverses the string and completes the workflow
+    このワークフローは2つのexecutorを順に処理します:
+    1. UpperCaseExecutorが入力を大文字に変換
+    2. ReverseTextExecutorが文字列を逆順にし、ワークフローを完了
+
     """
-    # Step 1: Create the executors.
+    # ステップ1: executorを作成します。
     upper_case_executor = UpperCaseExecutor(id="upper_case_executor")
     reverse_text_executor = ReverseTextExecutor(id="reverse_text_executor")
 
-    # Step 2: Build the workflow with the defined edges.
+    # ステップ2: 定義されたエッジでワークフローを構築します。
     workflow = (
         WorkflowBuilder()
         .add_edge(upper_case_executor, reverse_text_executor)
@@ -72,14 +73,14 @@ async def run_sequential_workflow() -> None:
         .build()
     )
 
-    # Step 3: Run the workflow with an initial message.
+    # ステップ3: 初期メッセージでワークフローを実行します。
     input_text = "hello world"
     print(f"Starting workflow with input: '{input_text}'")
 
     output_event = None
     async for event in workflow.run_stream("Hello world"):
         if isinstance(event, WorkflowOutputEvent):
-            # The WorkflowOutputEvent contains the final result.
+            # WorkflowOutputEventには最終結果が含まれます。
             output_event = event
 
     if output_event:
@@ -87,15 +88,15 @@ async def run_sequential_workflow() -> None:
 
 
 async def main():
-    """Run the telemetry sample with a simple sequential workflow."""
-    # This will enable tracing and create the necessary tracing, logging and metrics providers
-    # based on environment variables. See the .env.example file for the available configuration options.
+    """シンプルなシーケンシャルワークフローでテレメトリサンプルを実行します。"""
+    # トレーシングを有効にし、環境変数に基づいて必要なトレーシング、ロギング、メトリクスプロバイダーを作成します。 利用可能な設定オプションは .env.example
+    # ファイルを参照してください。
     setup_observability()
 
     with get_tracer().start_as_current_span("Sequential Workflow Scenario", kind=SpanKind.CLIENT) as current_span:
         print(f"Trace ID: {format_trace_id(current_span.get_span_context().trace_id)}")
 
-        # Run the sequential workflow scenario
+        # シーケンシャルワークフローシナリオを実行します。
         await run_sequential_workflow()
 
 

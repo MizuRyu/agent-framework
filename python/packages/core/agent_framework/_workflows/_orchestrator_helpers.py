@@ -1,9 +1,9 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Shared orchestrator utilities for group chat patterns.
+"""グループチャットパターンのための共有オーケストレーター用ユーティリティ。
 
-This module provides simple, reusable functions for common orchestration tasks.
-No inheritance required - just import and call.
+このモジュールは、一般的なオーケストレーションタスクのためのシンプルで再利用可能な関数を提供します。
+継承は不要で、インポートして呼び出すだけです。
 """
 
 import logging
@@ -18,52 +18,53 @@ logger = logging.getLogger(__name__)
 
 
 def clean_conversation_for_handoff(conversation: list[ChatMessage]) -> list[ChatMessage]:
-    """Remove tool-related content from conversation for clean handoffs.
+    """会話からツール関連の内容を削除してクリーンなhandoffを実現します。
 
-    During handoffs, tool calls can cause API errors because:
-    1. Assistant messages with tool_calls must be followed by tool responses
-    2. Tool response messages must follow an assistant message with tool_calls
+    handoff中、ツール呼び出しはAPIエラーを引き起こす可能性があります。理由は：
+    1. Assistantメッセージにtool_callsがある場合、ツールレスポンスが続かなければならない
+    2. ツールレスポンスメッセージは、tool_callsを含むassistantメッセージの後に続かなければならない
 
-    This creates a cleaned copy removing ALL tool-related content.
+    これにより、すべてのツール関連コンテンツを削除したクリーンなコピーが作成されます。
 
-    Removes:
-    - FunctionApprovalRequestContent and FunctionCallContent from assistant messages
-    - Tool response messages (Role.TOOL)
-    - Messages with only tool calls and no text
+    削除対象：
+    - assistantメッセージからのFunctionApprovalRequestContentおよびFunctionCallContent
+    - ツールレスポンスメッセージ（Role.TOOL）
+    - テキストなしのツール呼び出しのみのメッセージ
 
-    Preserves:
-    - User messages
-    - Assistant messages with text content
+    保持対象：
+    - ユーザーメッセージ
+    - テキストコンテンツを含むassistantメッセージ
 
     Args:
-        conversation: Original conversation with potential tool content
+        conversation: ツールコンテンツを含む可能性のある元の会話
 
     Returns:
-        Cleaned conversation safe for handoff routing
+        handoffルーティングに安全なクリーンな会話
+
     """
     from agent_framework import FunctionApprovalRequestContent, FunctionCallContent
 
     cleaned: list[ChatMessage] = []
     for msg in conversation:
-        # Skip tool response messages entirely
+        # ツールレスポンスメッセージを完全にスキップします。
         if msg.role == Role.TOOL:
             continue
 
-        # Check for tool-related content
+        # ツール関連の内容があるかチェックします。
         has_tool_content = False
         if msg.contents:
             has_tool_content = any(
                 isinstance(content, (FunctionApprovalRequestContent, FunctionCallContent)) for content in msg.contents
             )
 
-        # If no tool content, keep original
+        # ツール内容がなければ元のまま保持します。
         if not has_tool_content:
             cleaned.append(msg)
             continue
 
-        # Has tool content - only keep if it also has text
+        # ツール内容がある場合はテキストもある場合のみ保持します。
         if msg.text and msg.text.strip():
-            # Create fresh text-only message
+            # 新しいテキストのみのメッセージを作成します。
             msg_copy = ChatMessage(
                 role=msg.role,
                 text=msg.text,
@@ -80,17 +81,18 @@ def create_completion_message(
     author_name: str,
     reason: str = "completed",
 ) -> ChatMessage:
-    """Create a standardized completion message.
+    """標準化されたcompletionメッセージを作成します。
 
-    Simple helper to avoid duplicating completion message creation.
+    completionメッセージ作成の重複を避けるためのシンプルなヘルパー。
 
     Args:
-        text: Message text, or None to generate default
-        author_name: Author/orchestrator name
-        reason: Reason for completion (for default text generation)
+        text: メッセージテキスト、またはNoneでデフォルト生成
+        author_name: 作成者／オーケストレーター名
+        reason: completionの理由（デフォルトテキスト生成用）
 
     Returns:
-        ChatMessage with ASSISTANT role
+        ASSISTANTロールのChatMessage
+
     """
     message_text = text or f"Conversation {reason}."
     return ChatMessage(
@@ -108,21 +110,22 @@ def prepare_participant_request(
     task: ChatMessage | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> "_GroupChatRequestMessage":
-    """Create a standardized participant request message.
+    """標準化された参加者リクエストメッセージを作成します。
 
-    Simple helper to avoid duplicating request construction.
+    リクエスト構築の重複を避けるためのシンプルなヘルパー。
 
     Args:
-        participant_name: Name of the target participant
-        conversation: Conversation history to send
-        instruction: Optional instruction from manager/orchestrator
-        task: Optional task context
-        metadata: Optional metadata dict
+        participant_name: 対象参加者の名前
+        conversation: 送信する会話履歴
+        instruction: マネージャー／オーケストレーターからのオプションの指示
+        task: オプションのタスクコンテキスト
+        metadata: オプションのメタデータ辞書
 
     Returns:
-        GroupChatRequestMessage ready to send
+        送信準備ができたGroupChatRequestMessage
+
     """
-    # Import here to avoid circular dependency
+    # 循環依存を避けるためにここでImportします。
     from ._group_chat import _GroupChatRequestMessage  # type: ignore[reportPrivateUsage]
 
     return _GroupChatRequestMessage(
@@ -135,10 +138,10 @@ def prepare_participant_request(
 
 
 class ParticipantRegistry:
-    """Simple registry for tracking participant executor IDs and routing info.
+    """参加者のexecutor IDとルーティング情報を追跡するためのシンプルなレジストリ。
 
-    Provides a clean interface for the common pattern of mapping participant names
-    to executor IDs and tracking which are agents vs custom executors.
+    参加者名をexecutor IDにマッピングし、AgentとカスタムExecutorを区別して追跡する一般的なパターンのためのクリーンなインターフェースを提供します。
+
     """
 
     def __init__(self) -> None:
@@ -154,12 +157,13 @@ class ParticipantRegistry:
         entry_id: str,
         is_agent: bool,
     ) -> None:
-        """Register a participant's routing information.
+        """参加者のルーティング情報を登録します。
 
         Args:
-            name: Participant name
-            entry_id: Executor ID for this participant's entry point
-            is_agent: Whether this is an AgentExecutor (True) or custom Executor (False)
+            name: 参加者名
+            entry_id: この参加者のエントリーポイントのExecutor ID
+            is_agent: AgentExecutor（True）かカスタムExecutor（False）か
+
         """
         self._participant_entry_ids[name] = entry_id
 
@@ -170,21 +174,21 @@ class ParticipantRegistry:
             self._non_agent_participants.add(name)
 
     def get_entry_id(self, name: str) -> str | None:
-        """Get the entry executor ID for a participant name."""
+        """参加者名からエントリエグゼキューターIDを取得します。"""
         return self._participant_entry_ids.get(name)
 
     def get_participant_name(self, executor_id: str) -> str | None:
-        """Get the participant name for an executor ID (agents only)."""
+        """executor IDから参加者名を取得します（エージェントのみ）。"""
         return self._executor_id_to_participant.get(executor_id)
 
     def is_agent(self, name: str) -> bool:
-        """Check if a participant is an agent (vs custom executor)."""
+        """参加者がAgentか（カスタムExecutorではないか）をチェックします。"""
         return name in self._agent_executor_ids
 
     def is_registered(self, name: str) -> bool:
-        """Check if a participant is registered."""
+        """参加者が登録されているかをチェックします。"""
         return name in self._participant_entry_ids
 
     def all_participants(self) -> set[str]:
-        """Get all registered participant names."""
+        """登録されているすべての参加者名を取得します。"""
         return set(self._participant_entry_ids.keys())

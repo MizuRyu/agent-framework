@@ -1,26 +1,24 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Sample: Multi-tier handoff workflow with specialist-to-specialist routing.
+"""サンプル: スペシャリスト間ルーティングを伴う多層ハンドオフワークフロー。
 
-This sample demonstrates advanced handoff routing where specialist agents can hand off
-to other specialists, enabling complex multi-tier workflows. Unlike the simple handoff
-pattern (see handoff_simple.py), specialists here can delegate to other specialists
-without returning control to the user until the specialist chain completes.
+このサンプルは、スペシャリストAgentが他のスペシャリストにハンドオフできる高度なルーティングを示します。
+これにより複雑な多層ワークフローが可能になります。単純なハンドオフパターン（handoff_simple.py参照）とは異なり、
+ここではスペシャリストがユーザーに制御を戻すことなく他のスペシャリストに委任できます。
 
-Routing Pattern:
+ルーティングパターン:
     User → Triage → Specialist A → Specialist B → Back to User
 
-This pattern is useful for complex support scenarios where different specialists need
-to collaborate or escalate to each other before returning to the user. For example:
-    - Replacement agent needs shipping info → hands off to delivery agent
-    - Technical support needs billing info → hands off to billing agent
-    - Level 1 support escalates to Level 2 → hands off to escalation agent
+このパターンは、異なるスペシャリストが協力またはエスカレーションを行い、ユーザーに戻る前に連携が必要な複雑なサポートシナリオに有用です。例えば:
+    - 交換Agentが配送情報を必要とする → 配送Agentにハンドオフ
+    - 技術サポートが請求情報を必要とする → 請求Agentにハンドオフ
+    - レベル1サポートがレベル2にエスカレーション → エスカレーションAgentにハンドオフ
 
-Configuration uses `.add_handoff()` to explicitly define the routing graph.
+設定は`.add_handoff()`を使ってルーティンググラフを明示的に定義します。
 
-Prerequisites:
-    - `az login` (Azure CLI authentication)
-    - Environment variables configured for AzureOpenAIChatClient
+前提条件:
+    - `az login`（Azure CLI認証）
+    - AzureOpenAIChatClient用の環境変数設定
 """
 
 import asyncio
@@ -42,10 +40,11 @@ from azure.identity import AzureCliCredential
 
 
 def create_agents(chat_client: AzureOpenAIChatClient):
-    """Create triage and specialist agents with multi-tier handoff capabilities.
+    """多層ハンドオフ機能を持つトリアージおよびスペシャリストAgentを作成します。
 
     Returns:
-        Tuple of (triage_agent, replacement_agent, delivery_agent, billing_agent)
+        (triage_agent, replacement_agent, delivery_agent, billing_agent)のタプルを返します
+
     """
     triage = chat_client.create_agent(
         instructions=(
@@ -90,12 +89,12 @@ def create_agents(chat_client: AzureOpenAIChatClient):
 
 
 async def _drain(stream: AsyncIterable[WorkflowEvent]) -> list[WorkflowEvent]:
-    """Collect all events from an async stream into a list."""
+    """非同期ストリームからすべてのイベントをリストに収集します。"""
     return [event async for event in stream]
 
 
 def _handle_events(events: list[WorkflowEvent]) -> list[RequestInfoEvent]:
-    """Process workflow events and extract pending user input requests."""
+    """ワークフローイベントを処理し、保留中のユーザー入力リクエストを抽出します。"""
     requests: list[RequestInfoEvent] = []
 
     for event in events:
@@ -110,7 +109,7 @@ def _handle_events(events: list[WorkflowEvent]) -> list[RequestInfoEvent]:
             if isinstance(conversation, list):
                 print("\n=== Final Conversation ===")
                 for message in conversation:
-                    # Filter out messages with no text (tool calls)
+                    # テキストのないメッセージ（ツール呼び出し）を除外します
                     if not message.text.strip():
                         continue
                     speaker = message.author_name or message.role.value
@@ -126,9 +125,9 @@ def _handle_events(events: list[WorkflowEvent]) -> list[RequestInfoEvent]:
 
 
 def _print_handoff_request(request: HandoffUserInputRequest) -> None:
-    """Display a user input request with conversation context."""
+    """会話コンテキスト付きでユーザー入力リクエストを表示します。"""
     print("\n=== User Input Requested ===")
-    # Filter out messages with no text for cleaner display
+    # 表示をすっきりさせるため、テキストのないメッセージを除外します
     messages_with_text = [msg for msg in request.conversation if msg.text.strip()]
     print(f"Last {len(messages_with_text)} messages in conversation:")
     for message in messages_with_text[-5:]:  # Show last 5 for brevity
@@ -139,24 +138,24 @@ def _print_handoff_request(request: HandoffUserInputRequest) -> None:
 
 
 async def main() -> None:
-    """Demonstrate specialist-to-specialist handoffs in a multi-tier support scenario.
+    """多層サポートシナリオにおけるスペシャリスト間ハンドオフを示します。
 
-    This sample shows:
-    1. Triage agent routes to replacement specialist
-    2. Replacement specialist hands off to delivery specialist
-    3. Delivery specialist can hand off to billing if needed
-    4. All transitions are seamless without returning to user until complete
+    このサンプルは以下を示します:
+    1. トリアージAgentが交換スペシャリストにルーティング
+    2. 交換スペシャリストが配送スペシャリストにハンドオフ
+    3. 配送スペシャリストは必要に応じて請求にハンドオフ可能
+    4. すべての遷移は完了までユーザーに戻らずシームレス
 
-    The workflow configuration explicitly defines which agents can hand off to which others:
+    ワークフロー設定はどのAgentがどのAgentにハンドオフ可能かを明示的に定義しています:
     - triage_agent → replacement_agent, delivery_agent, billing_agent
     - replacement_agent → delivery_agent, billing_agent
     - delivery_agent → billing_agent
+
     """
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     triage, replacement, delivery, billing = create_agents(chat_client)
 
-    # Configure multi-tier handoffs using fluent add_handoff() API
-    # This allows specialists to hand off to other specialists
+    # fluentなadd_handoff() APIを使って多層ハンドオフを設定します これによりスペシャリストが他のスペシャリストにハンドオフ可能になります
     workflow = (
         HandoffBuilder(
             name="multi_tier_support",
@@ -166,17 +165,14 @@ async def main() -> None:
         .add_handoff(triage, [replacement, delivery, billing])  # Triage can route to any specialist
         .add_handoff(replacement, [delivery, billing])  # Replacement can delegate to delivery or billing
         .add_handoff(delivery, billing)  # Delivery can escalate to billing
-        # Termination condition: Stop when more than 4 user messages exist.
-        # This allows agents to respond to the 4th user message before the 5th triggers termination.
-        # In this sample: initial message + 3 scripted responses = 4 messages, then 5th message ends workflow.
+        # 終了条件: ユーザーメッセージが4つを超えたら停止します。 これによりAgentは4番目のユーザーメッセージに応答し、5番目で終了がトリガーされます。
+        # このサンプルでは初期メッセージ＋3つのスクリプト応答＝4メッセージ、その後5番目でワークフロー終了です。
         .with_termination_condition(lambda conv: sum(1 for msg in conv if msg.role.value == "user") > 4)
         .build()
     )
 
-    # Scripted user responses simulating a multi-tier handoff scenario
-    # Note: The initial run_stream() call sends the first user message,
-    # then these scripted responses are sent in sequence (total: 4 user messages).
-    # A 5th response triggers termination after agents respond to the 4th message.
+    # 多層ハンドオフシナリオを模擬するスクリプト化されたユーザー応答 注意: 初回のrun_stream()呼び出しで最初のユーザーメッセージが送信され、
+    # その後これらのスクリプト応答が順に送信されます（合計4つのユーザーメッセージ）。 5番目の応答は4番目の応答後に終了をトリガーします。
     scripted_responses = [
         "I need help with order 12345. I want a replacement and need to know when it will arrive.",
         "The item arrived damaged. I'd like a replacement shipped to the same address.",
@@ -191,14 +187,14 @@ async def main() -> None:
     print("Expected flow: User → Triage → Replacement → Delivery → Billing → User")
     print("=" * 80 + "\n")
 
-    # Start workflow with initial message
+    # 初期メッセージでワークフローを開始します
     print("[User]: I need help with order 12345. I want a replacement and need to know when it will arrive.\n")
     events = await _drain(
         workflow.run_stream("I need help with order 12345. I want a replacement and need to know when it will arrive.")
     )
     pending_requests = _handle_events(events)
 
-    # Process scripted responses
+    # スクリプト化された応答を処理します
     response_index = 0
     while pending_requests and response_index < len(scripted_responses):
         user_response = scripted_responses[response_index]

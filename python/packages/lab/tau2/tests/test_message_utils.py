@@ -7,7 +7,7 @@ from agent_framework_lab_tau2._message_utils import flip_messages, log_messages
 
 
 def test_flip_messages_user_to_assistant():
-    """Test flipping user message to assistant."""
+    """ユーザーメッセージをアシスタントに反転するテスト。"""
     messages = [
         ChatMessage(
             role=Role.USER, contents=[TextContent(text="Hello assistant")], author_name="User1", message_id="msg_001"
@@ -24,7 +24,7 @@ def test_flip_messages_user_to_assistant():
 
 
 def test_flip_messages_assistant_to_user():
-    """Test flipping assistant message to user."""
+    """アシスタントメッセージをユーザーに反転するテスト。"""
     messages = [
         ChatMessage(
             role=Role.ASSISTANT,
@@ -44,7 +44,7 @@ def test_flip_messages_assistant_to_user():
 
 
 def test_flip_messages_assistant_with_function_calls_filtered():
-    """Test that function calls are filtered out when flipping assistant to user."""
+    """アシスタントからユーザーに反転する際に関数呼び出しがフィルタリングされることのテスト。"""
     function_call = FunctionCallContent(call_id="call_123", name="test_function", arguments={"param": "value"})
 
     messages = [
@@ -59,7 +59,7 @@ def test_flip_messages_assistant_with_function_calls_filtered():
 
     assert len(flipped) == 1
     assert flipped[0].role == Role.USER
-    # Function call should be filtered out
+    # 関数呼び出しはフィルタリングされるべきです
     assert len(flipped[0].contents) == 2
     assert all(content.type == "text" for content in flipped[0].contents)
     assert "I'll call a function" in flipped[0].text
@@ -67,7 +67,7 @@ def test_flip_messages_assistant_with_function_calls_filtered():
 
 
 def test_flip_messages_assistant_with_only_function_calls_skipped():
-    """Test that assistant messages with only function calls are skipped."""
+    """関数呼び出しのみのアシスタントメッセージがスキップされることのテスト。"""
     function_call = FunctionCallContent(call_id="call_456", name="another_function", arguments={"key": "value"})
 
     messages = [
@@ -76,24 +76,24 @@ def test_flip_messages_assistant_with_only_function_calls_skipped():
 
     flipped = flip_messages(messages)
 
-    # Should be empty since the message had no text content after filtering
+    # フィルタリング後にテキストコンテンツがないため空であるべきです
     assert len(flipped) == 0
 
 
 def test_flip_messages_tool_messages_skipped():
-    """Test that tool messages are skipped."""
+    """ツールメッセージがスキップされることのテスト。"""
     function_result = FunctionResultContent(call_id="call_789", result={"success": True})
 
     messages = [ChatMessage(role=Role.TOOL, contents=[function_result])]
 
     flipped = flip_messages(messages)
 
-    # Tool messages should be skipped
+    # ツールメッセージはスキップされるべきです
     assert len(flipped) == 0
 
 
 def test_flip_messages_system_messages_preserved():
-    """Test that system messages are preserved as-is."""
+    """システムメッセージがそのまま保持されることのテスト。"""
     messages = [ChatMessage(role=Role.SYSTEM, contents=[TextContent(text="System instruction")], message_id="sys_001")]
 
     flipped = flip_messages(messages)
@@ -105,7 +105,7 @@ def test_flip_messages_system_messages_preserved():
 
 
 def test_flip_messages_mixed_conversation():
-    """Test flipping a mixed conversation."""
+    """混合会話を反転するテスト。"""
     function_call = FunctionCallContent(call_id="call_mixed", name="mixed_function", arguments={})
 
     function_result = FunctionResultContent(call_id="call_mixed", result="function result")
@@ -120,11 +120,11 @@ def test_flip_messages_mixed_conversation():
 
     flipped = flip_messages(messages)
 
-    # Should have: system (unchanged), assistant (from user), user (from assistant, filtered),
-    # assistant (from final assistant)
+    # 以下を含むべきです: system（変更なし）、assistant（userから）、user（assistantから、フィルタリング済み）、
+    # assistant（最終アシスタントから）
     assert len(flipped) == 4
 
-    # Check each flipped message
+    # 反転された各メッセージをチェック
     assert flipped[0].role == Role.SYSTEM
     assert flipped[0].text == "System prompt"
 
@@ -132,23 +132,23 @@ def test_flip_messages_mixed_conversation():
     assert flipped[1].text == "User question"
 
     assert flipped[2].role == Role.USER
-    assert flipped[2].text == "Assistant response"  # Function call filtered out
+    assert flipped[2].text == "Assistant response"  # 関数呼び出しはフィルタリングされました
 
-    # Tool message skipped
+    # ツールメッセージはスキップされました
 
     assert flipped[3].role == Role.USER
     assert flipped[3].text == "Final response"
 
 
 def test_flip_messages_empty_list():
-    """Test flipping empty message list."""
+    """空のメッセージリストを反転するテスト。"""
     messages = []
     flipped = flip_messages(messages)
     assert len(flipped) == 0
 
 
 def test_flip_messages_preserves_metadata():
-    """Test that message metadata is preserved during flipping."""
+    """反転中にメッセージのメタデータが保持されることのテスト。"""
     messages = [
         ChatMessage(
             role=Role.USER, contents=[TextContent(text="Test message")], author_name="TestUser", message_id="test_123"
@@ -164,7 +164,7 @@ def test_flip_messages_preserves_metadata():
 
 @patch("agent_framework_lab_tau2._message_utils.logger")
 def test_log_messages_text_content(mock_logger):
-    """Test logging messages with text content."""
+    """テキストコンテンツを含むメッセージのロギングテスト。"""
     messages = [
         ChatMessage(role=Role.USER, contents=[TextContent(text="Hello")]),
         ChatMessage(role=Role.ASSISTANT, contents=[TextContent(text="Hi there!")]),
@@ -172,20 +172,20 @@ def test_log_messages_text_content(mock_logger):
 
     log_messages(messages)
 
-    # Should have called logger.info for each message
+    # 各メッセージに対してlogger.infoが呼ばれるべきです
     assert mock_logger.opt.return_value.info.call_count == 2
 
 
 @patch("agent_framework_lab_tau2._message_utils.logger")
 def test_log_messages_function_call(mock_logger):
-    """Test logging messages with function calls."""
+    """関数呼び出しを含むメッセージのロギングテスト。"""
     function_call = FunctionCallContent(call_id="call_log", name="log_function", arguments={"param": "value"})
 
     messages = [ChatMessage(role=Role.ASSISTANT, contents=[function_call])]
 
     log_messages(messages)
 
-    # Should log the function call
+    # 関数呼び出しがログに記録されるべきです
     mock_logger.opt.return_value.info.assert_called()
     call_args = mock_logger.opt.return_value.info.call_args[0][0]
     assert "TOOL_CALL" in call_args
@@ -194,14 +194,14 @@ def test_log_messages_function_call(mock_logger):
 
 @patch("agent_framework_lab_tau2._message_utils.logger")
 def test_log_messages_function_result(mock_logger):
-    """Test logging messages with function results."""
+    """関数結果を含むメッセージのロギングテスト。"""
     function_result = FunctionResultContent(call_id="call_result", result="success")
 
     messages = [ChatMessage(role=Role.TOOL, contents=[function_result])]
 
     log_messages(messages)
 
-    # Should log the function result
+    # 関数結果がログに記録されるべきです
     mock_logger.opt.return_value.info.assert_called()
     call_args = mock_logger.opt.return_value.info.call_args[0][0]
     assert "TOOL_RESULT" in call_args
@@ -209,7 +209,7 @@ def test_log_messages_function_result(mock_logger):
 
 @patch("agent_framework_lab_tau2._message_utils.logger")
 def test_log_messages_different_roles(mock_logger):
-    """Test logging messages with different roles get different colors."""
+    """異なる役割のメッセージが異なる色でログされることのテスト。"""
     messages = [
         ChatMessage(role=Role.SYSTEM, contents=[TextContent(text="System")]),
         ChatMessage(role=Role.USER, contents=[TextContent(text="User")]),
@@ -219,10 +219,10 @@ def test_log_messages_different_roles(mock_logger):
 
     log_messages(messages)
 
-    # Should have called logger for each message
+    # 各メッセージに対してloggerが呼ばれるべきです
     assert mock_logger.opt.return_value.info.call_count == 4
 
-    # Check that different color tags are used
+    # 異なるカラータグが使用されていることをチェック
     calls = mock_logger.opt.return_value.info.call_args_list
     system_call = calls[0][0][0]
     user_call = calls[1][0][0]
@@ -237,20 +237,20 @@ def test_log_messages_different_roles(mock_logger):
 
 @patch("agent_framework_lab_tau2._message_utils.logger")
 def test_log_messages_escapes_html(mock_logger):
-    """Test that HTML-like characters are properly escaped in log output."""
+    """ログ出力でHTML風の文字が正しくエスケープされることのテスト。"""
     messages = [ChatMessage(role=Role.USER, contents=[TextContent(text="Message with <tag> content")])]
 
     log_messages(messages)
 
     mock_logger.opt.return_value.info.assert_called()
     call_args = mock_logger.opt.return_value.info.call_args[0][0]
-    # Should escape < characters
+    # <文字がエスケープされるべきです
     assert "\\<tag>" in call_args or "&lt;tag&gt;" in call_args
 
 
 @patch("agent_framework_lab_tau2._message_utils.logger")
 def test_log_messages_mixed_content_types(mock_logger):
-    """Test logging messages with mixed content types."""
+    """混合コンテンツタイプのメッセージのロギングテスト。"""
     function_call = FunctionCallContent(call_id="mixed_call", name="mixed_function", arguments={"key": "value"})
 
     messages = [
@@ -262,5 +262,5 @@ def test_log_messages_mixed_content_types(mock_logger):
 
     log_messages(messages)
 
-    # Should log multiple times for different content types
+    # 異なるコンテンツタイプごとに複数回ログされるべきです
     assert mock_logger.opt.return_value.info.call_count == 3

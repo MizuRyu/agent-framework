@@ -33,14 +33,14 @@ async def test_resume_fails_when_graph_mismatch() -> None:
     storage = InMemoryCheckpointStorage()
     workflow = build_workflow(storage, finish_id="finish")
 
-    # Run once to create checkpoints
+    # チェックポイントを作成するために一度実行します。
     _ = [event async for event in workflow.run_stream("hello")]  # noqa: F841
 
     checkpoints = await storage.list_checkpoints()
     assert checkpoints, "expected at least one checkpoint to be created"
     target_checkpoint = checkpoints[-1]
 
-    # Build a structurally different workflow (different finish executor id)
+    # 構造的に異なるワークフローを構築します（異なるfinish executor id）。
     mismatched_workflow = build_workflow(storage, finish_id="finish_alt")
 
     with pytest.raises(ValueError, match="Workflow graph has changed"):

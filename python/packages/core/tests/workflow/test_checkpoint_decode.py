@@ -40,7 +40,7 @@ def test_is_instance_of_coerces_request_response_original_request_dict() -> None
         request_id="req-1",
     )
 
-    # Simulate checkpoint decode fallback leaving a dict
+    # チェックポイントのデコードフォールバックでdictを残すことをシミュレートします。
     response.original_request = cast(
         Any,
         {

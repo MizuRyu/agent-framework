@@ -18,9 +18,9 @@ from agent_framework import (  # Core chat primitives used to form LLM requests
     WorkflowContext,  # Per-run context and event bus
     executor,  # Decorator to turn a function into a workflow executor
 )
-from agent_framework.azure import AzureOpenAIChatClient  # Thin client for Azure OpenAI chat models
-from azure.identity import AzureCliCredential  # Uses your az CLI login for credentials
-from pydantic import BaseModel  # Structured outputs with validation
+from agent_framework.azure import AzureOpenAIChatClient  # Azure OpenAIチャットモデル用のシンクライアント。
+from azure.identity import AzureCliCredential  # az CLIログインを資格情報として使用します。
+from pydantic import BaseModel  # 検証付きの構造化出力。
 from typing_extensions import Never
 
 """
@@ -51,23 +51,23 @@ CURRENT_EMAIL_ID_KEY = "current_email_id"
 
 
 class DetectionResultAgent(BaseModel):
-    """Structured output returned by the spam detection agent."""
+    """spam detection agentが返す構造化出力。"""
 
-    # The agent classifies the email and provides a rationale.
+    # agentはメールを分類し、その理由を提供します。
     spam_decision: Literal["NotSpam", "Spam", "Uncertain"]
     reason: str
 
 
 class EmailResponse(BaseModel):
-    """Structured output returned by the email assistant agent."""
+    """email assistant agentが返す構造化出力。"""
 
-    # The drafted professional reply.
+    # 作成されたプロフェッショナルな返信。
     response: str
 
 
 @dataclass
 class DetectionResult:
-    # Internal typed payload used for routing and downstream handling.
+    # ルーティングと下流処理に使用される内部の型付きペイロード。
     spam_decision: str
     reason: str
     email_id: str
@@ -75,16 +75,16 @@ class DetectionResult:
 
 @dataclass
 class Email:
-    # In memory record of the email content stored in shared state.
+    # 共有Stateに保存されたメール内容のメモリ内記録。
     email_id: str
     email_content: str
 
 
 def get_case(expected_decision: str):
-    """Factory that returns a predicate matching a specific spam_decision value."""
+    """特定のspam_decision値にマッチする述語を返すファクトリー。"""
 
     def condition(message: Any) -> bool:
-        # Only match when the upstream payload is a DetectionResult with the expected decision.
+        # 上流のペイロードが期待されるdecisionのDetectionResultの場合のみマッチします。
         return isinstance(message, DetectionResult) and message.spam_decision == expected_decision
 
     return condition
@@ -92,12 +92,12 @@ def get_case(expected_decision: str):
 
 @executor(id="store_email")
 async def store_email(email_text: str, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-    # Persist the raw email once. Store under a unique key and set the current pointer for convenience.
+    # 生のメールを一度だけ永続化します。一意のキーで保存し、利便性のために現在のポインターを設定します。
     new_email = Email(email_id=str(uuid4()), email_content=email_text)
     await ctx.set_shared_state(f"{EMAIL_STATE_PREFIX}{new_email.email_id}", new_email)
     await ctx.set_shared_state(CURRENT_EMAIL_ID_KEY, new_email.email_id)
 
-    # Kick off the detector by forwarding the email as a user message to the spam_detection_agent.
+    # メールをユーザーメッセージとしてspam_detection_agentに転送し、検出器を起動します。
     await ctx.send_message(
         AgentExecutorRequest(messages=[ChatMessage(Role.USER, text=new_email.email_content)], should_respond=True)
     )
@@ -105,7 +105,7 @@ async def store_email(email_text: str, ctx: WorkflowContext[AgentExecutorRequest
 
 @executor(id="to_detection_result")
 async def to_detection_result(response: AgentExecutorResponse, ctx: WorkflowContext[DetectionResult]) -> None:
-    # Parse the detector JSON into a typed model. Attach the current email id for downstream lookups.
+    # 検出器のJSONを型付きモデルに解析します。下流の参照用に現在のメールIDを添付します。
     parsed = DetectionResultAgent.model_validate_json(response.agent_run_response.text)
     email_id: str = await ctx.get_shared_state(CURRENT_EMAIL_ID_KEY)
     await ctx.send_message(DetectionResult(spam_decision=parsed.spam_decision, reason=parsed.reason, email_id=email_id))
@@ -113,11 +113,11 @@ async def to_detection_result(response: AgentExecutorResponse, ctx: WorkflowCont
 
 @executor(id="submit_to_email_assistant")
 async def submit_to_email_assistant(detection: DetectionResult, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-    # Only proceed for the NotSpam branch. Guard against accidental misrouting.
+    # NotSpamブランチのみ進行します。誤ったルーティングを防ぎます。
     if detection.spam_decision != "NotSpam":
         raise RuntimeError("This executor should only handle NotSpam messages.")
 
-    # Load the original content from shared state using the id carried in DetectionResult.
+    # DetectionResultに含まれるIDを使って共有Stateから元の内容をロードします。
     email: Email = await ctx.get_shared_state(f"{EMAIL_STATE_PREFIX}{detection.email_id}")
     await ctx.send_message(
         AgentExecutorRequest(messages=[ChatMessage(Role.USER, text=email.email_content)], should_respond=True)
@@ -126,14 +126,14 @@ async def submit_to_email_assistant(detection: DetectionResult, ctx: WorkflowCon
 
 @executor(id="finalize_and_send")
 async def finalize_and_send(response: AgentExecutorResponse, ctx: WorkflowContext[Never, str]) -> None:
-    # Terminal step for the drafting branch. Yield the email response as output.
+    # ドラフトブランチの終端ステップ。メールの返信を出力としてyieldします。
     parsed = EmailResponse.model_validate_json(response.agent_run_response.text)
     await ctx.yield_output(f"Email sent: {parsed.response}")
 
 
 @executor(id="handle_spam")
 async def handle_spam(detection: DetectionResult, ctx: WorkflowContext[Never, str]) -> None:
-    # Spam path terminal. Include the detector's rationale.
+    # Spamパスの終端。検出器の理由を含めます。
     if detection.spam_decision == "Spam":
         await ctx.yield_output(f"Email marked as spam: {detection.reason}")
     else:
@@ -142,7 +142,7 @@ async def handle_spam(detection: DetectionResult, ctx: WorkflowContext[Never, st
 
 @executor(id="handle_uncertain")
 async def handle_uncertain(detection: DetectionResult, ctx: WorkflowContext[Never, str]) -> None:
-    # Uncertain path terminal. Surface the original content to aid human review.
+    # 不確定パスの終端。元の内容を表示して人間のレビューを支援します。
     if detection.spam_decision == "Uncertain":
         email: Email | None = await ctx.get_shared_state(f"{EMAIL_STATE_PREFIX}{detection.email_id}")
         await ctx.yield_output(
@@ -153,10 +153,10 @@ async def handle_uncertain(detection: DetectionResult, ctx: WorkflowContext[Neve
 
 
 async def main():
-    """Main function to run the workflow."""
+    """ワークフローを実行するメイン関数。"""
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
-    # Agents. response_format enforces that the LLM returns JSON that Pydantic can validate.
+    # Agents。response_formatはLLMがPydanticで検証可能なJSONを返すことを強制します。
     spam_detection_agent = AgentExecutor(
         chat_client.create_agent(
             instructions=(
@@ -180,8 +180,8 @@ async def main():
         id="email_assistant_agent",
     )
 
-    # Build workflow: store -> detection agent -> to_detection_result -> switch (NotSpam or Spam or Default).
-    # The switch-case group evaluates cases in order, then falls back to Default when none match.
+    # ワークフロー構築: store -> detection agent -> to_detection_result -> switch (NotSpam or
+    # Spam or Default). switch-caseグループは順にケースを評価し、どれもマッチしない場合はDefaultにフォールバックします。
     workflow = (
         WorkflowBuilder()
         .set_start_executor(store_email)
@@ -200,7 +200,7 @@ async def main():
         .build()
     )
 
-    # Read ambiguous email if available. Otherwise use a simple inline sample.
+    # 曖昧なメールがあれば読み込みます。なければ簡単なインラインサンプルを使用します。
     resources_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "resources", "ambiguous_email.txt"
     )
@@ -214,7 +214,7 @@ async def main():
             "Let me know if you'd like more details."
         )
 
-    # Run and print the outputs from whichever branch completes.
+    # 完了したブランチの出力を実行して表示します。
     events = await workflow.run(email)
     outputs = events.get_outputs()
     if outputs:

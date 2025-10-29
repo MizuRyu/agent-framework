@@ -9,7 +9,7 @@ from agent_framework._memory import AggregateContextProvider, Context, ContextPr
 
 
 class MockContextProvider(ContextProvider):
-    """Mock ContextProvider for testing."""
+    """テスト用のContextProviderのモック。"""
 
     def __init__(self, messages: list[ChatMessage] | None = None) -> None:
         self.context_messages = messages
@@ -21,7 +21,7 @@ class MockContextProvider(ContextProvider):
         self.model_invoking_messages = None
 
     async def thread_created(self, thread_id: str | None) -> None:
-        """Track thread_created calls."""
+        """thread_created呼び出しを追跡します。"""
         self.thread_created_called = True
         self.thread_created_thread_id = thread_id
 
@@ -32,12 +32,12 @@ class MockContextProvider(ContextProvider):
         invoke_exception: Exception | None = None,
         **kwargs: Any,
     ) -> None:
-        """Track invoked calls."""
+        """invoked呼び出しを追跡します。"""
         self.invoked_called = True
         self.new_messages = request_messages
 
     async def invoking(self, messages: ChatMessage | MutableSequence[ChatMessage], **kwargs: Any) -> Context:
-        """Track invoking calls and return context."""
+        """invoking呼び出しを追跡し、contextを返します。"""
         self.invoking_called = True
         self.model_invoking_messages = messages
         context = Context()
@@ -46,20 +46,20 @@ class MockContextProvider(ContextProvider):
 
 
 class TestAggregateContextProvider:
-    """Tests for AggregateContextProvider class."""
+    """AggregateContextProviderクラスのテスト。"""
 
     def test_init_with_no_providers(self) -> None:
-        """Test initialization with no providers."""
+        """プロバイダーなしでの初期化をテストします。"""
         aggregate = AggregateContextProvider()
         assert aggregate.providers == []
 
     def test_init_with_none_providers(self) -> None:
-        """Test initialization with None providers."""
+        """Noneのプロバイダーでの初期化をテストします。"""
         aggregate = AggregateContextProvider(None)
         assert aggregate.providers == []
 
     def test_init_with_providers(self) -> None:
-        """Test initialization with providers."""
+        """プロバイダーありでの初期化をテストします。"""
         provider1 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 1")])
         provider2 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 2")])
         provider3 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 3")])
@@ -72,7 +72,7 @@ class TestAggregateContextProvider:
         assert aggregate.providers[2] is provider3
 
     def test_add_provider(self) -> None:
-        """Test adding a provider."""
+        """プロバイダーの追加をテストします。"""
         aggregate = AggregateContextProvider()
         provider = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions")])
 
@@ -81,7 +81,7 @@ class TestAggregateContextProvider:
         assert aggregate.providers[0] is provider
 
     def test_add_multiple_providers(self) -> None:
-        """Test adding multiple providers."""
+        """複数のプロバイダーの追加をテストします。"""
         aggregate = AggregateContextProvider()
         provider1 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 1")])
         provider2 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 2")])
@@ -94,14 +94,14 @@ class TestAggregateContextProvider:
         assert aggregate.providers[1] is provider2
 
     async def test_thread_created_with_no_providers(self) -> None:
-        """Test thread_created with no providers."""
+        """プロバイダーなしでのthread_createdをテストします。"""
         aggregate = AggregateContextProvider()
 
-        # Should not raise an exception
+        # 例外を発生させるべきではありません。
         await aggregate.thread_created("thread-123")
 
     async def test_thread_created_with_providers(self) -> None:
-        """Test thread_created calls all providers."""
+        """thread_createdが全てのプロバイダーを呼び出すことをテストします。"""
         provider1 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 1")])
         provider2 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 2")])
         aggregate = AggregateContextProvider([provider1, provider2])
@@ -115,7 +115,7 @@ class TestAggregateContextProvider:
         assert provider2.thread_created_thread_id == thread_id
 
     async def test_thread_created_with_none_thread_id(self) -> None:
-        """Test thread_created with None thread_id."""
+        """Noneのthread_idでのthread_createdをテストします。"""
         provider = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions")])
         aggregate = AggregateContextProvider([provider])
 
@@ -125,15 +125,15 @@ class TestAggregateContextProvider:
         assert provider.thread_created_thread_id is None
 
     async def test_messages_adding_with_no_providers(self) -> None:
-        """Test invoked with no providers."""
+        """プロバイダーなしでのinvokedをテストします。"""
         aggregate = AggregateContextProvider()
         message = ChatMessage(text="Hello", role=Role.USER)
 
-        # Should not raise an exception
+        # 例外を発生させてはいけません
         await aggregate.invoked(message)
 
     async def test_messages_adding_with_single_message(self) -> None:
-        """Test invoked with a single message."""
+        """単一のメッセージで呼び出されたテスト。"""
         provider1 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 1")])
         provider2 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 2")])
         aggregate = AggregateContextProvider([provider1, provider2])
@@ -147,7 +147,7 @@ class TestAggregateContextProvider:
         assert provider2.new_messages == message
 
     async def test_messages_adding_with_message_sequence(self) -> None:
-        """Test invoked with a sequence of messages."""
+        """メッセージのシーケンスで呼び出されたテスト。"""
         provider = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions")])
         aggregate = AggregateContextProvider([provider])
 
@@ -161,7 +161,7 @@ class TestAggregateContextProvider:
         assert provider.new_messages == messages
 
     async def test_model_invoking_with_no_providers(self) -> None:
-        """Test invoking with no providers."""
+        """プロバイダーなしで呼び出されたテスト。"""
         aggregate = AggregateContextProvider()
         message = ChatMessage(text="Hello", role=Role.USER)
 
@@ -171,7 +171,7 @@ class TestAggregateContextProvider:
         assert not context.messages
 
     async def test_model_invoking_with_single_provider(self) -> None:
-        """Test invoking with a single provider."""
+        """単一のプロバイダーで呼び出されたテスト。"""
         provider = MockContextProvider(messages=[ChatMessage(role="user", text="Test instructions")])
         aggregate = AggregateContextProvider([provider])
 
@@ -187,7 +187,7 @@ class TestAggregateContextProvider:
         assert context.messages[0].text == "Test instructions"
 
     async def test_model_invoking_with_multiple_providers(self) -> None:
-        """Test invoking combines contexts from multiple providers."""
+        """複数のプロバイダーからのコンテキストを組み合わせて呼び出すテスト。"""
         provider1 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 1")])
         provider2 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 2")])
         provider3 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 3")])
@@ -214,9 +214,9 @@ class TestAggregateContextProvider:
         assert context.messages[2].text == "Instructions 3"
 
     async def test_model_invoking_with_none_instructions(self) -> None:
-        """Test invoking filters out None instructions."""
+        """Noneの指示をフィルタリングして呼び出すテスト。"""
         provider1 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 1")])
-        provider2 = MockContextProvider(messages=None)  # None instructions
+        provider2 = MockContextProvider(messages=None)  # Noneの指示
         provider3 = MockContextProvider(messages=[ChatMessage(role="user", text="Instructions 3")])
         aggregate = AggregateContextProvider([provider1, provider2, provider3])
 
@@ -231,7 +231,7 @@ class TestAggregateContextProvider:
         assert context.messages[1].text == "Instructions 3"
 
     async def test_model_invoking_with_all_none_instructions(self) -> None:
-        """Test invoking when all providers return None instructions."""
+        """すべてのプロバイダーがNoneの指示を返す場合の呼び出しテスト。"""
         provider1 = MockContextProvider(None)
         provider2 = MockContextProvider(None)
         aggregate = AggregateContextProvider([provider1, provider2])
@@ -243,7 +243,7 @@ class TestAggregateContextProvider:
         assert not context.messages
 
     async def test_model_invoking_with_mutable_sequence(self) -> None:
-        """Test invoking with MutableSequence of messages."""
+        """MutableSequenceのメッセージで呼び出されたテスト。"""
         provider = MockContextProvider(messages=[ChatMessage(role="user", text="Test instructions")])
         aggregate = AggregateContextProvider([provider])
 
@@ -258,8 +258,8 @@ class TestAggregateContextProvider:
         assert context.messages[0].text == "Test instructions"
 
     async def test_async_methods_concurrent_execution(self) -> None:
-        """Test that async methods execute providers concurrently."""
-        # Use AsyncMock to verify concurrent execution
+        """非同期メソッドがプロバイダーを同時に実行することをテスト。"""
+        # AsyncMockを使用して同時実行を検証する
         provider1 = Mock(spec=ContextProvider)
         provider1.thread_created = AsyncMock()
         provider1.invoked = AsyncMock()
@@ -272,12 +272,12 @@ class TestAggregateContextProvider:
 
         aggregate = AggregateContextProvider([provider1, provider2])
 
-        # Test thread_created
+        # thread_createdのテスト
         await aggregate.thread_created("thread-123")
         provider1.thread_created.assert_called_once_with("thread-123")
         provider2.thread_created.assert_called_once_with("thread-123")
 
-        # Test invoked
+        # invokedのテスト
         message = ChatMessage(text="Hello", role=Role.USER)
         await aggregate.invoked(message)
         provider1.invoked.assert_called_once_with(
@@ -287,7 +287,7 @@ class TestAggregateContextProvider:
             request_messages=message, response_messages=None, invoke_exception=None
         )
 
-        # Test invoking
+        # invokingのテスト
         context = await aggregate.invoking(message)
         provider1.invoking.assert_called_once_with(message)
         provider2.invoking.assert_called_once_with(message)

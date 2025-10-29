@@ -21,7 +21,7 @@ settings rather than relying on environment variable defaults.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -29,10 +29,8 @@ def get_weather(
 async def main() -> None:
     print("=== Azure AI Chat Client with Explicit Settings ===")
 
-    # Since no Agent ID is provided, the agent will be automatically created
-    # and deleted after getting a response
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # Agent IDが指定されていないため、Agentは自動的に作成され、レスポンス取得後に削除されます。 認証には、ターミナルで`az
+    # login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         ChatAgent(

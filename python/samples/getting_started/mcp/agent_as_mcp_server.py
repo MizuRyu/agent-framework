@@ -46,18 +46,17 @@ def get_item_price(
 
 
 async def run() -> None:
-    # Define an agent
-    # Agent's name and description provide better context for AI model
+    # エージェントを定義する Agentの名前と説明はAIモデルにより良いコンテキストを提供します
     agent = OpenAIResponsesClient().create_agent(
         name="RestaurantAgent",
         description="Answer questions about the menu.",
         tools=[get_specials, get_item_price],
     )
 
-    # Expose the agent as an MCP server
+    # エージェントをMCPサーバーとして公開する
     server = agent.as_mcp_server()
 
-    # Run server
+    # サーバーを実行する
     from mcp.server.stdio import stdio_server
 
     async def handle_stdin(stdin: Any | None = None, stdout: Any | None = None) -> None:

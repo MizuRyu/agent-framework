@@ -45,79 +45,68 @@ Prerequisites
 """
 
 
-# Example 1: A custom Executor subclass
-# ------------------------------------
-#
-# Subclassing Executor lets you define a named node with lifecycle hooks if needed.
-# The work itself is implemented in an async method decorated with @handler.
-#
-# Handler signature contract:
-# - First parameter is the typed input to this node (here: text: str)
-# - Second parameter is a WorkflowContext[T_Out], where T_Out is the type of data this
-#   node will emit via ctx.send_message (here: T_Out is str)
-#
-# Within a handler you typically:
-# - Compute a result
-# - Forward that result to downstream node(s) using ctx.send_message(result)
+# Example 1: カスタムExecutorサブクラス ------------------------------------
+# Executorをサブクラス化すると、必要に応じてライフサイクルフックを持つ名前付きノードを定義できる。
+# 実際の処理は@handlerで装飾された非同期メソッドで実装される。  Handlerのシグネチャ契約: - 最初のパラメータはこのノードへの型付き入力（ここではtext:
+# str） -
+# 2番目のパラメータはWorkflowContext[T_Out]で、T_Outはこのノードがctx.send_messageで送信するデータの型（ここではstr）
+# Handler内では通常: - 結果を計算する - ctx.send_message(result)を使って結果を下流ノードに転送する
 class UpperCase(Executor):
     def __init__(self, id: str):
         super().__init__(id=id)
 
     @handler
     async def to_upper_case(self, text: str, ctx: WorkflowContext[str]) -> None:
-        """Convert the input to uppercase and forward it to the next node.
+        """入力を大文字に変換し、次のノードに転送する。
 
-        Note: The WorkflowContext is parameterized with the type this handler will
-        emit. Here WorkflowContext[str] means downstream nodes should expect str.
+        注意: WorkflowContextはこのハンドラが送信する型でパラメータ化されている。
+        ここでWorkflowContext[str]は下流ノードがstrを期待することを意味する。
+
         """
         result = text.upper()
 
-        # Send the result to the next executor in the workflow.
+        # 結果をワークフロー内の次のExecutorに送信する。
         await ctx.send_message(result)
 
 
-# Example 2: A standalone function-based executor
-# -----------------------------------------------
-#
-# For simple steps you can skip subclassing and define an async function with the
-# same signature pattern (typed input + WorkflowContext[T_Out, T_W_Out]) and decorate it with
-# @executor. This creates a fully functional node that can be wired into a flow.
+# Example 2: スタンドアロンの関数ベースのexecutor -----------------------------------------------
+# 単純なステップの場合はサブクラス化を省略し、同じシグネチャパターン（型付き入力 + WorkflowContext[T_Out,
+# T_W_Out]）の非同期関数を定義し、@executorでデコレートできます。これにより、フローに接続可能な完全な機能を持つノードが作成されます。
 
 
 @executor(id="reverse_text_executor")
 async def reverse_text(text: str, ctx: WorkflowContext[Never, str]) -> None:
-    """Reverse the input string and yield the workflow output.
+    """入力文字列を逆順にしてワークフロー出力をyieldする。
 
-    This node yields the final output using ctx.yield_output(result).
-    The workflow will complete when it becomes idle (no more work to do).
+    このノードはctx.yield_output(result)を使って最終出力をyieldする。
+    ワークフローはアイドル状態（処理がなくなる）になると完了する。
 
-    The WorkflowContext is parameterized with two types:
-    - T_Out = Never: this node does not send messages to downstream nodes.
-    - T_W_Out = str: this node yields workflow output of type str.
+    WorkflowContextは2つの型でパラメータ化されている:
+    - T_Out = Never: このノードは下流ノードにメッセージを送信しない。
+    - T_W_Out = str: このノードはstr型のワークフロー出力をyieldする。
+
     """
     result = text[::-1]
 
-    # Yield the output - the workflow will complete when idle
+    # 出力をyieldします - ワークフローはアイドル状態になると完了します
     await ctx.yield_output(result)
 
 
 async def main():
-    """Build and run a simple 2-step workflow using the fluent builder API."""
+    """フルーエントビルダーAPIを使ってシンプルな2ステップのワークフローを構築し実行します。"""
 
     upper_case = UpperCase(id="upper_case_executor")
 
-    # Build the workflow using a fluent pattern:
-    # 1) add_edge(from_node, to_node) defines a directed edge upper_case -> reverse_text
-    # 2) set_start_executor(node) declares the entry point
-    # 3) build() finalizes and returns an immutable Workflow object
+    # フルーエントパターンでワークフローを構築します: 1) add_edge(from_node, to_node) は有向エッジ upper_case ->
+    # reverse_text を定義します 2) set_start_executor(node) はエントリーポイントを宣言します 3) build()
+    # は最終化して不変のWorkflowオブジェクトを返します
     workflow = WorkflowBuilder().add_edge(upper_case, reverse_text).set_start_executor(upper_case).build()
 
-    # Run the workflow by sending the initial message to the start node.
-    # The run(...) call returns an event collection; its get_outputs() method
-    # retrieves the outputs yielded by any terminal nodes.
+    # 開始ノードに初期メッセージを送信してワークフローを実行します。 run(...) 呼び出しはイベントコレクションを返し、その get_outputs() メソッドで
+    # 終端ノードからyieldされた出力を取得します。
     events = await workflow.run("hello world")
     print(events.get_outputs())
-    # Summarize the final run state (e.g., COMPLETED)
+    # 最終的なrun状態を要約します（例: COMPLETED）
     print("Final state:", events.get_final_state())
 
     """

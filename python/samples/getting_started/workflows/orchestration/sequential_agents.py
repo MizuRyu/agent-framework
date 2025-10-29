@@ -28,7 +28,7 @@ Prerequisites:
 
 
 async def main() -> None:
-    # 1) Create agents
+    # 1) Agentを作成します
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     writer = chat_client.create_agent(
@@ -41,10 +41,10 @@ async def main() -> None:
         name="reviewer",
     )
 
-    # 2) Build sequential workflow: writer -> reviewer
+    # 2) 逐次ワークフローを構築します: writer -> reviewer
     workflow = SequentialBuilder().participants([writer, reviewer]).build()
 
-    # 3) Run and collect outputs
+    # 3) 実行して出力を収集します
     outputs: list[list[ChatMessage]] = []
     async for event in workflow.run_stream("Write a tagline for a budget-friendly eBike."):
         if isinstance(event, WorkflowOutputEvent):

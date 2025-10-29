@@ -1,15 +1,15 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""AutoGen MagenticOneGroupChat vs Agent Framework MagenticBuilder.
+"""AutoGen の MagenticOneGroupChat と Agent Framework の MagenticBuilder の比較。
 
-Demonstrates orchestrated multi-agent workflows with a central coordinator
-managing specialized agents for complex tasks.
+複雑なタスクのために専門化されたエージェントを管理する中央コーディネーターを持つ
+オーケストレーションされたマルチエージェントワークフローを示します。
 """
 
 import asyncio
 
 
 async def run_autogen() -> None:
-    """AutoGen's MagenticOneGroupChat for orchestrated collaboration."""
+    """AutoGen の MagenticOneGroupChat によるオーケストレーションされたコラボレーション。"""
     from autogen_agentchat.agents import AssistantAgent
     from autogen_agentchat.teams import MagenticOneGroupChat
     from autogen_agentchat.ui import Console
@@ -17,7 +17,7 @@ async def run_autogen() -> None:
 
     client = OpenAIChatCompletionClient(model="gpt-4.1-mini")
 
-    # Create specialized agents
+    # 専門化されたエージェントを作成します
     researcher = AssistantAgent(
         name="researcher",
         model_client=client,
@@ -42,7 +42,7 @@ async def run_autogen() -> None:
         model_client_stream=True,
     )
 
-    # Create MagenticOne team with coordinator
+    # コーディネーター付きの MagenticOne チームを作成します
     team = MagenticOneGroupChat(
         participants=[researcher, coder, reviewer],
         model_client=client,  # Coordinator uses this client
@@ -50,13 +50,13 @@ async def run_autogen() -> None:
         max_stalls=3,
     )
 
-    # Run complex task and display the conversation
+    # 複雑なタスクを実行し、会話を表示します
     print("[AutoGen] Magentic One conversation:")
     await Console(team.run_stream(task="Research Python async patterns and write a simple example"))
 
 
 async def run_agent_framework() -> None:
-    """Agent Framework's MagenticBuilder for orchestrated collaboration."""
+    """Agent Framework の MagenticBuilder によるオーケストレーションされたコラボレーション。"""
     from agent_framework import (
         MagenticAgentDeltaEvent,
         MagenticAgentMessageEvent,
@@ -68,7 +68,7 @@ async def run_agent_framework() -> None:
 
     client = OpenAIChatClient(model_id="gpt-4.1-mini")
 
-    # Create specialized agents
+    # 専門化されたエージェントを作成します
     researcher = client.create_agent(
         name="researcher",
         instructions="You are a research analyst. Gather and analyze information.",
@@ -87,7 +87,7 @@ async def run_agent_framework() -> None:
         description="Code reviewer for quality assurance",
     )
 
-    # Create Magentic workflow
+    # Magneticワークフローを作成する
     workflow = (
         MagenticBuilder()
         .participants(researcher=researcher, coder=coder, reviewer=reviewer)
@@ -100,7 +100,7 @@ async def run_agent_framework() -> None:
         .build()
     )
 
-    # Run complex task
+    # 複雑なタスクを実行する
     print("[Agent Framework] Magentic conversation:")
     last_stream_agent_id: str | None = None
     stream_line_open: bool = False
@@ -135,7 +135,7 @@ async def run_agent_framework() -> None:
 
     if stream_line_open:
         print()
-    print()  # Final newline after conversation
+    print()  # 会話の後に最終改行を追加する
 
 
 async def main() -> None:

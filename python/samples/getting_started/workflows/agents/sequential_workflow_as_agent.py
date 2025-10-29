@@ -26,7 +26,7 @@ Prerequisites:
 
 
 async def main() -> None:
-    # 1) Create agents
+    # 1) Agentを作成する
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     writer = chat_client.create_agent(
@@ -39,10 +39,10 @@ async def main() -> None:
         name="reviewer",
     )
 
-    # 2) Build sequential workflow: writer -> reviewer
+    # 2) 逐次的なワークフローを構築する: writer -> reviewer
     workflow = SequentialBuilder().participants([writer, reviewer]).build()
 
-    # 3) Treat the workflow itself as an agent for follow-up invocations
+    # 3) ワークフロー自体をAgentとして扱い、フォローアップ呼び出しに使用する
     agent = workflow.as_agent(name="SequentialWorkflowAgent")
     prompt = "Write a tagline for a budget-friendly eBike."
     agent_response = await agent.run(prompt)

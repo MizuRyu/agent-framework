@@ -28,11 +28,11 @@ class StringExecutor(Executor):
 
 
 class StringAggregator(Executor):
-    """A mock executor that aggregates results from multiple executors."""
+    """複数のexecutorから結果を集約するモックexecutor。"""
 
     @handler
     async def mock_handler(self, messages: list[str], ctx: WorkflowContext[str]) -> None:
-        # This mock simply returns the data incremented by 1
+        # このモックは単にデータに1を加えたものを返します。
         await ctx.send_message("Aggregated: " + ", ".join(messages))
 
 
@@ -68,7 +68,7 @@ def test_valid_workflow_passes_validation():
     executor1 = StringExecutor(id="string_executor")
     executor2 = StringExecutor(id="string_executor_2")
 
-    # Create a valid workflow
+    # 有効なワークフローを作成します。
     workflow = (
         WorkflowBuilder()
         .add_edge(executor1, executor2)
@@ -120,7 +120,7 @@ def test_type_compatibility_with_any_type_passes():
     string_executor = StringExecutor(id="string_executor")
     any_executor = AnyExecutor(id="any_executor")
 
-    # This should not raise an exception
+    # 例外は発生しないはずです。
     workflow = WorkflowBuilder().add_edge(string_executor, any_executor).set_start_executor(string_executor).build()
 
     assert workflow is not None
@@ -130,7 +130,7 @@ def test_type_compatibility_with_no_output_types():
     no_output_executor = NoOutputTypesExecutor(id="no_output")
     string_executor = StringExecutor(id="string_executor")
 
-    # This should pass validation since no output types are specified
+    # 出力型が指定されていないため検証は通過するはずです。
     workflow = (
         WorkflowBuilder().add_edge(no_output_executor, string_executor).set_start_executor(no_output_executor).build()
     )
@@ -142,7 +142,7 @@ def test_multi_type_executor_compatibility():
     string_executor = StringExecutor(id="string_executor")
     multi_type_executor = MultiTypeExecutor(id="multi_type")
 
-    # String executor outputs strings, multi-type can handle strings
+    # String executorは文字列を出力し、multi-typeは文字列を扱えます。
     workflow = (
         WorkflowBuilder().add_edge(string_executor, multi_type_executor).set_start_executor(string_executor).build()
     )
@@ -153,7 +153,7 @@ def test_multi_type_executor_compatibility():
 def test_graph_connectivity_unreachable_executors():
     executor1 = StringExecutor(id="executor1")
     executor2 = StringExecutor(id="executor2")
-    executor3 = StringExecutor(id="executor3")  # This will be unreachable
+    executor3 = StringExecutor(id="executor3")  # ここには到達しません。
 
     with pytest.raises(GraphConnectivityError) as exc_info:
         WorkflowBuilder().add_edge(executor1, executor2).add_edge(executor3, executor2).set_start_executor(
@@ -168,13 +168,13 @@ def test_graph_connectivity_unreachable_executors():
 def test_graph_connectivity_isolated_executors():
     executor1 = StringExecutor(id="executor1")
     executor2 = StringExecutor(id="executor2")
-    executor3 = StringExecutor(id="executor3")  # This will be isolated
+    executor3 = StringExecutor(id="executor3")  # ここは孤立します。
 
-    # Create edges that include an isolated executor (self-loop that's not connected to main graph)
+    # メイングラフに接続されていない孤立したexecutor（自己ループ）を含むエッジを作成します。
     edge_groups = [
         SingleEdgeGroup(executor1.id, executor2.id),
         SingleEdgeGroup(executor3.id, executor3.id),
-    ]  # Self-loop to include in graph
+    ]  # グラフに含めるための自己ループ。
 
     executors: dict[str, Executor] = {executor1.id: executor1, executor2.id: executor2, executor3.id: executor3}
 
@@ -188,7 +188,7 @@ def test_graph_connectivity_isolated_executors():
 def test_start_executor_not_in_graph():
     executor1 = StringExecutor(id="executor1")
     executor2 = StringExecutor(id="executor2")
-    executor3 = StringExecutor(id="executor3")  # Not in graph
+    executor3 = StringExecutor(id="executor3")  # グラフに含まれていません。
 
     with pytest.raises(GraphConnectivityError) as exc_info:
         WorkflowBuilder().add_edge(executor1, executor2).set_start_executor(executor3).build()
@@ -214,7 +214,7 @@ def test_workflow_validation_error_base_class():
 
 
 def test_complex_workflow_validation():
-    # Create a workflow with multiple paths
+    # 複数のパスを持つワークフローを作成します。
     executor1 = StringExecutor(id="executor1")
     executor2 = MultiTypeExecutor(id="executor2")
     executor3 = StringExecutor(id="executor3")
@@ -247,7 +247,7 @@ def test_type_compatibility_inheritance():
     base_executor = BaseExecutor(id="base")
     derived_executor = DerivedExecutor(id="derived")
 
-    # This should pass since both handle str
+    # 両方がstrを扱うため通過するはずです。
     workflow = WorkflowBuilder().add_edge(base_executor, derived_executor).set_start_executor(base_executor).build()
 
     assert workflow is not None
@@ -259,10 +259,10 @@ def test_direct_validation_function():
     edge_groups = [SingleEdgeGroup(executor1.id, executor2.id)]
     executors: dict[str, Executor] = {executor1.id: executor1, executor2.id: executor2}
 
-    # This should not raise any exceptions
+    # 例外は発生しないはずです。
     validate_workflow_graph(edge_groups, executors, executor1)
 
-    # Test with invalid start executor
+    # 無効な開始executorでテストします。
     executor3 = StringExecutor(id="executor3")
     with pytest.raises(GraphConnectivityError):
         validate_workflow_graph(edge_groups, executors, executor3)
@@ -284,7 +284,7 @@ def test_fan_in_validation():
     source2 = StringExecutor(id="source2")
     target = StringAggregator(id="target")
 
-    # Create a proper fan-in by having a start executor that connects to both sources
+    # 両方のソースに接続する開始executorで適切なファンインを作成します。
     workflow = (
         WorkflowBuilder()
         .add_edge(start_executor, source1)  # Start connects to source1
@@ -310,11 +310,11 @@ def test_chain_validation():
 def test_logging_for_missing_output_types(caplog: Any) -> None:
     caplog.set_level(logging.WARNING)
 
-    # Create executor without output types
+    # 出力型なしのexecutorを作成します。
     no_output_executor = NoOutputTypesExecutor(id="no_output")
     string_executor = StringExecutor(id="string_executor")
 
-    # This should trigger a warning log
+    # 警告ログがトリガーされるはずです。
     workflow = (
         WorkflowBuilder().add_edge(no_output_executor, string_executor).set_start_executor(no_output_executor).build()
     )
@@ -328,18 +328,18 @@ def test_logging_for_missing_input_types(caplog: Any) -> None:
     caplog.set_level(logging.WARNING)
 
     class NoInputTypesExecutor(Executor):
-        # Handler without type annotation for input parameter
+        # 入力パラメータに型注釈のないハンドラ。
         async def handle_message(self, message: Any, ctx: WorkflowContext[Any]) -> None:
             await ctx.send_message("processed")
 
         def _discover_handlers(self) -> None:
-            # Override to manually register handler without type info
+            # 型情報なしでハンドラを手動登録するためにオーバーライドします。
             self._handlers[str] = self.handle_message
 
     string_executor = StringExecutor(id="string_executor")
     no_input_executor = NoInputTypesExecutor(id="no_input")
 
-    # This should pass since NoInputTypesExecutor has no proper input types
+    # NoInputTypesExecutorは適切な入力型がないため通過するはずです。
     workflow = (
         WorkflowBuilder().add_edge(string_executor, no_input_executor).set_start_executor(string_executor).build()
     )
@@ -352,7 +352,7 @@ def test_self_loop_detection_warning(caplog: Any) -> None:
 
     executor = StringExecutor(id="self_loop_executor")
 
-    # Create a self-loop
+    # 自己ループを作成します。
     workflow = WorkflowBuilder().add_edge(executor, executor).set_start_executor(executor).build()
 
     assert workflow is not None
@@ -363,21 +363,21 @@ def test_self_loop_detection_warning(caplog: Any) -> None:
 def test_handler_validation_basic(caplog: Any) -> None:
     caplog.set_level(logging.WARNING)
 
-    # Test basic handler validation - ensure the validation code runs without errors
+    # 基本的なハンドラ検証をテストします - 検証コードがエラーなく実行されることを確認します。
     start_executor = StringExecutor(id="start")
     target_executor = StringExecutor(id="target")
 
     workflow = WorkflowBuilder().add_edge(start_executor, target_executor).set_start_executor(start_executor).build()
 
     assert workflow is not None
-    # Just ensure the validation runs without errors
+    # 検証がエラーなく実行されることを確認するだけです。
 
 
 def test_dead_end_detection(caplog: Any) -> None:
     caplog.set_level(logging.INFO)
 
     executor1 = StringExecutor(id="executor1")
-    executor2 = StringExecutor(id="executor2")  # This will be a dead end
+    executor2 = StringExecutor(id="executor2")  # ここは行き止まりになります。
 
     workflow = WorkflowBuilder().add_edge(executor1, executor2).set_start_executor(executor1).build()
 
@@ -394,7 +394,7 @@ def test_cycle_detection_warning(caplog: Any) -> None:
     executor2 = StringExecutor(id="executor2")
     executor3 = StringExecutor(id="executor3")
 
-    # Create a cycle: executor1 -> executor2 -> executor3 -> executor1
+    # サイクルを作成します: executor1 -> executor2 -> executor3 -> executor1。
     workflow = (
         WorkflowBuilder()
         .add_edge(executor1, executor2)
@@ -425,13 +425,13 @@ def test_successful_type_compatibility_logging(caplog: Any) -> None:
 def test_complex_cycle_detection(caplog: Any) -> None:
     caplog.set_level(logging.WARNING)
 
-    # Create a more complex graph with multiple cycles
+    # 複数のサイクルを持つより複雑なグラフを作成します。
     executor1 = StringExecutor(id="executor1")
     executor2 = StringExecutor(id="executor2")
     executor3 = StringExecutor(id="executor3")
     executor4 = StringExecutor(id="executor4")
 
-    # Create multiple paths and cycles
+    # 複数のパスとサイクルを作成します。
     workflow = (
         WorkflowBuilder()
         .add_edge(executor1, executor2)
@@ -453,7 +453,7 @@ def test_no_cycles_in_simple_chain(caplog: Any) -> None:
     executor2 = StringExecutor(id="executor2")
     executor3 = StringExecutor(id="executor3")
 
-    # Simple chain without cycles
+    # サイクルのない単純なチェーン。
     workflow = (
         WorkflowBuilder()
         .add_edge(executor1, executor2)
@@ -463,7 +463,7 @@ def test_no_cycles_in_simple_chain(caplog: Any) -> None:
     )
 
     assert workflow is not None
-    # Should not log cycle detection
+    # サイクル検出のログは出ないはずです。
     assert "Cycle detected" not in caplog.text
 
 
@@ -471,8 +471,8 @@ def test_multiple_dead_ends_detection(caplog: Any) -> None:
     caplog.set_level(logging.INFO)
 
     executor1 = StringExecutor(id="executor1")
-    executor2 = StringExecutor(id="executor2")  # Dead end
-    executor3 = StringExecutor(id="executor3")  # Dead end
+    executor2 = StringExecutor(id="executor2")  # 行き止まり。
+    executor3 = StringExecutor(id="executor3")  # 行き止まり。
 
     workflow = (
         WorkflowBuilder()
@@ -490,15 +490,15 @@ def test_multiple_dead_ends_detection(caplog: Any) -> None:
 def test_single_executor_workflow(caplog: Any) -> None:
     caplog.set_level(logging.INFO)
 
-    # Test workflow with minimal structure
+    # 最小構造のワークフローをテストします。
     executor1 = StringExecutor(id="executor1")
     executor2 = StringExecutor(id="executor2")
 
-    # Create a simple two-executor workflow to avoid graph validation issues
+    # グラフ検証問題を避けるための単純な2-executorワークフローを作成します。
     workflow = WorkflowBuilder().add_edge(executor1, executor2).set_start_executor(executor1).build()
 
     assert workflow is not None
-    # Should detect executor2 as dead end
+    # executor2が行き止まりとして検出されるはずです。
     assert "Dead-end executors detected" in caplog.text
 
 
@@ -510,7 +510,7 @@ def test_enhanced_type_compatibility_error_details():
         WorkflowBuilder().add_edge(string_executor, int_executor).set_start_executor(string_executor).build()
 
     error = exc_info.value
-    # Verify enhanced error contains detailed type information
+    # 詳細な型情報を含む強化されたエラーを検証します。
     assert "Source executor outputs types" in str(error)
     assert "target executor can only handle types" in str(error)
     assert error.source_types is not None
@@ -531,7 +531,7 @@ def test_union_type_compatibility_validation() -> None:
     union_output = UnionOutputExecutor(id="union_output")
     union_input = UnionInputExecutor(id="union_input")
 
-    # This should pass validation due to type compatibility (str)
+    # 型互換性（str）により検証は通過するはずです。
     workflow = WorkflowBuilder().add_edge(union_output, union_input).set_start_executor(union_output).build()
 
     assert workflow is not None
@@ -551,14 +551,14 @@ def test_generic_type_compatibility() -> None:
     list_output = ListOutputExecutor(id="list_output")
     list_input = ListInputExecutor(id="list_input")
 
-    # This should pass validation for generic type compatibility
+    # ジェネリック型互換性の検証を通過するはずです。
     workflow = WorkflowBuilder().add_edge(list_output, list_input).set_start_executor(list_output).build()
 
     assert workflow is not None
 
 
 def test_validation_enum_usage() -> None:
-    # Test that all validation types use the enum correctly
+    # すべての検証型がenumを正しく使用していることをテストします。
     edge_error = EdgeDuplicationError("test->test")
     assert edge_error.validation_type == ValidationTypeEnum.EDGE_DUPLICATION
 
@@ -568,13 +568,13 @@ def test_validation_enum_usage() -> None:
     graph_error = GraphConnectivityError("test message")
     assert graph_error.validation_type == ValidationTypeEnum.GRAPH_CONNECTIVITY
 
-    # Test enum string representation
+    # enumの文字列表現をテストします。
     assert str(ValidationTypeEnum.EDGE_DUPLICATION) == "ValidationTypeEnum.EDGE_DUPLICATION"
     assert ValidationTypeEnum.EDGE_DUPLICATION.value == "EDGE_DUPLICATION"
 
 
 def test_handler_ctx_missing_annotation_raises() -> None:
-    # Validation now happens at handler registration time, not workflow build time
+    # 検証はワークフロー構築時ではなくハンドラ登録時に行われます。
     with pytest.raises(ValueError) as exc:
 
         class BadExecutor(Executor):
@@ -586,7 +586,7 @@ def test_handler_ctx_missing_annotation_raises() -> None:
 
 
 def test_handler_ctx_invalid_t_out_entries_raises() -> None:
-    # Validation now happens at handler registration time, not workflow build time
+    # 検証はワークフロー構築時ではなくハンドラ登録時に行われます。
     with pytest.raises(ValueError) as exc:
 
         class BadExecutor(Executor):
@@ -601,13 +601,13 @@ def test_handler_ctx_none_is_allowed() -> None:
     class NoneExecutor(Executor):
         @handler
         async def handle(self, message: str, ctx: WorkflowContext) -> None:
-            # does not emit
+            # emitしません。
             return None
 
     start = StringExecutor(id="s")
     none_exec = NoneExecutor(id="n")
 
-    # Should build successfully
+    # 正常にビルドされるはずです。
     wf = WorkflowBuilder().add_edge(start, none_exec).set_start_executor(start).build()
     assert wf is not None
 
@@ -623,6 +623,6 @@ def test_handler_ctx_any_is_allowed_but_skips_type_checks(caplog: Any) -> None:
     start = StringExecutor(id="s")
     any_out = AnyOutExecutor(id="a")
 
-    # Builds; later edges from this executor will skip type compatibility when outputs are unspecified
+    # ビルドされます; このexecutorからの後続エッジは出力が未指定の場合に型互換性をスキップします。
     wf = WorkflowBuilder().add_edge(start, any_out).set_start_executor(start).build()
     assert wf is not None

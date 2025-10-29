@@ -24,39 +24,39 @@ from ._acquire_token import acquire_token
 
 
 class CopilotStudioSettings(AFBaseSettings):
-    """Copilot Studio model settings.
+    """Copilot Studio のモデル設定。
 
-    The settings are first loaded from environment variables with the prefix 'COPILOTSTUDIOAGENT__'.
-    If the environment variables are not found, the settings can be loaded from a .env file
-    with the encoding 'utf-8'. If the settings are not found in the .env file, the settings
-    are ignored; however, validation will fail alerting that the settings are missing.
+    設定はまず 'COPILOTSTUDIOAGENT__' プレフィックスの環境変数から読み込まれる。
+    環境変数が見つからない場合は、エンコーディング 'utf-8' の .env ファイルから読み込まれる。
+    .env ファイルにも設定が見つからない場合は設定は無視されるが、
+    バリデーションで設定が欠落していることが通知される。
 
     Keyword Args:
-        environmentid: Environment ID of environment with the Copilot Studio App.
-            Can be set via environment variable COPILOTSTUDIOAGENT__ENVIRONMENTID.
-        schemaname: The agent identifier or schema name of the Copilot to use.
-            Can be set via environment variable COPILOTSTUDIOAGENT__SCHEMANAME.
-        agentappid: The app ID of the App Registration used to login.
-            Can be set via environment variable COPILOTSTUDIOAGENT__AGENTAPPID.
-        tenantid: The tenant ID of the App Registration used to login.
-            Can be set via environment variable COPILOTSTUDIOAGENT__TENANTID.
-        env_file_path: If provided, the .env settings are read from this file path location.
-        env_file_encoding: The encoding of the .env file, defaults to 'utf-8'.
+        environmentid: Copilot Studio App を含む環境の環境ID。
+            環境変数 COPILOTSTUDIOAGENT__ENVIRONMENTID で設定可能。
+        schemaname: 使用する Copilot のエージェント識別子またはスキーマ名。
+            環境変数 COPILOTSTUDIOAGENT__SCHEMANAME で設定可能。
+        agentappid: ログインに使用する App Registration のアプリID。
+            環境変数 COPILOTSTUDIOAGENT__AGENTAPPID で設定可能。
+        tenantid: ログインに使用する App Registration のテナントID。
+            環境変数 COPILOTSTUDIOAGENT__TENANTID で設定可能。
+        env_file_path: 指定すると、そのパスの .env ファイルから設定を読み込む。
+        env_file_encoding: .env ファイルのエンコーディング。デフォルトは 'utf-8'。
 
     Examples:
         .. code-block:: python
 
             from agent_framework_copilotstudio import CopilotStudioSettings
 
-            # Using environment variables
-            # Set COPILOTSTUDIOAGENT__ENVIRONMENTID=env-123
-            # Set COPILOTSTUDIOAGENT__SCHEMANAME=my-agent
+            # 環境変数を使う場合
+            # COPILOTSTUDIOAGENT__ENVIRONMENTID=env-123 を設定
+            # COPILOTSTUDIOAGENT__SCHEMANAME=my-agent を設定
             settings = CopilotStudioSettings()
 
-            # Or passing parameters directly
+            # またはパラメータを直接渡す場合
             settings = CopilotStudioSettings(environmentid="env-123", schemaname="my-agent")
 
-            # Or loading from a .env file
+            # または .env ファイルから読み込む場合
             settings = CopilotStudioSettings(env_file_path="path/to/.env")
     """
 
@@ -69,7 +69,7 @@ class CopilotStudioSettings(AFBaseSettings):
 
 
 class CopilotStudioAgent(BaseAgent):
-    """A Copilot Studio Agent."""
+    """Copilot Studio の Agent。"""
 
     def __init__(
         self,
@@ -95,44 +95,38 @@ class CopilotStudioAgent(BaseAgent):
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
     ) -> None:
-        """Initialize the Copilot Studio Agent.
+        """Copilot Studio Agent を初期化する。
 
         Args:
-            client: Optional pre-configured CopilotClient instance. If not provided,
-                a new client will be created using the other parameters.
-            settings: Optional pre-configured ConnectionSettings. If not provided,
-                settings will be created from the other parameters.
+            client: オプションの事前設定済み CopilotClient インスタンス。指定しない場合は他のパラメータから新規作成される。
+            settings: オプションの事前設定済み ConnectionSettings。指定しない場合は他のパラメータから作成される。
 
         Keyword Args:
-            id: id of the CopilotAgent
-            name: Name of the CopilotAgent
-            description: Description of the CopilotAgent
-            context_providers: Context Providers, to be used by the copilot agent.
-            middleware: Agent middlewares used by the agent.
-            environment_id: Environment ID of the Power Platform environment containing
-                the Copilot Studio app. Can also be set via COPILOTSTUDIOAGENT__ENVIRONMENTID
-                environment variable.
-            agent_identifier: The agent identifier or schema name of the Copilot to use.
-                Can also be set via COPILOTSTUDIOAGENT__SCHEMANAME environment variable.
-            client_id: The app ID of the App Registration used for authentication.
-                Can also be set via COPILOTSTUDIOAGENT__AGENTAPPID environment variable.
-            tenant_id: The tenant ID of the App Registration used for authentication.
-                Can also be set via COPILOTSTUDIOAGENT__TENANTID environment variable.
-            token: Optional pre-acquired authentication token. If not provided,
-                token acquisition will be attempted using MSAL.
-            cloud: The Power Platform cloud to use (Public, GCC, etc.).
-            agent_type: The type of Copilot Studio agent (Copilot, Agent, etc.).
-            custom_power_platform_cloud: Custom Power Platform cloud URL if using
-                a custom environment.
-            username: Optional username for token acquisition.
-            token_cache: Optional token cache for storing authentication tokens.
-            scopes: Optional list of authentication scopes. Defaults to Power Platform
-                API scopes if not provided.
-            env_file_path: Optional path to .env file for loading configuration.
-            env_file_encoding: Encoding of the .env file, defaults to 'utf-8'.
+            id: CopilotAgent の id
+            name: CopilotAgent の名前
+            description: CopilotAgent の説明
+            context_providers: Copilot Agent が使用する Context Providers。
+            middleware: エージェントが使用する Middleware。
+            environment_id: Copilot Studio アプリを含む Power Platform 環境の環境ID。
+                環境変数 COPILOTSTUDIOAGENT__ENVIRONMENTID でも設定可能。
+            agent_identifier: 使用する Copilot のエージェント識別子またはスキーマ名。
+                環境変数 COPILOTSTUDIOAGENT__SCHEMANAME でも設定可能。
+            client_id: 認証に使用する App Registration のアプリID。
+                環境変数 COPILOTSTUDIOAGENT__AGENTAPPID でも設定可能。
+            tenant_id: 認証に使用する App Registration のテナントID。
+                環境変数 COPILOTSTUDIOAGENT__TENANTID でも設定可能。
+            token: オプションの事前取得済み認証トークン。指定しない場合は MSAL を使って取得を試みる。
+            cloud: 使用する Power Platform のクラウド（Public、GCC など）。
+            agent_type: Copilot Studio agent のタイプ（Copilot、Agent など）。
+            custom_power_platform_cloud: カスタム環境を使う場合のカスタム Power Platform クラウド URL。
+            username: トークン取得用のオプションのユーザー名。
+            token_cache: 認証トークンを保存するオプションのトークンキャッシュ。
+            scopes: オプションの認証スコープリスト。指定しない場合は Power Platform API スコープがデフォルト。
+            env_file_path: 設定読み込み用の .env ファイルのパス。
+            env_file_encoding: .env ファイルのエンコーディング。デフォルトは 'utf-8'。
 
         Raises:
-            ServiceInitializationError: If required configuration is missing or invalid.
+            ServiceInitializationError: 必須の設定が欠落または無効な場合。
         """
         super().__init__(
             id=id,
@@ -212,27 +206,26 @@ class CopilotStudioAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Get a response from the agent.
+        """Agentからのレスポンスを取得します。
 
-        This method returns the final result of the agent's execution
-        as a single AgentRunResponse object. The caller is blocked until
-        the final result is available.
+        このメソッドはAgentの実行の最終結果を単一のAgentRunResponseオブジェクトとして返します。
+        呼び出し元は最終結果が利用可能になるまでブロックされます。
 
-        Note: For streaming responses, use the run_stream method, which returns
-        intermediate steps and the final result as a stream of AgentRunResponseUpdate
-        objects. Streaming only the final result is not feasible because the timing of
-        the final result's availability is unknown, and blocking the caller until then
-        is undesirable in streaming scenarios.
+        注意: ストリーミングレスポンスの場合は、run_streamメソッドを使用してください。
+        これは中間ステップと最終結果をAgentRunResponseUpdateオブジェクトのストリームとして返します。
+        最終結果のみをストリーミングすることは、最終結果の利用可能なタイミングが不明であり、
+        その時点まで呼び出し元をブロックすることがストリーミングシナリオでは望ましくないため、実現不可能です。
 
         Args:
-            messages: The message(s) to send to the agent.
+            messages: Agentに送信するメッセージ。
 
         Keyword Args:
-            thread: The conversation thread associated with the message(s).
-            kwargs: Additional keyword arguments.
+            thread: メッセージに関連付けられた会話スレッド。
+            kwargs: 追加のキーワード引数。
 
         Returns:
-            An agent response item.
+            Agentのレスポンスアイテム。
+
         """
         if not thread:
             thread = self.get_new_thread()
@@ -258,22 +251,23 @@ class CopilotStudioAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Run the agent as a stream.
+        """Agentをストリームとして実行します。
 
-        This method will return the intermediate steps and final results of the
-        agent's execution as a stream of AgentRunResponseUpdate objects to the caller.
+        このメソッドはAgentの実行の中間ステップと最終結果を
+        AgentRunResponseUpdateオブジェクトのストリームとして呼び出し元に返します。
 
-        Note: An AgentRunResponseUpdate object contains a chunk of a message.
+        注意: AgentRunResponseUpdateオブジェクトはメッセージのチャンクを含みます。
 
         Args:
-            messages: The message(s) to send to the agent.
+            messages: Agentに送信するメッセージ。
 
         Keyword Args:
-            thread: The conversation thread associated with the message(s).
-            kwargs: Additional keyword arguments.
+            thread: メッセージに関連付けられた会話スレッド。
+            kwargs: 追加のキーワード引数。
 
         Yields:
-            An agent response item.
+            Agentのレスポンスアイテム。
+
         """
         if not thread:
             thread = self.get_new_thread()
@@ -296,13 +290,14 @@ class CopilotStudioAgent(BaseAgent):
             )
 
     async def _start_new_conversation(self) -> str:
-        """Start a new conversation with the Copilot Studio agent.
+        """Copilot Studio agentとの新しい会話を開始します。
 
         Returns:
-            The conversation ID for the new conversation.
+            新しい会話の会話ID。
 
         Raises:
-            ServiceException: If the conversation could not be started.
+            ServiceException: 会話を開始できなかった場合。
+
         """
         conversation_id: str | None = None
 
@@ -316,15 +311,16 @@ class CopilotStudioAgent(BaseAgent):
         return conversation_id
 
     async def _process_activities(self, activities: AsyncIterable[Any], streaming: bool) -> AsyncIterable[ChatMessage]:
-        """Process activities from the Copilot Studio agent.
+        """Copilot Studio agentからのアクティビティを処理します。
 
         Args:
-            activities: Stream of activities from the agent.
-            streaming: Whether to process activities for streaming (typing activities)
-                or non-streaming (message activities) responses.
+            activities: agentからのアクティビティのストリーム。
+            streaming: ストリーミング（typingアクティビティ）か非ストリーミング（メッセージアクティビティ）
+                のレスポンスを処理するかどうか。
 
         Yields:
-            ChatMessage objects created from the activities.
+            アクティビティから作成されたChatMessageオブジェクト。
+
         """
         async for activity in activities:
             if activity.text and (

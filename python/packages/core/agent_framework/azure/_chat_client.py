@@ -44,7 +44,7 @@ TAzureOpenAIChatClient = TypeVar("TAzureOpenAIChatClient", bound="AzureOpenAICha
 @use_observability
 @use_chat_middleware
 class AzureOpenAIChatClient(AzureOpenAIConfigMixin, OpenAIBaseChatClient):
-    """Azure OpenAI Chat completion class."""
+    """Azure OpenAI Chat completion クラス。"""
 
     def __init__(
         self,
@@ -65,60 +65,55 @@ class AzureOpenAIChatClient(AzureOpenAIConfigMixin, OpenAIBaseChatClient):
         instruction_role: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize an Azure OpenAI Chat completion client.
+        """Azure OpenAI Chat completion クライアントを初期化します。
 
         Keyword Args:
-            api_key: The API key. If provided, will override the value in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_API_KEY.
-            deployment_name: The deployment name. If provided, will override the value
-                (chat_deployment_name) in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_CHAT_DEPLOYMENT_NAME.
-            endpoint: The deployment endpoint. If provided will override the value
-                in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_ENDPOINT.
-            base_url: The deployment base URL. If provided will override the value
-                in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_BASE_URL.
-            api_version: The deployment API version. If provided will override the value
-                in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_API_VERSION.
-            ad_token: The Azure Active Directory token.
-            ad_token_provider: The Azure Active Directory token provider.
-            token_endpoint: The token endpoint to request an Azure token.
-                Can also be set via environment variable AZURE_OPENAI_TOKEN_ENDPOINT.
-            credential: The Azure credential for authentication.
-            default_headers: The default headers mapping of string keys to
-                string values for HTTP requests.
-            async_client: An existing client to use.
-            env_file_path: Use the environment settings file as a fallback to using env vars.
-            env_file_encoding: The encoding of the environment settings file, defaults to 'utf-8'.
-            instruction_role: The role to use for 'instruction' messages, for example, summarization
-                prompts could use `developer` or `system`.
-            kwargs: Other keyword parameters.
+            api_key: API キー。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_API_KEY でも設定可能です。
+            deployment_name: デプロイメント名。指定すると環境変数や .env ファイルの値（chat_deployment_name）を上書きします。
+                環境変数 AZURE_OPENAI_CHAT_DEPLOYMENT_NAME でも設定可能です。
+            endpoint: デプロイメントのエンドポイント。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_ENDPOINT でも設定可能です。
+            base_url: デプロイメントのベース URL。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_BASE_URL でも設定可能です。
+            api_version: デプロイメントの API バージョン。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_API_VERSION でも設定可能です。
+            ad_token: Azure Active Directory トークン。
+            ad_token_provider: Azure Active Directory トークンプロバイダー。
+            token_endpoint: Azure トークンを要求するトークンエンドポイント。
+                環境変数 AZURE_OPENAI_TOKEN_ENDPOINT でも設定可能です。
+            credential: 認証に使用する Azure 資格情報。
+            default_headers: HTTP リクエストのための文字列キーから文字列値へのデフォルトヘッダーのマッピング。
+            async_client: 使用する既存のクライアント。
+            env_file_path: 環境変数の代わりに環境設定ファイルを使用。
+            env_file_encoding: 環境設定ファイルのエンコーディング。デフォルトは 'utf-8'。
+            instruction_role: 'instruction' メッセージに使用するロール。例えば要約プロンプトは `developer` や `system` を使用可能。
+            kwargs: その他のキーワードパラメータ。
 
         Examples:
             .. code-block:: python
 
                 from agent_framework.azure import AzureOpenAIChatClient
 
-                # Using environment variables
+                # 環境変数を使用する場合
                 # Set AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com
                 # Set AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4
                 # Set AZURE_OPENAI_API_KEY=your-key
                 client = AzureOpenAIChatClient()
 
-                # Or passing parameters directly
+                # またはパラメータを直接渡す場合
                 client = AzureOpenAIChatClient(
                     endpoint="https://your-endpoint.openai.azure.com", deployment_name="gpt-4", api_key="your-key"
                 )
 
-                # Or loading from a .env file
+                # または .env ファイルから読み込む場合
                 client = AzureOpenAIChatClient(env_file_path="path/to/.env")
+
         """
         try:
-            # Filter out any None values from the arguments
+            # 引数から None の値を除外する
             azure_openai_settings = AzureOpenAISettings(
-                # pydantic settings will see if there is a value, if not, will try the env var or .env file
+                # pydantic の設定は値があるか確認し、なければ環境変数や .env ファイルを試みます
                 api_key=api_key,  # type: ignore
                 base_url=base_url,  # type: ignore
                 endpoint=endpoint,  # type: ignore
@@ -155,11 +150,12 @@ class AzureOpenAIChatClient(AzureOpenAIConfigMixin, OpenAIBaseChatClient):
 
     @override
     def _parse_text_from_choice(self, choice: Choice | ChunkChoice) -> TextContent | None:
-        """Parse the choice into a TextContent object.
+        """choice を TextContent オブジェクトに解析します。
 
-        Overwritten from OpenAIBaseChatClient to deal with Azure On Your Data function.
-        For docs see:
+        OpenAIBaseChatClient からオーバーライドし、Azure On Your Data 機能に対応しています。
+        ドキュメントは以下を参照してください:
         https://learn.microsoft.com/en-us/azure/ai-foundry/openai/references/on-your-data?tabs=python#context
+
         """
         message = choice.message if isinstance(choice, Choice) else choice.delta
         if hasattr(message, "refusal") and message.refusal:
@@ -180,8 +176,8 @@ class AzureOpenAIChatClient(AzureOpenAIConfigMixin, OpenAIBaseChatClient):
         if not isinstance(context, dict):
             logger.warning("Context is not a valid dictionary, ignoring context.")
             return text_content
-        # `all_retrieved_documents` is currently not used, but can be retrieved
-        # through the raw_representation in the text content.
+        # `all_retrieved_documents` は現在使用されていませんが、テキストコンテンツの raw_representation
+        # から取得可能です。
         if intent := context.get("intent"):
             text_content.additional_properties = {"intent": intent}
         if citations := context.get("citations"):

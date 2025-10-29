@@ -25,30 +25,30 @@ from agent_framework_a2a._agent import _get_uri_data  # type: ignore
 
 
 class MockA2AClient:
-    """Mock implementation of A2A Client for testing."""
+    """テスト用のA2A Clientのモック実装です。"""
 
     def __init__(self) -> None:
         self.call_count: int = 0
         self.responses: list[Any] = []
 
     def add_message_response(self, message_id: str, text: str, role: str = "agent") -> None:
-        """Add a mock Message response."""
+        """モックのMessageレスポンスを追加します。"""
 
-        # Create actual TextPart instance and wrap it in Part
+        # 実際のTextPartインスタンスを作成し、Partでラップします。
         text_part = Part(root=TextPart(text=text))
 
-        # Create actual Message instance
+        # 実際のMessageインスタンスを作成します。
         message = Message(
             message_id=message_id, role=A2ARole.agent if role == "agent" else A2ARole.user, parts=[text_part]
         )
         self.responses.append(message)
 
     def add_task_response(self, task_id: str, artifacts: list[dict[str, Any]]) -> None:
-        """Add a mock Task response."""
-        # Create mock artifacts
+        """モックのTaskレスポンスを追加します。"""
+        # モックのアーティファクトを作成します。
         mock_artifacts = []
         for artifact_data in artifacts:
-            # Create actual TextPart instance and wrap it in Part
+            # 実際のTextPartインスタンスを作成し、Partでラップします。
             text_part = Part(root=TextPart(text=artifact_data.get("content", "Test content")))
 
             artifact = Artifact(
@@ -59,21 +59,21 @@ class MockA2AClient:
             )
             mock_artifacts.append(artifact)
 
-        # Create task status
+        # タスクのステータスを作成します。
         status = TaskStatus(state=TaskState.completed, message=None)
 
-        # Create actual Task instance
+        # 実際のTaskインスタンスを作成します。
         task = Task(
             id=task_id, context_id="test-context", status=status, artifacts=mock_artifacts if mock_artifacts else None
         )
 
-        # Mock the ClientEvent tuple format
-        update_event = None  # No specific update event for completed tasks
+        # ClientEventのタプル形式をモックします。
+        update_event = None  # 完了したタスクに特定の更新イベントはありません。
         client_event = (task, update_event)
         self.responses.append(client_event)
 
     async def send_message(self, message: Any) -> AsyncIterator[Any]:
-        """Mock send_message method that yields responses."""
+        """レスポンスをyieldするsend_messageメソッドのモックです。"""
         self.call_count += 1
 
         if self.responses:
@@ -83,19 +83,19 @@ class MockA2AClient:
 
 @fixture
 def mock_a2a_client() -> MockA2AClient:
-    """Fixture that provides a mock A2A client."""
+    """モックのA2Aクライアントを提供するフィクスチャです。"""
     return MockA2AClient()
 
 
 @fixture
 def a2a_agent(mock_a2a_client: MockA2AClient) -> A2AAgent:
-    """Fixture that provides an A2AAgent with a mock client."""
+    """モッククライアントを持つA2AAgentを提供するフィクスチャです。"""
     return A2AAgent(name="Test Agent", id="test-agent", client=mock_a2a_client, http_client=None)
 
 
 def test_a2a_agent_initialization_with_client(mock_a2a_client: MockA2AClient) -> None:
-    """Test A2AAgent initialization with provided client."""
-    # Use model_construct to bypass Pydantic validation for mock objects
+    """提供されたクライアントでのA2AAgent初期化のテストです。"""
+    # mockオブジェクトのためにPydanticの検証を回避するためにmodel_constructを使用します。
     agent = A2AAgent(
         name="Test Agent", id="test-agent-123", description="A test agent", client=mock_a2a_client, http_client=None
     )
@@ -107,13 +107,13 @@ def test_a2a_agent_initialization_with_client(mock_a2a_client: MockA2AClient) ->
 
 
 def test_a2a_agent_initialization_without_client_raises_error() -> None:
-    """Test A2AAgent initialization without client or URL raises ValueError."""
+    """クライアントまたはURLがない場合のA2AAgent初期化がValueErrorを発生させるテストです。"""
     with raises(ValueError, match="Either agent_card or url must be provided"):
         A2AAgent(name="Test Agent")
 
 
 async def test_run_with_message_response(a2a_agent: A2AAgent, mock_a2a_client: MockA2AClient) -> None:
-    """Test run() method with immediate Message response."""
+    """即時Messageレスポンスを持つrun()メソッドのテストです。"""
     mock_a2a_client.add_message_response("msg-123", "Hello from agent!", "agent")
 
     response = await a2a_agent.run("Hello agent")
@@ -127,7 +127,7 @@ async def test_run_with_message_response(a2a_agent: A2AAgent, mock_a2a_client: M
 
 
 async def test_run_with_task_response_single_artifact(a2a_agent: A2AAgent, mock_a2a_client: MockA2AClient) -> None:
-    """Test run() method with Task response containing single artifact."""
+    """単一のアーティファクトを含むTaskレスポンスを持つrun()メソッドのテストです。"""
     artifacts = [{"id": "art-1", "content": "Generated report content"}]
     mock_a2a_client.add_task_response("task-456", artifacts)
 
@@ -142,7 +142,7 @@ async def test_run_with_task_response_single_artifact(a2a_agent: A2AAgent, mock_
 
 
 async def test_run_with_task_response_multiple_artifacts(a2a_agent: A2AAgent, mock_a2a_client: MockA2AClient) -> None:
-    """Test run() method with Task response containing multiple artifacts."""
+    """複数のアーティファクトを含むTaskレスポンスを持つrun()メソッドのテストです。"""
     artifacts = [
         {"id": "art-1", "content": "First artifact content"},
         {"id": "art-2", "content": "Second artifact content"},
@@ -159,7 +159,7 @@ async def test_run_with_task_response_multiple_artifacts(a2a_agent: A2AAgent, mo
     assert response.messages[1].text == "Second artifact content"
     assert response.messages[2].text == "Third artifact content"
 
-    # All should be assistant messages
+    # すべてアシスタントメッセージであるべきです。
     for message in response.messages:
         assert message.role == Role.ASSISTANT
 
@@ -167,7 +167,7 @@ async def test_run_with_task_response_multiple_artifacts(a2a_agent: A2AAgent, mo
 
 
 async def test_run_with_task_response_no_artifacts(a2a_agent: A2AAgent, mock_a2a_client: MockA2AClient) -> None:
-    """Test run() method with Task response containing no artifacts."""
+    """アーティファクトを含まないTaskレスポンスを持つrun()メソッドのテストです。"""
     mock_a2a_client.add_task_response("task-empty", [])
 
     response = await a2a_agent.run("Do something with no output")
@@ -177,7 +177,7 @@ async def test_run_with_task_response_no_artifacts(a2a_agent: A2AAgent, mock_a2a
 
 
 async def test_run_with_unknown_response_type_raises_error(a2a_agent: A2AAgent, mock_a2a_client: MockA2AClient) -> None:
-    """Test run() method with unknown response type raises NotImplementedError."""
+    """不明なレスポンスタイプでrun()メソッドがNotImplementedErrorを発生させるテストです。"""
     mock_a2a_client.responses.append("invalid_response")
 
     with raises(NotImplementedError, match="Only Message and Task responses are supported"):
@@ -185,7 +185,7 @@ async def test_run_with_unknown_response_type_raises_error(a2a_agent: A2AAgent, 
 
 
 def test_task_to_chat_messages_empty_artifacts(a2a_agent: A2AAgent) -> None:
-    """Test _task_to_chat_messages with task containing no artifacts."""
+    """アーティファクトを含まないタスクで_task_to_chat_messagesのテストです。"""
     task = MagicMock()
     task.artifacts = None
 
@@ -195,10 +195,10 @@ def test_task_to_chat_messages_empty_artifacts(a2a_agent: A2AAgent) -> None:
 
 
 def test_task_to_chat_messages_with_artifacts(a2a_agent: A2AAgent) -> None:
-    """Test _task_to_chat_messages with task containing artifacts."""
+    """アーティファクトを含むタスクで_task_to_chat_messagesのテストです。"""
     task = MagicMock()
 
-    # Create mock artifacts
+    # モックのアーティファクトを作成します。
     artifact1 = MagicMock()
     artifact1.artifact_id = "art-1"
     text_part1 = MagicMock()
@@ -228,7 +228,7 @@ def test_task_to_chat_messages_with_artifacts(a2a_agent: A2AAgent) -> None:
 
 
 def test_artifact_to_chat_message(a2a_agent: A2AAgent) -> None:
-    """Test _artifact_to_chat_message conversion."""
+    """_artifact_to_chat_message変換のテストです。"""
     artifact = MagicMock()
     artifact.artifact_id = "test-artifact"
 
@@ -249,7 +249,7 @@ def test_artifact_to_chat_message(a2a_agent: A2AAgent) -> None:
 
 
 def test_get_uri_data_valid_uri() -> None:
-    """Test _get_uri_data with valid data URI."""
+    """有効なデータURIで_get_uri_dataのテストです。"""
 
     uri = "data:application/json;base64,eyJ0ZXN0IjoidmFsdWUifQ=="
     result = _get_uri_data(uri)
@@ -257,24 +257,24 @@ def test_get_uri_data_valid_uri() -> None:
 
 
 def test_get_uri_data_invalid_uri() -> None:
-    """Test _get_uri_data with invalid URI format."""
+    """無効なURI形式で_get_uri_dataのテストです。"""
 
     with raises(ValueError, match="Invalid data URI format"):
         _get_uri_data("not-a-valid-data-uri")
 
 
 def test_a2a_parts_to_contents_conversion(a2a_agent: A2AAgent) -> None:
-    """Test A2A parts to contents conversion."""
+    """A2Aパーツからcontentsへの変換のテストです。"""
 
     agent = A2AAgent(name="Test Agent", client=MockA2AClient(), _http_client=None)
 
-    # Create A2A parts
+    # A2Aパーツを作成します。
     parts = [Part(root=TextPart(text="First part")), Part(root=TextPart(text="Second part"))]
 
-    # Convert to contents
+    # contentsに変換します。
     contents = agent._a2a_parts_to_contents(parts)
 
-    # Verify conversion
+    # 変換を検証します。
     assert len(contents) == 2
     assert isinstance(contents[0], TextContent)
     assert isinstance(contents[1], TextContent)
@@ -283,72 +283,72 @@ def test_a2a_parts_to_contents_conversion(a2a_agent: A2AAgent) -> None:
 
 
 def test_chat_message_to_a2a_message_with_error_content(a2a_agent: A2AAgent) -> None:
-    """Test _chat_message_to_a2a_message with ErrorContent."""
+    """ErrorContentを持つ_chat_message_to_a2a_messageのテストです。"""
 
-    # Create ChatMessage with ErrorContent
+    # ErrorContentを持つChatMessageを作成します。
     error_content = ErrorContent(message="Test error message")
     message = ChatMessage(role=Role.USER, contents=[error_content])
 
-    # Convert to A2A message
+    # A2Aメッセージに変換します。
     a2a_message = a2a_agent._chat_message_to_a2a_message(message)
 
-    # Verify conversion
+    # 変換を検証します。
     assert len(a2a_message.parts) == 1
     assert a2a_message.parts[0].root.text == "Test error message"
 
 
 def test_chat_message_to_a2a_message_with_uri_content(a2a_agent: A2AAgent) -> None:
-    """Test _chat_message_to_a2a_message with UriContent."""
+    """UriContentを持つ_chat_message_to_a2a_messageのテストです。"""
 
-    # Create ChatMessage with UriContent
+    # UriContentを持つChatMessageを作成します。
     uri_content = UriContent(uri="http://example.com/file.pdf", media_type="application/pdf")
     message = ChatMessage(role=Role.USER, contents=[uri_content])
 
-    # Convert to A2A message
+    # A2Aメッセージに変換します。
     a2a_message = a2a_agent._chat_message_to_a2a_message(message)
 
-    # Verify conversion
+    # 変換を検証します。
     assert len(a2a_message.parts) == 1
     assert a2a_message.parts[0].root.file.uri == "http://example.com/file.pdf"
     assert a2a_message.parts[0].root.file.mime_type == "application/pdf"
 
 
 def test_chat_message_to_a2a_message_with_data_content(a2a_agent: A2AAgent) -> None:
-    """Test _chat_message_to_a2a_message with DataContent."""
+    """DataContentを持つ_chat_message_to_a2a_messageのテストです。"""
 
-    # Create ChatMessage with DataContent (base64 data URI)
+    # DataContent（base64データURI）を持つChatMessageを作成します。
     data_content = DataContent(uri="data:text/plain;base64,SGVsbG8gV29ybGQ=", media_type="text/plain")
     message = ChatMessage(role=Role.USER, contents=[data_content])
 
-    # Convert to A2A message
+    # A2Aメッセージに変換します。
     a2a_message = a2a_agent._chat_message_to_a2a_message(message)
 
-    # Verify conversion
+    # 変換を検証します。
     assert len(a2a_message.parts) == 1
     assert a2a_message.parts[0].root.file.bytes == "SGVsbG8gV29ybGQ="
     assert a2a_message.parts[0].root.file.mime_type == "text/plain"
 
 
 def test_chat_message_to_a2a_message_empty_contents_raises_error(a2a_agent: A2AAgent) -> None:
-    """Test _chat_message_to_a2a_message with empty contents raises ValueError."""
-    # Create ChatMessage with no contents
+    """空のcontentsで_chat_message_to_a2a_messageがValueErrorを発生させるテストです。"""
+    # contentsがないChatMessageを作成します。
     message = ChatMessage(role=Role.USER, contents=[])
 
-    # Should raise ValueError for empty contents
+    # 空のcontentsでValueErrorが発生するはずです。
     with raises(ValueError, match="ChatMessage.contents is empty"):
         a2a_agent._chat_message_to_a2a_message(message)
 
 
 async def test_run_stream_with_message_response(a2a_agent: A2AAgent, mock_a2a_client: MockA2AClient) -> None:
-    """Test run_stream() method with immediate Message response."""
+    """即時Messageレスポンスを持つrun_stream()メソッドのテストです。"""
     mock_a2a_client.add_message_response("msg-stream-123", "Streaming response from agent!", "agent")
 
-    # Collect streaming updates
+    # ストリーミング更新を収集します。
     updates: list[AgentRunResponseUpdate] = []
     async for update in a2a_agent.run_stream("Hello agent"):
         updates.append(update)
 
-    # Verify streaming response
+    # ストリーミングレスポンスを検証します。
     assert len(updates) == 1
     assert isinstance(updates[0], AgentRunResponseUpdate)
     assert updates[0].role == Role.ASSISTANT
@@ -363,41 +363,41 @@ async def test_run_stream_with_message_response(a2a_agent: A2AAgent, mock_a2a_cl
 
 
 async def test_context_manager_cleanup() -> None:
-    """Test context manager cleanup of http client."""
+    """httpクライアントのコンテキストマネージャクリーンアップのテストです。"""
 
-    # Create mock http client that tracks aclose calls
+    # aclose呼び出しを追跡するモックhttpクライアントを作成します。
     mock_http_client = AsyncMock()
     mock_a2a_client = MagicMock()
 
     agent = A2AAgent(client=mock_a2a_client)
     agent._http_client = mock_http_client
 
-    # Test context manager cleanup
+    # コンテキストマネージャのクリーンアップをテストする
     async with agent:
         pass
 
-    # Verify aclose was called
+    # aclose が呼び出されたことを検証する
     mock_http_client.aclose.assert_called_once()
 
 
 async def test_context_manager_no_cleanup_when_no_http_client() -> None:
-    """Test context manager when _http_client is None."""
+    """_http_client が None の場合のコンテキストマネージャをテストする。"""
 
     mock_a2a_client = MagicMock()
 
     agent = A2AAgent(client=mock_a2a_client, _http_client=None)
 
-    # This should not raise any errors
+    # これはエラーを発生させないはずです
     async with agent:
         pass
 
 
 def test_chat_message_to_a2a_message_with_multiple_contents() -> None:
-    """Test conversion of ChatMessage with multiple contents."""
+    """複数のコンテンツを持つ ChatMessage の変換をテストする。"""
 
     agent = A2AAgent(client=MagicMock(), _http_client=None)
 
-    # Create message with multiple content types
+    # 複数のコンテンツタイプを持つメッセージを作成する
     message = ChatMessage(
         role=Role.USER,
         contents=[
@@ -410,22 +410,22 @@ def test_chat_message_to_a2a_message_with_multiple_contents() -> None:
 
     result = agent._chat_message_to_a2a_message(message)
 
-    # Should have converted all 4 contents to parts
+    # すべての4つのコンテンツが parts に変換されているはずです
     assert len(result.parts) == 4
 
-    # Check each part type
-    assert result.parts[0].root.kind == "text"  # Regular text
-    assert result.parts[1].root.kind == "file"  # Binary data
-    assert result.parts[2].root.kind == "file"  # URI content
-    assert result.parts[3].root.kind == "text"  # JSON text remains as text (no parsing)
+    # 各 part のタイプをチェックする
+    assert result.parts[0].root.kind == "text"  # 通常のテキスト
+    assert result.parts[1].root.kind == "file"  # バイナリデータ
+    assert result.parts[2].root.kind == "file"  # URI コンテンツ
+    assert result.parts[3].root.kind == "text"  # JSON テキストはテキストのまま（解析しない）
 
 
 def test_a2a_parts_to_contents_with_data_part() -> None:
-    """Test conversion of A2A DataPart."""
+    """A2A DataPart の変換をテストする。"""
 
     agent = A2AAgent(client=MagicMock(), _http_client=None)
 
-    # Create DataPart
+    # DataPart を作成する
     data_part = Part(root=DataPart(data={"key": "value", "number": 42}, metadata={"source": "test"}))
 
     contents = agent._a2a_parts_to_contents([data_part])
@@ -438,10 +438,10 @@ def test_a2a_parts_to_contents_with_data_part() -> None:
 
 
 def test_a2a_parts_to_contents_unknown_part_kind() -> None:
-    """Test error handling for unknown A2A part kind."""
+    """不明な A2A part kind のエラー処理をテストする。"""
     agent = A2AAgent(client=MagicMock(), _http_client=None)
 
-    # Create a mock part with unknown kind
+    # 不明な kind を持つモックパートを作成する
     mock_part = MagicMock()
     mock_part.root.kind = "unknown_kind"
 
@@ -450,11 +450,11 @@ def test_a2a_parts_to_contents_unknown_part_kind() -> None:
 
 
 def test_chat_message_to_a2a_message_with_hosted_file() -> None:
-    """Test conversion of ChatMessage with HostedFileContent to A2A message."""
+    """HostedFileContent を持つ ChatMessage の A2A メッセージへの変換をテストする。"""
 
     agent = A2AAgent(client=MagicMock(), _http_client=None)
 
-    # Create message with hosted file content
+    # ホストされたファイルコンテンツを持つメッセージを作成する
     message = ChatMessage(
         role=Role.USER,
         contents=[HostedFileContent(file_id="hosted://storage/document.pdf")],
@@ -462,25 +462,25 @@ def test_chat_message_to_a2a_message_with_hosted_file() -> None:
 
     result = agent._chat_message_to_a2a_message(message)  # noqa: SLF001
 
-    # Verify the conversion
+    # 変換を検証する
     assert len(result.parts) == 1
     part = result.parts[0]
     assert part.root.kind == "file"
 
-    # Verify it's a FilePart with FileWithUri
+    # FileWithUri を持つ FilePart であることを検証する
 
     assert isinstance(part.root, FilePart)
     assert isinstance(part.root.file, FileWithUri)
     assert part.root.file.uri == "hosted://storage/document.pdf"
-    assert part.root.file.mime_type is None  # HostedFileContent doesn't specify media_type
+    assert part.root.file.mime_type is None  # HostedFileContent は media_type を指定しない
 
 
 def test_a2a_parts_to_contents_with_hosted_file_uri() -> None:
-    """Test conversion of A2A FilePart with hosted file URI back to UriContent."""
+    """ホストされたファイル URI を持つ A2A FilePart を UriContent に戻す変換をテストする。"""
 
     agent = A2AAgent(client=MagicMock(), _http_client=None)
 
-    # Create FilePart with hosted file URI (simulating what A2A would send back)
+    # ホストされたファイル URI を持つ FilePart を作成する（A2A が返すものをシミュレート）
     file_part = Part(
         root=FilePart(
             file=FileWithUri(
@@ -496,22 +496,21 @@ def test_a2a_parts_to_contents_with_hosted_file_uri() -> None:
 
     assert isinstance(contents[0], UriContent)
     assert contents[0].uri == "hosted://storage/document.pdf"
-    assert contents[0].media_type == ""  # Converted None to empty string
+    assert contents[0].media_type == ""  # None を空文字列に変換した
 
 
 def test_auth_interceptor_parameter() -> None:
-    """Test that auth_interceptor parameter is accepted without errors."""
-    # Create a mock auth interceptor
+    """auth_interceptor パラメータがエラーなく受け入れられることをテストする。"""
+    # モックの auth interceptor を作成する
     mock_auth_interceptor = MagicMock()
 
-    # Test that A2AAgent can be created with auth_interceptor parameter
-    # Using url parameter for simplicity
+    # auth_interceptor パラメータで A2AAgent を作成できることをテストする 簡単のため url パラメータを使用
     agent = A2AAgent(
         name="test-agent",
         url="https://test-agent.example.com",
         auth_interceptor=mock_auth_interceptor,
     )
 
-    # Verify the agent was created successfully
+    # エージェントが正常に作成されたことを検証する
     assert agent.name == "test-agent"
     assert agent.client is not None

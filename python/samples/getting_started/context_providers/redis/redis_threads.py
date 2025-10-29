@@ -1,28 +1,24 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Redis Context Provider: Thread scoping examples
+"""Redis Context Provider: スレッドスコープの例
 
-This sample demonstrates how conversational memory can be scoped when using the
-Redis context provider. It covers three scenarios:
+このサンプルでは、Redis context providerを使用した場合の会話メモリのスコープ方法を示します。3つのシナリオをカバーしています：
 
-1) Global thread scope
-   - Provide a fixed thread_id to share memories across operations/threads.
+1) グローバルスレッドスコープ
+   - 固定のthread_idを提供し、操作/スレッド間でメモリを共有します。
 
-2) Per-operation thread scope
-   - Enable scope_to_per_operation_thread_id to bind the provider to a single
-     thread for the lifetime of that provider instance. Use the same thread
-     object for reads/writes with that provider.
+2) 操作ごとのスレッドスコープ
+   - scope_to_per_operation_thread_idを有効にして、providerインスタンスのライフタイム中に単一のスレッドにバインドします。同じスレッドオブジェクトを使って読み書きします。
 
-3) Multiple agents with isolated memory
-   - Use different agent_id values to keep memories separated for different
-     agent personas, even when the user_id is the same.
+3) 複数Agentでメモリを分離
+   - 異なるagent_id値を使い、同じuser_idでも異なるAgentペルソナのメモリを分離します。
 
-Requirements:
-  - A Redis instance with RediSearch enabled (e.g., Redis Stack)
-  - agent-framework with the Redis extra installed: pip install "agent-framework-redis"
-  - Optionally an OpenAI API key for the chat client in this demo
+要件：
+  - RediSearchが有効なRedisインスタンス（例：Redis Stack）
+  - Redisエクストラがインストールされたagent-framework：pip install "agent-framework-redis"
+  - このデモのチャットクライアント用にOpenAI APIキー（任意）
 
-Run:
+実行方法：
   python redis_threads.py
 """
 
@@ -35,12 +31,12 @@ from agent_framework_redis._provider import RedisProvider
 from redisvl.extensions.cache.embeddings import EmbeddingsCache
 from redisvl.utils.vectorize import OpenAITextVectorizer
 
-# Please set the OPENAI_API_KEY and OPENAI_CHAT_MODEL_ID environment variables to use the OpenAI vectorizer
-# Recommend default for OPENAI_CHAT_MODEL_ID is gpt-4o-mini
+# OpenAIベクトライザーを使用するには、OPENAI_API_KEYとOPENAI_CHAT_MODEL_ID環境変数を設定してください
+# OPENAI_CHAT_MODEL_IDの推奨デフォルトはgpt-4o-miniです
 
 
 async def example_global_thread_scope() -> None:
-    """Example 1: Global thread_id scope (memories shared across all operations)."""
+    """例1: グローバルthread_idスコープ（すべての操作でメモリ共有）。"""
     print("1. Global Thread Scope Example:")
     print("-" * 40)
 
@@ -54,8 +50,7 @@ async def example_global_thread_scope() -> None:
     provider = RedisProvider(
         redis_url="redis://localhost:6379",
         index_name="redis_threads_global",
-        # overwrite_redis_index=True,
-        # drop_redis_index=True,
+        # overwrite_redis_index=True, drop_redis_index=True,
         application_id="threads_demo_app",
         agent_id="threads_demo_agent",
         user_id="threads_demo_user",
@@ -73,28 +68,29 @@ async def example_global_thread_scope() -> None:
         context_providers=provider,
     )
 
-    # Store a preference in the global scope
+    # グローバルスコープに好みを保存します
     query = "Remember that I prefer technical responses with code examples when discussing programming."
     print(f"User: {query}")
     result = await agent.run(query)
     print(f"Agent: {result}\n")
 
-    # Create a new thread - memories should still be accessible due to global scope
+    # 新しいスレッドを作成します - グローバルスコープのためメモリは引き続きアクセス可能なはずです
     new_thread = agent.get_new_thread()
     query = "What technical responses do I prefer?"
     print(f"User (new thread): {query}")
     result = await agent.run(query, thread=new_thread)
     print(f"Agent: {result}\n")
 
-    # Clean up the Redis index
+    # Redisインデックスをクリーンアップします
     await provider.redis_index.delete()
 
 
 async def example_per_operation_thread_scope() -> None:
-    """Example 2: Per-operation thread scope (memories isolated per thread).
+    """例2: 操作ごとのスレッドスコープ（スレッドごとにメモリが分離）。
 
-    Note: When scope_to_per_operation_thread_id=True, the provider is bound to a single thread
-    throughout its lifetime. Use the same thread object for all operations with that provider.
+    注意: scope_to_per_operation_thread_id=Trueの場合、providerはライフタイム中単一のスレッドにバインドされます。
+    そのproviderでのすべての操作に同じスレッドオブジェクトを使用してください。
+
     """
     print("2. Per-Operation Thread Scope Example:")
     print("-" * 40)
@@ -113,8 +109,7 @@ async def example_per_operation_thread_scope() -> None:
     provider = RedisProvider(
         redis_url="redis://localhost:6379",
         index_name="redis_threads_dynamic",
-        # overwrite_redis_index=True,
-        # drop_redis_index=True,
+        # overwrite_redis_index=True, drop_redis_index=True,
         application_id="threads_demo_app",
         agent_id="threads_demo_agent",
         user_id="threads_demo_user",
@@ -131,39 +126,39 @@ async def example_per_operation_thread_scope() -> None:
         context_providers=provider,
     )
 
-    # Create a specific thread for this scoped provider
+    # このスコープ付きprovider用に特定のスレッドを作成します
     dedicated_thread = agent.get_new_thread()
 
-    # Store some information in the dedicated thread
+    # 専用スレッドに情報を保存します
     query = "Remember that for this conversation, I'm working on a Python project about data analysis."
     print(f"User (dedicated thread): {query}")
     result = await agent.run(query, thread=dedicated_thread)
     print(f"Agent: {result}\n")
 
-    # Test memory retrieval in the same dedicated thread
+    # 同じ専用スレッドでメモリ取得をテストします
     query = "What project am I working on?"
     print(f"User (same dedicated thread): {query}")
     result = await agent.run(query, thread=dedicated_thread)
     print(f"Agent: {result}\n")
 
-    # Store more information in the same thread
+    # 同じスレッドにさらに情報を保存します
     query = "Also remember that I prefer using pandas and matplotlib for this project."
     print(f"User (same dedicated thread): {query}")
     result = await agent.run(query, thread=dedicated_thread)
     print(f"Agent: {result}\n")
 
-    # Test comprehensive memory retrieval
+    # 包括的なメモリ取得をテストします
     query = "What do you know about my current project and preferences?"
     print(f"User (same dedicated thread): {query}")
     result = await agent.run(query, thread=dedicated_thread)
     print(f"Agent: {result}\n")
 
-    # Clean up the Redis index
+    # Redisインデックスをクリーンアップします
     await provider.redis_index.delete()
 
 
 async def example_multiple_agents() -> None:
-    """Example 3: Multiple agents with different thread configurations (isolated via agent_id) but within 1 index."""
+    """例3: 複数Agentで異なるスレッド構成（agent_idで分離）だが1つのインデックス内。"""
     print("3. Multiple Agents with Different Thread Configurations:")
     print("-" * 40)
 
@@ -214,19 +209,19 @@ async def example_multiple_agents() -> None:
         context_providers=work_provider,
     )
 
-    # Store personal information
+    # 個人情報を保存します
     query = "Remember that I like to exercise at 6 AM and prefer outdoor activities."
     print(f"User to Personal Agent: {query}")
     result = await personal_agent.run(query)
     print(f"Personal Agent: {result}\n")
 
-    # Store work information
+    # 仕事情報を保存します
     query = "Remember that I have team meetings every Tuesday at 2 PM."
     print(f"User to Work Agent: {query}")
     result = await work_agent.run(query)
     print(f"Work Agent: {result}\n")
 
-    # Test memory isolation
+    # メモリの分離をテストします
     query = "What do you know about my schedule?"
     print(f"User to Personal Agent: {query}")
     result = await personal_agent.run(query)
@@ -236,7 +231,7 @@ async def example_multiple_agents() -> None:
     result = await work_agent.run(query)
     print(f"Work Agent: {result}\n")
 
-    # Clean up the Redis index (shared)
+    # Redisインデックスをクリーンアップします（共有）
     await work_provider.redis_index.delete()
 
 

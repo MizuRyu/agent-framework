@@ -65,37 +65,37 @@ Flow visualization:
 """
 
 
-# 1. Define domain-specific request/response types
+# 1. ドメイン固有の request/response タイプを定義します。
 @dataclass
 class ResourceRequest(RequestInfoMessage):
-    """Request for computing resources."""
+    """計算リソースのリクエスト。"""
 
-    resource_type: str = "cpu"  # cpu, memory, disk, etc.
+    resource_type: str = "cpu"  # cpu、memory、disk など。
     amount: int = 1
-    priority: str = "normal"  # low, normal, high
+    priority: str = "normal"  # low、normal、high。
 
 
 @dataclass
 class PolicyCheckRequest(RequestInfoMessage):
-    """Request to check resource allocation policy."""
+    """リソース割り当てポリシーをチェックするリクエスト。"""
 
     resource_type: str = ""
     amount: int = 0
-    policy_type: str = "quota"  # quota, compliance, security
+    policy_type: str = "quota"  # quota、compliance、security。
 
 
 @dataclass
 class ResourceResponse:
-    """Response with allocated resources."""
+    """割り当てられたリソースのレスポンス。"""
 
     resource_type: str
     allocated: int
-    source: str  # Which system provided the resources
+    source: str  # どのシステムがリソースを提供したか。
 
 
 @dataclass
 class PolicyResponse:
-    """Response from policy check."""
+    """ポリシーチェックのレスポンス。"""
 
     approved: bool
     reason: str
@@ -106,9 +106,9 @@ class RequestFinished:
     pass
 
 
-# 2. Implement the sub-workflow executor - makes resource and policy requests
+# 2. サブワークフロー executor を実装します - リソースとポリシーのリクエストを行います。
 class ResourceRequester(Executor):
-    """Simple executor that requests resources and checks policies."""
+    """リソースをリクエストし、ポリシーをチェックするシンプルな executor。"""
 
     def __init__(self):
         super().__init__(id="resource_requester")
@@ -120,7 +120,7 @@ class ResourceRequester(Executor):
         requests: list[dict[str, Any]],
         ctx: WorkflowContext[ResourceRequest | PolicyCheckRequest],
     ) -> None:
-        """Process a list of resource requests."""
+        """リソースリクエストのリストを処理します。"""
         print(f"🏭 Sub-workflow processing {len(requests)} requests")
         self._request_count += len(requests)
 
@@ -135,7 +135,7 @@ class ResourceRequester(Executor):
                     amount=req_data.get("amount", 1),
                     priority=req_data.get("priority", "normal"),
                 )
-                # Send to parent workflow for interception - not to target_id
+                # ターゲットID ではなく親ワークフローに送信してインターセプトします。
                 await ctx.send_message(request)
             elif req_type == "policy":
                 print(
@@ -147,7 +147,7 @@ class ResourceRequester(Executor):
                     amount=req_data.get("amount", 1),
                     policy_type=req_data.get("policy_type", "quota"),
                 )
-                # Send to parent workflow for interception - not to target_id
+                # ターゲットID ではなく親ワークフローに送信してインターセプトします。
                 await ctx.send_message(request)
 
     @handler
@@ -156,7 +156,7 @@ class ResourceRequester(Executor):
         response: RequestResponse[ResourceRequest, ResourceResponse],
         ctx: WorkflowContext[Never, RequestFinished],
     ) -> None:
-        """Handle resource allocation response."""
+        """リソース割り当てのレスポンスを処理します。"""
         if response.data:
             source_icon = "🏪" if response.data.source == "cache" else "🌐"
             print(
@@ -164,7 +164,7 @@ class ResourceRequester(Executor):
                 f"from {response.data.source}"
             )
             if self._collect_results():
-                # Yield completion result to the parent workflow.
+                # 完了結果を親ワークフローに yield します。
                 await ctx.yield_output(RequestFinished())
 
     @handler
@@ -173,7 +173,7 @@ class ResourceRequester(Executor):
         response: RequestResponse[PolicyCheckRequest, PolicyResponse],
         ctx: WorkflowContext[Never, RequestFinished],
     ) -> None:
-        """Handle policy check response."""
+        """ポリシーチェックのレスポンスを処理します。"""
         if response.data:
             status_icon = "✅" if response.data.approved else "❌"
             print(
@@ -181,40 +181,40 @@ class ResourceRequester(Executor):
                 f"{response.data.approved} - {response.data.reason}"
             )
             if self._collect_results():
-                # Yield completion result to the parent workflow.
+                # 完了結果を親ワークフローに yield します。
                 await ctx.yield_output(RequestFinished())
 
     def _collect_results(self) -> bool:
-        """Collect and summarize results."""
+        """結果を収集し、サマリーを作成します。"""
         self._request_count -= 1
         print(f"📊 Sub-workflow completed request ({self._request_count} remaining)")
         return self._request_count == 0
 
 
-# 3. Implement the Resource Cache - Uses typed handler for ResourceRequest
+# 3. Resource Cache を実装します - ResourceRequest 用の型付きハンドラーを使用します。
 class ResourceCache(Executor):
-    """Interceptor that handles RESOURCE requests from cache using typed routing."""
+    """型付きルーティングを使ってキャッシュから RESOURCE リクエストを処理するインターセプター。"""
 
-    # Use class attributes to avoid Pydantic assignment restrictions
+    # Pydantic の割り当て制限を回避するためにクラス属性を使用します。
     cache: dict[str, int] = {"cpu": 10, "memory": 50, "disk": 100}
     results: list[ResourceResponse] = []
 
     def __init__(self):
         super().__init__(id="resource_cache")
-        # Instance initialization only; state kept in class attributes as above
+        # インスタンス初期化のみ；状態は上記のようにクラス属性に保持します。
 
     @handler
     async def handle_resource_request(
         self, request: ResourceRequest, ctx: WorkflowContext[RequestResponse[ResourceRequest, Any] | ResourceRequest]
     ) -> None:
-        """Handle RESOURCE requests from sub-workflows and check cache first."""
+        """サブワークフローからの RESOURCE リクエストを処理し、まずキャッシュをチェックします。"""
         resource_request = request
         print(f"🏪 CACHE interceptor checking: {resource_request.amount} {resource_request.resource_type}")
 
         available = self.cache.get(resource_request.resource_type, 0)
 
         if available >= resource_request.amount:
-            # We can satisfy from cache
+            # キャッシュから満たすことができます。
             self.cache[resource_request.resource_type] -= resource_request.amount
             response_data = ResourceResponse(
                 resource_type=resource_request.resource_type, allocated=resource_request.amount, source="cache"
@@ -222,11 +222,11 @@ class ResourceCache(Executor):
             print(f"  ✅ Cache satisfied: {resource_request.amount} {resource_request.resource_type}")
             self.results.append(response_data)
 
-            # Send response back to sub-workflow
+            # レスポンスをサブワークフローに返送します。
             response = RequestResponse(data=response_data, original_request=request, request_id=request.request_id)
             await ctx.send_message(response, target_id=request.source_executor_id)
         else:
-            # Cache miss - forward to external
+            # キャッシュミス - 外部に転送します。
             print(f"  ❌ Cache miss: need {resource_request.amount}, have {available} {resource_request.resource_type}")
             await ctx.send_message(request)
 
@@ -234,7 +234,7 @@ class ResourceCache(Executor):
     async def collect_result(
         self, response: RequestResponse[ResourceRequest, ResourceResponse], ctx: WorkflowContext
     ) -> None:
-        """Collect results from external requests that were forwarded."""
+        """転送された外部リクエストから結果を収集します。"""
         if response.data and response.data.source != "cache":  # Don't double-count our own results
             self.results.append(response.data)
             print(
@@ -243,11 +243,11 @@ class ResourceCache(Executor):
             )
 
 
-# 4. Implement the Policy Engine - Uses typed handler for PolicyCheckRequest
+# 4. Policy Engine を実装します - PolicyCheckRequest 用の型付きハンドラーを使用します。
 class PolicyEngine(Executor):
-    """Interceptor that handles POLICY requests using typed routing."""
+    """型付きルーティングを使って POLICY リクエストを処理するインターセプター。"""
 
-    # Use class attributes for simple sample state
+    # シンプルなサンプル状態のためにクラス属性を使用します。
     quota: dict[str, int] = {
         "cpu": 5,  # Only allow up to 5 CPU units
         "memory": 20,  # Only allow up to 20 memory units
@@ -257,7 +257,7 @@ class PolicyEngine(Executor):
 
     def __init__(self):
         super().__init__(id="policy_engine")
-        # Instance initialization only; state kept in class attributes as above
+        # インスタンス初期化のみ；状態は上記のようにクラス属性に保持します。
 
     @handler
     async def handle_policy_request(
@@ -265,7 +265,7 @@ class PolicyEngine(Executor):
         request: PolicyCheckRequest,
         ctx: WorkflowContext[RequestResponse[PolicyCheckRequest, Any] | PolicyCheckRequest],
     ) -> None:
-        """Handle POLICY requests from sub-workflows and apply rules."""
+        """サブワークフローからの POLICY リクエストを処理し、ルールを適用します。"""
         policy_request = request
         print(
             f"🛡️  POLICY interceptor checking: {policy_request.amount} {policy_request.resource_type}, policy={policy_request.policy_type}"
@@ -279,17 +279,17 @@ class PolicyEngine(Executor):
                 print(f"  ✅ Policy approved: {policy_request.amount} <= {quota_limit}")
                 self.results.append(response_data)
 
-                # Send response back to sub-workflow
+                # レスポンスをサブワークフローに返送します。
                 response = RequestResponse(data=response_data, original_request=request, request_id=request.request_id)
                 await ctx.send_message(response, target_id=request.source_executor_id)
                 return
 
-            # Exceeds quota - forward to external for review
+            # クォータ超過 - レビューのため外部に転送します。
             print(f"  ❌ Policy exceeds quota: {policy_request.amount} > {quota_limit}, forwarding to external")
             await ctx.send_message(request)
             return
 
-        # Unknown policy type - forward to external
+        # 不明なポリシータイプ - 外部に転送
         print(f"  ❓ Unknown policy type: {policy_request.policy_type}, forwarding")
         await ctx.send_message(request)
 
@@ -297,7 +297,7 @@ class PolicyEngine(Executor):
     async def collect_policy_result(
         self, response: RequestResponse[PolicyCheckRequest, PolicyResponse], ctx: WorkflowContext
     ) -> None:
-        """Collect policy results from external requests that were forwarded."""
+        """転送された外部リクエストからポリシー結果を収集します。"""
         if response.data:
             self.results.append(response.data)
             print(f"🛡️  🌐 Policy received external response: {response.data.approved} - {response.data.reason}")
@@ -309,24 +309,25 @@ class Coordinator(Executor):
 
     @handler
     async def start(self, requests: list[dict[str, Any]], ctx: WorkflowContext[list[dict[str, Any]]]) -> None:
-        """Start the resource allocation process."""
+        """リソース割り当てプロセスを開始します。"""
         await ctx.send_message(requests, target_id="resource_workflow")
 
     @handler
     async def handle_completion(self, completion: RequestFinished, ctx: WorkflowContext) -> None:
-        """Handle sub-workflow completion.
+        """サブワークフローの完了を処理します。
 
-        It comes from the sub-workflow yielded output.
+        これはサブワークフローから生成された出力に由来します。
+
         """
         print("🎯 Main workflow received completion.")
 
 
 async def main() -> None:
-    """Demonstrate parallel request interception patterns."""
+    """並列リクエストインターセプトパターンを示します。"""
     print("🚀 Starting Sub-Workflow Parallel Request Interception Demo...")
     print("=" * 60)
 
-    # 5. Create the sub-workflow
+    # 5. サブワークフローを作成する
     resource_requester = ResourceRequester()
     sub_request_info = RequestInfoExecutor(id="sub_request_info")
 
@@ -338,16 +339,16 @@ async def main() -> None:
         .build()
     )
 
-    # 6. Create parent workflow with PROPER interceptor pattern
-    cache = ResourceCache()  # Intercepts ResourceRequest
-    policy = PolicyEngine()  # Intercepts PolicyCheckRequest (different type!)
+    # 6. 適切なインターセプターパターンで親ワークフローを作成する
+    cache = ResourceCache()  # ResourceRequestをインターセプトします
+    policy = PolicyEngine()  # PolicyCheckRequest（異なるタイプ！）をインターセプトします
     workflow_executor = WorkflowExecutor(sub_workflow, id="resource_workflow")
     main_request_info = RequestInfoExecutor(id="main_request_info")
 
-    # Create a simple coordinator that starts the process
+    # プロセスを開始するシンプルなコーディネーターを作成する
     coordinator = Coordinator()
 
-    # TYPED ROUTING: Each executor handles specific typed RequestInfoMessage messages
+    # TYPED ROUTING: 各executorは特定の型のRequestInfoMessageメッセージを処理します
     main_workflow = (
         WorkflowBuilder()
         .set_start_executor(coordinator)
@@ -363,7 +364,7 @@ async def main() -> None:
         .build()
     )
 
-    # 7. Test with various requests (mixed resource and policy)
+    # 7. さまざまなリクエスト（リソースとポリシーの混合）でテストする
     test_requests = [
         {"request_type": "resource", "type": "cpu", "amount": 2, "priority": "normal"},  # Cache hit
         {"request_type": "policy", "type": "cpu", "amount": 3, "policy_type": "quota"},  # Policy hit
@@ -383,11 +384,11 @@ async def main() -> None:
         )
     print("=" * 70)
 
-    # 8. Run the workflow
+    # 8. ワークフローを実行する
     print("🎬 Running workflow...")
     events = await main_workflow.run(test_requests)
 
-    # 9. Handle any external requests that couldn't be intercepted
+    # 9. インターセプトできなかった外部リクエストを処理する
     request_events = events.get_request_info_events()
     if request_events:
         print(f"\n🌐 Handling {len(request_events)} external request(s)...")
@@ -395,14 +396,14 @@ async def main() -> None:
         external_responses: dict[str, Any] = {}
         for event in request_events:
             if isinstance(event.data, ResourceRequest):
-                # Handle ResourceRequest - create ResourceResponse
+                # ResourceRequestを処理し、ResourceResponseを作成する
                 resource_response = ResourceResponse(
                     resource_type=event.data.resource_type, allocated=event.data.amount, source="external_provider"
                 )
                 external_responses[event.request_id] = resource_response
                 print(f"  🏭 External provider: {resource_response.allocated} {resource_response.resource_type}")
             elif isinstance(event.data, PolicyCheckRequest):
-                # Handle PolicyCheckRequest - create PolicyResponse
+                # PolicyCheckRequestを処理し、PolicyResponseを作成する
                 policy_response = PolicyResponse(approved=True, reason="External policy service approved")
                 external_responses[event.request_id] = policy_response
                 print(f"  🔒 External policy: {'✅ APPROVED' if policy_response.approved else '❌ DENIED'}")
@@ -411,7 +412,7 @@ async def main() -> None:
     else:
         print("\n🎯 All requests were intercepted internally!")
 
-    # 10. Show results and analysis
+    # 10. 結果と分析を表示する
     print("\n" + "=" * 70)
     print("📊 RESULTS ANALYSIS")
     print("=" * 70)

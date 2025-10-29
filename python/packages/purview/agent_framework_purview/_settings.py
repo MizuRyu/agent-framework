@@ -10,7 +10,7 @@ from pydantic_settings import SettingsConfigDict
 
 
 class PurviewLocationType(str, Enum):
-    """The type of location for Purview policy evaluation."""
+    """Purview ポリシー評価のための場所のタイプ。"""
 
     APPLICATION = "application"
     URI = "uri"
@@ -18,7 +18,7 @@ class PurviewLocationType(str, Enum):
 
 
 class PurviewAppLocation(BaseModel):
-    """Identifier representing the app's location for Purview policy evaluation."""
+    """Purview ポリシー評価のためのアプリの場所を表す識別子。"""
 
     location_type: PurviewLocationType = Field(..., description="The location type.")
     location_value: str = Field(..., description="The location value.")
@@ -37,15 +37,16 @@ class PurviewAppLocation(BaseModel):
 
 
 class PurviewSettings(AFBaseSettings):
-    """Settings for Purview integration mirroring .NET PurviewSettings.
+    """Purview 統合の設定で、.NET PurviewSettings をミラーリングしています。
 
     Attributes:
-        app_name: Public app name.
-        tenant_id: Optional tenant id (guid) of the user making the request.
-        purview_app_location: Optional app location for policy evaluation.
-        graph_base_uri: Base URI for Microsoft Graph.
-        blocked_prompt_message: Custom message to return when a prompt is blocked by policy.
-        blocked_response_message: Custom message to return when a response is blocked by policy.
+        app_name: 公開アプリ名。
+        tenant_id: リクエストを行うユーザーのオプションのテナントID（guid）。
+        purview_app_location: ポリシー評価のためのオプションのアプリ場所。
+        graph_base_uri: Microsoft Graph のベースURI。
+        blocked_prompt_message: ポリシーによりプロンプトがブロックされた場合に返すカスタムメッセージ。
+        blocked_response_message: ポリシーによりレスポンスがブロックされた場合に返すカスタムメッセージ。
+
     """
 
     app_name: str = Field(...)

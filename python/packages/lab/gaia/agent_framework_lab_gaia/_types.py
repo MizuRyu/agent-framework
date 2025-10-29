@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Common types for agent evaluation."""
+"""agent評価のための共通タイプ。"""
 
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
@@ -17,7 +17,7 @@ __all__ = [
 
 @dataclass
 class Task:
-    """Represents a task to be evaluated."""
+    """評価されるタスクを表します。"""
 
     task_id: str
     question: str
@@ -29,7 +29,7 @@ class Task:
 
 @dataclass
 class Prediction:
-    """Represents a prediction made by an agent for a task."""
+    """タスクに対してagentが行った予測を表します。"""
 
     prediction: str
     messages: list[Any] | None = None
@@ -42,7 +42,7 @@ class Prediction:
 
 @dataclass
 class Evaluation:
-    """Represents the evaluation result of a prediction."""
+    """予測の評価結果を表します。"""
 
     is_correct: bool
     score: float
@@ -51,7 +51,7 @@ class Evaluation:
 
 @dataclass
 class TaskResult:
-    """Complete result for a single task evaluation."""
+    """単一タスク評価の完全な結果。"""
 
     task_id: str
     task: Task
@@ -63,17 +63,17 @@ class TaskResult:
 
 @runtime_checkable
 class TaskRunner(Protocol):
-    """Protocol for running tasks."""
+    """タスクを実行するためのプロトコル。"""
 
     async def __call__(self, task: Task) -> Prediction:
-        """Run a single task and return the prediction."""
+        """単一タスクを実行し、予測を返します。"""
         ...
 
 
 @runtime_checkable
 class Evaluator(Protocol):
-    """Protocol for evaluating predictions."""
+    """予測を評価するためのプロトコル。"""
 
     async def __call__(self, task: Task, prediction: Prediction) -> Evaluation:
-        """Evaluate a prediction for a given task."""
+        """指定されたタスクに対する予測を評価します。"""
         ...

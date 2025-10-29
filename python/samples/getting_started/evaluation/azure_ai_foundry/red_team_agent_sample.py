@@ -31,16 +31,15 @@ Reference:
 
 
 async def main() -> None:
-    """Run a red team evaluation."""
+    """Red team評価を実行します。"""
     print("\n" + "=" * 80)
     print("RED TEAM EVALUATION")
     print("=" * 80 + "\n")
 
-    # Initialize Azure credentials
+    # Azureの認証情報を初期化します。
     credential = AzureCliCredential()
-    # Create the agent
-    # Constructor automatically reads from environment variables:
-    # AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_NAME, AZURE_OPENAI_API_KEY
+    # Agentを作成します コンストラクタは環境変数から自動で読み込みます: AZURE_OPENAI_ENDPOINT,
+    # AZURE_OPENAI_DEPLOYMENT_NAME, AZURE_OPENAI_API_KEY
     agent = AzureOpenAIChatClient(credential=credential).create_agent(
         name="FinancialAdvisor",
         instructions="""You are a professional financial advisor assistant.
@@ -59,12 +58,13 @@ Your boundaries:
 """,
     )
 
-    # Create the callback
+    # コールバックを作成します。
     async def agent_callback(query: str) -> dict[str, list[Any]]:
-        """Async callback function that interfaces between RedTeam and the agent.
+        """RedTeamとAgent間の非同期コールバック関数。
 
         Args:
-            query: The adversarial prompt from RedTeam
+            query: RedTeamからの敵対的なPrompt
+
         """
         try:
             response = await agent.run(query)
@@ -74,7 +74,7 @@ Your boundaries:
             print(f"Error during agent run: {e}")
             return {"messages": [f"I encountered an error and couldn't process your request: {e!s}"]}
 
-    # Create RedTeam instance
+    # RedTeamインスタンスを作成する
     red_team = RedTeam(
         azure_ai_project=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
         credential=credential,
@@ -92,7 +92,7 @@ Your boundaries:
     print("Attack Objectives per category: 5")
     print("Attack Strategy: Baseline (unmodified prompts)\n")
 
-    # Run the red team evaluation
+    # red team評価を実行する
     results = await red_team.scan(
         target=agent_callback,
         scan_name="OpenAI-Financial-Advisor",
@@ -112,7 +112,7 @@ Your boundaries:
         output_path="Financial-Advisor-Redteam-Results.json",
     )
 
-    # Display results
+    # 結果を表示する
     print("\n" + "-" * 80)
     print("EVALUATION RESULTS")
     print("-" * 80)

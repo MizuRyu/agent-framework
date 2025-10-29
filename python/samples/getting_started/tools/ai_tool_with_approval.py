@@ -22,16 +22,16 @@ conditions = ["sunny", "cloudy", "raining", "snowing", "clear"]
 
 @ai_function
 def get_weather(location: Annotated[str, "The city and state, e.g. San Francisco, CA"]) -> str:
-    """Get the current weather for a given location."""
-    # Simulate weather data
+    """指定された場所の現在の天気を取得する。"""
+    # 天気データをシミュレートする
     return f"The weather in {location} is {conditions[randrange(0, len(conditions))]} and {randrange(-10, 30)}°C."
 
 
-# Define a simple weather tool that requires approval
+# 承認が必要なシンプルな天気ツールを定義する
 @ai_function(approval_mode="always_require")
 def get_weather_detail(location: Annotated[str, "The city and state, e.g. San Francisco, CA"]) -> str:
-    """Get the current weather for a given location."""
-    # Simulate weather data
+    """指定された場所の現在の天気を取得する。"""
+    # 天気データをシミュレートする
     return (
         f"The weather in {location} is {conditions[randrange(0, len(conditions))]} and {randrange(-10, 30)}°C, "
         "with a humidity of 88%. "
@@ -40,14 +40,15 @@ def get_weather_detail(location: Annotated[str, "The city and state, e.g. San Fr
 
 
 async def handle_approvals(query: str, agent: "AgentProtocol") -> AgentRunResponse:
-    """Handle function call approvals.
+    """関数呼び出しの承認を処理する。
 
-    When we don't have a thread, we need to ensure we include the original query,
-    the approval request, and the approval response in each iteration.
+    スレッドがない場合、元のクエリ、承認リクエスト、および承認レスポンスを
+    各イテレーションに含める必要がある。
+
     """
     result = await agent.run(query)
     while len(result.user_input_requests) > 0:
-        # Start with the original query
+        # 元のクエリから開始する
         new_inputs: list[Any] = [query]
 
         for user_input_needed in result.user_input_requests:
@@ -57,28 +58,29 @@ async def handle_approvals(query: str, agent: "AgentProtocol") -> AgentRunRespon
                 f"\n  Arguments: {user_input_needed.function_call.arguments}"
             )
 
-            # Add the assistant message with the approval request
+            # 承認リクエストを含むアシスタントメッセージを追加する
             new_inputs.append(ChatMessage(role="assistant", contents=[user_input_needed]))
 
-            # Get user approval
+            # ユーザーの承認を得る
             user_approval = await asyncio.to_thread(input, "\nApprove function call? (y/n): ")
 
-            # Add the user's approval response
+            # ユーザーの承認レスポンスを追加する
             new_inputs.append(
                 ChatMessage(role="user", contents=[user_input_needed.create_response(user_approval.lower() == "y")])
             )
 
-        # Run again with all the context
+        # すべてのコンテキストで再度実行する
         result = await agent.run(new_inputs)
 
     return result
 
 
 async def handle_approvals_streaming(query: str, agent: "AgentProtocol") -> None:
-    """Handle function call approvals with streaming responses.
+    """ストリーミングレスポンスで関数呼び出しの承認を処理する。
 
-    When we don't have a thread, we need to ensure we include the original query,
-    the approval request, and the approval response in each iteration.
+    スレッドがない場合、元のクエリ、承認リクエスト、および承認レスポンスを
+    各イテレーションに含める必要がある。
+
     """
     current_input: str | list[Any] = query
     has_user_input_requests = True
@@ -86,18 +88,18 @@ async def handle_approvals_streaming(query: str, agent: "AgentProtocol") -> None
         has_user_input_requests = False
         user_input_requests: list[Any] = []
 
-        # Stream the response
+        # レスポンスをストリームする
         async for chunk in agent.run_stream(current_input):
             if chunk.text:
                 print(chunk.text, end="", flush=True)
 
-            # Collect user input requests from the stream
+            # ストリームからユーザー入力リクエストを収集する
             if chunk.user_input_requests:
                 user_input_requests.extend(chunk.user_input_requests)
 
         if user_input_requests:
             has_user_input_requests = True
-            # Start with the original query
+            # 元のクエリから開始する
             new_inputs: list[Any] = [query]
 
             for user_input_needed in user_input_requests:
@@ -107,23 +109,23 @@ async def handle_approvals_streaming(query: str, agent: "AgentProtocol") -> None
                     f"\n  Arguments: {user_input_needed.function_call.arguments}"
                 )
 
-                # Add the assistant message with the approval request
+                # 承認リクエストを含むアシスタントメッセージを追加する
                 new_inputs.append(ChatMessage(role="assistant", contents=[user_input_needed]))
 
-                # Get user approval
+                # ユーザーの承認を得る
                 user_approval = await asyncio.to_thread(input, "\nApprove function call? (y/n): ")
 
-                # Add the user's approval response
+                # ユーザーの承認レスポンスを追加する
                 new_inputs.append(
                     ChatMessage(role="user", contents=[user_input_needed.create_response(user_approval.lower() == "y")])
                 )
 
-            # Update input with all the context for next iteration
+            # 次のイテレーションのためにすべてのコンテキストで入力を更新する
             current_input = new_inputs
 
 
 async def run_weather_agent_with_approval(is_streaming: bool) -> None:
-    """Example showing AI function with approval requirement."""
+    """承認要件付きAI関数の例。"""
     print(f"\n=== Weather Agent with Approval Required ({'Streaming' if is_streaming else 'Non-Streaming'}) ===\n")
 
     async with ChatAgent(

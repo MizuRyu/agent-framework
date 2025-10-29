@@ -19,19 +19,17 @@ lifecycle management. Shows both streaming and non-streaming responses with func
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 async def non_streaming_example() -> None:
-    """Example of non-streaming response (get the complete result at once)."""
+    """非ストリーミングレスポンスの例（一度に完全な結果を取得）。"""
     print("=== Non-streaming Response Example ===")
 
-    # Since no Agent ID is provided, the agent will be automatically created
-    # and deleted after getting a response
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # Agent ID が指定されていないため、エージェントは自動的に作成され、レスポンス取得後に削除されます。 認証には、ターミナルで `az login`
+    # コマンドを実行するか、AzureCliCredential を好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
@@ -47,13 +45,11 @@ async def non_streaming_example() -> None:
 
 
 async def streaming_example() -> None:
-    """Example of streaming response (get results as they are generated)."""
+    """ストリーミングレスポンスの例（生成される結果を逐次取得）。"""
     print("=== Streaming Response Example ===")
 
-    # Since no Agent ID is provided, the agent will be automatically created
-    # and deleted after getting a response
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # Agent ID が指定されていないため、エージェントは自動的に作成され、レスポンス取得後に削除されます。 認証には、ターミナルで `az login`
+    # コマンドを実行するか、AzureCliCredential を好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(

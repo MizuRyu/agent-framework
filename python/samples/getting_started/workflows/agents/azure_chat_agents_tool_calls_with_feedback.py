@@ -53,7 +53,7 @@ Prerequisites:
 def fetch_product_brief(
     product_name: Annotated[str, Field(description="Product name to look up.")],
 ) -> str:
-    """Return a marketing brief for a product."""
+    """製品のマーケティングブリーフを返します。"""
     briefs = {
         "lumenx desk lamp": (
             "Product: LumenX Desk Lamp\n"
@@ -69,7 +69,7 @@ def fetch_product_brief(
 def get_brand_voice_profile(
     voice_name: Annotated[str, Field(description="Brand or campaign voice to emulate.")],
 ) -> str:
-    """Return guidance for the requested brand voice."""
+    """要求されたブランドボイスのガイダンスを返します。"""
     voices = {
         "lumenx launch": (
             "Voice guidelines:\n"
@@ -83,7 +83,7 @@ def get_brand_voice_profile(
 
 @dataclass
 class DraftFeedbackRequest(RequestInfoMessage):
-    """Payload sent to RequestInfoExecutor for human review."""
+    """RequestInfoExecutorに送信されるペイロード（人間のレビュー用）。"""
 
     prompt: str = ""
     draft_text: str = ""
@@ -91,7 +91,7 @@ class DraftFeedbackRequest(RequestInfoMessage):
 
 
 class DraftFeedbackCoordinator(Executor):
-    """Bridge between the writer agent, human feedback, and final editor."""
+    """Writer Agent、人間のフィードバック、最終エディタの橋渡し。"""
 
     def __init__(self, *, id: str = "draft_feedback_coordinator") -> None:
         super().__init__(id)
@@ -102,7 +102,7 @@ class DraftFeedbackCoordinator(Executor):
         draft: AgentExecutorResponse,
         ctx: WorkflowContext[DraftFeedbackRequest],
     ) -> None:
-        # Preserve the full conversation so the final editor can see tool traces and the initial prompt.
+        # 最終エディタがツールのトレースと初期Promptを確認できるように会話全体を保持します。
         conversation: list[ChatMessage]
         if draft.full_conversation is not None:
             conversation = list(draft.full_conversation)
@@ -140,7 +140,7 @@ class DraftFeedbackCoordinator(Executor):
 
 
 async def main() -> None:
-    """Run the workflow and bridge human feedback between two agents."""
+    """ワークフローを実行し、2つのAgent間で人間のフィードバックを橋渡しします。"""
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     writer_agent = chat_client.create_agent(
@@ -201,7 +201,7 @@ async def main() -> None:
             if isinstance(event, AgentRunUpdateEvent):
                 executor_id = event.executor_id
                 update = event.data
-                # Extract and print any new tool calls or results from the update.
+                # 更新から新しいツール呼び出しや結果を抽出して表示します。
                 function_calls = [c for c in update.contents if isinstance(c, FunctionCallContent)]  # type: ignore[union-attr]
                 function_results = [c for c in update.contents if isinstance(c, FunctionResultContent)]  # type: ignore[union-attr]
                 if executor_id != last_executor:
@@ -209,7 +209,7 @@ async def main() -> None:
                         print()
                     print(f"{executor_id}:", end=" ", flush=True)
                     last_executor = executor_id
-                # Print any new tool calls before the text update.
+                # テキスト更新の前に新しいツール呼び出しを表示します。
                 for call in function_calls:
                     if call.call_id in printed_tool_calls:
                         continue
@@ -224,7 +224,7 @@ async def main() -> None:
                         flush=True,
                     )
                     print(f"{executor_id}:", end=" ", flush=True)
-                # Print any new tool results before the text update.
+                # テキスト更新の前に新しいツール結果を表示します。
                 for result in function_results:
                     if result.call_id in printed_tool_results:
                         continue
@@ -237,10 +237,10 @@ async def main() -> None:
                         flush=True,
                     )
                     print(f"{executor_id}:", end=" ", flush=True)
-                # Finally, print the text update.
+                # 最後にテキスト更新を表示します。
                 print(update, end="", flush=True)
             elif isinstance(event, RequestInfoEvent) and isinstance(event.data, DraftFeedbackRequest):
-                # Stash the request so we can prompt the human after the stream completes.
+                # ストリーム完了後に人間にPromptできるようリクエストを保存します。
                 requests.append((event.request_id, event.data))
                 last_executor = None
             elif isinstance(event, WorkflowOutputEvent):

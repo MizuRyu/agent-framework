@@ -10,27 +10,27 @@ from agent_framework.redis import RedisChatMessageStore
 
 
 async def example_manual_memory_store() -> None:
-    """Basic example of using Redis chat message store."""
+    """Redis chat message storeの基本例。"""
     print("=== Basic Redis Chat Message Store Example ===")
 
-    # Create Redis store with auto-generated thread ID
+    # 自動生成されたthread IDでRedis storeを作成します。
     redis_store = RedisChatMessageStore(
         redis_url="redis://localhost:6379",
-        # thread_id will be auto-generated if not provided
+        # thread_idが指定されていない場合は自動生成されます。
     )
 
     print(f"Created store with thread ID: {redis_store.thread_id}")
 
-    # Create thread with Redis store
+    # Redis storeでスレッドを作成します。
     thread = AgentThread(message_store=redis_store)
 
-    # Create agent
+    # agentを作成します。
     agent = OpenAIChatClient().create_agent(
         name="RedisBot",
         instructions="You are a helpful assistant that remembers our conversation using Redis.",
     )
 
-    # Have a conversation
+    # 会話を行います。
     print("\n--- Starting conversation ---")
     query1 = "Hello! My name is Alice and I love pizza."
     print(f"User: {query1}")
@@ -42,24 +42,24 @@ async def example_manual_memory_store() -> None:
     response2 = await agent.run(query2, thread=thread)
     print(f"Agent: {response2.text}")
 
-    # Show messages are stored in Redis
+    # メッセージがRedisに保存されていることを示します。
     messages = await redis_store.list_messages()
     print(f"\nTotal messages in Redis: {len(messages)}")
 
-    # Cleanup
+    # クリーンアップ
     await redis_store.clear()
     await redis_store.aclose()
     print("Cleaned up Redis data\n")
 
 
 async def example_user_session_management() -> None:
-    """Example of managing user sessions with Redis."""
+    """Redisを使ったユーザーセッション管理の例。"""
     print("=== User Session Management Example ===")
 
     user_id = "alice_123"
     session_id = f"session_{uuid4()}"
 
-    # Create Redis store for specific user session
+    # 特定のユーザーセッション用のRedisストアを作成する
     def create_user_session_store():
         return RedisChatMessageStore(
             redis_url="redis://localhost:6379",
@@ -67,21 +67,21 @@ async def example_user_session_management() -> None:
             max_messages=10,  # Keep only last 10 messages
         )
 
-    # Create agent with factory pattern
+    # ファクトリーパターンでAgentを作成する
     agent = OpenAIChatClient().create_agent(
         name="SessionBot",
         instructions="You are a helpful assistant. Keep track of user preferences.",
         chat_message_store_factory=create_user_session_store,
     )
 
-    # Start conversation
+    # 会話を開始する
     thread = agent.get_new_thread()
 
     print(f"Started session for user {user_id}")
     if hasattr(thread.message_store, "thread_id"):
         print(f"Thread ID: {thread.message_store.thread_id}")  # type: ignore[union-attr]
 
-    # Simulate conversation
+    # 会話をシミュレートする
     queries = [
         "Hi, I'm Alice and I prefer vegetarian food.",
         "What restaurants would you recommend?",
@@ -95,12 +95,12 @@ async def example_user_session_management() -> None:
         response = await agent.run(query, thread=thread)
         print(f"Agent: {response.text}")
 
-    # Show persistent storage
+    # 永続ストレージを表示する
     if thread.message_store:
         messages = await thread.message_store.list_messages()  # type: ignore[union-attr]
         print(f"\nMessages stored for user {user_id}: {len(messages)}")
 
-    # Cleanup
+    # クリーンアップする
     if thread.message_store:
         await thread.message_store.clear()  # type: ignore[union-attr]
         await thread.message_store.aclose()  # type: ignore[union-attr]
@@ -108,12 +108,12 @@ async def example_user_session_management() -> None:
 
 
 async def example_conversation_persistence() -> None:
-    """Example of conversation persistence across application restarts."""
+    """アプリケーション再起動時の会話永続化の例。"""
     print("=== Conversation Persistence Example ===")
 
     conversation_id = "persistent_chat_001"
 
-    # Phase 1: Start conversation
+    # フェーズ1: 会話を開始する
     print("--- Phase 1: Starting conversation ---")
     store1 = RedisChatMessageStore(
         redis_url="redis://localhost:6379",
@@ -126,7 +126,7 @@ async def example_conversation_persistence() -> None:
         instructions="You are a helpful assistant. Remember our conversation history.",
     )
 
-    # Start conversation
+    # 会話を開始する
     query1 = "Hello! I'm working on a Python project about machine learning."
     print(f"User: {query1}")
     response1 = await agent.run(query1, thread=thread1)
@@ -140,7 +140,7 @@ async def example_conversation_persistence() -> None:
     print(f"Stored {len(await store1.list_messages())} messages in Redis")
     await store1.aclose()
 
-    # Phase 2: Resume conversation (simulating app restart)
+    # フェーズ2: 会話を再開する（アプリ再起動をシミュレート）
     print("\n--- Phase 2: Resuming conversation (after 'restart') ---")
     store2 = RedisChatMessageStore(
         redis_url="redis://localhost:6379",
@@ -149,7 +149,7 @@ async def example_conversation_persistence() -> None:
 
     thread2 = AgentThread(message_store=store2)
 
-    # Continue conversation - agent should remember context
+    # 会話を続ける - Agentはコンテキストを記憶しているはず
     query3 = "What was I working on before?"
     print(f"User: {query3}")
     response3 = await agent.run(query3, thread=thread2)
@@ -162,17 +162,17 @@ async def example_conversation_persistence() -> None:
 
     print(f"Total messages after resuming: {len(await store2.list_messages())}")
 
-    # Cleanup
+    # クリーンアップする
     await store2.clear()
     await store2.aclose()
     print("Cleaned up persistent data\n")
 
 
 async def example_thread_serialization() -> None:
-    """Example of thread state serialization and deserialization."""
+    """スレッド状態のシリアライズとデシリアライズの例。"""
     print("=== Thread Serialization Example ===")
 
-    # Create initial thread with Redis store
+    # Redisストアで初期スレッドを作成する
     original_store = RedisChatMessageStore(
         redis_url="redis://localhost:6379",
         thread_id="serialization_test",
@@ -186,35 +186,34 @@ async def example_thread_serialization() -> None:
         instructions="You are a helpful assistant.",
     )
 
-    # Have initial conversation
+    # 初期の会話を行う
     print("--- Initial conversation ---")
     query1 = "Hello! I'm testing serialization."
     print(f"User: {query1}")
     response1 = await agent.run(query1, thread=original_thread)
     print(f"Agent: {response1.text}")
 
-    # Serialize thread state
+    # スレッド状態をシリアライズする
     serialized_thread = await original_thread.serialize()
     print(f"\nSerialized thread state: {serialized_thread}")
 
-    # Close original connection
+    # 元の接続を閉じる
     await original_store.aclose()
 
-    # Deserialize thread state (simulating loading from database/file)
+    # スレッド状態をデシリアライズする（データベースやファイルからの読み込みをシミュレート）
     print("\n--- Deserializing thread state ---")
 
-    # Create a new thread with the same Redis store type
-    # This ensures the correct store type is used for deserialization
+    # 同じRedisストアタイプで新しいスレッドを作成する これによりデシリアライズ時に正しいストアタイプが使用されることを保証する
     restored_store = RedisChatMessageStore(redis_url="redis://localhost:6379")
     restored_thread = await AgentThread.deserialize(serialized_thread, message_store=restored_store)
 
-    # Continue conversation with restored thread
+    # 復元したスレッドで会話を続ける
     query2 = "Do you remember what I said about testing?"
     print(f"User: {query2}")
     response2 = await agent.run(query2, thread=restored_thread)
     print(f"Agent: {response2.text}")
 
-    # Cleanup
+    # クリーンアップする
     if restored_thread.message_store:
         await restored_thread.message_store.clear()  # type: ignore[union-attr]
         await restored_thread.message_store.aclose()  # type: ignore[union-attr]
@@ -222,10 +221,10 @@ async def example_thread_serialization() -> None:
 
 
 async def example_message_limits() -> None:
-    """Example of automatic message trimming with limits."""
+    """制限付きの自動メッセージトリミングの例。"""
     print("=== Message Limits Example ===")
 
-    # Create store with small message limit
+    # 小さいメッセージ制限でストアを作成する
     store = RedisChatMessageStore(
         redis_url="redis://localhost:6379",
         thread_id="limits_test",
@@ -238,7 +237,7 @@ async def example_message_limits() -> None:
         instructions="You are a helpful assistant with limited memory.",
     )
 
-    # Send multiple messages to test trimming
+    # トリミングをテストするために複数のメッセージを送信する
     messages = [
         "Message 1: Hello!",
         "Message 2: How are you?",
@@ -258,18 +257,18 @@ async def example_message_limits() -> None:
         if len(stored_messages) > 0:
             print(f"Oldest message: {stored_messages[0].text[:30]}...")
 
-    # Final check
+    # 最終チェック
     final_messages = await store.list_messages()
     print(f"\nFinal message count: {len(final_messages)} (should be <= 6: 3 messages × 2 per exchange)")
 
-    # Cleanup
+    # クリーンアップする
     await store.clear()
     await store.aclose()
     print("Cleaned up limits test data\n")
 
 
 async def main() -> None:
-    """Run all Redis chat message store examples."""
+    """すべてのRedisチャットメッセージストアの例を実行する。"""
     print("Redis Chat Message Store Examples")
     print("=" * 50)
     print("Prerequisites:")
@@ -277,13 +276,13 @@ async def main() -> None:
     print("- OPENAI_API_KEY environment variable set")
     print("=" * 50)
 
-    # Check prerequisites
+    # 前提条件を確認する
     if not os.getenv("OPENAI_API_KEY"):
         print("ERROR: OPENAI_API_KEY environment variable not set")
         return
 
     try:
-        # Test Redis connection
+        # Redis接続をテストする
         test_store = RedisChatMessageStore(redis_url="redis://localhost:6379")
         connection_ok = await test_store.ping()
         await test_store.aclose()
@@ -296,7 +295,7 @@ async def main() -> None:
         return
 
     try:
-        # Run all examples
+        # すべての例を実行する
         await example_manual_memory_store()
         await example_user_session_management()
         await example_conversation_persistence()

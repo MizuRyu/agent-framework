@@ -33,12 +33,12 @@ from samples.getting_started.chat_client.openai_responses_client import (
     main as openai_responses_client,
 )
 
-# Environment variable for controlling sample tests
+# サンプルテストを制御するための環境変数。
 RUN_SAMPLES_TESTS = "RUN_SAMPLES_TESTS"
 
-# All chat client samples across providers
+# プロバイダーを跨いだすべてのChat Clientサンプル。
 chat_client_samples = [
-    # Azure Chat Client samples
+    # Azure Chat Clientのサンプル。
     param(
         azure_assistants_client,
         [],  # Non-interactive sample
@@ -66,7 +66,7 @@ chat_client_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # Azure AI Chat Client samples
+    # Azure AI Chat Clientのサンプル。
     param(
         azure_ai_chat_client,
         [],  # Non-interactive sample
@@ -76,7 +76,7 @@ chat_client_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # OpenAI Chat Client samples
+    # OpenAI Chat Clientのサンプル。
     param(
         openai_assistants_client,
         [],  # Non-interactive sample
@@ -104,7 +104,7 @@ chat_client_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # General Chat Client samples (no provider-specific environment variable)
+    # 一般的なChat Clientサンプル（プロバイダー固有の環境変数なし）。
     param(
         chat_response_cancellation,
         [],  # Non-interactive sample
@@ -120,7 +120,7 @@ async def test_chat_client_samples(
     responses: list[str],
     monkeypatch: MonkeyPatch,
 ):
-    """Test chat client samples with input mocking and retry logic."""
+    """入力のモックとリトライロジックを用いたテストChat Clientのサンプル。"""
     saved_responses = copy.deepcopy(responses)
 
     def reset():

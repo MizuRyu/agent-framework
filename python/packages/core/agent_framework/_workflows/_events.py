@@ -15,15 +15,16 @@ if TYPE_CHECKING:
 
 
 class WorkflowEventSource(str, Enum):
-    """Identifies whether a workflow event came from the framework or an executor.
+    """ワークフローイベントがフレームワーク由来かexecutor由来かを識別します。
 
-    Use `FRAMEWORK` for events emitted by built-in orchestration paths—even when the
-    code that raises them lives in runner-related modules—and `EXECUTOR` for events
-    surfaced by developer-provided executor implementations.
+    組み込みのオーケストレーションパスから発生したイベントには`FRAMEWORK`を使用します。
+    これは、イベントを発生させるコードがランナー関連モジュールにあっても同様です。
+    開発者提供のexecutor実装から発生したイベントには`EXECUTOR`を使用します。
+
     """
 
-    FRAMEWORK = "FRAMEWORK"  # Framework-owned orchestration, regardless of module location
-    EXECUTOR = "EXECUTOR"  # User-supplied executor code and callbacks
+    FRAMEWORK = "FRAMEWORK"  # モジュールの場所に関わらずフレームワーク所有のオーケストレーション。
+    EXECUTOR = "EXECUTOR"  # ユーザー提供のexecutorコードおよびコールバック。
 
 
 _event_origin_context: ContextVar[WorkflowEventSource] = ContextVar(
@@ -32,13 +33,13 @@ _event_origin_context: ContextVar[WorkflowEventSource] = ContextVar(
 
 
 def _current_event_origin() -> WorkflowEventSource:
-    """Return the origin to associate with newly created workflow events."""
+    """新規作成されたワークフローイベントに関連付けるオリジンを返します。"""
     return _event_origin_context.get()
 
 
 @contextmanager
 def _framework_event_origin() -> Iterator[None]:  # pyright: ignore[reportUnusedFunction]
-    """Temporarily mark subsequently created events as originating from the framework (internal)."""
+    """後続の作成イベントを一時的にフレームワーク由来としてマークします（内部用）。"""
     token = _event_origin_context.set(WorkflowEventSource.FRAMEWORK)
     try:
         yield
@@ -47,107 +48,103 @@ def _framework_event_origin() -> Iterator[None]:  # pyright: ignore[reportUnused
 
 
 class WorkflowEvent:
-    """Base class for workflow events."""
+    """ワークフローイベントの基底クラス。"""
 
     def __init__(self, data: Any | None = None):
-        """Initialize the workflow event with optional data."""
+        """オプションのデータでワークフローイベントを初期化します。"""
         self.data = data
         self.origin = _current_event_origin()
 
     def __repr__(self) -> str:
-        """Return a string representation of the workflow event."""
+        """ワークフローイベントの文字列表現を返します。"""
         data_repr = self.data if self.data is not None else "None"
         return f"{self.__class__.__name__}(origin={self.origin}, data={data_repr})"
 
 
 class WorkflowStartedEvent(WorkflowEvent):
-    """Built-in lifecycle event emitted when a workflow run begins."""
+    """ワークフロー実行開始時に発行される組み込みライフサイクルイベント。"""
 
     ...
 
 
 class WorkflowWarningEvent(WorkflowEvent):
-    """Executor-origin event signaling a warning surfaced by user code."""
+    """ユーザーコードで発生した警告を示すexecutor由来のイベント。"""
 
     def __init__(self, data: str):
-        """Initialize the workflow warning event with optional data and warning message."""
+        """オプションのデータと警告メッセージでワークフロー警告イベントを初期化します。"""
         super().__init__(data)
 
     def __repr__(self) -> str:
-        """Return a string representation of the workflow warning event."""
+        """ワークフロー警告イベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(message={self.data}, origin={self.origin})"
 
 
 class WorkflowErrorEvent(WorkflowEvent):
-    """Executor-origin event signaling an error surfaced by user code."""
+    """ユーザーコードで発生したエラーを示すexecutor由来のイベント。"""
 
     def __init__(self, data: Exception):
-        """Initialize the workflow error event with optional data and error message."""
+        """オプションのデータとエラーメッセージでワークフローエラーイベントを初期化します。"""
         super().__init__(data)
 
     def __repr__(self) -> str:
-        """Return a string representation of the workflow error event."""
+        """ワークフローエラーイベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(exception={self.data}, origin={self.origin})"
 
 
 class WorkflowRunState(str, Enum):
-    """Run-level state of a workflow execution.
+    """ワークフロー実行のランレベル状態。
 
-    Semantics:
-      - STARTED: Run has been initiated and the workflow context has been created.
-        This is an initial state before any meaningful work is performed. In this
-        codebase we emit a dedicated `WorkflowStartedEvent` for telemetry, and
-        typically advance the status directly to `IN_PROGRESS`. Consumers may
-        still rely on `STARTED` for state machines that need an explicit pre-work
-        phase.
+    セマンティクス:
+      - STARTED: 実行が開始され、ワークフローコンテキストが作成された状態。
+        これは意味のある作業が行われる前の初期状態です。
+        このコードベースではテレメトリ用に専用の`WorkflowStartedEvent`を発行し、
+        通常は状態を直接`IN_PROGRESS`に進めます。
+        状態機械で明示的な事前作業フェーズが必要な場合は`STARTED`を利用することがあります。
 
-      - IN_PROGRESS: The workflow is actively executing (e.g., the initial
-        message has been delivered to the start executor or a superstep is
-        running). This status is emitted at the beginning of a run and can be
-        followed by other statuses as the run progresses.
+      - IN_PROGRESS: ワークフローがアクティブに実行中（例：開始executorに初期メッセージが配信された、またはスーパーステップが実行中）。
+        実行開始時に発行され、進行に伴い他の状態に遷移することがあります。
 
-      - IN_PROGRESS_PENDING_REQUESTS: Active execution while one or more
-        request-for-information operations are outstanding. New work may still
-        be scheduled while requests are in flight.
+      - IN_PROGRESS_PENDING_REQUESTS: 1つ以上の情報要求操作が未完了の状態でのアクティブ実行。
+        リクエストが進行中でも新たな作業がスケジュールされる可能性があります。
 
-      - IDLE: The workflow is quiescent with no outstanding requests and no more
-        work to do. This is the normal terminal state for workflows that have
-        finished executing, potentially having produced outputs along the way.
+      - IDLE: 未処理のリクエストがなく、作業もない静止状態。
+        実行が完了し、途中で出力を生成した可能性がある通常の終了状態です。
 
-      - IDLE_WITH_PENDING_REQUESTS: The workflow is paused awaiting external
-        input (e.g., emitted a `RequestInfoEvent`). This is a non-terminal
-        state; the workflow can resume when responses are supplied.
+      - IDLE_WITH_PENDING_REQUESTS: 外部入力を待って一時停止中（例：`RequestInfoEvent`を発行）。
+        これは非終端状態で、応答が提供されると再開可能です。
 
-      - FAILED: Terminal state indicating an error surfaced. Accompanied by a
-        `WorkflowFailedEvent` with structured error details.
+      - FAILED: エラーが発生したことを示す終端状態。
+        構造化されたエラー詳細を含む`WorkflowFailedEvent`が伴います。
 
-      - CANCELLED: Terminal state indicating the run was cancelled by a caller
-        or orchestrator. Not currently emitted by default runner paths but
-        included for integrators/orchestrators that support cancellation.
+      - CANCELLED: 呼び出し元またはオーケストレーターによって実行がキャンセルされたことを示す終端状態。
+        デフォルトのランナーパスでは現在発行されませんが、
+        キャンセルをサポートする統合者やオーケストレーター向けに含まれています。
+
     """
 
-    STARTED = "STARTED"  # Explicit pre-work phase (rarely emitted as status; see note above)
-    IN_PROGRESS = "IN_PROGRESS"  # Active execution is underway
-    IN_PROGRESS_PENDING_REQUESTS = "IN_PROGRESS_PENDING_REQUESTS"  # Active execution with outstanding requests
-    IDLE = "IDLE"  # No active work and no outstanding requests
-    IDLE_WITH_PENDING_REQUESTS = "IDLE_WITH_PENDING_REQUESTS"  # Paused awaiting external responses
-    FAILED = "FAILED"  # Finished with an error
-    CANCELLED = "CANCELLED"  # Finished due to cancellation
+    STARTED = "STARTED"  # 明示的な事前作業フェーズ（状態としては稀に発行される; 上記の注記参照）
+    IN_PROGRESS = "IN_PROGRESS"  # アクティブな実行が進行中。
+    IN_PROGRESS_PENDING_REQUESTS = "IN_PROGRESS_PENDING_REQUESTS"  # 未完了のリクエストを伴うアクティブな実行。
+    IDLE = "IDLE"  # アクティブな作業も未完了のリクエストもなし。
+    IDLE_WITH_PENDING_REQUESTS = "IDLE_WITH_PENDING_REQUESTS"  # 外部応答を待って一時停止中。
+    FAILED = "FAILED"  # エラーにより終了。
+    CANCELLED = "CANCELLED"  # キャンセルにより終了。
 
 
 class WorkflowStatusEvent(WorkflowEvent):
-    """Built-in lifecycle event emitted for workflow run state transitions."""
+    """ワークフロー実行状態遷移時に発行される組み込みライフサイクルイベント。"""
 
     def __init__(
         self,
         state: WorkflowRunState,
         data: Any | None = None,
     ):
-        """Initialize the workflow status event with a new state and optional data.
+        """新しい状態とオプションのデータでワークフローステータスイベントを初期化します。
 
         Args:
-            state: The new state of the workflow run.
-            data: Optional additional data associated with the state change.
+            state: ワークフロー実行の新しい状態。
+            data: 状態変更に関連するオプションの追加データ。
+
         """
         super().__init__(data)
         self.state = state
@@ -158,7 +155,7 @@ class WorkflowStatusEvent(WorkflowEvent):
 
 @dataclass
 class WorkflowErrorDetails:
-    """Structured error information to surface in error events/results."""
+    """エラーイベントや結果で表面化する構造化エラー情報。"""
 
     error_type: str
     message: str
@@ -189,7 +186,7 @@ class WorkflowErrorDetails:
 
 
 class WorkflowFailedEvent(WorkflowEvent):
-    """Built-in lifecycle event emitted when a workflow run terminates with an error."""
+    """ワークフロー実行がエラーで終了したときに発行される組み込みライフサイクルイベント。"""
 
     def __init__(
         self,
@@ -204,7 +201,7 @@ class WorkflowFailedEvent(WorkflowEvent):
 
 
 class RequestInfoEvent(WorkflowEvent):
-    """Event triggered when a workflow executor requests external information."""
+    """ワークフローexecutorが外部情報を要求したときに発生するイベント。"""
 
     def __init__(
         self,
@@ -213,13 +210,14 @@ class RequestInfoEvent(WorkflowEvent):
         request_type: type,
         request_data: "RequestInfoMessage",
     ):
-        """Initialize the request info event.
+        """request infoイベントを初期化します。
 
         Args:
-            request_id: Unique identifier for the request.
-            source_executor_id: ID of the executor that made the request.
-            request_type: Type of the request (e.g., a specific data type).
-            request_data: The data associated with the request.
+            request_id: リクエストの一意識別子。
+            source_executor_id: リクエストを行ったexecutorのID。
+            request_type: リクエストの種類（例：特定のデータタイプ）。
+            request_data: リクエストに関連するデータ。
+
         """
         super().__init__(request_data)
         self.request_id = request_id
@@ -227,7 +225,7 @@ class RequestInfoEvent(WorkflowEvent):
         self.request_type = request_type
 
     def __repr__(self) -> str:
-        """Return a string representation of the request info event."""
+        """request infoイベントの文字列表現を返します。"""
         return (
             f"{self.__class__.__name__}("
             f"request_id={self.request_id}, "
@@ -238,58 +236,59 @@ class RequestInfoEvent(WorkflowEvent):
 
 
 class WorkflowOutputEvent(WorkflowEvent):
-    """Event triggered when a workflow executor yields output."""
+    """ワークフローexecutorが出力を生成したときに発生するイベント。"""
 
     def __init__(
         self,
         data: Any,
         source_executor_id: str,
     ):
-        """Initialize the workflow output event.
+        """ワークフロー出力イベントを初期化します。
 
         Args:
-            data: The output yielded by the executor.
-            source_executor_id: ID of the executor that yielded the output.
+            data: executorが生成した出力。
+            source_executor_id: 出力を生成したexecutorのID。
+
         """
         super().__init__(data)
         self.source_executor_id = source_executor_id
 
     def __repr__(self) -> str:
-        """Return a string representation of the workflow output event."""
+        """ワークフロー出力イベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(data={self.data}, source_executor_id={self.source_executor_id})"
 
 
 class ExecutorEvent(WorkflowEvent):
-    """Base class for executor events."""
+    """executorイベントの基底クラス。"""
 
     def __init__(self, executor_id: str, data: Any | None = None):
-        """Initialize the executor event with an executor ID and optional data."""
+        """executor IDとオプションのデータでexecutorイベントを初期化します。"""
         super().__init__(data)
         self.executor_id = executor_id
 
     def __repr__(self) -> str:
-        """Return a string representation of the executor event."""
+        """executorイベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(executor_id={self.executor_id}, data={self.data})"
 
 
 class ExecutorInvokedEvent(ExecutorEvent):
-    """Event triggered when an executor handler is invoked."""
+    """executorハンドラーが呼び出されたときに発生するイベント。"""
 
     def __repr__(self) -> str:
-        """Return a string representation of the executor handler invoke event."""
+        """executorハンドラー呼び出しイベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(executor_id={self.executor_id}, data={self.data})"
 
 
 class ExecutorCompletedEvent(ExecutorEvent):
-    """Event triggered when an executor handler is completed."""
+    """executorハンドラーが完了したときに発生するイベント。"""
 
     def __repr__(self) -> str:
-        """Return a string representation of the executor handler complete event."""
+        """executorハンドラー完了イベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(executor_id={self.executor_id}, data={self.data})"
 
 
 class ExecutorFailedEvent(ExecutorEvent):
-    """Event triggered when an executor handler raises an error."""
+    """executorハンドラーがエラーを発生させたときに発生するイベント。"""
 
     def __init__(
         self,
@@ -304,26 +303,26 @@ class ExecutorFailedEvent(ExecutorEvent):
 
 
 class AgentRunUpdateEvent(ExecutorEvent):
-    """Event triggered when an agent is streaming messages."""
+    """Agentがメッセージをストリーミングしているときに発生するイベント。"""
 
     def __init__(self, executor_id: str, data: AgentRunResponseUpdate | None = None):
-        """Initialize the agent streaming event."""
+        """Agentストリーミングイベントを初期化します。"""
         super().__init__(executor_id, data)
 
     def __repr__(self) -> str:
-        """Return a string representation of the agent streaming event."""
+        """Agentストリーミングイベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(executor_id={self.executor_id}, messages={self.data})"
 
 
 class AgentRunEvent(ExecutorEvent):
-    """Event triggered when an agent run is completed."""
+    """エージェントの実行が完了したときにトリガーされるイベント。"""
 
     def __init__(self, executor_id: str, data: AgentRunResponse | None = None):
-        """Initialize the agent run event."""
+        """エージェント実行イベントを初期化します。"""
         super().__init__(executor_id, data)
 
     def __repr__(self) -> str:
-        """Return a string representation of the agent run event."""
+        """エージェント実行イベントの文字列表現を返します。"""
         return f"{self.__class__.__name__}(executor_id={self.executor_id}, data={self.data})"
 
 

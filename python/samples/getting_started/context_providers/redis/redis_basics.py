@@ -1,29 +1,24 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Redis Context Provider: Basic usage and agent integration
+"""Redis Context Provider: 基本的な使い方とAgent統合
 
-This example demonstrates how to use the Redis context provider to persist and
-retrieve conversational memory for agents. It covers three progressively more
-realistic scenarios:
+この例では、Redis context providerを使用してAgentの会話メモリを永続化および取得する方法を示します。3つの段階的に現実的なシナリオをカバーしています：
 
-1) Standalone provider usage ("basic cache")
-   - Write messages to Redis and retrieve relevant context using full-text or
-     hybrid vector search.
+1) 単独のprovider使用（"basic cache"）
+   - メッセージをRedisに書き込み、全文検索またはハイブリッドベクター検索を使って関連コンテキストを取得します。
 
 2) Agent + provider
-   - Connect the provider to an agent so the agent can store user preferences
-     and recall them across turns.
+   - providerをAgentに接続し、Agentがユーザーの好みを保存し、ターン間で呼び出せるようにします。
 
 3) Agent + provider + tool memory
-   - Expose a simple tool to the agent, then verify that details from the tool
-     outputs are captured and retrievable as part of the agent's memory.
+   - シンプルなツールをAgentに公開し、ツールの出力からの詳細がAgentのメモリの一部としてキャプチャされ、取得可能であることを検証します。
 
-Requirements:
-  - A Redis instance with RediSearch enabled (e.g., Redis Stack)
-  - agent-framework with the Redis extra installed: pip install "agent-framework-redis"
-  - Optionally an OpenAI API key if enabling embeddings for hybrid search
+要件：
+  - RediSearchが有効なRedisインスタンス（例：Redis Stack）
+  - Redisエクストラがインストールされたagent-framework：pip install "agent-framework-redis"
+  - ハイブリッド検索のために埋め込みを有効にする場合はOpenAI APIキー（任意）
 
-Run:
+実行方法：
   python redis_basics.py
 """
 
@@ -38,13 +33,13 @@ from redisvl.utils.vectorize import OpenAITextVectorizer
 
 
 def search_flights(origin_airport_code: str, destination_airport_code: str, detailed: bool = False) -> str:
-    """Simulated flight-search tool to demonstrate tool memory.
+    """ツールメモリを示すための模擬フライト検索ツール。
 
-    The agent can call this function, and the returned details can be stored
-    by the Redis context provider. We later ask the agent to recall facts from
-    these tool results to verify memory is working as expected.
+    Agentはこの関数を呼び出すことができ、返された詳細はRedis context providerによって保存されます。
+    後でAgentにこれらのツール結果からの事実を思い出させ、メモリが期待通りに動作していることを検証します。
+
     """
-    # Minimal static catalog used to simulate a tool's structured output
+    # ツールの構造化出力をシミュレートするために使用される最小限の静的カタログ
     flights = {
         ("JFK", "LAX"): {
             "airline": "SkyJet",
@@ -87,31 +82,27 @@ def search_flights(origin_airport_code: str, destination_airport_code: str, deta
 
 
 async def main() -> None:
-    """Walk through provider-only, agent integration, and tool-memory scenarios.
+    """providerのみ、Agent統合、およびツールメモリのシナリオを順に説明します。
 
-    Helpful debugging (uncomment when iterating):
+    デバッグに便利（繰り返し時にコメント解除してください）：
       - print(await provider.redis_index.info())
       - print(await provider.search_all())
+
     """
 
     print("1. Standalone provider usage:")
     print("-" * 40)
-    # Create a provider with partition scope and OpenAI embeddings
-
-    # Please set the OPENAI_API_KEY and OPENAI_CHAT_MODEL_ID environment variables to use the OpenAI vectorizer
-    # Recommend default for OPENAI_CHAT_MODEL_ID is gpt-4o-mini
-
-    # We attach an embedding vectorizer so the provider can perform hybrid (text + vector)
-    # retrieval. If you prefer text-only retrieval, instantiate RedisProvider without the
-    # 'vectorizer' and vector_* parameters.
+    # パーティションスコープとOpenAI埋め込みを使ってproviderを作成します
+    # OpenAIベクトライザーを使用するには、OPENAI_API_KEYとOPENAI_CHAT_MODEL_ID環境変数を設定してください
+    # OPENAI_CHAT_MODEL_IDの推奨デフォルトはgpt-4o-miniです
+    # providerがハイブリッド（テキスト＋ベクター）検索を実行できるように埋め込みベクトライザーを付加します。
+    # テキストのみの検索を好む場合は、'vectorizer'およびvector_*パラメータなしでRedisProviderをインスタンス化してください。
     vectorizer = OpenAITextVectorizer(
         model="text-embedding-ada-002",
         api_config={"api_key": os.getenv("OPENAI_API_KEY")},
         cache=EmbeddingsCache(name="openai_embeddings_cache", redis_url="redis://localhost:6379"),
     )
-    # The provider manages persistence and retrieval. application_id/agent_id/user_id
-    # scope data for multi-tenant separation; thread_id (set later) narrows to a
-    # specific conversation.
+    # providerは永続化と取得を管理します。application_id/agent_id/user_idはマルチテナント分離のためのスコープデータで、thread_id（後で設定）は特定の会話に絞り込みます。
     provider = RedisProvider(
         redis_url="redis://localhost:6379",
         index_name="redis_basics",
@@ -124,43 +115,39 @@ async def main() -> None:
         vector_distance_metric="cosine",
     )
 
-    # Build sample chat messages to persist to Redis
+    # Redisに永続化するためのサンプルチャットメッセージを構築します
     messages = [
         ChatMessage(role=Role.USER, text="runA CONVO: User Message"),
         ChatMessage(role=Role.ASSISTANT, text="runA CONVO: Assistant Message"),
         ChatMessage(role=Role.SYSTEM, text="runA CONVO: System Message"),
     ]
 
-    # Declare/start a conversation/thread and write messages under 'runA'.
-    # Threads are logical boundaries used by the provider to group and retrieve
-    # conversation-specific context.
+    # 'runA'の下で会話/スレッドを宣言/開始し、メッセージを書き込みます。
+    # スレッドはproviderが会話固有のコンテキストをグループ化および取得するための論理的境界です。
     await provider.thread_created(thread_id="runA")
     await provider.invoked(request_messages=messages)
 
-    # Retrieve relevant memories for a hypothetical model call. The provider uses
-    # the current request messages as the retrieval query and returns context to
-    # be injected into the model's instructions.
+    # 仮想的なモデル呼び出しのために関連するメモリを取得します。providerは現在のRequestメッセージを検索クエリとして使用し、モデルの指示に注入するコンテキストを返します。
     ctx = await provider.invoking([ChatMessage(role=Role.SYSTEM, text="B: Assistant Message")])
 
-    # Inspect retrieved memories that would be injected into instructions
-    # (Debug-only output so you can verify retrieval works as expected.)
+    # 指示に注入される取得済みメモリを検査します （デバッグ用の出力で、取得が期待通りに動作していることを確認できます。）
     print("Model Invoking Result:")
     print(ctx)
 
-    # Drop / delete the provider index in Redis
+    # Redisのproviderインデックスを削除します
     await provider.redis_index.delete()
 
-    # --- Agent + provider: teach and recall a preference ---
+    # --- Agent + provider: 好みを教えて思い出す ---
 
     print("\n2. Agent + provider: teach and recall a preference")
     print("-" * 40)
-    # Fresh provider for the agent demo (recreates index)
+    # Agentデモ用の新しいprovider（インデックスを再作成）
     vectorizer = OpenAITextVectorizer(
         model="text-embedding-ada-002",
         api_config={"api_key": os.getenv("OPENAI_API_KEY")},
         cache=EmbeddingsCache(name="openai_embeddings_cache", redis_url="redis://localhost:6379"),
     )
-    # Recreate a clean index so the next scenario starts fresh
+    # 次のシナリオを新鮮に開始するためにクリーンなインデックスを再作成します
     provider = RedisProvider(
         redis_url="redis://localhost:6379",
         index_name="redis_basics_2",
@@ -174,10 +161,10 @@ async def main() -> None:
         vector_distance_metric="cosine",
     )
 
-    # Create chat client for the agent
+    # Agent用のチャットクライアントを作成します
     client = OpenAIChatClient(model_id=os.getenv("OPENAI_CHAT_MODEL_ID"), api_key=os.getenv("OPENAI_API_KEY"))
-    # Create agent wired to the Redis context provider. The provider automatically
-    # persists conversational details and surfaces relevant context on each turn.
+    # Redis context
+    # providerに接続されたAgentを作成します。providerは会話の詳細を自動的に永続化し、各ターンで関連コンテキストを提供します。
     agent = client.create_agent(
         name="MemoryEnhancedAssistant",
         instructions=(
@@ -188,26 +175,26 @@ async def main() -> None:
         context_providers=provider,
     )
 
-    # Teach a user preference; the agent writes this to the provider's memory
+    # ユーザーの好みを教えます。Agentはこれをproviderのメモリに書き込みます。
     query = "Remember that I enjoy glugenflorgle"
     result = await agent.run(query)
     print("User: ", query)
     print("Agent: ", result)
 
-    # Ask the agent to recall the stored preference; it should retrieve from memory
+    # Agentに保存された好みを思い出させます。メモリから取得できるはずです。
     query = "What do I enjoy?"
     result = await agent.run(query)
     print("User: ", query)
     print("Agent: ", result)
 
-    # Drop / delete the provider index in Redis
+    # Redisのproviderインデックスを削除します
     await provider.redis_index.delete()
 
-    # --- Agent + provider + tool: store and recall tool-derived context ---
+    # --- Agent + provider + tool: ツール由来のコンテキストを保存して思い出す ---
 
     print("\n3. Agent + provider + tool: store and recall tool-derived context")
     print("-" * 40)
-    # Text-only provider (full-text search only). Omits vectorizer and related params.
+    # テキストのみのprovider（全文検索のみ）。ベクトライザーおよび関連パラメータは省略しています。
     provider = RedisProvider(
         redis_url="redis://localhost:6379",
         index_name="redis_basics_3",
@@ -217,8 +204,7 @@ async def main() -> None:
         user_id="kermit",
     )
 
-    # Create agent exposing the flight search tool. Tool outputs are captured by the
-    # provider and become retrievable context for later turns.
+    # フライト検索ツールを公開するAgentを作成します。ツールの出力はproviderによってキャプチャされ、後のターンで取得可能なコンテキストになります。
     client = OpenAIChatClient(model_id=os.getenv("OPENAI_CHAT_MODEL_ID"), api_key=os.getenv("OPENAI_API_KEY"))
     agent = client.create_agent(
         name="MemoryEnhancedAssistant",
@@ -229,18 +215,18 @@ async def main() -> None:
         tools=search_flights,
         context_providers=provider,
     )
-    # Invoke the tool; outputs become part of memory/context
+    # ツールを呼び出します。出力はメモリ/コンテキストの一部になります。
     query = "Are there any flights from new york city (jfk) to la? Give me details"
     result = await agent.run(query)
     print("User: ", query)
     print("Agent: ", result)
-    # Verify the agent can recall tool-derived context
+    # Agentがツール由来のコンテキストを思い出せることを検証します。
     query = "Which flight did I ask about?"
     result = await agent.run(query)
     print("User: ", query)
     print("Agent: ", result)
 
-    # Drop / delete the provider index in Redis
+    # Redisのproviderインデックスを削除します
     await provider.redis_index.delete()
 
 

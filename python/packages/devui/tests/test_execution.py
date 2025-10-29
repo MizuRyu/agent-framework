@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Focused tests for execution flow functionality."""
+"""実行フロー機能に特化したテスト。"""
 
 import asyncio
 import os
@@ -16,7 +16,7 @@ from agent_framework_devui.models._openai_custom import AgentFrameworkRequest
 
 
 class _DummyStartExecutor:
-    """Minimal executor stub exposing handler metadata for tests."""
+    """テスト用にハンドラメタデータを公開する最小限のexecutorスタブ。"""
 
     def __init__(self, *, input_types=None, handlers=None):
         if input_types is not None:
@@ -26,7 +26,7 @@ class _DummyStartExecutor:
 
 
 class _DummyWorkflow:
-    """Simple workflow stub returning configured start executor."""
+    """設定された開始executorを返すシンプルなワークフロースタブ。"""
 
     def __init__(self, start_executor):
         self._start_executor = start_executor
@@ -37,51 +37,51 @@ class _DummyWorkflow:
 
 @pytest.fixture
 def test_entities_dir():
-    """Use the samples directory which has proper entity structure."""
-    # Get the samples directory from the main python samples folder
+    """適切なエンティティ構造を持つsamplesディレクトリを使用する。"""
+    # メインのpython samplesフォルダからsamplesディレクトリを取得する
     current_dir = Path(__file__).parent
-    # Navigate to python/samples/getting_started/devui
+    # python/samples/getting_started/devui に移動する
     samples_dir = current_dir.parent.parent.parent / "samples" / "getting_started" / "devui"
     return str(samples_dir.resolve())
 
 
 @pytest.fixture
 async def executor(test_entities_dir):
-    """Create configured executor."""
+    """設定されたexecutorを作成する。"""
     discovery = EntityDiscovery(test_entities_dir)
     mapper = MessageMapper()
     executor = AgentFrameworkExecutor(discovery, mapper)
 
-    # Discover entities
+    # エンティティをディスカバリする
     await executor.discover_entities()
 
     return executor
 
 
 async def test_executor_entity_discovery(executor):
-    """Test executor entity discovery."""
+    """executorエンティティのディスカバリをテストする。"""
     entities = await executor.discover_entities()
 
-    # Should find entities from samples directory
+    # samplesディレクトリからエンティティを見つけるべきである
     assert len(entities) > 0, "Should discover at least one entity"
 
     entity_types = [e.type for e in entities]
     assert "agent" in entity_types, "Should find at least one agent"
     assert "workflow" in entity_types, "Should find at least one workflow"
 
-    # Test entity structure
+    # エンティティ構造をテストする
     for entity in entities:
         assert entity.id, "Entity should have an ID"
         assert entity.name, "Entity should have a name"
-        # Entities with only an `__init__.py` file cannot have their type determined
-        # until the module is imported during lazy loading. This is why 'unknown' type exists.
+        # `__init__.py` ファイルのみを持つエンティティは、モジュールがレイジーロード中にインポートされるまでタイプを決定できない。これが
+        # 'unknown' タイプが存在する理由である。
         assert entity.type in ["agent", "workflow", "unknown"], (
             "Entity should have valid type (unknown allowed during discovery phase)"
         )
 
 
 async def test_executor_get_entity_info(executor):
-    """Test getting entity info by ID."""
+    """IDによるエンティティ情報取得をテストする。"""
     entities = await executor.discover_entities()
     entity_id = entities[0].id
 
@@ -93,14 +93,14 @@ async def test_executor_get_entity_info(executor):
 
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="requires OpenAI API key")
 async def test_executor_sync_execution(executor):
-    """Test synchronous execution."""
+    """同期実行をテストする。"""
     entities = await executor.discover_entities()
-    # Find an agent entity to test with
+    # テスト用のAgentエンティティを見つける
     agents = [e for e in entities if e.type == "agent"]
     assert len(agents) > 0, "No agent entities found for testing"
     agent_id = agents[0].id
 
-    # Use simplified routing: model = entity_id
+    # 簡略化されたルーティングを使用：model = entity_id
     request = AgentFrameworkRequest(
         model=agent_id,  # Model IS the entity_id
         input="test data",
@@ -109,7 +109,7 @@ async def test_executor_sync_execution(executor):
 
     response = await executor.execute_sync(request)
 
-    # With simplified routing, response.model reflects the actual agent_id
+    # 簡略化されたルーティングでは、response.model は実際のagent_idを反映する
     assert response.model == agent_id
     assert response.object == "response"
     assert len(response.output) > 0
@@ -119,14 +119,14 @@ async def test_executor_sync_execution(executor):
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="requires OpenAI API key")
 @pytest.mark.skip("Skipping while we fix discovery")
 async def test_executor_streaming_execution(executor):
-    """Test streaming execution."""
+    """ストリーミング実行をテストする。"""
     entities = await executor.discover_entities()
-    # Find an agent entity to test with
+    # テスト用のAgentエンティティを見つける
     agents = [e for e in entities if e.type == "agent"]
     assert len(agents) > 0, "No agent entities found for testing"
     agent_id = agents[0].id
 
-    # Use simplified routing: model = entity_id
+    # 簡略化されたルーティングを使用：model = entity_id
     request = AgentFrameworkRequest(
         model=agent_id,  # Model IS the entity_id
         input="streaming test",
@@ -149,26 +149,26 @@ async def test_executor_streaming_execution(executor):
 
 
 async def test_executor_invalid_entity_id(executor):
-    """Test execution with invalid entity ID."""
+    """無効なエンティティIDでの実行をテストする。"""
     with pytest.raises(EntityNotFoundError):
         executor.get_entity_info("nonexistent_agent")
 
 
 async def test_executor_missing_entity_id(executor):
-    """Test get_entity_id returns model field (simplified routing)."""
+    """get_entity_id が model フィールドを返すことをテストする（簡略化ルーティング）。"""
     request = AgentFrameworkRequest(
         model="my_agent",
         input="test",
         stream=False,
     )
 
-    # With simplified routing, model field IS the entity_id
+    # 簡略化されたルーティングでは、model フィールドが entity_id である
     entity_id = request.get_entity_id()
     assert entity_id == "my_agent"
 
 
 def test_executor_get_start_executor_message_types_uses_handlers():
-    """Ensure handler metadata is surfaced when input_types missing."""
+    """input_types が欠落している場合にハンドラメタデータが表面化されることを保証する。"""
     executor = AgentFrameworkExecutor(EntityDiscovery(None), MessageMapper())
     start_executor = _DummyStartExecutor(handlers={str: lambda *_: None})
     workflow = _DummyWorkflow(start_executor)
@@ -180,7 +180,7 @@ def test_executor_get_start_executor_message_types_uses_handlers():
 
 
 def test_executor_select_primary_input_prefers_string():
-    """Select string input even when discovered after other handlers."""
+    """他のハンドラの後にディスカバリされた場合でも文字列入力を選択する。"""
     from agent_framework_devui._utils import select_primary_input_type
 
     placeholder_type = type("Placeholder", (), {})
@@ -191,7 +191,7 @@ def test_executor_select_primary_input_prefers_string():
 
 
 def test_executor_parse_structured_prefers_input_field():
-    """Structured payloads map to string when agent start requires text."""
+    """構造化ペイロードは、Agentの開始がテキストを要求する場合に文字列にマップされる。"""
     executor = AgentFrameworkExecutor(EntityDiscovery(None), MessageMapper())
     start_executor = _DummyStartExecutor(handlers={type("Req", (), {}): None, str: lambda *_: None})
     workflow = _DummyWorkflow(start_executor)
@@ -202,7 +202,7 @@ def test_executor_parse_structured_prefers_input_field():
 
 
 def test_executor_parse_raw_falls_back_to_string():
-    """Raw inputs remain untouched when start executor expects text."""
+    """開始executorがテキストを期待する場合、生の入力は変更されない。"""
     executor = AgentFrameworkExecutor(EntityDiscovery(None), MessageMapper())
     start_executor = _DummyStartExecutor(handlers={str: lambda *_: None})
     workflow = _DummyWorkflow(start_executor)
@@ -213,11 +213,11 @@ def test_executor_parse_raw_falls_back_to_string():
 
 
 async def test_executor_handles_non_streaming_agent():
-    """Test executor can handle agents with only run() method (no run_stream)."""
+    """run() メソッドのみを持つAgentをexecutorが処理できることをテストする（run_streamなし）。"""
     from agent_framework import AgentRunResponse, AgentThread, ChatMessage, Role, TextContent
 
     class NonStreamingAgent:
-        """Agent with only run() method - does NOT satisfy full AgentProtocol."""
+        """run() メソッドのみを持つAgent - 完全なAgentProtocolを満たさない。"""
 
         id = "non_streaming_test"
         name = "Non-Streaming Test Agent"
@@ -236,7 +236,7 @@ async def test_executor_handles_non_streaming_agent():
         def get_new_thread(self, **kwargs):
             return AgentThread()
 
-    # Create executor and register agent
+    # executorを作成しAgentを登録する
     discovery = EntityDiscovery(None)
     mapper = MessageMapper()
     executor = AgentFrameworkExecutor(discovery, mapper)
@@ -245,7 +245,7 @@ async def test_executor_handles_non_streaming_agent():
     entity_info = await discovery.create_entity_info_from_object(agent, source="test")
     discovery.register_entity(entity_info.id, entity_info, agent)
 
-    # Execute non-streaming agent (use simplified routing)
+    # 非ストリーミングAgentを実行する（簡略化ルーティングを使用）
     request = AgentFrameworkRequest(
         model=entity_info.id,  # Model IS the entity_id
         input="hello",
@@ -256,7 +256,7 @@ async def test_executor_handles_non_streaming_agent():
     async for event in executor.execute_streaming(request):
         events.append(event)
 
-    # Should get events even though agent doesn't stream
+    # Agentがストリームしなくてもイベントを受け取るべきである
     assert len(events) > 0
     text_events = [e for e in events if hasattr(e, "type") and e.type == "response.output_text.delta"]
     assert len(text_events) > 0
@@ -264,12 +264,12 @@ async def test_executor_handles_non_streaming_agent():
 
 
 if __name__ == "__main__":
-    # Simple test runner
+    # シンプルなテストランナー
     async def run_tests():
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create test agent
+            # テスト用Agentを作成する
             agent_file = temp_path / "streaming_agent.py"
             agent_file.write_text("""
 class StreamingAgent:
@@ -285,11 +285,11 @@ class StreamingAgent:
             mapper = MessageMapper()
             executor = AgentFrameworkExecutor(discovery, mapper)
 
-            # Test discovery
+            # ディスカバリをテストする
             entities = await executor.discover_entities()
 
             if entities:
-                # Test sync execution (use simplified routing)
+                # 同期実行をテストする（簡略化ルーティングを使用）
                 request = AgentFrameworkRequest(
                     model=entities[0].id,  # Model IS the entity_id
                     input="test input",
@@ -298,7 +298,7 @@ class StreamingAgent:
 
                 await executor.execute_sync(request)
 
-                # Test streaming execution
+                # ストリーミング実行をテストする
                 request.stream = True
                 event_count = 0
                 async for _event in executor.execute_streaming(request):

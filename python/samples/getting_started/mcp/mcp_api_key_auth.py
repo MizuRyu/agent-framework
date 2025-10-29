@@ -17,21 +17,19 @@ For more authentication examples including OAuth 2.0 flows, see:
 
 
 async def api_key_auth_example() -> None:
-    """Example of using API key authentication with MCP server."""
-    # Configuration
+    """MCPサーバーでAPIキー認証を使用する例。"""
+    # 設定
     mcp_server_url = os.getenv("MCP_SERVER_URL", "your-mcp-server-url")
     api_key = os.getenv("MCP_API_KEY")
 
-    # Create authentication headers
-    # Common patterns:
-    # - Bearer token: "Authorization": f"Bearer {api_key}"
-    # - API key header: "X-API-Key": api_key
-    # - Custom header: "Authorization": f"ApiKey {api_key}"
+    # 認証ヘッダーを作成する 一般的なパターン: - Bearer token: "Authorization": f"Bearer {api_key}" - API
+    # key header: "X-API-Key": api_key - Custom header: "Authorization": f"ApiKey
+    # {api_key}"
     auth_headers = {
         "Authorization": f"Bearer {api_key}",
     }
 
-    # Create MCP tool with authentication headers
+    # 認証ヘッダー付きのMCPツールを作成する
     async with (
         MCPStreamableHTTPTool(
             name="MCP tool",

@@ -52,7 +52,7 @@ async def main() -> None:
     last_executor_id: str | None = None
     async for event in workflow.run_stream(task):
         if isinstance(event, AgentRunUpdateEvent):
-            # Handle the streaming agent update as it's produced
+            # 生成されるストリーミングAgentの更新を処理します。
             eid = event.executor_id
             if eid != last_executor_id:
                 if last_executor_id is not None:

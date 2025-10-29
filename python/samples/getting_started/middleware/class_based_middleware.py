@@ -37,33 +37,32 @@ from object-oriented design patterns.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 class SecurityAgentMiddleware(AgentMiddleware):
-    """Agent middleware that checks for security violations."""
+    """セキュリティ違反をチェックするAgent Middleware。"""
 
     async def process(
         self,
         context: AgentRunContext,
         next: Callable[[AgentRunContext], Awaitable[None]],
     ) -> None:
-        # Check for potential security violations in the query
-        # Look at the last user message
+        # クエリの潜在的なセキュリティ違反をチェックする 最後のユーザーメッセージを見る
         last_message = context.messages[-1] if context.messages else None
         if last_message and last_message.text:
             query = last_message.text
             if "password" in query.lower() or "secret" in query.lower():
                 print("[SecurityAgentMiddleware] Security Warning: Detected sensitive information, blocking request.")
-                # Override the result with warning message
+                # 警告メッセージで結果を上書きする
                 context.result = AgentRunResponse(
                     messages=[
                         ChatMessage(role=Role.ASSISTANT, text="Detected sensitive information, the request is blocked.")
                     ]
                 )
-                # Simply don't call next() to prevent execution
+                # 単にnext()を呼ばずに実行を防ぐ
                 return
 
         print("[SecurityAgentMiddleware] Security check passed.")
@@ -71,7 +70,7 @@ class SecurityAgentMiddleware(AgentMiddleware):
 
 
 class LoggingFunctionMiddleware(FunctionMiddleware):
-    """Function middleware that logs function calls."""
+    """関数呼び出しをログに記録するFunction Middleware。"""
 
     async def process(
         self,
@@ -92,11 +91,10 @@ class LoggingFunctionMiddleware(FunctionMiddleware):
 
 
 async def main() -> None:
-    """Example demonstrating class-based middleware."""
+    """クラスベースMiddlewareのデモ。"""
     print("=== Class-based Middleware Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
@@ -106,14 +104,14 @@ async def main() -> None:
             middleware=[SecurityAgentMiddleware(), LoggingFunctionMiddleware()],
         ) as agent,
     ):
-        # Test with normal query
+        # 通常クエリでテストする
         print("\n--- Normal Query ---")
         query = "What's the weather like in Seattle?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result.text}\n")
 
-        # Test with security-related query
+        # セキュリティ関連クエリでテストする
         print("--- Security Test ---")
         query = "What's the password for the weather service?"
         print(f"User: {query}")

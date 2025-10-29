@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""GAIA benchmark implementation for Agent Framework."""
+"""Agent Framework用のGAIAベンチマーク実装。"""
 
 import asyncio
 import json
@@ -24,7 +24,7 @@ __all__ = ["GAIA", "GAIATelemetryConfig", "gaia_scorer"]
 
 
 class GAIATelemetryConfig:
-    """Configuration for GAIA telemetry and tracing."""
+    """GAIAのテレメトリとトレーシングの設定。"""
 
     def __init__(
         self,
@@ -34,14 +34,15 @@ class GAIATelemetryConfig:
         trace_to_file: bool = False,
         file_path: str | None = None,
     ):
-        """Initialize telemetry configuration.
+        """テレメトリ設定を初期化します。
 
         Args:
-            enable_tracing: Whether to enable OpenTelemetry tracing
-            otlp_endpoint: OTLP endpoint for trace export
-            applicationinsights_connection_string: Azure Monitor connection string
-            trace_to_file: Whether to export traces to local file
-            file_path: Path for local file export (defaults to gaia_traces.json)
+            enable_tracing: OpenTelemetryトレーシングを有効にするかどうか
+            otlp_endpoint: トレースエクスポート用のOTLPエンドポイント
+            applicationinsights_connection_string: Azure Monitorの接続文字列
+            trace_to_file: トレースをローカルファイルにエクスポートするかどうか
+            file_path: ローカルファイルエクスポートのパス（デフォルトはgaia_traces.json）
+
         """
         self.enable_tracing = enable_tracing
         self.otlp_endpoint = otlp_endpoint
@@ -50,7 +51,7 @@ class GAIATelemetryConfig:
         self.file_path = file_path or "gaia_traces.json"
 
     def setup_observability(self) -> None:
-        """Set up OpenTelemetry based on configuration."""
+        """設定に基づいてOpenTelemetryをセットアップします。"""
         if not self.enable_tracing:
             return
 
@@ -62,12 +63,12 @@ class GAIATelemetryConfig:
             applicationinsights_connection_string=self.applicationinsights_connection_string,
         )
 
-        # Set up local file export if requested
+        # 要求された場合にローカルファイルエクスポートをセットアップします。
         if self.trace_to_file:
             self._setup_file_export()
 
     def _setup_file_export(self) -> None:
-        """Set up local file export for traces."""
+        """トレースのローカルファイルエクスポートをセットアップします。"""
         try:
             import json
             import os
@@ -80,7 +81,7 @@ class GAIATelemetryConfig:
             class FileSpanExporter(SpanExporter):
                 def __init__(self, file_path: str):
                     self.file_path = file_path
-                    # Ensure directory exists
+                    # ディレクトリが存在することを確認します。
                     os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
 
                 def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
@@ -120,7 +121,7 @@ class GAIATelemetryConfig:
 
 
 def _normalize_number_str(number_str: str) -> float:
-    """Normalize a number string for comparison."""
+    """比較のために数値文字列を正規化します。"""
     for ch in ["$", "%", ","]:
         number_str = number_str.replace(ch, "")
     try:
@@ -130,14 +131,14 @@ def _normalize_number_str(number_str: str) -> float:
 
 
 def _split_string(s: str, chars: list[str] | None = None) -> list[str]:
-    """Split string by multiple delimiters."""
+    """複数の区切り文字で文字列を分割します。"""
     if chars is None:
         chars = [",", ";"]
     return re.split(f"[{''.join(chars)}]", s)
 
 
 def _normalize_str(s: str, remove_punct: bool = True) -> str:
-    """Normalize string for comparison."""
+    """比較のために文字列を正規化します。"""
     no_spaces = re.sub(r"\s", "", s or "")
     if remove_punct:
         table = str.maketrans("", "", string.punctuation)
@@ -146,14 +147,15 @@ def _normalize_str(s: str, remove_punct: bool = True) -> str:
 
 
 def gaia_scorer(model_answer: str, ground_truth: str) -> bool:
-    """Official GAIA scoring function.
+    """公式GAIAスコアリング関数。
 
     Args:
-        model_answer: The model's answer
-        ground_truth: The ground truth answer
+        model_answer: モデルの回答
+        ground_truth: 正解の回答
 
     Returns:
-        True if the answer is correct, False otherwise
+        回答が正しければTrue、そうでなければFalse
+
     """
 
     def is_float(x: Any) -> bool:
@@ -167,10 +169,10 @@ def gaia_scorer(model_answer: str, ground_truth: str) -> bool:
         model_answer = "None"
 
     if is_float(ground_truth):
-        # numeric exact match after normalization
+        # 正規化後の数値の完全一致。
         return _normalize_number_str(model_answer) == float(ground_truth)
     if any(ch in ground_truth for ch in [",", ";"]):
-        # list with per-element compare (number or string)
+        # 要素ごとの比較を行うリスト（数値または文字列）。
         gt_elems = _split_string(ground_truth)
         ma_elems = _split_string(model_answer)
         if len(gt_elems) != len(ma_elems):
@@ -182,12 +184,12 @@ def gaia_scorer(model_answer: str, ground_truth: str) -> bool:
             else:
                 comparisons.append(_normalize_str(ma, remove_punct=False) == _normalize_str(gt, remove_punct=False))
         return all(comparisons)
-    # string normalize + exact
+    # 文字列の正規化＋完全一致。
     return _normalize_str(model_answer) == _normalize_str(ground_truth)
 
 
 def _read_jsonl(path: Path) -> Iterable[dict[str, Any]]:
-    """Read JSONL file and yield parsed records."""
+    """JSONLファイルを読み込み、解析したレコードをyieldします。"""
     with path.open("rb") as f:
         for line in f:
             if not line.strip():
@@ -201,12 +203,12 @@ def _read_jsonl(path: Path) -> Iterable[dict[str, Any]]:
 
 
 def _load_gaia_local(repo_dir: Path, wanted_levels: list[int] | None = None, max_n: int | None = None) -> list[Task]:
-    """Load GAIA tasks from local repository directory."""
+    """ローカルリポジトリディレクトリからGAIAタスクをロードします。"""
     tasks: list[Task] = []
 
     for p in repo_dir.rglob("metadata.jsonl"):
         for rec in _read_jsonl(p):
-            # Robustly extract fields used across variants
+            # バリアント間で使用されるフィールドを堅牢に抽出します。
             q = rec.get("Question") or rec.get("question") or rec.get("query") or rec.get("prompt")
             ans = rec.get("Final answer") or rec.get("answer") or rec.get("final_answer")
             qid = str(
@@ -219,7 +221,7 @@ def _load_gaia_local(repo_dir: Path, wanted_levels: list[int] | None = None, max
             lvl = rec.get("Level") or rec.get("level")
             fname = rec.get("file_name") or rec.get("filename") or None
 
-            # Only evaluate examples with public answers (dev/validation split)
+            # 公開された回答のみを評価します（dev/validation分割）。
             if not q or ans is None:
                 continue
 
@@ -228,7 +230,7 @@ def _load_gaia_local(repo_dir: Path, wanted_levels: list[int] | None = None, max
 
             tasks.append(Task(task_id=qid, question=q, answer=str(ans), level=lvl, file_name=fname, metadata=rec))
 
-    # Shuffle to help with rate-limits and fairness if max_n is provided
+    # max_nが指定された場合、レート制限や公平性のためにシャッフルします。
     random.shuffle(tasks)
     if max_n:
         tasks = tasks[:max_n]
@@ -236,10 +238,11 @@ def _load_gaia_local(repo_dir: Path, wanted_levels: list[int] | None = None, max
 
 
 class GAIA:
-    """GAIA benchmark runner for Agent Framework.
+    """Agent Framework用のGAIAベンチマークランナー。
 
-    GAIA (General AI Assistant) is a benchmark for general-purpose AI assistants.
-    This class provides utilities to run the benchmark with custom agents.
+    GAIA（General AI Assistant）は汎用AIアシスタントのベンチマークです。
+    このクラスはカスタムAgentでベンチマークを実行するためのユーティリティを提供します。
+
     """
 
     def __init__(
@@ -249,39 +252,40 @@ class GAIA:
         hf_token: str | None = None,
         telemetry_config: GAIATelemetryConfig | None = None,
     ):
-        """Initialize GAIA benchmark runner.
+        """GAIAベンチマークランナーを初期化します。
 
         Args:
-            evaluator: Custom evaluator function. If None, uses default GAIA scorer.
-            data_dir: Directory to cache GAIA data. Defaults to a temporary directory.
-            hf_token: Hugging Face token for accessing the GAIA dataset.
-            telemetry_config: Configuration for telemetry and tracing. If None, no tracing is performed.
+            evaluator: カスタム評価関数。Noneの場合はデフォルトのGAIAスコアラーを使用します。
+            data_dir: GAIAデータをキャッシュするディレクトリ。デフォルトは一時ディレクトリです。
+            hf_token: GAIAデータセットにアクセスするためのHugging Faceトークン。
+            telemetry_config: テレメトリおよびトレーシングの設定。Noneの場合はトレーシングは行われません。
+
         """
         self.evaluator = evaluator or self._default_evaluator
         self.data_dir = Path(data_dir or Path(tempfile.gettempdir()) / "data_gaia_hub")
         self.hf_token = hf_token
         self.telemetry_config = telemetry_config or GAIATelemetryConfig()
 
-        # Set up telemetry
+        # テレメトリを設定する
         self.telemetry_config.setup_observability()
 
-        # Initialize tracer
+        # トレーサーを初期化する
         if self.telemetry_config.enable_tracing:
             self.tracer = get_tracer("gaia_benchmark", "1.0.0")
         else:
             self.tracer = NoOpTracer()
 
     async def _default_evaluator(self, task: Task, prediction: Prediction) -> Evaluation:
-        """Default evaluator using GAIA official scoring."""
+        """GAIA公式スコアリングを使用したデフォルトの評価関数。"""
         is_correct = gaia_scorer(prediction.prediction, task.answer or "")
         return Evaluation(is_correct=is_correct, score=1.0 if is_correct else 0.0)
 
     def _ensure_data(self) -> Path:
-        """Ensure GAIA data is available locally."""
+        """GAIAデータがローカルに存在することを確認する。"""
         if self.data_dir.exists() and any(self.data_dir.rglob("metadata.jsonl")):
             return self.data_dir
 
-        # Download data if not available
+        # データがない場合はダウンロードする
         token = self.hf_token or os.environ.get("HF_TOKEN")
         if not token:
             raise RuntimeError(
@@ -305,7 +309,7 @@ class GAIA:
     async def _run_single_task(
         self, task: Task, task_runner: TaskRunner, semaphore: asyncio.Semaphore, timeout: int | None = None
     ) -> TaskResult:
-        """Run a single task with error handling and timing."""
+        """エラーハンドリングとタイミングを含めて単一タスクを実行する。"""
         async with semaphore:
             with self.tracer.start_as_current_span(
                 "gaia.task.run",
@@ -319,7 +323,7 @@ class GAIA:
             ) as span:
                 start_time = time.time()
                 try:
-                    # Add task execution span
+                    # タスク実行のスパンを追加する
                     with self.tracer.start_as_current_span(
                         "gaia.task.execute",
                         kind=SpanKind.INTERNAL,
@@ -333,13 +337,13 @@ class GAIA:
                         else:
                             prediction = await task_runner(task)
 
-                    # Add evaluation span
+                    # 評価のスパンを追加する
                     with self.tracer.start_as_current_span("gaia.task.evaluate", kind=SpanKind.INTERNAL):
                         evaluation = await self.evaluator(task, prediction)
 
                     runtime_seconds = time.time() - start_time
 
-                    # Add results to span
+                    # 結果をスパンに追加する
                     if span:
                         span.set_attributes({
                             "gaia.task.runtime_seconds": runtime_seconds,
@@ -358,7 +362,7 @@ class GAIA:
                 except Exception as e:
                     runtime_seconds = time.time() - start_time
 
-                    # Record error in span
+                    # スパンにエラーを記録する
                     if span:
                         span.set_attributes({
                             "gaia.task.runtime_seconds": runtime_seconds,
@@ -386,18 +390,19 @@ class GAIA:
         timeout: int | None = None,
         out: str | None = None,
     ) -> list[TaskResult]:
-        """Run the GAIA benchmark.
+        """GAIAベンチマークを実行します。
 
         Args:
-            task_runner: Function that takes a Task and returns a Prediction
-            level: GAIA level(s) to run (1, 2, 3, or list of levels)
-            max_n: Maximum number of tasks to run per level
-            parallel: Number of parallel tasks to run
-            timeout: Timeout per task in seconds
-            out: Output file to save results including detailed traces (optional)
+            task_runner: Taskを受け取りPredictionを返す関数
+            level: 実行するGAIAレベル（1, 2, 3、またはレベルのリスト）
+            max_n: レベルごとに実行する最大タスク数
+            parallel: 並列実行するタスク数
+            timeout: タスクごとのタイムアウト秒数
+            out: 詳細なトレースを含む結果を保存する出力ファイル（オプション）
 
         Returns:
-            List of TaskResult objects
+            TaskResultオブジェクトのリスト
+
         """
         with self.tracer.start_as_current_span(
             "gaia.benchmark.run",
@@ -409,14 +414,14 @@ class GAIA:
                 "gaia.benchmark.timeout": timeout or 0,
             },
         ) as benchmark_span:
-            # Ensure data is available
+            # データが利用可能であることを確認する
             with self.tracer.start_as_current_span("gaia.data.ensure", kind=SpanKind.INTERNAL):
                 data_path = self._ensure_data()
 
-            # Parse level parameter
+            # レベルパラメータを解析する
             levels = [level] if isinstance(level, int) else level
 
-            # Load tasks
+            # タスクをロードする
             with self.tracer.start_as_current_span(
                 "gaia.tasks.load",
                 kind=SpanKind.INTERNAL,
@@ -440,13 +445,13 @@ class GAIA:
 
             print(f"Running {len(tasks)} GAIA tasks (levels={levels}) with {parallel} parallel workers...")
 
-            # Update benchmark span with task info
+            # ベンチマークスパンをタスク情報で更新する
             if benchmark_span:
                 benchmark_span.set_attributes({
                     "gaia.benchmark.total_tasks": len(tasks),
                 })
 
-            # Run tasks
+            # タスクを実行する
             semaphore = asyncio.Semaphore(parallel)
             results = []
 
@@ -459,12 +464,12 @@ class GAIA:
                     result = await coro
                     results.append(result)
 
-            # Calculate summary statistics
+            # 集計統計を計算する
             correct = sum(1 for r in results if r.evaluation.is_correct)
             accuracy = correct / len(results) if results else 0.0
             avg_runtime = sum(r.runtime_seconds or 0 for r in results) / len(results) if results else 0.0
 
-            # Update benchmark span with final results
+            # ベンチマークスパンを最終結果で更新する
             if benchmark_span:
                 benchmark_span.set_attributes({
                     "gaia.benchmark.accuracy": accuracy,
@@ -477,7 +482,7 @@ class GAIA:
             print(f"Accuracy: {accuracy:.3f} ({correct}/{len(results)})")
             print(f"Average runtime: {avg_runtime:.2f}s")
 
-            # Save results if requested
+            # 要求があれば結果を保存する
             if out:
                 with self.tracer.start_as_current_span(
                     "gaia.results.save", kind=SpanKind.INTERNAL, attributes={"gaia.results.output_file": out}
@@ -488,21 +493,21 @@ class GAIA:
             return results
 
     def _save_results(self, results: list[TaskResult], output_path: str) -> None:
-        """Save results with detailed trace information to JSONL file."""
+        """詳細なトレース情報を含む結果をJSONLファイルに保存する。"""
         with open(output_path, "w", encoding="utf-8") as f:
             for result in results:
-                # Convert messages to serializable format
+                # メッセージをシリアライズ可能な形式に変換する
                 serializable_messages = []
                 if result.prediction.messages:
                     for msg in result.prediction.messages:
                         if hasattr(msg, "model_dump"):
-                            # Pydantic model
+                            # Pydanticモデル
                             serializable_messages.append(msg.model_dump())
                         elif hasattr(msg, "__dict__"):
-                            # Regular object with attributes
+                            # 属性を持つ通常のオブジェクト
                             serializable_messages.append(vars(msg))
                         else:
-                            # Fallback to string representation
+                            # 文字列表現にフォールバックする
                             serializable_messages.append(str(msg))
 
                 record = {
@@ -516,7 +521,7 @@ class GAIA:
                     "runtime_seconds": result.runtime_seconds,
                     "error": result.error,
                     "timestamp": datetime.now().isoformat(),
-                    # Include detailed trace information
+                    # 詳細なトレース情報を含める
                     "task_metadata": result.task.metadata,
                     "file_name": result.task.file_name,
                     "messages": serializable_messages,
@@ -532,7 +537,7 @@ class GAIA:
 
 
 def viewer_main() -> None:
-    """Main function for the gaia_viewer script."""
+    """gaia_viewerスクリプトのメイン関数。"""
     import argparse
 
     parser = argparse.ArgumentParser(description="View GAIA benchmark results")
@@ -544,7 +549,7 @@ def viewer_main() -> None:
 
     args = parser.parse_args()
 
-    # Load results
+    # 結果をロードする
     results = []
     with open(args.results_file, encoding="utf-8") as f:
         for line in f:
@@ -556,7 +561,7 @@ def viewer_main() -> None:
                 except ImportError:
                     results.append(json.loads(line))
 
-    # Apply filters
+    # フィルターを適用する
     if args.level is not None:
         results = [r for r in results if r.get("level") == args.level]
 
@@ -565,7 +570,7 @@ def viewer_main() -> None:
     elif args.incorrect_only:
         results = [r for r in results if not r.get("is_correct")]
 
-    # Display results
+    # 結果を表示する
     if not results:
         print("No results match the filters.")
         return

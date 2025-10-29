@@ -16,8 +16,8 @@ from agent_framework import (  # Core chat primitives to build LLM requests
     WorkflowOutputEvent,  # Event emitted when workflow yields output
     handler,  # Decorator to mark an Executor method as invokable
 )
-from agent_framework.azure import AzureOpenAIChatClient  # Client wrapper for Azure OpenAI chat models
-from azure.identity import AzureCliCredential  # Uses your az CLI login for credentials
+from agent_framework.azure import AzureOpenAIChatClient  # Azure OpenAIチャットモデルのクライアントラッパー
+from azure.identity import AzureCliCredential  # az CLIログインを認証情報として使用します
 from typing_extensions import Never
 
 """
@@ -40,7 +40,7 @@ Prerequisites:
 
 
 class DispatchToExperts(Executor):
-    """Dispatches the incoming prompt to all expert agent executors for parallel processing (fan out)."""
+    """受信したPromptをすべての専門Agent executorに並列処理のためにディスパッチします（fan out）。"""
 
     def __init__(self, expert_ids: list[str], id: str | None = None):
         super().__init__(id=id or "dispatch_to_experts")
@@ -48,8 +48,8 @@ class DispatchToExperts(Executor):
 
     @handler
     async def dispatch(self, prompt: str, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-        # Wrap the incoming prompt as a user message for each expert and request a response.
-        # Each send_message targets a different AgentExecutor by id so that branches run in parallel.
+        # 受信したPromptを各専門家のユーザーメッセージとしてラップし、レスポンスを要求します。
+        # 各send_messageはidで異なるAgentExecutorをターゲットにし、ブランチを並列実行します。
         initial_message = ChatMessage(Role.USER, text=prompt)
         for expert_id in self._expert_ids:
             await ctx.send_message(
@@ -60,7 +60,7 @@ class DispatchToExperts(Executor):
 
 @dataclass
 class AggregatedInsights:
-    """Typed container for the aggregator to hold per domain strings before formatting."""
+    """フォーマッティング前にドメインごとの文字列を保持するための型付きコンテナ。"""
 
     research: str
     marketing: str
@@ -68,7 +68,7 @@ class AggregatedInsights:
 
 
 class AggregateInsights(Executor):
-    """Aggregates expert agent responses into a single consolidated result (fan in)."""
+    """専門Agentのレスポンスを単一の統合結果に集約します（fan in）。"""
 
     def __init__(self, expert_ids: list[str], id: str | None = None):
         super().__init__(id=id or "aggregate_insights")
@@ -76,10 +76,10 @@ class AggregateInsights(Executor):
 
     @handler
     async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext[Never, str]) -> None:
-        # Map responses to text by executor id for a simple, predictable demo.
+        # レスポンスをexecutor idごとにテキストにマッピングし、シンプルで予測可能なデモを実現します。
         by_id: dict[str, str] = {}
         for r in results:
-            # AgentExecutorResponse.agent_run_response.text is the assistant text produced by the agent.
+            # AgentExecutorResponse.agent_run_response.textはAgentが生成したアシスタントテキストです。
             by_id[r.executor_id] = r.agent_run_response.text
 
         research_text = by_id.get("researcher", "")
@@ -92,7 +92,7 @@ class AggregateInsights(Executor):
             legal=legal_text,
         )
 
-        # Provide a readable, consolidated string as the final workflow result.
+        # 最終的なワークフロー結果として読みやすく統合された文字列を提供します。
         consolidated = (
             "Consolidated Insights\n"
             "====================\n\n"
@@ -105,7 +105,7 @@ class AggregateInsights(Executor):
 
 
 async def main() -> None:
-    # 1) Create agent executors for domain experts
+    # ドメインエキスパートのためのAgent Executorを作成します。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     researcher = AgentExecutor(
@@ -141,7 +141,7 @@ async def main() -> None:
     dispatcher = DispatchToExperts(expert_ids=expert_ids, id="dispatcher")
     aggregator = AggregateInsights(expert_ids=expert_ids, id="aggregator")
 
-    # 2) Build a simple fan out and fan in workflow
+    # シンプルなfan outおよびfan inワークフローを構築します。
     workflow = (
         WorkflowBuilder()
         .set_start_executor(dispatcher)
@@ -150,10 +150,10 @@ async def main() -> None:
         .build()
     )
 
-    # 3) Run with a single prompt and print progress plus the final consolidated output
+    # 単一のプロンプトで実行し、進行状況と最終的な統合出力を表示します。
     async for event in workflow.run_stream("We are launching a new budget-friendly electric bike for urban commuters."):
         if isinstance(event, AgentRunEvent):
-            # Show which agent ran and what step completed for lightweight observability.
+            # どのAgentが実行され、どのステップが完了したかを表示して軽量な可観測性を提供します。
             print(event)
         elif isinstance(event, WorkflowOutputEvent):
             print("===== Final Aggregated Output =====")

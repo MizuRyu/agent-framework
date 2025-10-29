@@ -7,7 +7,7 @@ from ._agent import A2AAgent
 try:
     __version__ = importlib.metadata.version(__name__)
 except importlib.metadata.PackageNotFoundError:
-    __version__ = "0.0.0"  # Fallback for development mode
+    __version__ = "0.0.0"  # 開発モード用のフォールバックです。
 
 __all__ = [
     "A2AAgent",

@@ -35,7 +35,7 @@ from agent_framework._mcp import (
 )
 from agent_framework.exceptions import ToolException, ToolExecutionException
 
-# Integration test skip condition
+# 統合テストのスキップ条件
 skip_if_mcp_integration_tests_disabled = pytest.mark.skipif(
     os.getenv("RUN_INTEGRATION_TESTS", "false").lower() != "true" or os.getenv("LOCAL_MCP_URL", "") == "",
     reason="No LOCAL_MCP_URL provided; skipping integration tests."
@@ -44,9 +44,9 @@ skip_if_mcp_integration_tests_disabled = pytest.mark.skipif(
 )
 
 
-# Helper function tests
+# ヘルパー関数のテスト
 def test_normalize_mcp_name():
-    """Test MCP name normalization."""
+    """MCP名の正規化をテストします。"""
     assert _normalize_mcp_name("valid_name") == "valid_name"
     assert _normalize_mcp_name("name-with-dashes") == "name-with-dashes"
     assert _normalize_mcp_name("name.with.dots") == "name.with.dots"
@@ -56,7 +56,7 @@ def test_normalize_mcp_name():
 
 
 def test_mcp_prompt_message_to_ai_content():
-    """Test conversion from MCP prompt message to AI content."""
+    """MCPのpromptメッセージからAIコンテンツへの変換をテストします。"""
     mcp_message = types.PromptMessage(role="user", content=types.TextContent(type="text", text="Hello, world!"))
     ai_content = _mcp_prompt_message_to_chat_message(mcp_message)
 
@@ -69,7 +69,7 @@ def test_mcp_prompt_message_to_ai_content():
 
 
 def test_mcp_call_tool_result_to_ai_contents():
-    """Test conversion from MCP tool result to AI contents."""
+    """MCPのtool結果からAIコンテンツへの変換をテストします。"""
     mcp_result = types.CallToolResult(
         content=[
             types.TextContent(type="text", text="Result text"),
@@ -87,7 +87,7 @@ def test_mcp_call_tool_result_to_ai_contents():
 
 
 def test_mcp_content_types_to_ai_content_text():
-    """Test conversion of MCP text content to AI content."""
+    """MCPのテキストコンテンツからAIコンテンツへの変換をテストします。"""
     mcp_content = types.TextContent(type="text", text="Sample text")
     ai_content = _mcp_type_to_ai_content(mcp_content)
 
@@ -97,7 +97,7 @@ def test_mcp_content_types_to_ai_content_text():
 
 
 def test_mcp_content_types_to_ai_content_image():
-    """Test conversion of MCP image content to AI content."""
+    """MCPの画像コンテンツからAIコンテンツへの変換をテストします。"""
     mcp_content = types.ImageContent(type="image", data="data:image/jpeg;base64,abc", mimeType="image/jpeg")
     ai_content = _mcp_type_to_ai_content(mcp_content)
 
@@ -108,7 +108,7 @@ def test_mcp_content_types_to_ai_content_image():
 
 
 def test_mcp_content_types_to_ai_content_audio():
-    """Test conversion of MCP audio content to AI content."""
+    """MCPのオーディオコンテンツからAIコンテンツへの変換をテストします。"""
     mcp_content = types.AudioContent(type="audio", data="data:audio/wav;base64,def", mimeType="audio/wav")
     ai_content = _mcp_type_to_ai_content(mcp_content)
 
@@ -119,7 +119,7 @@ def test_mcp_content_types_to_ai_content_audio():
 
 
 def test_mcp_content_types_to_ai_content_resource_link():
-    """Test conversion of MCP resource link to AI content."""
+    """MCPのリソースリンクからAIコンテンツへの変換をテストします。"""
     mcp_content = types.ResourceLink(
         type="resource_link",
         uri=AnyUrl("https://example.com/resource"),
@@ -135,7 +135,7 @@ def test_mcp_content_types_to_ai_content_resource_link():
 
 
 def test_mcp_content_types_to_ai_content_embedded_resource_text():
-    """Test conversion of MCP embedded text resource to AI content."""
+    """MCPの埋め込みテキストリソースからAIコンテンツへの変換をテストします。"""
     text_resource = types.TextResourceContents(
         uri=AnyUrl("file://test.txt"), mimeType="text/plain", text="Embedded text content"
     )
@@ -148,8 +148,8 @@ def test_mcp_content_types_to_ai_content_embedded_resource_text():
 
 
 def test_mcp_content_types_to_ai_content_embedded_resource_blob():
-    """Test conversion of MCP embedded blob resource to AI content."""
-    # Use a proper data URI in the blob field since that's what the MCP implementation expects
+    """MCPの埋め込みblobリソースからAIコンテンツへの変換をテストします。"""
+    # blobフィールドには適切なdata URIを使用します。これはMCPの実装が期待している形式です。
     blob_resource = types.BlobResourceContents(
         uri=AnyUrl("file://test.bin"),
         mimeType="application/octet-stream",
@@ -165,7 +165,7 @@ def test_mcp_content_types_to_ai_content_embedded_resource_blob():
 
 
 def test_ai_content_to_mcp_content_types_text():
-    """Test conversion of AI text content to MCP content."""
+    """AIのテキストコンテンツからMCPコンテンツへの変換をテストします。"""
     ai_content = TextContent(text="Sample text")
     mcp_content = _ai_content_to_mcp_types(ai_content)
 
@@ -175,7 +175,7 @@ def test_ai_content_to_mcp_content_types_text():
 
 
 def test_ai_content_to_mcp_content_types_data_image():
-    """Test conversion of AI data content to MCP content."""
+    """AIのデータコンテンツからMCPコンテンツへの変換をテストします。"""
     ai_content = DataContent(uri="data:image/png;base64,xyz", media_type="image/png")
     mcp_content = _ai_content_to_mcp_types(ai_content)
 
@@ -186,7 +186,7 @@ def test_ai_content_to_mcp_content_types_data_image():
 
 
 def test_ai_content_to_mcp_content_types_data_audio():
-    """Test conversion of AI data content to MCP content."""
+    """AIのデータコンテンツからMCPコンテンツへの変換をテストします。"""
     ai_content = DataContent(uri="data:audio/mpeg;base64,xyz", media_type="audio/mpeg")
     mcp_content = _ai_content_to_mcp_types(ai_content)
 
@@ -197,7 +197,7 @@ def test_ai_content_to_mcp_content_types_data_audio():
 
 
 def test_ai_content_to_mcp_content_types_data_binary():
-    """Test conversion of AI data content to MCP content."""
+    """AIのデータコンテンツからMCPコンテンツへの変換をテストします。"""
     ai_content = DataContent(uri="data:application/octet-stream;base64,xyz", media_type="application/octet-stream")
     mcp_content = _ai_content_to_mcp_types(ai_content)
 
@@ -208,7 +208,7 @@ def test_ai_content_to_mcp_content_types_data_binary():
 
 
 def test_ai_content_to_mcp_content_types_uri():
-    """Test conversion of AI URI content to MCP content."""
+    """AIのURIコンテンツからMCPコンテンツへの変換をテストします。"""
     ai_content = UriContent(uri="https://example.com/resource", media_type="application/json")
     mcp_content = _ai_content_to_mcp_types(ai_content)
 
@@ -230,7 +230,7 @@ def test_chat_message_to_mcp_types():
 
 
 def test_get_input_model_from_mcp_tool():
-    """Test creation of input model from MCP tool."""
+    """MCPツールからの入力モデルの作成をテストします。"""
     tool = types.Tool(
         name="test_tool",
         description="A test tool",
@@ -242,18 +242,18 @@ def test_get_input_model_from_mcp_tool():
     )
     model = _get_input_model_from_mcp_tool(tool)
 
-    # Create an instance to verify the model works
+    # モデルが正しく動作することを検証するためにインスタンスを作成します。
     instance = model(param1="test", param2=42)
     assert instance.param1 == "test"
     assert instance.param2 == 42
 
-    # Test validation
+    # バリデーションをテストします。
     with pytest.raises(ValidationError):  # Missing required param1
         model(param2=42)
 
 
 def test_get_input_model_from_mcp_tool_with_nested_object():
-    """Test creation of input model from MCP tool with nested object property."""
+    """ネストされたオブジェクトプロパティを持つMCPツールからの入力モデルの作成をテストします。"""
     tool = types.Tool(
         name="get_customer_detail",
         description="Get customer details",
@@ -271,24 +271,24 @@ def test_get_input_model_from_mcp_tool_with_nested_object():
     )
     model = _get_input_model_from_mcp_tool(tool)
 
-    # Create an instance to verify the model works with nested objects
+    # ネストされたオブジェクトを持つモデルが正しく動作することを検証するためにインスタンスを作成します。
     instance = model(params={"customer_id": 251})
     assert instance.params == {"customer_id": 251}
     assert isinstance(instance.params, dict)
 
-    # Verify model_dump produces the correct nested structure
+    # model_dumpが正しいネスト構造を生成することを検証します。
     dumped = instance.model_dump()
     assert dumped == {"params": {"customer_id": 251}}
 
 
 def test_get_input_model_from_mcp_tool_with_ref_schema():
-    """Test creation of input model from MCP tool with $ref schema.
+    """$refスキーマを持つMCPツールからの入力モデルの作成をテストします。
 
-    This simulates a FastMCP tool that uses Pydantic models with $ref in the schema.
-    The schema should be resolved and nested objects should be preserved.
+    これは、スキーマに$refを含むPydanticモデルを使用するFastMCPツールをシミュレートします。
+    スキーマは解決され、ネストされたオブジェクトは保持されるべきです。
     """
-    # This is similar to what FastMCP generates when you have:
-    # async def get_customer_detail(params: CustomerIdParam) -> CustomerDetail
+    # これはFastMCPが以下のようなコードを生成する場合に似ています: async def get_customer_detail(params:
+    # CustomerIdParam) -> CustomerDetail
     tool = types.Tool(
         name="get_customer_detail",
         description="Get customer details",
@@ -307,18 +307,18 @@ def test_get_input_model_from_mcp_tool_with_ref_schema():
     )
     model = _get_input_model_from_mcp_tool(tool)
 
-    # Create an instance to verify the model works with $ref schemas
+    # $refスキーマを持つモデルが正しく動作することを検証するためにインスタンスを作成します。
     instance = model(params={"customer_id": 251})
     assert instance.params == {"customer_id": 251}
     assert isinstance(instance.params, dict)
 
-    # Verify model_dump produces the correct nested structure
+    # model_dumpが正しいネスト構造を生成することを検証します。
     dumped = instance.model_dump()
     assert dumped == {"params": {"customer_id": 251}}
 
 
 def test_get_input_model_from_mcp_prompt():
-    """Test creation of input model from MCP prompt."""
+    """MCPのpromptからの入力モデルの作成をテストします。"""
     prompt = types.Prompt(
         name="test_prompt",
         description="A test prompt",
@@ -329,19 +329,19 @@ def test_get_input_model_from_mcp_prompt():
     )
     model = _get_input_model_from_mcp_prompt(prompt)
 
-    # Create an instance to verify the model works
+    # モデルが正しく動作することを検証するためにインスタンスを作成します。
     instance = model(arg1="test", arg2="optional")
     assert instance.arg1 == "test"
     assert instance.arg2 == "optional"
 
-    # Test validation
+    # バリデーションをテストします。
     with pytest.raises(ValidationError):  # Missing required arg1
         model(arg2="optional")
 
 
-# MCPTool tests
+# MCPToolのテスト
 async def test_local_mcp_server_initialization():
-    """Test MCPTool initialization."""
+    """MCPToolの初期化をテストします。"""
     server = MCPTool(name="test_server")
     assert isinstance(server, ToolProtocol)
     assert server.name == "test_server"
@@ -350,11 +350,11 @@ async def test_local_mcp_server_initialization():
 
 
 async def test_local_mcp_server_context_manager():
-    """Test MCPTool as context manager."""
+    """コンテキストマネージャとしてのMCPToolをテストします。"""
 
     class TestServer(MCPTool):
         async def connect(self):
-            # Mock connection
+            # 接続のモック
             self.session = Mock(spec=ClientSession)
 
         def get_mcp_client(self) -> _AsyncGeneratorContextManager[Any, None]:
@@ -368,12 +368,12 @@ async def test_local_mcp_server_context_manager():
 
 
 async def test_local_mcp_server_load_functions():
-    """Test loading functions from MCP server."""
+    """MCPサーバーからの関数の読み込みをテストします。"""
 
     class TestServer(MCPTool):
         async def connect(self):
             self.session = Mock(spec=ClientSession)
-            # Mock tools list response
+            # ツールリスト応答のモック
             self.session.list_tools = AsyncMock(
                 return_value=types.ListToolsResult(
                     tools=[
@@ -402,12 +402,12 @@ async def test_local_mcp_server_load_functions():
 
 
 async def test_local_mcp_server_load_prompts():
-    """Test loading prompts from MCP server."""
+    """MCPサーバーからのpromptの読み込みをテストします。"""
 
     class TestServer(MCPTool):
         async def connect(self):
             self.session = Mock(spec=ClientSession)
-            # Mock prompts list response
+            # promptリスト応答のモック
             self.session.list_prompts = AsyncMock(
                 return_value=types.ListPromptsResult(
                     prompts=[
@@ -431,7 +431,7 @@ async def test_local_mcp_server_load_prompts():
 
 
 async def test_local_mcp_server_function_execution():
-    """Test function execution through MCP server."""
+    """MCPサーバーを介した関数実行をテストします。"""
 
     class TestServer(MCPTool):
         async def connect(self):
@@ -472,7 +472,7 @@ async def test_local_mcp_server_function_execution():
 
 
 async def test_local_mcp_server_function_execution_with_nested_object():
-    """Test function execution through MCP server with nested object arguments."""
+    """ネストされたオブジェクト引数を使ったMCPサーバーを介した関数実行をテストします。"""
 
     class TestServer(MCPTool):
         async def connect(self):
@@ -512,20 +512,20 @@ async def test_local_mcp_server_function_execution_with_nested_object():
         await server.load_tools()
         func = server.functions[0]
 
-        # Call with nested object
+        # ネストされたオブジェクトを使って呼び出し
         result = await func.invoke(params={"customer_id": 251})
 
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
 
-        # Verify the session.call_tool was called with the correct nested structure
+        # session.call_toolが正しいネスト構造で呼び出されたことを検証します。
         server.session.call_tool.assert_called_once()
         call_args = server.session.call_tool.call_args
         assert call_args.kwargs["arguments"] == {"params": {"customer_id": 251}}
 
 
 async def test_local_mcp_server_function_execution_error():
-    """Test function execution error handling."""
+    """関数実行のエラー処理をテストします。"""
 
     class TestServer(MCPTool):
         async def connect(self):
@@ -545,7 +545,7 @@ async def test_local_mcp_server_function_execution_error():
                     ]
                 )
             )
-            # Mock a tool call that raises an MCP error
+            # MCPエラーを発生させるツール呼び出しのモック
             self.session.call_tool = AsyncMock(
                 side_effect=McpError(types.ErrorData(code=-1, message="Tool execution failed"))
             )
@@ -563,7 +563,7 @@ async def test_local_mcp_server_function_execution_error():
 
 
 async def test_local_mcp_server_prompt_execution():
-    """Test prompt execution through MCP server."""
+    """MCPサーバーを介したprompt実行をテストします。"""
 
     class TestMCPTool(MCPTool):
         async def connect(self):
@@ -616,10 +616,10 @@ async def test_local_mcp_server_prompt_execution():
     ],
 )
 async def test_mcp_tool_approval_mode(approval_mode, expected_approvals):
-    """Test MCPTool approval_mode parameter with various configurations.
+    """MCPToolのapproval_modeパラメータを様々な設定でテストします。
 
-    The approval_mode parameter controls whether tools require approval before execution.
-    It can be set globally ("always_require" or "never_require") or per-tool using a dict.
+    approval_modeパラメータはツールの実行前承認が必要かどうかを制御します。
+    グローバル設定（"always_require"または"never_require"）か、ツールごとにdictで設定可能です。
     """
 
     class TestServer(MCPTool):
@@ -656,7 +656,7 @@ async def test_mcp_tool_approval_mode(approval_mode, expected_approvals):
         await server.load_tools()
         assert len(server.functions) == 2
 
-        # Verify each tool has the expected approval mode
+        # 各ツールが期待されるapproval modeを持つことを検証します。
         for func in server.functions:
             assert func.approval_mode == expected_approvals[func.name]
 
@@ -671,11 +671,10 @@ async def test_mcp_tool_approval_mode(approval_mode, expected_approvals):
     ],
 )
 async def test_mcp_tool_allowed_tools(allowed_tools, expected_count, expected_names):
-    """Test MCPTool allowed_tools parameter with various configurations.
+    """MCPToolのallowed_toolsパラメータを様々な設定でテストします。
 
-    The allowed_tools parameter filters which tools are exposed via the functions property.
-    When None, all loaded tools are available. When set to a list, only tools whose names
-    are in that list are exposed.
+    allowed_toolsパラメータはfunctionsプロパティで公開されるツールをフィルタリングします。
+    Noneの場合は全ての読み込まれたツールが利用可能です。リストの場合は、その名前がリストにあるツールのみが公開されます。
     """
 
     class TestServer(MCPTool):
@@ -718,18 +717,18 @@ async def test_mcp_tool_allowed_tools(allowed_tools, expected_count, expected_na
     server = TestServer(name="test_server", allowed_tools=allowed_tools)
     async with server:
         await server.load_tools()
-        # _functions should contain all tools
+        # _functionsは全てのツールを含むべきです。
         assert len(server._functions) == 3
 
-        # functions property should filter based on allowed_tools
+        # functionsプロパティはallowed_toolsに基づいてフィルタリングされるべきです。
         assert len(server.functions) == expected_count
         actual_names = [func.name for func in server.functions]
         assert sorted(actual_names) == sorted(expected_names)
 
 
-# Server implementation tests
+# サーバー実装のテスト
 def test_local_mcp_stdio_tool_init():
-    """Test MCPStdioTool initialization."""
+    """MCPStdioToolの初期化をテストします。"""
     tool = MCPStdioTool(name="test", command="echo", args=["hello"])
     assert tool.name == "test"
     assert tool.command == "echo"
@@ -737,24 +736,24 @@ def test_local_mcp_stdio_tool_init():
 
 
 def test_local_mcp_websocket_tool_init():
-    """Test MCPWebsocketTool initialization."""
+    """MCPWebsocketToolの初期化をテストします。"""
     tool = MCPWebsocketTool(name="test", url="ws://localhost:8080")
     assert tool.name == "test"
     assert tool.url == "ws://localhost:8080"
 
 
 def test_local_mcp_streamable_http_tool_init():
-    """Test MCPStreamableHTTPTool initialization."""
+    """MCPStreamableHTTPToolの初期化をテストします。"""
     tool = MCPStreamableHTTPTool(name="test", url="http://localhost:8080")
     assert tool.name == "test"
     assert tool.url == "http://localhost:8080"
 
 
-# Integration test
+# 統合テスト
 @pytest.mark.flaky
 @skip_if_mcp_integration_tests_disabled
 async def test_streamable_http_integration():
-    """Test MCP StreamableHTTP integration."""
+    """MCP StreamableHTTPの統合をテストします。"""
     url = os.environ.get("LOCAL_MCP_URL", "")
     if not url.startswith("http"):
         pytest.skip("LOCAL_MCP_URL is not an HTTP URL")
@@ -762,11 +761,11 @@ async def test_streamable_http_integration():
     tool = MCPStreamableHTTPTool(name="integration_test", url=url)
 
     async with tool:
-        # Test that we can connect and load tools
+        # 接続してツールを読み込めることをテストします。
         assert tool.session is not None
         assert isinstance(tool.functions, list)
 
-        # If there are functions available, try to get information about one
+        # 利用可能な関数があれば、その情報を取得しようとします。
         assert tool.functions, "The MCP server should have at least one function."
 
         func = tool.functions[0]
@@ -779,15 +778,14 @@ async def test_streamable_http_integration():
 
 
 async def test_mcp_tool_message_handler_notification():
-    """Test that message_handler correctly processes tools/list_changed and prompts/list_changed
-    notifications."""
+    """message_handlerがtools/list_changedとprompts/list_changed通知を正しく処理することをテストします。"""
     tool = MCPStdioTool(name="test_tool", command="python")
 
-    # Mock the load_tools and load_prompts methods
+    # load_toolsとload_promptsメソッドのモック
     tool.load_tools = AsyncMock()
     tool.load_prompts = AsyncMock()
 
-    # Test tools list changed notification
+    # toolsリスト変更通知のテスト
     tools_notification = Mock(spec=types.ServerNotification)
     tools_notification.root = Mock()
     tools_notification.root.method = "notifications/tools/list_changed"
@@ -796,10 +794,10 @@ async def test_mcp_tool_message_handler_notification():
     assert result is None
     tool.load_tools.assert_called_once()
 
-    # Reset mock
+    # モックをリセット
     tool.load_tools.reset_mock()
 
-    # Test prompts list changed notification
+    # promptsリスト変更通知のテスト
     prompts_notification = Mock(spec=types.ServerNotification)
     prompts_notification.root = Mock()
     prompts_notification.root.method = "notifications/prompts/list_changed"
@@ -808,7 +806,7 @@ async def test_mcp_tool_message_handler_notification():
     assert result is None
     tool.load_prompts.assert_called_once()
 
-    # Test unhandled notification
+    # 未処理通知のテスト
     unknown_notification = Mock(spec=types.ServerNotification)
     unknown_notification.root = Mock()
     unknown_notification.root.method = "notifications/unknown"
@@ -818,22 +816,22 @@ async def test_mcp_tool_message_handler_notification():
 
 
 async def test_mcp_tool_message_handler_error():
-    """Test that message_handler gracefully handles exceptions by logging and returning None."""
+    """message_handlerが例外をログに記録しNoneを返して正常に処理することをテストします。"""
     tool = MCPStdioTool(name="test_tool", command="python")
 
-    # Test with exception message
+    # 例外メッセージを使ったテスト
     test_exception = RuntimeError("Test error message")
 
-    # The message handler should log the error and return None
+    # message handlerはエラーをログに記録しNoneを返すべきです。
     result = await tool.message_handler(test_exception)
     assert result is None
 
 
 async def test_mcp_tool_sampling_callback_no_client():
-    """Test sampling callback error path when no chat client is available."""
+    """チャットClientが利用できない場合のsampling callbackのエラー経路をテストします。"""
     tool = MCPStdioTool(name="test_tool", command="python")
 
-    # Create minimal params mock
+    # 最小限のparamsモックを作成します。
     params = Mock()
     params.messages = []
 
@@ -845,16 +843,16 @@ async def test_mcp_tool_sampling_callback_no_client():
 
 
 async def test_mcp_tool_sampling_callback_chat_client_exception():
-    """Test sampling callback when chat client raises exception."""
+    """チャットClientが例外を発生させる場合のsampling callbackをテストします。"""
     tool = MCPStdioTool(name="test_tool", command="python")
 
-    # Mock chat client that raises exception
+    # 例外を発生させるチャットClientのモック
     mock_chat_client = AsyncMock()
     mock_chat_client.get_response.side_effect = RuntimeError("Chat client error")
 
     tool.chat_client = mock_chat_client
 
-    # Create mock params
+    # モックparamsを作成します。
     params = Mock()
     mock_message = Mock()
     mock_message.role = "user"
@@ -873,12 +871,12 @@ async def test_mcp_tool_sampling_callback_chat_client_exception():
 
 
 async def test_mcp_tool_sampling_callback_no_valid_content():
-    """Test sampling callback when response has no valid content types."""
+    """応答に有効なコンテンツタイプがない場合のsampling callbackをテストします。"""
     from agent_framework import ChatMessage, DataContent, Role
 
     tool = MCPStdioTool(name="test_tool", command="python")
 
-    # Mock chat client with response containing only invalid content types
+    # 無効なコンテンツタイプのみを含む応答を持つチャットClientのモック
     mock_chat_client = AsyncMock()
     mock_response = Mock()
     mock_response.messages = [
@@ -892,7 +890,7 @@ async def test_mcp_tool_sampling_callback_no_valid_content():
 
     tool.chat_client = mock_chat_client
 
-    # Create mock params
+    # モックparamsを作成します。
     params = Mock()
     mock_message = Mock()
     mock_message.role = "user"
@@ -910,21 +908,21 @@ async def test_mcp_tool_sampling_callback_no_valid_content():
     assert "Failed to get right content types from the response." in result.message
 
 
-# Test error handling in connect() method
+# connect()メソッドのエラー処理をテストします。
 
 
 async def test_connect_session_creation_failure():
-    """Test connect() raises ToolException when ClientSession creation fails."""
+    """ClientSessionの作成に失敗した場合、connect()がToolExceptionを発生させることをテストします。"""
     tool = MCPStdioTool(name="test", command="test-command")
 
-    # Mock successful transport creation
+    # 成功したtransport作成のモック
     mock_transport = (Mock(), Mock())  # (read_stream, write_stream)
     mock_context_manager = Mock()
     mock_context_manager.__aenter__ = AsyncMock(return_value=mock_transport)
     mock_context_manager.__aexit__ = AsyncMock(return_value=None)
     tool.get_mcp_client = Mock(return_value=mock_context_manager)
 
-    # Mock ClientSession to raise an exception
+    # 例外を発生させるClientSessionのモック
     with patch("agent_framework._mcp.ClientSession") as mock_session_class:
         mock_session_class.side_effect = RuntimeError("Session creation failed")
 
@@ -936,17 +934,17 @@ async def test_connect_session_creation_failure():
 
 
 async def test_connect_initialization_failure_http_no_command():
-    """Test connect() when session.initialize() fails for HTTP tool (no command attribute)."""
+    """HTTPツールでsession.initialize()が失敗した場合のconnect()をテストします（command属性なし）。"""
     tool = MCPStreamableHTTPTool(name="test", url="http://example.com")
 
-    # Mock successful transport creation
+    # 成功したtransport作成のモック
     mock_transport = (Mock(), Mock())
     mock_context_manager = Mock()
     mock_context_manager.__aenter__ = AsyncMock(return_value=mock_transport)
     mock_context_manager.__aexit__ = AsyncMock(return_value=None)
     tool.get_mcp_client = Mock(return_value=mock_context_manager)
 
-    # Mock successful session creation but failed initialization
+    # 成功したsession作成だが初期化に失敗したモック
     mock_session = Mock()
     mock_session.initialize = AsyncMock(side_effect=ConnectionError("Server not ready"))
 
@@ -957,43 +955,43 @@ async def test_connect_initialization_failure_http_no_command():
         with pytest.raises(ToolException) as exc_info:
             await tool.connect()
 
-        # Should use generic error message since HTTP tool doesn't have command
+        # HTTPツールにcommandがないため、一般的なエラーメッセージを使用すべきです。
         assert "MCP server failed to initialize" in str(exc_info.value)
         assert "Server not ready" in str(exc_info.value)
 
 
 async def test_connect_cleanup_on_transport_failure():
-    """Test that _exit_stack.aclose() is called when transport creation fails."""
+    """transport作成に失敗した場合に_exit_stack.aclose()が呼ばれることをテストします。"""
     tool = MCPStdioTool(name="test", command="test-command")
 
-    # Mock _exit_stack.aclose to verify it's called
+    # 呼び出しを検証するために_exit_stack.acloseをモックします。
     tool._exit_stack.aclose = AsyncMock()
 
-    # Mock get_mcp_client to raise an exception
+    # 例外を発生させるget_mcp_clientのモック
     tool.get_mcp_client = Mock(side_effect=RuntimeError("Transport failed"))
 
     with pytest.raises(ToolException):
         await tool.connect()
 
-    # Verify cleanup was called
+    # クリーンアップが呼ばれたことを検証します。
     tool._exit_stack.aclose.assert_called_once()
 
 
 async def test_connect_cleanup_on_initialization_failure():
-    """Test that _exit_stack.aclose() is called when initialization fails."""
+    """初期化に失敗した場合に_exit_stack.aclose()が呼ばれることをテストします。"""
     tool = MCPStdioTool(name="test", command="test-command")
 
-    # Mock _exit_stack.aclose to verify it's called
+    # 呼び出しを検証するために_exit_stack.acloseをモックします。
     tool._exit_stack.aclose = AsyncMock()
 
-    # Mock successful transport creation
+    # 成功したtransport作成のモック
     mock_transport = (Mock(), Mock())
     mock_context_manager = Mock()
     mock_context_manager.__aenter__ = AsyncMock(return_value=mock_transport)
     mock_context_manager.__aexit__ = AsyncMock(return_value=None)
     tool.get_mcp_client = Mock(return_value=mock_context_manager)
 
-    # Mock successful session creation but failed initialization
+    # 成功したsession作成だが初期化に失敗したモック
     mock_session = Mock()
     mock_session.initialize = AsyncMock(side_effect=RuntimeError("Init failed"))
 
@@ -1004,26 +1002,26 @@ async def test_connect_cleanup_on_initialization_failure():
         with pytest.raises(ToolException):
             await tool.connect()
 
-        # Verify cleanup was called
+        # クリーンアップが呼ばれたことを検証します。
         tool._exit_stack.aclose.assert_called_once()
 
 
 def test_mcp_stdio_tool_get_mcp_client_with_env_and_kwargs():
-    """Test MCPStdioTool.get_mcp_client() with environment variables and client kwargs."""
+    """環境変数とclient kwargsを使ったMCPStdioTool.get_mcp_client()のテスト。"""
     env_vars = {"PATH": "/usr/bin", "DEBUG": "1"}
     tool = MCPStdioTool(name="test", command="test-command", env=env_vars, custom_param="value1", another_param=42)
 
     with patch("agent_framework._mcp.stdio_client"), patch("agent_framework._mcp.StdioServerParameters") as mock_params:
         tool.get_mcp_client()
 
-        # Verify all parameters including custom kwargs were passed
+        # カスタムkwargsを含む全てのパラメータが渡されたことを検証します。
         mock_params.assert_called_once_with(
             command="test-command", args=[], env=env_vars, custom_param="value1", another_param=42
         )
 
 
 def test_mcp_streamable_http_tool_get_mcp_client_all_params():
-    """Test MCPStreamableHTTPTool.get_mcp_client() with all parameters."""
+    """全てのパラメータを使ったMCPStreamableHTTPTool.get_mcp_client()のテスト。"""
     tool = MCPStreamableHTTPTool(
         name="test",
         url="http://example.com",
@@ -1037,7 +1035,7 @@ def test_mcp_streamable_http_tool_get_mcp_client_all_params():
     with patch("agent_framework._mcp.streamablehttp_client") as mock_http_client:
         tool.get_mcp_client()
 
-        # Verify all parameters were passed
+        # 全てのパラメータが渡されたことを検証します。
         mock_http_client.assert_called_once_with(
             url="http://example.com",
             headers={"Auth": "token"},
@@ -1049,7 +1047,7 @@ def test_mcp_streamable_http_tool_get_mcp_client_all_params():
 
 
 def test_mcp_websocket_tool_get_mcp_client_with_kwargs():
-    """Test MCPWebsocketTool.get_mcp_client() with client kwargs."""
+    """client kwargsを使ったMCPWebsocketTool.get_mcp_client()のテスト。"""
     tool = MCPWebsocketTool(
         name="test", url="wss://example.com", max_size=1024, ping_interval=30, compression="deflate"
     )
@@ -1057,7 +1055,7 @@ def test_mcp_websocket_tool_get_mcp_client_with_kwargs():
     with patch("agent_framework._mcp.websocket_client") as mock_ws_client:
         tool.get_mcp_client()
 
-        # Verify all kwargs were passed
+        # 全てのkwargsが渡されたことを検証します。
         mock_ws_client.assert_called_once_with(
             url="wss://example.com", max_size=1024, ping_interval=30, compression="deflate"
         )

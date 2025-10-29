@@ -30,9 +30,10 @@ Prerequisites:
 
 
 async def create_azure_ai_agent() -> tuple[Callable[..., Awaitable[Any]], Callable[[], Awaitable[None]]]:
-    """Helper method to create a Azure AI agent factory and a close function.
+    """Azure AI Agentファクトリとクローズ関数を作成するヘルパーメソッド。
 
-    This makes sure the async context managers are properly handled.
+    これにより非同期コンテキストマネージャが適切に処理されます。
+
     """
     stack = AsyncExitStack()
     cred = await stack.enter_async_context(AzureCliCredential())
@@ -65,8 +66,8 @@ async def main() -> None:
                 "Provide the feedback in the most concise manner possible."
             ),
         )
-        # Build the workflow by adding agents directly as edges.
-        # Agents adapt to workflow mode: run_stream() for incremental updates, run() for complete responses.
+        # Agentを直接エッジとして追加してワークフローを構築します。 Agentはワークフローモードに適応します:
+        # run_stream()は増分更新用、run()は完全なレスポンス用。
         workflow = (
             WorkflowBuilder()
             .set_start_executor(writer)

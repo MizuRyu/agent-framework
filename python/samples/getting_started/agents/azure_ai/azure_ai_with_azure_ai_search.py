@@ -23,17 +23,17 @@ Environment variables:
 - AZURE_AI_MODEL_DEPLOYMENT_NAME: The name of your model deployment
 """
 
-# Test queries to verify Azure AI Search is working with the hotels-sample-index
+# Azure AI Search が hotels-sample-index で動作していることを検証するテストクエリ。
 USER_INPUTS = [
     "Search the hotel database for Stay-Kay City Hotel and give me detailed information.",
 ]
 
 
 async def main() -> None:
-    """Main function demonstrating Azure AI agent with Azure AI Search capabilities."""
+    """Azure AI Search 機能を持つ Azure AI エージェントを示すメイン関数。"""
 
-    # 1. Create Azure AI Search tool using HostedFileSearchTool
-    # The tool will automatically use the default Azure AI Search connection from your project
+    # 1. HostedFileSearchTool を使って Azure AI Search ツールを作成する このツールはプロジェクトのデフォルト Azure AI
+    # Search 接続を自動的に使用します。
     azure_ai_search_tool = HostedFileSearchTool(
         additional_properties={
             "index_name": "hotels-sample-index",  # Name of your search index
@@ -42,7 +42,7 @@ async def main() -> None:
         },
     )
 
-    # 2. Use AzureAIAgentClient as async context manager for automatic cleanup
+    # 2. AzureAIAgentClient を非同期コンテキストマネージャーとして使用し、自動クリーンアップを行う
     async with (
         AzureAIAgentClient(async_credential=AzureCliCredential()) as client,
         ChatAgent(
@@ -55,12 +55,12 @@ async def main() -> None:
         print("=== Azure AI Agent with Azure AI Search ===")
         print("This agent can search through hotel data to help you find accommodations.\n")
 
-        # 3. Simulate conversation with the agent
+        # 3. エージェントとの会話をシミュレートする
         for user_input in USER_INPUTS:
             print(f"User: {user_input}")
             print("Agent: ", end="", flush=True)
 
-            # Stream the response for better user experience
+            # より良いユーザー体験のためにレスポンスをストリームする
             async for chunk in agent.run_stream(user_input):
                 if chunk.text:
                     print(chunk.text, end="", flush=True)

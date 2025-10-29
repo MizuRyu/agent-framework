@@ -5,55 +5,56 @@ from loguru import logger
 
 
 def flip_messages(messages: list[ChatMessage]) -> list[ChatMessage]:
-    """Flip message roles between assistant and user for role-playing scenarios.
+    """アシスタントとユーザー間でメッセージの役割を入れ替えるロールプレイングシナリオ用。
 
-    Used in agent simulations where the assistant's messages become user inputs
-    and vice versa. Function calls are filtered out when flipping assistant
-    messages to user messages (since users typically don't make function calls).
+    アシスタントのメッセージがユーザー入力になり、その逆も同様。
+    アシスタントのメッセージをユーザーメッセージに反転する際は関数呼び出しをフィルタリング（通常ユーザーは関数呼び出しを行わないため）。
+
     """
 
     def filter_out_function_calls(messages: list[Contents]) -> list[Contents]:
-        """Remove function call content from message contents."""
+        """メッセージ内容から関数呼び出しの内容を削除する。"""
         return [content for content in messages if content.type != "function_call"]
 
     flipped_messages = []
     for msg in messages:
         if msg.role == Role.ASSISTANT:
-            # Flip assistant to user
+            # アシスタントからユーザーへ反転する
             contents = filter_out_function_calls(msg.contents)
             if contents:
                 flipped_msg = ChatMessage(
                     role=Role.USER,
-                    # The function calls will cause 400 when role is user
+                    # 関数呼び出しはroleがuserの場合に400エラーを引き起こす
                     contents=contents,
                     author_name=msg.author_name,
                     message_id=msg.message_id,
                 )
                 flipped_messages.append(flipped_msg)
         elif msg.role == Role.USER:
-            # Flip user to assistant
+            # ユーザーからアシスタントへ反転する
             flipped_msg = ChatMessage(
                 role=Role.ASSISTANT, contents=msg.contents, author_name=msg.author_name, message_id=msg.message_id
             )
             flipped_messages.append(flipped_msg)
         elif msg.role == Role.TOOL:
-            # Skip tool messages
+            # ツールメッセージをスキップする
             pass
         else:
-            # Keep other roles as-is (system, tool, etc.)
+            # その他の役割はそのまま保持（system、toolなど）
             flipped_messages.append(msg)
     return flipped_messages
 
 
 def log_messages(messages: list[ChatMessage]) -> None:
-    """Log messages with colored output based on role and content type.
+    """役割とコンテンツタイプに基づいて色付き出力でメッセージをログに記録。
 
-    Provides visual debugging by color-coding different message roles and
-    content types. Escapes HTML-like characters to prevent log formatting issues.
+    さまざまなメッセージ役割とコンテンツタイプを色分けして視覚的にデバッグを提供。
+    HTMLのような文字をエスケープしてログのフォーマット問題を防止。
+
     """
     logger_ = logger.opt(colors=True)
     for msg in messages:
-        # Handle different content types
+        # 異なるコンテンツタイプを処理する
         if hasattr(msg, "contents") and msg.contents:
             for content in msg.contents:
                 if hasattr(content, "type"):
@@ -81,7 +82,7 @@ def log_messages(messages: list[ChatMessage]) -> None:
                         content_text = str(content).replace("<", r"\<")
                         logger_.info(f"<magenta>[{msg.role.value.upper()}] ({content.type})</magenta> {content_text}")
                 else:
-                    # Fallback for content without type
+                    # タイプなしのコンテンツのフォールバック
                     text_content = str(content).replace("<", r"\<")
                     if msg.role == Role.SYSTEM:
                         logger_.info(f"<cyan>[SYSTEM]</cyan> {text_content}")
@@ -94,7 +95,7 @@ def log_messages(messages: list[ChatMessage]) -> None:
                     else:
                         logger_.info(f"<magenta>[{msg.role.value.upper()}]</magenta> {text_content}")
         elif hasattr(msg, "text") and msg.text:
-            # Handle simple text messages
+            # 単純なテキストメッセージを処理する
             text_content = msg.text.replace("<", r"\<")
             if msg.role == Role.SYSTEM:
                 logger_.info(f"<cyan>[SYSTEM]</cyan> {text_content}")
@@ -107,6 +108,6 @@ def log_messages(messages: list[ChatMessage]) -> None:
             else:
                 logger_.info(f"<magenta>[{msg.role.value.upper()}]</magenta> {text_content}")
         else:
-            # Fallback for other message formats
+            # その他のメッセージ形式のフォールバック
             text_content = str(msg).replace("<", r"\<")
             logger_.info(f"<magenta>[{msg.role.value.upper()}]</magenta> {text_content}")

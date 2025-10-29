@@ -38,7 +38,7 @@ it creates a custom async generator that yields the override message in chunks.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -46,14 +46,14 @@ def get_weather(
 async def weather_override_middleware(
     context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
 ) -> None:
-    """Middleware that overrides weather results for both streaming and non-streaming cases."""
+    """ストリーミングおよび非ストリーミングの両方のケースで天気の結果を上書きするミドルウェア。"""
 
-    # Let the original agent execution complete first
+    # 元のAgentの実行を最初に完了させる
     await next(context)
 
-    # Check if there's a result to override (agent called weather function)
+    # 上書きする結果があるか確認する（Agentが天気関数を呼び出したか）
     if context.result is not None:
-        # Create custom weather message
+        # カスタムの天気メッセージを作成する
         chunks = [
             "Weather Advisory - ",
             "due to special atmospheric conditions, ",
@@ -63,24 +63,23 @@ async def weather_override_middleware(
         ]
 
         if context.is_streaming:
-            # For streaming: create an async generator that yields chunks
+            # ストリーミングの場合：チャンクをyieldする非同期ジェネレーターを作成する
             async def override_stream() -> AsyncIterable[AgentRunResponseUpdate]:
                 for chunk in chunks:
                     yield AgentRunResponseUpdate(contents=[TextContent(text=chunk)])
 
             context.result = override_stream()
         else:
-            # For non-streaming: just replace with the string message
+            # 非ストリーミングの場合：文字列メッセージに置き換えるだけ
             custom_message = "".join(chunks)
             context.result = AgentRunResponse(messages=[ChatMessage(role=Role.ASSISTANT, text=custom_message)])
 
 
 async def main() -> None:
-    """Example demonstrating result override with middleware for both streaming and non-streaming."""
+    """ストリーミングおよび非ストリーミングの両方に対するミドルウェアによる結果上書きを示す例。"""
     print("=== Result Override Middleware Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
@@ -90,14 +89,14 @@ async def main() -> None:
             middleware=weather_override_middleware,
         ) as agent,
     ):
-        # Non-streaming example
+        # 非ストリーミングの例
         print("\n--- Non-streaming Example ---")
         query = "What's the weather like in Seattle?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result}")
 
-        # Streaming example
+        # ストリーミングの例
         print("\n--- Streaming Example ---")
         query = "What's the weather like in Portland?"
         print(f"User: {query}")

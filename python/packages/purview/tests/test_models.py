@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for Purview models and serialization."""
+"""Purview モデルとシリアライゼーションのテスト。"""
 
 from agent_framework_purview._models import (
     Activity,
@@ -24,17 +24,17 @@ from agent_framework_purview._models import (
 
 
 class TestFlagOperations:
-    """Test flag serialization and deserialization operations."""
+    """フラグのシリアライズとデシリアライズ操作をテスト。"""
 
     def test_protection_scope_activities_flag_combination(self) -> None:
-        """Test combining flags."""
+        """フラグの結合をテスト。"""
         combined = ProtectionScopeActivities.UPLOAD_TEXT | ProtectionScopeActivities.UPLOAD_FILE
         assert combined.value == 3
         assert ProtectionScopeActivities.UPLOAD_TEXT in combined
         assert ProtectionScopeActivities.UPLOAD_FILE in combined
 
     def test_deserialize_flag_with_string(self) -> None:
-        """Test deserializing flag from comma-separated string."""
+        """カンマ区切り文字列からのフラグのデシリアライズをテスト。"""
         mapping = {
             "uploadText": ProtectionScopeActivities.UPLOAD_TEXT,
             "uploadFile": ProtectionScopeActivities.UPLOAD_FILE,
@@ -46,18 +46,18 @@ class TestFlagOperations:
         assert ProtectionScopeActivities.UPLOAD_FILE in result
 
     def test_deserialize_flag_with_none(self) -> None:
-        """Test deserializing None returns None."""
+        """None のデシリアライズは None を返すことをテスト。"""
         mapping = {"uploadText": ProtectionScopeActivities.UPLOAD_TEXT}
         result = deserialize_flag(None, mapping, ProtectionScopeActivities)
         assert result is None
 
     def test_serialize_flag_with_none(self) -> None:
-        """Test serializing None returns None."""
+        """None のシリアライズは None を返すことをテスト。"""
         result = serialize_flag(None, [])
         assert result is None
 
     def test_serialize_flag_with_values(self) -> None:
-        """Test serializing flag with values."""
+        """値を持つフラグのシリアライズをテスト。"""
         flag = ProtectionScopeActivities.UPLOAD_TEXT | ProtectionScopeActivities.UPLOAD_FILE
         ordered = [
             ("uploadText", ProtectionScopeActivities.UPLOAD_TEXT),
@@ -68,10 +68,10 @@ class TestFlagOperations:
 
 
 class TestComplexModels:
-    """Test complex models with nested structures."""
+    """ネストされた構造を持つ複雑なモデルをテスト。"""
 
     def test_content_to_process_with_nested_structures(self) -> None:
-        """Test ContentToProcess with all nested structures."""
+        """すべてのネストされた構造を持つ ContentToProcess をテスト。"""
         text_content = PurviewTextContent(data="Test")
         metadata = ProcessConversationMetadata(
             identifier="msg-1",
@@ -106,10 +106,10 @@ class TestComplexModels:
 
 
 class TestRequestResponseSerialization:
-    """Test request/response serialization with aliases."""
+    """エイリアスを使ったリクエスト/レスポンスのシリアライズをテスト。"""
 
     def test_protection_scopes_request_serialization(self) -> None:
-        """Test ProtectionScopesRequest serializes activities correctly."""
+        """ProtectionScopesRequest がアクティビティを正しくシリアライズすることをテスト。"""
         location = PolicyLocation(data_type="microsoft.graph.policyLocationApplication", value="app-id")
 
         request = ProtectionScopesRequest(
@@ -127,10 +127,10 @@ class TestRequestResponseSerialization:
 
 
 class TestModelDeserialization:
-    """Test model deserialization from API responses."""
+    """API レスポンスからのモデルのデシリアライズをテスト。"""
 
     def test_protection_scopes_response_deserialization(self) -> None:
-        """Test ProtectionScopesResponse deserializes 'value' to 'scopes'."""
+        """ProtectionScopesResponse が 'value' を 'scopes' にデシリアライズすることをテスト。"""
         api_data = {
             "scopeIdentifier": "scope-123",
             "value": [
@@ -151,7 +151,7 @@ class TestModelDeserialization:
         assert response.scopes[0].execution_mode == "evaluateInline"
 
     def test_process_content_response_deserialization(self) -> None:
-        """Test ProcessContentResponse deserializes aliased fields correctly."""
+        """ProcessContentResponse がエイリアス付きフィールドを正しくデシリアライズすることをテスト。"""
         api_data = {
             "id": "response-123",
             "protectionScopeState": "blocked",
@@ -165,7 +165,7 @@ class TestModelDeserialization:
         assert len(response.policy_actions) == 1
 
     def test_content_serialization_uses_aliases(self) -> None:
-        """Test ContentToProcess serializes with camelCase aliases."""
+        """ContentToProcess が camelCase エイリアスでシリアライズされることをテスト。"""
         text_content = PurviewTextContent(data="Test")
         metadata = ProcessConversationMetadata(
             identifier="msg-1",
@@ -201,7 +201,7 @@ class TestModelDeserialization:
         assert "protectedAppMetadata" in dumped
 
     def test_process_content_request_excludes_private_fields(self) -> None:
-        """Test ProcessContentRequest excludes private fields when serializing."""
+        """ProcessContentRequest がシリアライズ時にプライベートフィールドを除外することをテスト。"""
         text_content = PurviewTextContent(data="Test")
         metadata = ProcessConversationMetadata(
             identifier="msg-1",
@@ -237,10 +237,10 @@ class TestModelDeserialization:
 
         dumped = request.model_dump(by_alias=True, exclude_none=True, mode="json")
 
-        # Check that excluded fields are not present
+        # 除外されたフィールドが存在しないことをチェック。
         assert "user_id" not in dumped
         assert "tenant_id" not in dumped
         assert "correlation_id" not in dumped
 
-        # Check that content is present
+        # content が存在することをチェック。
         assert "contentToProcess" in dumped

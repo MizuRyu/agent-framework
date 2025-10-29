@@ -110,7 +110,7 @@ async def main() -> None:
 
     if outputs:
         print("===== Final Aggregated Conversation (messages) =====")
-        messages: list[ChatMessage] | Any = outputs[0]  # Get the first (and typically only) output
+        messages: list[ChatMessage] | Any = outputs[0]  # 最初の（通常は唯一の）出力を取得します。
         for i, msg in enumerate(messages, start=1):
             name = msg.author_name if msg.author_name else "user"
             print(f"{'-' * 60}\n\n{i:02d} [{name}]:\n{msg.text}")

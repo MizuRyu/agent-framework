@@ -1,19 +1,18 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 """
-Script to run all Python samples in the samples directory concurrently.
-This script will run all samples and report results at the end.
+samples ディレクトリ内のすべての Python サンプルを同時に実行するスクリプトです。
+このスクリプトはすべてのサンプルを実行し、最後に結果を報告します。
 
-Note: This script is AI generated. This is for internal validation purposes only.
+注意: このスクリプトは AI によって生成されています。内部検証目的のみです。
 
-Samples that require human interaction are known to fail.
+人間の操作が必要なサンプルは失敗することが知られています。
 
-Usage:
-    python run_all_samples.py                          # Run all samples using uv run (concurrent)
-    python run_all_samples.py --direct                 # Run all samples directly (concurrent,
-                                                       # assumes environment is set up)
-    python run_all_samples.py --subdir <directory>     # Run samples only in specific subdirectory
-    python run_all_samples.py --subdir getting_started/workflows  # Example: run only workflow samples
+使い方:
+    python run_all_samples.py                          # uv run を使ってすべてのサンプルを同時に実行
+    python run_all_samples.py --direct                 # すべてのサンプルを直接実行（同時実行、環境設定済みと仮定）
+    python run_all_samples.py --subdir <directory>     # 特定のサブディレクトリ内のサンプルのみ実行
+    python run_all_samples.py --subdir getting_started/workflows  # 例: ワークフローサンプルのみ実行
 """
 
 import argparse
@@ -25,10 +24,10 @@ from pathlib import Path
 
 
 def find_python_samples(samples_dir: Path, subdir: str | None = None) -> list[Path]:
-    """Find all Python sample files in the samples directory or a subdirectory."""
+    """samples ディレクトリまたはサブディレクトリ内のすべての Python サンプルファイルを見つけます。"""
     python_files: list[Path] = []
 
-    # Determine the search directory
+    # 検索ディレクトリを決定します
     if subdir:
         search_dir = samples_dir / subdir
         if not search_dir.exists():
@@ -39,16 +38,16 @@ def find_python_samples(samples_dir: Path, subdir: str | None = None) -> list[Pa
         search_dir = samples_dir
         print(f"Searching in all samples: {search_dir}")
 
-    # Walk through all subdirectories and find .py files
+    # すべてのサブディレクトリを巡回し、.py ファイルを見つけます
     for root, dirs, files in os.walk(search_dir):
-        # Skip __pycache__ directories
+        # __pycache__ ディレクトリをスキップします
         dirs[:] = [d for d in dirs if d != "__pycache__"]
 
         for file in files:
             if file.endswith(".py") and not file.startswith("_") and file != "_run_all_samples.py":
                 python_files.append(Path(root) / file)
 
-    # Sort files for consistent execution order
+    # 一貫した実行順序のためにファイルをソートします
     return sorted(python_files)
 
 
@@ -58,15 +57,16 @@ def run_sample(
     python_root: Path | None = None,
 ) -> tuple[bool, str, str]:
     """
-    Run a single sample file using subprocess and return (success, output, error_info).
+    subprocess を使って単一のサンプルファイルを実行し、(success, output, error_info) を返します。
 
     Args:
-        sample_path: Path to the sample file
-        use_uv: Whether to use uv run
-        python_root: Root directory for uv run
+        sample_path: サンプルファイルへのパス
+        use_uv: uv run を使うかどうか
+        python_root: uv run のルートディレクトリ
 
     Returns:
-        Tuple of (success, output, error_info)
+        (success, output, error_info) のタプル
+
     """
     if use_uv and python_root:
         cmd = ["uv", "run", "python", str(sample_path)]
@@ -101,7 +101,7 @@ def run_sample(
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Parse command line arguments."""
+    """コマンドライン引数を解析します。"""
     parser = argparse.ArgumentParser(
         description="Run Python samples concurrently",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -131,12 +131,12 @@ Examples:
 
 
 def main() -> None:
-    """Main function to run all samples concurrently."""
+    """すべてのサンプルを同時に実行するメイン関数です。"""
     args = parse_arguments()
 
-    # Get the samples directory (assuming this script is in the samples directory)
+    # samples ディレクトリを取得します（このスクリプトが samples ディレクトリ内にあると仮定）
     samples_dir = Path(__file__).parent
-    python_root = samples_dir.parent  # Go up to the python/ directory
+    python_root = samples_dir.parent  # python/ ディレクトリまで上がります
 
     print("Python samples runner")
     print(f"Samples directory: {samples_dir}")
@@ -151,7 +151,7 @@ def main() -> None:
 
     print("🚀 Running samples concurrently...")
 
-    # Find all Python sample files
+    # すべての Python サンプルファイルを見つけます
     sample_files = find_python_samples(samples_dir, args.subdir)
 
     if not sample_files:
@@ -160,24 +160,24 @@ def main() -> None:
 
     print(f"Found {len(sample_files)} Python sample files")
 
-    # Run samples concurrently
+    # サンプルを同時に実行します
     results: list[tuple[Path, bool, str, str]] = []
 
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-        # Submit all tasks
+        # すべてのタスクを送信します
         future_to_sample = {
             executor.submit(run_sample, sample_path, not args.direct, python_root): sample_path
             for sample_path in sample_files
         }
 
-        # Collect results as they complete
+        # 完了したものから結果を収集します
         for future in as_completed(future_to_sample):
             sample_path = future_to_sample[future]
             try:
                 success, output, error_info = future.result()
                 results.append((sample_path, success, output, error_info))
 
-                # Print progress - show relative path from samples directory
+                # 進行状況を表示します - samples ディレクトリからの相対パスを表示
                 relative_path = sample_path.relative_to(samples_dir)
                 if success:
                     print(f"✅ {relative_path}")
@@ -190,14 +190,14 @@ def main() -> None:
                 relative_path = sample_path.relative_to(samples_dir)
                 print(f"❌ {relative_path} - {error_info}")
 
-    # Sort results by original file order for consistent reporting
+    # 一貫した報告のために元のファイル順に結果をソートします
     sample_to_index = {path: i for i, path in enumerate(sample_files)}
     results.sort(key=lambda x: sample_to_index[x[0]])
 
     successful_runs = sum(1 for _, success, _, _ in results if success)
     failed_runs = len(results) - successful_runs
 
-    # Print detailed results
+    # 詳細な結果を表示します
     print(f"\n{'=' * 80}")
     print("DETAILED RESULTS:")
     print(f"{'=' * 80}")
@@ -212,7 +212,7 @@ def main() -> None:
             print(f"❌ {relative_path}")
             print(f"   Error: {error_info}")
 
-    # Print summary
+    # サマリーを表示します
     print(f"\n{'=' * 80}")
     if failed_runs == 0:
         print("🎉 ALL SAMPLES COMPLETED SUCCESSFULLY!")
@@ -226,7 +226,7 @@ def main() -> None:
 
     print(f"{'=' * 80}")
 
-    # Exit with error code if any samples failed
+    # サンプルのいずれかが失敗した場合、エラーコードで終了します
     if failed_runs > 0:
         sys.exit(1)
 

@@ -10,58 +10,61 @@ from typing import Literal
 from ._edge import FanInEdgeGroup
 from ._workflow import Workflow
 
-# Import of WorkflowExecutor is performed lazily inside methods to avoid cycles
+# WorkflowExecutorのImportは循環を避けるためメソッド内で遅延実行されます。
 
 """Workflow visualization module using graphviz."""
 
 
 class WorkflowViz:
-    """A class for visualizing workflows using graphviz."""
+    """graphvizを用いてワークフローを可視化するためのクラス。"""
 
     def __init__(self, workflow: Workflow):
-        """Initialize the WorkflowViz with a workflow.
+        """WorkflowVizをワークフローで初期化します。
 
         Args:
-            workflow: The workflow to visualize.
+            workflow: 可視化するワークフロー。
+
         """
         self._workflow = workflow
 
     def to_digraph(self) -> str:
-        """Export the workflow as a DOT format digraph string.
+        """ワークフローをDOT形式のdigraph文字列としてエクスポートします。
 
         Returns:
-            A string representation of the workflow in DOT format.
+            DOT形式のワークフローの文字列表現。
+
         """
         lines = ["digraph Workflow {"]
-        lines.append("  rankdir=TD;")  # Top to bottom layout
+        lines.append("  rankdir=TD;")  # 上から下へのレイアウト。
         lines.append("  node [shape=box, style=filled, fillcolor=lightblue];")
         lines.append("  edge [color=black, arrowhead=vee];")
         lines.append("")
 
-        # Emit the top-level workflow nodes/edges
+        # トップレベルのワークフローノード/エッジを出力します。
         self._emit_workflow_digraph(self._workflow, lines, indent="  ")
 
-        # Emit sub-workflows hosted by WorkflowExecutor as nested clusters
+        # WorkflowExecutorがホストするサブワークフローをネストされたクラスターとして出力します。
         self._emit_sub_workflows_digraph(self._workflow, lines, indent="  ")
 
         lines.append("}")
         return "\n".join(lines)
 
     def export(self, format: Literal["svg", "png", "pdf", "dot"] = "svg", filename: str | None = None) -> str:
-        """Export the workflow visualization to a file or return the file path.
+        """ワークフローの可視化をファイルにエクスポートするか、ファイルパスを返します。
 
         Args:
-            format: The output format. Supported formats: 'svg', 'png', 'pdf', 'dot'.
-            filename: Optional filename to save the output. If None, creates a temporary file.
+            format: 出力フォーマット。サポートされるフォーマット: 'svg', 'png', 'pdf', 'dot'.
+            filename: 出力を保存するファイル名。Noneの場合は一時ファイルを作成します。
 
         Returns:
-            The path to the saved file.
+            保存されたファイルのパス。
 
         Raises:
-            ImportError: If graphviz is not installed.
-            ValueError: If an unsupported format is specified.
+            ImportError: graphvizがインストールされていない場合。
+            ValueError: サポートされていないフォーマットが指定された場合。
+
         """
-        # Validate format first
+        # まずフォーマットを検証します。
         if format not in ["svg", "png", "pdf", "dot"]:
             raise ValueError(f"Unsupported format: {format}. Supported formats: svg, png, pdf, dot")
 
@@ -71,7 +74,7 @@ class WorkflowViz:
                 with open(filename, "w", encoding="utf-8") as f:
                     f.write(content)
                 return filename
-            # Create temporary file for dot format
+            # dot形式のための一時ファイルを作成します。
             with tempfile.NamedTemporaryFile(mode="w", suffix=".dot", delete=False, encoding="utf-8") as temp_file:
                 temp_file.write(content)
                 return temp_file.name
@@ -85,24 +88,24 @@ class WorkflowViz:
                 "or brew install graphviz on macOS. See https://graphviz.org/download/ for details."
             ) from e
 
-        # Create a temporary graphviz Source object
+        # 一時的なgraphviz Sourceオブジェクトを作成します。
         dot_content = self.to_digraph()
         source = graphviz.Source(dot_content)
 
         try:
             if filename:
-                # Save to specified file
+                # 指定されたファイルに保存します。
                 output_path = Path(filename)
                 if output_path.suffix and output_path.suffix[1:] != format:
                     raise ValueError(f"File extension {output_path.suffix} doesn't match format {format}")
 
-                # Remove extension if present since graphviz.render() adds it
+                # graphviz.render()が拡張子を追加するため、存在する場合は拡張子を削除します。
                 base_name = str(output_path.with_suffix(""))
                 source.render(base_name, format=format, cleanup=True)
 
-                # Return the actual filename with extension
+                # 拡張子付きの実際のファイル名を返します。
                 return f"{base_name}.{format}"
-            # Create temporary file
+            # 一時ファイルを作成します。
             with tempfile.NamedTemporaryFile(suffix=f".{format}", delete=False) as temp_file:
                 temp_path = Path(temp_file.name)
                 base_name = str(temp_path.with_suffix(""))
@@ -118,47 +121,51 @@ class WorkflowViz:
             ) from e
 
     def save_svg(self, filename: str) -> str:
-        """Convenience method to save as SVG.
+        """SVGとして保存するための便利メソッド。
 
         Args:
-            filename: The filename to save the SVG file.
+            filename: SVGファイルを保存するファイル名。
 
         Returns:
-            The path to the saved SVG file.
+            保存されたSVGファイルのパス。
+
         """
         return self.export(format="svg", filename=filename)
 
     def save_png(self, filename: str) -> str:
-        """Convenience method to save as PNG.
+        """PNGとして保存するための便利メソッド。
 
         Args:
-            filename: The filename to save the PNG file.
+            filename: PNGファイルを保存するファイル名。
 
         Returns:
-            The path to the saved PNG file.
+            保存されたPNGファイルのパス。
+
         """
         return self.export(format="png", filename=filename)
 
     def save_pdf(self, filename: str) -> str:
-        """Convenience method to save as PDF.
+        """PDFとして保存するための便利メソッド。
 
         Args:
-            filename: The filename to save the PDF file.
+            filename: PDFファイルを保存するファイル名。
 
         Returns:
-            The path to the saved PDF file.
+            保存されたPDFファイルのパス。
+
         """
         return self.export(format="pdf", filename=filename)
 
     def to_mermaid(self) -> str:
-        """Export the workflow as a Mermaid flowchart string.
+        """ワークフローをMermaidフローチャート文字列としてエクスポートします。
 
         Returns:
-            A string representation of the workflow in Mermaid flowchart syntax.
+            Mermaidフローチャート構文でのワークフローの文字列表現。
+
         """
 
         def _san(s: str) -> str:
-            """Sanitize an ID for Mermaid (alphanumeric and underscore, start with letter)."""
+            """Mermaid用のIDをサニタイズします（英数字とアンダースコア、先頭は文字）。"""
             s2 = re.sub(r"[^0-9A-Za-z_]", "_", s)
             if not s2 or not s2[0].isalpha():
                 s2 = f"n_{s2}"
@@ -166,10 +173,10 @@ class WorkflowViz:
 
         lines: list[str] = ["flowchart TD"]
 
-        # Emit top-level workflow
+        # トップレベルのワークフローを出力します。
         self._emit_workflow_mermaid(self._workflow, lines, indent="  ")
 
-        # Emit sub-workflows as Mermaid subgraphs
+        # サブワークフローをMermaidのサブグラフとして出力します。
         self._emit_sub_workflows_mermaid(self._workflow, lines, indent="  ")
 
         return "\n".join(lines)
@@ -181,9 +188,10 @@ class WorkflowViz:
         return hashlib.sha256((target + "|" + "|".join(sources_sorted)).encode("utf-8")).hexdigest()[:8]
 
     def _compute_fan_in_descriptors(self, wf: Workflow | None = None) -> list[tuple[str, list[str], str]]:
-        """Return list of (node_id, sources, target) for fan-in groups.
+        """fan-inグループの(node_id, sources, target)のリストを返します。
 
-        node_id is DOT-oriented: fan_in::target::digest
+        node_idはDOT向け: fan_in::target::digest
+
         """
         result: list[tuple[str, list[str], str]] = []
         workflow = wf or self._workflow
@@ -197,7 +205,7 @@ class WorkflowViz:
         return result
 
     def _compute_normal_edges(self, wf: Workflow | None = None) -> list[tuple[str, str, bool]]:
-        """Return list of (source_id, target_id, is_conditional) for non-fan-in groups."""
+        """fan-inでないグループの(source_id, target_id, is_conditional)のリストを返します。"""
         edges: list[tuple[str, str, bool]] = []
         workflow = wf or self._workflow
         for group in workflow.edge_groups:
@@ -208,21 +216,20 @@ class WorkflowViz:
                 edges.append((edge.source_id, edge.target_id, is_cond))
         return edges
 
-    # endregion
-
-    # region Internal emitters (DOT)
+    # endregion region Internal emitters (DOT)
 
     def _emit_workflow_digraph(self, wf: Workflow, lines: list[str], indent: str, ns: str | None = None) -> None:
-        """Emit DOT nodes/edges for the given workflow.
+        """指定されたワークフローのDOTノード/エッジを出力します。
 
-        If ns (namespace) is provided, node ids are prefixed with f"{ns}/" for uniqueness,
-        but labels remain the original executor ids.
+        ns（namespace）が指定された場合、ノードIDはf"{ns}/"でプレフィックスされて一意になりますが、
+        ラベルは元のexecutor IDのままです。
+
         """
 
         def map_id(x: str) -> str:
             return f"{ns}/{x}" if ns else x
 
-        # Nodes
+        # ノード
         start_executor_id = wf.start_executor_id
         lines.append(
             f'{indent}"{map_id(start_executor_id)}" [fillcolor=lightgreen, label="{start_executor_id}\\n(Start)"];'
@@ -231,27 +238,27 @@ class WorkflowViz:
             if executor_id != start_executor_id:
                 lines.append(f'{indent}"{map_id(executor_id)}" [label="{executor_id}"];')
 
-        # Fan-in nodes
+        # fan-inノード
         fan_in_nodes = self._compute_fan_in_descriptors(wf)
         if fan_in_nodes:
             lines.append("")
             for node_id, _, _ in fan_in_nodes:
                 lines.append(f'{indent}"{map_id(node_id)}" [shape=ellipse, fillcolor=lightgoldenrod, label="fan-in"];')
 
-        # Fan-in edges
+        # fan-inエッジ
         for node_id, sources, target in fan_in_nodes:
             for src in sources:
                 lines.append(f'{indent}"{map_id(src)}" -> "{map_id(node_id)}";')
             lines.append(f'{indent}"{map_id(node_id)}" -> "{map_id(target)}";')
 
-        # Normal edges
+        # 通常のエッジ
         for src, tgt, is_cond in self._compute_normal_edges(wf):
             edge_attr = ' [style=dashed, label="conditional"]' if is_cond else ""
             lines.append(f'{indent}"{map_id(src)}" -> "{map_id(tgt)}"{edge_attr};')
 
     def _emit_sub_workflows_digraph(self, wf: Workflow, lines: list[str], indent: str) -> None:
-        """Emit DOT subgraphs for any WorkflowExecutor instances found in the workflow."""
-        # Lazy import to avoid any potential import cycles
+        """ワークフロー内で見つかったWorkflowExecutorインスタンスのDOTサブグラフを出力します。"""
+        # 潜在的なインポート循環を避けるための遅延インポート。
         try:
             from ._workflow_executor import WorkflowExecutor  # type: ignore
         except ImportError:  # pragma: no cover - best-effort; if unavailable, skip subgraphs
@@ -264,18 +271,16 @@ class WorkflowViz:
                 lines.append(f'{indent}  label="sub-workflow: {exec_id}";')
                 lines.append(f"{indent}  style=dashed;")
 
-                # Emit the nested workflow inside this cluster using a namespace
+                # このクラスター内のネストされたワークフローをnamespaceを使って出力します。
                 ns = exec_id
                 self._emit_workflow_digraph(exec_obj.workflow, lines, indent=f"{indent}  ", ns=ns)
 
-                # Recurse into deeper nested sub-workflows
+                # より深いネストされたサブワークフローに再帰します。
                 self._emit_sub_workflows_digraph(exec_obj.workflow, lines, indent=f"{indent}  ")
 
                 lines.append(f"{indent}}}")
 
-    # endregion
-
-    # region Internal emitters (Mermaid)
+    # endregion region Internal emitters (Mermaid)
 
     def _emit_workflow_mermaid(self, wf: Workflow, lines: list[str], indent: str, ns: str | None = None) -> None:
         def _san(s: str) -> str:
@@ -289,7 +294,7 @@ class WorkflowViz:
                 return f"{_san(ns)}__{_san(x)}"
             return _san(x)
 
-        # Nodes
+        # ノード
         start_executor_id = wf.start_executor_id
         lines.append(f'{indent}{map_id(start_executor_id)}["{start_executor_id} (Start)"];')
         for executor_id in wf.executors:
@@ -297,7 +302,7 @@ class WorkflowViz:
                 continue
             lines.append(f'{indent}{map_id(executor_id)}["{executor_id}"];')
 
-        # Fan-in nodes
+        # fan-inノード
         fan_in_nodes_dot = self._compute_fan_in_descriptors(wf)
         fan_in_nodes: list[tuple[str, list[str], str]] = []
         for dot_node_id, sources, target in fan_in_nodes_dot:
@@ -307,16 +312,16 @@ class WorkflowViz:
             fan_in_nodes.append((fan_node_id, sources, target))
 
         for fan_node_id, _, _ in fan_in_nodes:
-            # Keep this line without trailing semicolon to match existing tests
+            # 既存のテストに合わせるため、末尾のセミコロンなしでこの行を保持します。
             lines.append(f"{indent}{fan_node_id}((fan-in))")
 
-        # Fan-in edges
+        # fan-inエッジ
         for fan_node_id, sources, target in fan_in_nodes:
             for s in sources:
                 lines.append(f"{indent}{map_id(s)} --> {fan_node_id};")
             lines.append(f"{indent}{fan_node_id} --> {map_id(target)};")
 
-        # Normal edges
+        # 通常のエッジ
         for src, tgt, is_cond in self._compute_normal_edges(wf):
             s = map_id(src)
             t = map_id(tgt)
@@ -341,9 +346,9 @@ class WorkflowViz:
             if isinstance(exec_obj, WorkflowExecutor) and hasattr(exec_obj, "workflow") and exec_obj.workflow:
                 sg_id = _san(exec_id)
                 lines.append(f"{indent}subgraph {sg_id}")
-                # Render nested workflow within this subgraph using namespacing
+                # このサブグラフ内で名前空間を使ってネストされたワークフローをレンダリングします。
                 self._emit_workflow_mermaid(exec_obj.workflow, lines, indent=f"{indent}  ", ns=exec_id)
-                # Recurse into deeper sub-workflows
+                # より深いサブワークフローに再帰します。
                 self._emit_sub_workflows_mermaid(exec_obj.workflow, lines, indent=f"{indent}  ")
                 lines.append(f"{indent}end")
 

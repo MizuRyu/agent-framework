@@ -28,20 +28,21 @@ showing integration with ChatAgent and both streaming and non-streaming response
 @use_function_invocation
 @use_chat_middleware
 class EchoingChatClient(BaseChatClient):
-    """A custom chat client that echoes messages back with modifications.
+    """メッセージを修正してエコーバックするカスタムチャットクライアント。
 
-    This demonstrates how to implement a custom chat client by extending BaseChatClient
-    and implementing the required _inner_get_response() and _inner_get_streaming_response() methods.
+    これはBaseChatClientを拡張し、必要な_inner_get_response()と_inner_get_streaming_response()メソッドを実装することで
+    カスタムチャットクライアントを実装する方法を示す。
     """
 
     OTEL_PROVIDER_NAME: ClassVar[str] = "EchoingChatClient"
 
     def __init__(self, *, prefix: str = "Echo:", **kwargs: Any) -> None:
-        """Initialize the EchoingChatClient.
+        """EchoingChatClientを初期化する。
 
         Args:
-            prefix: Prefix to add to echoed messages.
-            **kwargs: Additional keyword arguments passed to BaseChatClient.
+            prefix: エコーバックするメッセージに追加するプレフィックス。
+            **kwargs: BaseChatClientに渡される追加のキーワード引数。
+
         """
         super().__init__(**kwargs)
         self.prefix = prefix
@@ -53,11 +54,11 @@ class EchoingChatClient(BaseChatClient):
         chat_options: ChatOptions,
         **kwargs: Any,
     ) -> ChatResponse:
-        """Echo back the user's message with a prefix."""
+        """ユーザーのメッセージをプレフィックス付きでエコーバックする。"""
         if not messages:
             response_text = "No messages to echo!"
         else:
-            # Echo the last user message
+            # 最後のユーザーメッセージをエコーする
             last_user_message = None
             for message in reversed(messages):
                 if message.role == Role.USER:
@@ -84,14 +85,14 @@ class EchoingChatClient(BaseChatClient):
         chat_options: ChatOptions,
         **kwargs: Any,
     ) -> AsyncIterable[ChatResponseUpdate]:
-        """Stream back the echoed message character by character."""
-        # Get the complete response first
+        """エコーしたメッセージを文字ごとにストリーミングで返す。"""
+        # 最初に完全なレスポンスを取得する
         response = await self._inner_get_response(messages=messages, chat_options=chat_options, **kwargs)
 
         if response.messages:
             response_text = response.messages[0].text or ""
 
-            # Stream character by character
+            # 文字ごとにストリーミングする
             for char in response_text:
                 yield ChatResponseUpdate(
                     contents=[TextContent(text=char)],
@@ -103,20 +104,20 @@ class EchoingChatClient(BaseChatClient):
 
 
 async def main() -> None:
-    """Demonstrates how to implement and use a custom chat client with ChatAgent."""
+    """ChatAgentを使ったカスタムチャットクライアントの実装と使用例を示す。"""
     print("=== Custom Chat Client Example ===\n")
 
-    # Create the custom chat client
+    # カスタムチャットクライアントを作成する
     print("--- EchoingChatClient Example ---")
 
     echo_client = EchoingChatClient(prefix="🔊 Echo:")
 
-    # Use the chat client directly
+    # チャットクライアントを直接使用する
     print("Using chat client directly:")
     direct_response = await echo_client.get_response("Hello, custom chat client!")
     print(f"Direct response: {direct_response.messages[0].text}")
 
-    # Create an agent using the custom chat client
+    # カスタムチャットクライアントを使ってAgentを作成する
     echo_agent = echo_client.create_agent(
         name="EchoAgent",
         instructions="You are a helpful assistant that echoes back what users say.",
@@ -125,13 +126,13 @@ async def main() -> None:
     print(f"\nAgent Name: {echo_agent.name}")
     print(f"Agent Display Name: {echo_agent.display_name}")
 
-    # Test non-streaming with agent
+    # Agentで非ストリーミングをテストする
     query = "This is a test message"
     print(f"\nUser: {query}")
     result = await echo_agent.run(query)
     print(f"Agent: {result.messages[0].text}")
 
-    # Test streaming with agent
+    # Agentでストリーミングをテストする
     query2 = "Stream this message back to me"
     print(f"\nUser: {query2}")
     print("Agent: ", end="", flush=True)
@@ -140,12 +141,12 @@ async def main() -> None:
             print(chunk.text, end="", flush=True)
     print()
 
-    # Example: Using with threads and conversation history
+    # Threadと会話履歴を使った例
     print("\n--- Using Custom Chat Client with Thread ---")
 
     thread = echo_agent.get_new_thread()
 
-    # Multiple messages in conversation
+    # 会話内の複数メッセージ
     messages = [
         "Hello, I'm starting a conversation",
         "How are you doing?",
@@ -157,7 +158,7 @@ async def main() -> None:
         print(f"User: {msg}")
         print(f"Agent: {result.messages[0].text}\n")
 
-    # Check conversation history
+    # 会話履歴を確認する
     if thread.message_store:
         thread_messages = await thread.message_store.list_messages()
         print(f"Thread contains {len(thread_messages)} messages")

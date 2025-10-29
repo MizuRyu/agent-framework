@@ -52,12 +52,12 @@ def test_magentic_start_message_from_string():
 
 
 def test_plan_review_request_defaults_and_reply_variants():
-    req = MagenticPlanReviewRequest()  # defaults provided by dataclass
+    req = MagenticPlanReviewRequest()  # dataclass によって提供されるデフォルト値
     assert hasattr(req, "request_id")
     assert req.task_text == "" and req.facts_text == "" and req.plan_text == ""
     assert isinstance(req.round_index, int) and req.round_index == 0
 
-    # Replies: approve, revise with comments, revise with edited text
+    # 返信：承認、コメント付き修正、編集テキスト付き修正
     approve = MagenticPlanReviewReply(decision=MagenticPlanReviewDecision.APPROVE)
     revise_comments = MagenticPlanReviewReply(decision=MagenticPlanReviewDecision.REVISE, comments="Tighten scope")
     revise_text = MagenticPlanReviewReply(
@@ -75,7 +75,7 @@ def test_magentic_context_reset_behavior():
         task=ChatMessage(role=Role.USER, text="task"),
         participant_descriptions={"Alice": "Researcher"},
     )
-    # seed context state
+    # シードコンテキストの状態
     ctx.chat_history.append(ChatMessage(role=Role.ASSISTANT, text="draft"))
     ctx.stall_count = 2
     prev_reset = ctx.reset_count
@@ -94,7 +94,7 @@ class _SimpleLedger:
 
 
 class FakeManager(MagenticManagerBase):
-    """Deterministic manager for tests that avoids real LLM calls."""
+    """実際の LLM 呼び出しを回避するテスト用の決定論的 manager。"""
 
     task_ledger: _SimpleLedger | None = None
     satisfied_after_signoff: bool = True
@@ -219,7 +219,7 @@ async def test_magentic_workflow_plan_review_approval_to_completion():
 
 async def test_magentic_plan_review_approve_with_comments_replans_and_proceeds():
     class CountingManager(FakeManager):
-        # Declare as a model field so assignment is allowed under Pydantic
+        # Pydantic の下で代入を許可するためにモデルフィールドとして宣言。
         replan_count: int = 0
 
         def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
@@ -238,14 +238,14 @@ async def test_magentic_plan_review_approve_with_comments_replans_and_proceeds()
         .build()
     )
 
-    # Wait for the initial plan review request
+    # 初期の計画レビューリクエストを待ちます。
     req_event: RequestInfoEvent | None = None
     async for ev in wf.run_stream("do work"):
         if isinstance(ev, RequestInfoEvent) and ev.request_type is MagenticPlanReviewRequest:
             req_event = ev
     assert req_event is not None
 
-    # Reply APPROVE with comments (no edited text). Expect one replan and no second review round.
+    # コメント付きで APPROVE に返信（編集テキストなし）。1回の再計画があり、2回目のレビューラウンドはなしと予想。
     saw_second_review = False
     completed = False
     async for ev in wf.send_responses_streaming({
@@ -263,7 +263,7 @@ async def test_magentic_plan_review_approve_with_comments_replans_and_proceeds()
     assert completed
     assert manager.replan_count >= 1
     assert saw_second_review is False
-    # Replan from FakeManager updates facts/plan to include A2 / Do Z
+    # FakeManager からの再計画で A2 / Do Z を含む事実/計画を更新。
     assert manager.task_ledger is not None
     combined_text = (manager.task_ledger.facts.text or "") + (manager.task_ledger.plan.text or "")
     assert ("A2" in combined_text) or ("Do Z" in combined_text)
@@ -286,7 +286,7 @@ async def test_magentic_orchestrator_round_limit_produces_partial_result():
         (e for e in events if isinstance(e, WorkflowStatusEvent) and e.state == WorkflowRunState.IDLE), None
     )
     assert idle_status is not None
-    # Check that we got workflow output via WorkflowOutputEvent
+    # WorkflowOutputEvent を介してワークフロー出力を取得したことを確認。
     output_event = next((e for e in events if isinstance(e, WorkflowOutputEvent)), None)
     assert output_event is not None
     data = output_event.data
@@ -346,7 +346,7 @@ async def test_magentic_checkpoint_resume_round_trip():
     assert orchestrator._context.chat_history  # type: ignore[reportPrivateUsage]
     assert orchestrator._task_ledger is not None  # type: ignore[reportPrivateUsage]
     assert manager2.task_ledger is not None
-    # Latest entry in chat history should be the task ledger plan
+    # チャット履歴の最新エントリはタスク台帳計画であるべき。
     assert orchestrator._context.chat_history[-1].text == orchestrator._task_ledger.text  # type: ignore[reportPrivateUsage]
 
 
@@ -383,7 +383,7 @@ from agent_framework import StandardMagenticManager  # noqa: E402
 class _StubChatClient(ChatClientProtocol):
     @property
     def additional_properties(self) -> dict[str, Any]:
-        """Get additional properties associated with the client."""
+        """クライアントに関連付けられた追加のプロパティを取得。"""
         return {}
 
     async def get_response(self, messages, **kwargs):  # type: ignore[override]
@@ -401,12 +401,12 @@ async def test_standard_manager_plan_and_replan_via_complete_monkeypatch():
     mgr = StandardMagenticManager(chat_client=_StubChatClient())
 
     async def fake_complete_plan(messages: list[ChatMessage], **kwargs: Any) -> ChatMessage:
-        # Return a different response depending on call order length
+        # 呼び出し順の長さに応じて異なる応答を返す。
         if any("FACTS" in (m.text or "") for m in messages):
             return ChatMessage(role=Role.ASSISTANT, text="- step A\n- step B")
         return ChatMessage(role=Role.ASSISTANT, text="GIVEN OR VERIFIED FACTS\n- fact1")
 
-    # First, patch to produce facts then plan
+    # 最初に、事実を生成し、その後計画を生成するようにパッチ。
     mgr._complete = fake_complete_plan  # type: ignore[attr-defined]
 
     ctx = MagenticContext(
@@ -414,12 +414,12 @@ async def test_standard_manager_plan_and_replan_via_complete_monkeypatch():
         participant_descriptions={"A": "desc"},
     )
     combined = await mgr.plan(ctx.clone())
-    # Assert structural headings and that steps appear in the combined ledger output.
+    # 構造的な見出しとステップが結合された台帳出力に現れることをアサート。
     assert "We are working to address the following user request:" in combined.text
     assert "Here is the plan to follow as best as possible:" in combined.text
     assert any(t in combined.text for t in ("- step A", "- step B", "- step"))
 
-    # Now replan with new outputs
+    # 新しい出力で再計画。
     async def fake_complete_replan(messages: list[ChatMessage], **kwargs: Any) -> ChatMessage:
         if any("Please briefly explain" in (m.text or "") for m in messages):
             return ChatMessage(role=Role.ASSISTANT, text="- new step")
@@ -437,7 +437,7 @@ async def test_standard_manager_progress_ledger_success_and_error():
         participant_descriptions={"alice": "desc"},
     )
 
-    # Success path: valid JSON
+    # 成功パス：有効な JSON。
     async def fake_complete_ok(messages: list[ChatMessage], **kwargs: Any) -> ChatMessage:
         json_text = (
             '{"is_request_satisfied": {"reason": "r", "answer": false}, '
@@ -452,7 +452,7 @@ async def test_standard_manager_progress_ledger_success_and_error():
     ledger = await mgr.create_progress_ledger(ctx.clone())
     assert ledger.next_speaker.answer == "alice"
 
-    # Error path: invalid JSON now raises to avoid emitting planner-oriented instructions to agents
+    # エラーパス：無効な JSON は、エージェントにプランナー指向の指示を出さないように例外を発生させる。
     async def fake_complete_bad(messages: list[ChatMessage], **kwargs: Any) -> ChatMessage:
         return ChatMessage(role=Role.ASSISTANT, text="not-json")
 
@@ -474,7 +474,7 @@ class InvokeOnceManager(MagenticManagerBase):
 
     async def create_progress_ledger(self, magentic_context: MagenticContext) -> _MagenticProgressLedger:
         if not self._invoked:
-            # First round: ask agentA to respond
+            # 最初のラウンド：agentA に応答を依頼。
             self._invoked = True
             return _MagenticProgressLedger(
                 is_request_satisfied=_MagenticProgressLedgerItem(reason="r", answer=False),
@@ -483,7 +483,7 @@ class InvokeOnceManager(MagenticManagerBase):
                 next_speaker=_MagenticProgressLedgerItem(reason="r", answer="agentA"),
                 instruction_or_question=_MagenticProgressLedgerItem(reason="r", answer="say hi"),
             )
-        # Next round: mark satisfied so run can conclude
+        # 次のラウンド：満足済みとしてマークし、実行を終了可能にする。
         return _MagenticProgressLedger(
             is_request_satisfied=_MagenticProgressLedgerItem(reason="r", answer=True),
             is_in_loop=_MagenticProgressLedgerItem(reason="r", answer=False),
@@ -509,15 +509,15 @@ class StubThreadAgent(BaseAgent):
 
 
 class StubAssistantsClient:
-    pass  # class name used for branch detection
+    pass  # ブランチ検出に使用されるクラス名。
 
 
 class StubAssistantsAgent(BaseAgent):
-    chat_client: object | None = None  # allow assignment via Pydantic field
+    chat_client: object | None = None  # Pydantic フィールド経由の代入を許可。
 
     def __init__(self) -> None:
         super().__init__()
-        self.chat_client = StubAssistantsClient()  # type name contains 'AssistantsClient'
+        self.chat_client = StubAssistantsClient()  # タイプ名に 'AssistantsClient' を含む。
 
     async def run_stream(self, messages=None, *, thread=None, **kwargs):  # type: ignore[override]
         yield AgentRunResponseUpdate(
@@ -540,7 +540,7 @@ async def _collect_agent_responses_setup(participant_obj: object):
         .build()
     )
 
-    # Run a bounded stream to allow one invoke and then completion
+    # 1回の呼び出しとその後の完了を許可する制限付きストリームを実行。
     events: list[WorkflowEvent] = []
     async for ev in wf.run_stream("task"):  # plan review disabled
         events.append(ev)
@@ -556,7 +556,7 @@ async def _collect_agent_responses_setup(participant_obj: object):
 
 async def test_agent_executor_invoke_with_thread_chat_client():
     captured = await _collect_agent_responses_setup(StubThreadAgent())
-    # Should have at least one response from agentA via _MagenticAgentExecutor path
+    # 少なくとも1つの agentA からの応答が _MagenticAgentExecutor 経路を通じてあるはず。
     assert any((m.author_name == "agentA" and "ok" in (m.text or "")) for m in captured)
 
 
@@ -609,7 +609,7 @@ async def test_magentic_checkpoint_resume_inner_loop_superstep():
 async def test_magentic_checkpoint_resume_after_reset():
     storage = InMemoryCheckpointStorage()
 
-    # Use the working InvokeOnceManager first to get a completed workflow
+    # 最初に動作する InvokeOnceManager を使用して完了したワークフローを取得。
     manager = InvokeOnceManager()
 
     workflow = (
@@ -626,11 +626,9 @@ async def test_magentic_checkpoint_resume_after_reset():
 
     checkpoints = await _collect_checkpoints(storage)
 
-    # For this test, we just need to verify that we can resume from any checkpoint
-    # The original test intention was to test resuming after a reset has occurred
-    # Since we can't easily simulate a reset in the test environment without causing hangs,
-    # we'll test the basic checkpoint resume functionality which is the core requirement
-    resumed_state = checkpoints[-1]  # Use the last checkpoint
+    # このテストでは任意のチェックポイントから再開できることを検証するだけです。 元のテストの意図はリセット後の再開をテストすることでした。
+    # テスト環境でリセットをシミュレートするとハングするため、 基本的なチェックポイント再開機能をテストします。
+    resumed_state = checkpoints[-1]  # 最後のチェックポイントを使用。
 
     resumed_workflow = (
         MagenticBuilder()
@@ -691,8 +689,7 @@ async def test_magentic_checkpoint_resume_rejects_participant_renames():
 
 
 class NotProgressingManager(MagenticManagerBase):
-    """
-    A manager that never marks progress being made, to test stall/reset limits.
+    """進捗を一切マークしない manager で、スタール/リセット制限をテストします。
     """
 
     async def plan(self, magentic_context: MagenticContext) -> ChatMessage:

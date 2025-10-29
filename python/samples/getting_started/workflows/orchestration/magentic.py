@@ -50,9 +50,9 @@ async def main() -> None:
         instructions=(
             "You are a Researcher. You find information without additional computation or quantitative analysis."
         ),
-        # This agent requires the gpt-4o-search-preview model to perform web searches.
-        # Feel free to explore with other agents that support web search, for example,
-        # the `OpenAIResponseAgent` or `AzureAgentProtocol` with bing grounding.
+        # このAgentはweb検索を行うためにgpt-4o-search-previewモデルを必要とします。
+        # web検索をサポートする他のAgentも自由に試してください。例えば、 `OpenAIResponseAgent`やbing
+        # groundingを使った`AzureAgentProtocol`などです。
         chat_client=OpenAIChatClient(model_id="gpt-4o-search-preview"),
     )
 
@@ -66,7 +66,7 @@ async def main() -> None:
 
     print("\nBuilding Magentic Workflow...")
 
-    # State used by on_agent_stream callback
+    # on_agent_streamコールバックで使用されるState
     last_stream_agent_id: str | None = None
     stream_line_open: bool = False
 

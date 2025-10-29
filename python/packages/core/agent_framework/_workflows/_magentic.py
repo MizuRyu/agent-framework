@@ -51,13 +51,13 @@ else:
 
 logger = logging.getLogger(__name__)
 
-# Consistent author name for messages produced by the Magentic manager/orchestrator
+# Magenticマネージャー/オーケストレーターが生成するメッセージの一貫した著者名
 MAGENTIC_MANAGER_NAME = "magentic_manager"
 
-# Optional kinds for generic orchestrator message callback
+# 汎用オーケストレーターのメッセージコールバックのための任意の種類
 ORCH_MSG_KIND_USER_TASK = "user_task"
 ORCH_MSG_KIND_TASK_LEDGER = "task_ledger"
-# Newly surfaced kinds for unified callback consumers
+# 統一されたコールバックコンシューマのための新たに公開された種類
 ORCH_MSG_KIND_INSTRUCTION = "instruction"
 ORCH_MSG_KIND_NOTICE = "notice"
 
@@ -155,9 +155,7 @@ class CallbackSink(Protocol):
     async def __call__(self, event: MagenticCallbackEvent) -> None: ...
 
 
-# endregion Unified callback API
-
-# region Magentic One Prompts
+# endregion Unified callback API region Magentic One Prompts
 
 ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT = """Below I will present you a request.
 
@@ -198,7 +196,7 @@ original request. Remember, there is no requirement to involve all team members.
 may not be needed for this task.
 """
 
-# Added to render the ledger in a single assistant message, mirroring the original behavior.
+# 元の動作を反映し、元帳を単一のassistantメッセージでレンダリングするために追加されました。
 ORCHESTRATOR_TASK_LEDGER_FULL_PROMPT = """
 We are working to address the following user request:
 
@@ -313,23 +311,23 @@ The answer should be phrased as if you were speaking to the user.
 
 
 def _new_chat_history() -> list[ChatMessage]:
-    """Typed default factory for chat history list to satisfy type checkers."""
+    """型チェッカーを満たすために、chat historyリストのデフォルトファクトリに型を付けました。"""
     return []
 
 
 def _new_participant_descriptions() -> dict[str, str]:
-    """Typed default factory for participant descriptions dict to satisfy type checkers."""
+    """型チェッカーを満たすために、participant descriptions辞書のデフォルトファクトリに型を付けました。"""
     return {}
 
 
 def _new_chat_message_list() -> list[ChatMessage]:
-    """Typed default factory for ChatMessage list to satisfy type checkers."""
+    """型チェッカーを満たすために、ChatMessageリストのデフォルトファクトリに型を付けました。"""
     return []
 
 
 @dataclass
 class _MagenticStartMessage(DictConvertible):
-    """Internal: A message to start a magentic workflow."""
+    """内部用: magenticワークフローを開始するためのメッセージ。"""
 
     messages: list[ChatMessage] = field(default_factory=_new_chat_message_list)
 
@@ -348,16 +346,16 @@ class _MagenticStartMessage(DictConvertible):
 
     @property
     def task(self) -> ChatMessage:
-        """Final user message for the task."""
+        """タスクの最終ユーザーメッセージ。"""
         return self.messages[-1]
 
     @classmethod
     def from_string(cls, task_text: str) -> "_MagenticStartMessage":
-        """Create a MagenticStartMessage from a simple string."""
+        """単純な文字列からMagenticStartMessageを作成します。"""
         return cls(task_text)
 
     def to_dict(self) -> dict[str, Any]:
-        """Create a dict representation of the message."""
+        """メッセージの辞書表現を作成します。"""
         return {
             "messages": [message.to_dict() for message in self.messages],
             "task": self.task.to_dict(),
@@ -365,7 +363,7 @@ class _MagenticStartMessage(DictConvertible):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "_MagenticStartMessage":
-        """Create from a dict."""
+        """辞書から作成します。"""
         if "messages" in data:
             raw_messages = data["messages"]
             if not isinstance(raw_messages, Sequence) or isinstance(raw_messages, (str, bytes)):
@@ -380,16 +378,17 @@ class _MagenticStartMessage(DictConvertible):
 
 @dataclass
 class _MagenticRequestMessage(_GroupChatRequestMessage):
-    """Internal: A request message type for agents in a magentic workflow."""
+    """内部用: magenticワークフロー内のエージェント向けリクエストメッセージタイプ。"""
 
     task_context: str = ""
 
 
 class _MagenticResponseMessage(_GroupChatResponseMessage):
-    """Internal: A response message type.
+    """内部用: レスポンスメッセージタイプ。
 
-    When emitted by the orchestrator you can mark it as a broadcast to all agents,
-    or target a specific agent by name.
+    オーケストレーターが発行する場合、すべてのエージェントへのブロードキャストとしてマークするか、
+    名前で特定のエージェントをターゲットにすることができます。
+
     """
 
     def __init__(
@@ -408,12 +407,12 @@ class _MagenticResponseMessage(_GroupChatResponseMessage):
         self.broadcast = broadcast
 
     def to_dict(self) -> dict[str, Any]:
-        """Create a dict representation of the message."""
+        """メッセージの辞書表現を作成します。"""
         return {"body": self.body.to_dict(), "target_agent": self.target_agent, "broadcast": self.broadcast}
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "_MagenticResponseMessage":
-        """Create from a dict."""
+        """辞書から作成します。"""
         body = ChatMessage.from_dict(value["body"])
         target_agent = value.get("target_agent")
         broadcast = value.get("broadcast", False)
@@ -422,14 +421,14 @@ class _MagenticResponseMessage(_GroupChatResponseMessage):
 
 @dataclass
 class _MagenticPlanReviewRequest(RequestInfoMessage):
-    """Internal: Human-in-the-loop request to review and optionally edit the plan before execution."""
+    """内部用: 実行前に計画をレビューし、オプションで編集するためのHuman-in-the-loopリクエスト。"""
 
-    # Because RequestInfoMessage defines a default field (request_id),
-    # subclass fields must also have defaults to satisfy dataclass rules.
+    # RequestInfoMessageがデフォルトフィールド(request_id)を定義しているため、
+    # サブクラスのフィールドもdataclassルールを満たすためにデフォルトを持つ必要があります。
     task_text: str = ""
     facts_text: str = ""
     plan_text: str = ""
-    round_index: int = 0  # number of review rounds so far
+    round_index: int = 0  # これまでのレビューラウンド数
 
 
 class MagenticPlanReviewDecision(str, Enum):
@@ -439,16 +438,16 @@ class MagenticPlanReviewDecision(str, Enum):
 
 @dataclass
 class _MagenticPlanReviewReply:
-    """Internal: Human reply to a plan review request."""
+    """内部用: 計画レビューリクエストに対する人間の返信。"""
 
     decision: MagenticPlanReviewDecision
-    edited_plan_text: str | None = None  # if supplied, becomes the new plan text verbatim
-    comments: str | None = None  # guidance for replan if no edited text provided
+    edited_plan_text: str | None = None  # 指定された場合、そのまま新しい計画テキストになります。
+    comments: str | None = None  # 編集されたテキストが提供されなかった場合の再計画の指針。
 
 
 @dataclass
 class _MagenticTaskLedger(DictConvertible):
-    """Internal: Task ledger for the Standard Magentic manager."""
+    """内部用: Standard Magenticマネージャーのタスク元帳。"""
 
     facts: ChatMessage
     plan: ChatMessage
@@ -466,7 +465,7 @@ class _MagenticTaskLedger(DictConvertible):
 
 @dataclass
 class _MagenticProgressLedgerItem(DictConvertible):
-    """Internal: A progress ledger item."""
+    """内部用: 進捗元帳アイテム。"""
 
     reason: str
     answer: str | bool
@@ -478,13 +477,13 @@ class _MagenticProgressLedgerItem(DictConvertible):
     def from_dict(cls, data: dict[str, Any]) -> "_MagenticProgressLedgerItem":
         answer_value = data.get("answer")
         if not isinstance(answer_value, (str, bool)):
-            answer_value = ""  # Default to empty string if not str or bool
+            answer_value = ""  # strまたはboolでない場合は空文字列をデフォルトにします。
         return cls(reason=data.get("reason", ""), answer=answer_value)
 
 
 @dataclass
 class _MagenticProgressLedger(DictConvertible):
-    """Internal: A progress ledger for tracking workflow progress."""
+    """内部用: ワークフローの進捗を追跡するための進捗元帳。"""
 
     is_request_satisfied: _MagenticProgressLedgerItem
     is_in_loop: _MagenticProgressLedgerItem
@@ -514,7 +513,7 @@ class _MagenticProgressLedger(DictConvertible):
 
 @dataclass
 class MagenticContext(DictConvertible):
-    """Context for the Magentic manager."""
+    """Magenticマネージャーのコンテキスト。"""
 
     task: ChatMessage
     chat_history: list[ChatMessage] = field(default_factory=_new_chat_history)
@@ -549,23 +548,22 @@ class MagenticContext(DictConvertible):
         )
 
     def reset(self) -> None:
-        """Reset the context.
+        """コンテキストをリセットします。
 
-        This will clear the chat history and reset the stall count.
-        This will not reset the task, round count, or participant descriptions.
+        これによりチャット履歴がクリアされ、スタールカウントがリセットされます。
+        タスク、ラウンドカウント、参加者説明はリセットされません。
+
         """
         self.chat_history.clear()
         self.stall_count = 0
         self.reset_count += 1
 
 
-# endregion Messages and Types
-
-# region Utilities
+# endregion Messages and Types region Utilities
 
 
 def _team_block(participants: dict[str, str]) -> str:
-    """Render participant descriptions as a readable block."""
+    """参加者説明を読みやすいブロックとしてレンダリングします。"""
     return "\n".join(f"- {name}: {desc}" for name, desc in participants.items())
 
 
@@ -577,18 +575,19 @@ def _first_assistant(messages: list[ChatMessage]) -> ChatMessage | None:
 
 
 def _extract_json(text: str) -> dict[str, Any]:
-    """Potentially temp helper method.
+    """一時的なヘルパーメソッドの可能性があります。
 
-    Note: this method is required right now because the ChatClientProtocol, when calling
-    response.text, returns duplicate JSON payloads - need to figure out why.
+    注意: このメソッドは現在必要です。なぜならChatClientProtocolがresponse.textを呼ぶと
+    重複したJSONペイロードを返すためで、その原因を調査中です。
 
-    The `text` method is concatenating multiple text contents from diff msgs into a single string.
+    `text`メソッドは複数のメッセージからのテキスト内容を連結して単一の文字列にしています。
+
     """
     fence = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, flags=re.IGNORECASE)
     if fence:
         candidate = fence.group(1)
     else:
-        # Find first balanced JSON object
+        # 最初のバランスの取れたJSONオブジェクトを見つけます。
         start = text.find("{")
         if start == -1:
             raise ValueError("No JSON object found.")
@@ -626,20 +625,17 @@ T = TypeVar("T")
 
 
 def _coerce_model(model_cls: type[T], data: dict[str, Any]) -> T:
-    # Use type: ignore to suppress mypy errors for dynamic attribute access
-    # We check with hasattr() first, so this is safe
+    # 動的属性アクセスのmypyエラーを抑制するためにtype: ignoreを使用します。 最初にhasattr()でチェックしているので安全です。
     if hasattr(model_cls, "from_dict") and callable(model_cls.from_dict):  # type: ignore[attr-defined]
         return model_cls.from_dict(data)  # type: ignore[attr-defined,return-value,no-any-return]
     return model_cls(**data)  # type: ignore[arg-type,call-arg]
 
 
-# endregion Utilities
-
-# region Magentic Manager
+# endregion Utilities region Magentic Manager
 
 
 class MagenticManagerBase(ABC):
-    """Base class for the Magentic One manager."""
+    """Magentic Oneマネージャーの基底クラス。"""
 
     def __init__(
         self,
@@ -651,47 +647,48 @@ class MagenticManagerBase(ABC):
         self.max_stall_count = max_stall_count
         self.max_reset_count = max_reset_count
         self.max_round_count = max_round_count
-        # Base prompt surface for type safety; concrete managers may override with a str field.
+        # 型安全のための基本プロンプトサーフェス。具体的なマネージャーはstrフィールドでオーバーライド可能です。
         self.task_ledger_full_prompt: str = ORCHESTRATOR_TASK_LEDGER_FULL_PROMPT
 
     @abstractmethod
     async def plan(self, magentic_context: MagenticContext) -> ChatMessage:
-        """Create a plan for the task."""
+        """タスクの計画を作成します。"""
         ...
 
     @abstractmethod
     async def replan(self, magentic_context: MagenticContext) -> ChatMessage:
-        """Replan for the task."""
+        """タスクの再計画を行います。"""
         ...
 
     @abstractmethod
     async def create_progress_ledger(self, magentic_context: MagenticContext) -> _MagenticProgressLedger:
-        """Create a progress ledger."""
+        """進捗元帳を作成します。"""
         ...
 
     @abstractmethod
     async def prepare_final_answer(self, magentic_context: MagenticContext) -> ChatMessage:
-        """Prepare the final answer."""
+        """最終回答を準備します。"""
         ...
 
     def snapshot_state(self) -> dict[str, Any]:
-        """Serialize runtime state for checkpointing."""
+        """チェックポイント用にランタイム状態をシリアライズします。"""
         return {}
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        """Restore runtime state from checkpoint data."""
+        """チェックポイントデータからランタイム状態を復元します。"""
         return
 
 
 class StandardMagenticManager(MagenticManagerBase):
-    """Standard Magentic manager that performs real LLM calls via a ChatAgent.
+    """ChatAgentを介して実際のLLM呼び出しを行うStandard Magenticマネージャー。
 
-    The manager constructs prompts that mirror the original Magentic One orchestration:
-    - Facts gathering
-    - Plan creation
-    - Progress ledger in JSON
-    - Facts update and plan update on reset
-    - Final answer synthesis
+    マネージャーは元のMagentic Oneオーケストレーションを反映するプロンプトを構築します:
+    - 事実収集
+    - 計画作成
+    - JSON形式の進捗元帳
+    - リセット時の事実更新と計画更新
+    - 最終回答の合成
+
     """
 
     task_ledger: _MagenticTaskLedger | None
@@ -730,25 +727,26 @@ class StandardMagenticManager(MagenticManagerBase):
         max_round_count: int | None = None,
         progress_ledger_retry_count: int | None = None,
     ) -> None:
-        """Initialize the Standard Magentic Manager.
+        """Standard Magentic Managerを初期化します。
 
         Args:
-            chat_client: The chat client to use for LLM calls.
-            instructions: Instructions for the orchestrator agent.
+            chat_client: LLM呼び出しに使用するチャットクライアント。
+            instructions: オーケストレーターAgentへの指示。
 
         Keyword Args:
-            task_ledger: Optional task ledger for managing task state.
-            task_ledger_facts_prompt: Optional prompt for the task ledger facts.
-            task_ledger_plan_prompt: Optional prompt for the task ledger plan.
-            task_ledger_full_prompt: Optional prompt for the full task ledger.
-            task_ledger_facts_update_prompt: Optional prompt for updating task ledger facts.
-            task_ledger_plan_update_prompt: Optional prompt for updating task ledger plan.
-            progress_ledger_prompt: Optional prompt for the progress ledger.
-            final_answer_prompt: Optional prompt for the final answer.
-            max_stall_count: Maximum number of stalls allowed.
-            max_reset_count: Maximum number of resets allowed.
-            max_round_count: Maximum number of rounds allowed.
-            progress_ledger_retry_count: Maximum number of retries for the progress ledger.
+            task_ledger: タスク状態管理用のオプションのタスク元帳。
+            task_ledger_facts_prompt: タスク元帳の事実用オプションプロンプト。
+            task_ledger_plan_prompt: タスク元帳の計画用オプションプロンプト。
+            task_ledger_full_prompt: タスク元帳全体用オプションプロンプト。
+            task_ledger_facts_update_prompt: タスク元帳事実更新用オプションプロンプト。
+            task_ledger_plan_update_prompt: タスク元帳計画更新用オプションプロンプト。
+            progress_ledger_prompt: 進捗元帳用オプションプロンプト。
+            final_answer_prompt: 最終回答用オプションプロンプト。
+            max_stall_count: 最大スタール回数。
+            max_reset_count: 最大リセット回数。
+            max_round_count: 最大ラウンド数。
+            progress_ledger_retry_count: 進捗元帳の最大リトライ回数。
+
         """
         super().__init__(
             max_stall_count=max_stall_count,
@@ -760,7 +758,7 @@ class StandardMagenticManager(MagenticManagerBase):
         self.instructions: str | None = instructions
         self.task_ledger: _MagenticTaskLedger | None = task_ledger
 
-        # Prompts may be overridden if needed
+        # 必要に応じてプロンプトをオーバーライド可能です。
         self.task_ledger_facts_prompt: str = task_ledger_facts_prompt or ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT
         self.task_ledger_plan_prompt: str = task_ledger_plan_prompt or ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT
         self.task_ledger_full_prompt = task_ledger_full_prompt or ORCHESTRATOR_TASK_LEDGER_FULL_PROMPT
@@ -781,19 +779,20 @@ class StandardMagenticManager(MagenticManagerBase):
         self,
         messages: list[ChatMessage],
     ) -> ChatMessage:
-        """Call the underlying ChatClientProtocol directly and return the last assistant message.
+        """基盤となるChatClientProtocolを直接呼び出し、最後のassistantメッセージを返します。
 
-        If manager instructions are provided, they are injected as a SYSTEM message
-        at the start of the request to guide the model consistently without needing
-        an intermediate Agent wrapper.
+        マネージャーの指示が提供されている場合、それらはSYSTEMメッセージとして
+        リクエストの先頭に挿入され、モデルを一貫してガイドします。
+        中間のAgentラッパーは不要です。
+
         """
-        # Prepend system instructions if present
+        # システム指示があれば先頭に追加します。
         request_messages: list[ChatMessage] = []
         if self.instructions:
             request_messages.append(ChatMessage(role=Role.SYSTEM, text=self.instructions))
         request_messages.extend(messages)
 
-        # Invoke the chat client non-streaming API
+        # チャットクライアントの非ストリーミングAPIを呼び出します。
         response = await self.chat_client.get_response(request_messages)
         try:
             out_messages: list[ChatMessage] | None = list(response.messages)  # type: ignore[assignment]
@@ -808,33 +807,32 @@ class StandardMagenticManager(MagenticManagerBase):
                 author_name=last.author_name or MAGENTIC_MANAGER_NAME,
             )
 
-        # Fallback if no messages
+        # メッセージがない場合のフォールバック。
         return ChatMessage(role=Role.ASSISTANT, text="No output produced.", author_name=MAGENTIC_MANAGER_NAME)
 
     async def plan(self, magentic_context: MagenticContext) -> ChatMessage:
-        """Create facts and plan using the model, then render a combined task ledger as a single assistant message."""
+        """モデルを使って事実と計画を作成し、結合されたタスク元帳を単一のassistantメッセージとしてレンダリングします。"""
         task_text = magentic_context.task.text
         team_text = _team_block(magentic_context.participant_descriptions)
 
-        # Gather facts
+        # 事実を収集します。
         facts_user = ChatMessage(
             role=Role.USER,
             text=self.task_ledger_facts_prompt.format(task=task_text),
         )
         facts_msg = await self._complete([*magentic_context.chat_history, facts_user])
 
-        # Create plan
+        # 計画を作成します。
         plan_user = ChatMessage(
             role=Role.USER,
             text=self.task_ledger_plan_prompt.format(team=team_text),
         )
         plan_msg = await self._complete([*magentic_context.chat_history, facts_user, facts_msg, plan_user])
 
-        # Store ledger and render full combined view
+        # 元帳を保存し、完全な結合ビューをレンダリングします。
         self.task_ledger = _MagenticTaskLedger(facts=facts_msg, plan=plan_msg)
 
-        # Also store individual messages in chat_history for better grounding
-        # This gives the progress ledger model access to the detailed reasoning
+        # より良いグラウンディングのために個別メッセージもchat_historyに保存します。 これにより進捗元帳モデルが詳細な推論にアクセスできます。
         magentic_context.chat_history.extend([facts_user, facts_msg, plan_user, plan_msg])
 
         combined = self.task_ledger_full_prompt.format(
@@ -846,21 +844,21 @@ class StandardMagenticManager(MagenticManagerBase):
         return ChatMessage(role=Role.ASSISTANT, text=combined, author_name=MAGENTIC_MANAGER_NAME)
 
     async def replan(self, magentic_context: MagenticContext) -> ChatMessage:
-        """Update facts and plan when stalling or looping has been detected."""
+        """スタールやループが検出された場合に事実と計画を更新します。"""
         if self.task_ledger is None:
             raise RuntimeError("replan() called before plan(); call plan() once before requesting a replan.")
 
         task_text = magentic_context.task.text
         team_text = _team_block(magentic_context.participant_descriptions)
 
-        # Update facts
+        # 事実を更新します。
         facts_update_user = ChatMessage(
             role=Role.USER,
             text=self.task_ledger_facts_update_prompt.format(task=task_text, old_facts=self.task_ledger.facts.text),
         )
         updated_facts = await self._complete([*magentic_context.chat_history, facts_update_user])
 
-        # Update plan
+        # 計画を更新します。
         plan_update_user = ChatMessage(
             role=Role.USER,
             text=self.task_ledger_plan_update_prompt.format(team=team_text),
@@ -872,11 +870,10 @@ class StandardMagenticManager(MagenticManagerBase):
             plan_update_user,
         ])
 
-        # Store and render
+        # 保存してレンダリングします。
         self.task_ledger = _MagenticTaskLedger(facts=updated_facts, plan=updated_plan)
 
-        # Also store individual messages in chat_history for better grounding
-        # This gives the progress ledger model access to the detailed reasoning
+        # より良いグラウンディングのために個別メッセージもchat_historyに保存します。 これにより進捗元帳モデルが詳細な推論にアクセスできます。
         magentic_context.chat_history.extend([facts_update_user, updated_facts, plan_update_user, updated_plan])
 
         combined = self.task_ledger_full_prompt.format(
@@ -888,10 +885,12 @@ class StandardMagenticManager(MagenticManagerBase):
         return ChatMessage(role=Role.ASSISTANT, text=combined, author_name=MAGENTIC_MANAGER_NAME)
 
     async def create_progress_ledger(self, magentic_context: MagenticContext) -> _MagenticProgressLedger:
-        """Use the model to produce a JSON progress ledger based on the conversation so far.
+        """これまでの会話に基づいてモデルにJSON形式の進捗元帳を生成させます。
 
-        Adds lightweight retries with backoff for transient parse issues and avoids selecting a
-        non-existent "unknown" agent. If there are no participants, a clear error is raised.
+        一時的な解析問題に対して軽量なリトライとバックオフを追加し、
+        存在しない"unknown"エージェントの選択を避けます。
+        参加者がいない場合は明確なエラーを発生させます。
+
         """
         agent_names = list(magentic_context.participant_descriptions.keys())
         if not agent_names:
@@ -907,7 +906,7 @@ class StandardMagenticManager(MagenticManagerBase):
         )
         user_message = ChatMessage(role=Role.USER, text=prompt)
 
-        # Include full context to help the model decide current stage, with small retry loop
+        # モデルが現在のステージを判断しやすいように完全なコンテキストを含め、小さなリトライループを設けます。
         attempts = 0
         last_error: Exception | None = None
         while attempts < self.progress_ledger_retry_count:
@@ -922,7 +921,7 @@ class StandardMagenticManager(MagenticManagerBase):
                     f"Progress ledger JSON parse failed (attempt {attempts}/{self.progress_ledger_retry_count}): {ex}"
                 )
                 if attempts < self.progress_ledger_retry_count:
-                    # brief backoff before next try
+                    # 次の試行までの短いバックオフ。
                     await asyncio.sleep(0.25 * attempts)
 
         raise RuntimeError(
@@ -930,11 +929,11 @@ class StandardMagenticManager(MagenticManagerBase):
         )
 
     async def prepare_final_answer(self, magentic_context: MagenticContext) -> ChatMessage:
-        """Ask the model to produce the final answer addressed to the user."""
+        """モデルにユーザー宛の最終回答を生成させます。"""
         prompt = self.final_answer_prompt.format(task=magentic_context.task.text)
         user_message = ChatMessage(role=Role.USER, text=prompt)
         response = await self._complete([*magentic_context.chat_history, user_message])
-        # Ensure role is assistant
+        # 役割がassistantであることを保証します。
         return ChatMessage(
             role=Role.ASSISTANT,
             text=response.text,
@@ -942,22 +941,21 @@ class StandardMagenticManager(MagenticManagerBase):
         )
 
 
-# endregion Magentic Manager
-
-# region Magentic Executors
+# endregion Magentic Manager region Magentic Executors
 
 
 class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
-    """Magentic orchestrator executor that handles all orchestration logic.
+    """MagenticオーケストレーターExecutorで、すべてのオーケストレーションロジックを処理します。
 
-    This executor manages the entire Magentic One workflow including:
-    - Initial planning and task ledger creation
-    - Progress tracking and completion detection
-    - Agent coordination and message routing
-    - Reset and replanning logic
+    このExecutorはMagentic Oneワークフロー全体を管理します:
+    - 初期計画とタスク元帳作成
+    - 進捗追跡と完了検出
+    - エージェントの調整とメッセージルーティング
+    - リセットと再計画ロジック
+
     """
 
-    # Typed attributes (initialized in __init__)
+    # 型付き属性（__init__で初期化）
     _agent_executors: dict[str, "MagenticAgentExecutor"]
     _context: "MagenticContext | None"
     _task_ledger: "ChatMessage | None"
@@ -976,14 +974,15 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         max_plan_review_rounds: int = 10,
         executor_id: str | None = None,
     ) -> None:
-        """Initializes a new instance of the MagenticOrchestratorExecutor.
+        """MagenticOrchestratorExecutorの新しいインスタンスを初期化します。
 
         Args:
-            manager: The Magentic manager instance.
-            participants: A dictionary of participant IDs to their names.
-            require_plan_signoff: Whether to require plan sign-off from a human.
-            max_plan_review_rounds: The maximum number of plan review rounds.
-            executor_id: An optional executor ID.
+            manager: Magenticマネージャーのインスタンス。
+            participants: 参加者IDから名前への辞書。
+            require_plan_signoff: 人間による計画承認が必要かどうか。
+            max_plan_review_rounds: 計画レビューの最大ラウンド数。
+            executor_id: オプションのExecutor ID。
+
         """
         super().__init__(executor_id or f"magentic_orchestrator_{uuid4().hex[:8]}")
         self._manager = manager
@@ -993,19 +992,19 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         self._require_plan_signoff = require_plan_signoff
         self._plan_review_round = 0
         self._max_plan_review_rounds = max_plan_review_rounds
-        # Registry of agent executors for internal coordination (e.g., resets)
+        # 内部調整用のエージェントExecutorのレジストリ（例: リセット）
         self._agent_executors = {}
-        # Terminal state marker to stop further processing after completion/limits
+        # 完了や制限後にさらなる処理を停止するための終端状態マーカー
         self._terminated = False
-        # Tracks whether checkpoint state has been applied for this run
+        # この実行でチェックポイント状態が適用されたかどうかを追跡します。
         self._state_restored = False
 
     def _get_author_name(self) -> str:
-        """Get the magentic manager name for orchestrator-generated messages."""
+        """オーケストレーター生成メッセージ用のmagenticマネージャー名を取得します。"""
         return MAGENTIC_MANAGER_NAME
 
     def register_agent_executor(self, name: str, executor: "MagenticAgentExecutor") -> None:
-        """Register an agent executor for internal control (no messages)."""
+        """内部制御用にエージェントExecutorを登録します（メッセージはなし）。"""
         self._agent_executors[name] = executor
 
     async def _emit_orchestrator_message(
@@ -1014,21 +1013,22 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         message: ChatMessage,
         kind: str,
     ) -> None:
-        """Emit orchestrator message to the workflow event stream.
+        """オーケストレーターのメッセージをワークフローイベントストリームに発行します。
 
-        Orchestrator messages flow through the unified workflow event stream as
-        MagenticOrchestratorMessageEvent instances. Consumers should subscribe to
-        these events via workflow.run_stream().
+        オーケストレーターのメッセージは統一されたワークフローイベントストリームを通じて
+        MagenticOrchestratorMessageEventインスタンスとして流れます。
+        コンシューマはworkflow.run_stream()を通じてこれらのイベントを購読すべきです。
 
         Args:
-            ctx: Workflow context for adding events to the stream
-            message: Orchestrator message to emit (task, plan, instruction, notice)
-            kind: Message classification (user_task, task_ledger, instruction, notice)
+            ctx: イベントをストリームに追加するためのワークフローコンテキスト
+            message: 発行するオーケストレーターのメッセージ（task, plan, instruction, notice）
+            kind: メッセージ分類（user_task, task_ledger, instruction, notice）
 
         Example:
             async for event in workflow.run_stream("task"):
                 if isinstance(event, MagenticOrchestratorMessageEvent):
                     print(f"Orchestrator {event.kind}: {event.message.text}")
+
         """
         event = MagenticOrchestratorMessageEvent(
             orchestrator_id=self.id,
@@ -1038,13 +1038,14 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         await ctx.add_event(event)
 
     def snapshot_state(self) -> dict[str, Any]:
-        """Capture current orchestrator state for checkpointing.
+        """チェックポイント用に現在のオーケストレーター状態をキャプチャします。
 
-        Uses OrchestrationState for structure but maintains Magentic's complex metadata
-        at the top level for backward compatibility with existing checkpoints.
+        OrchestrationStateを構造に使用しますが、既存のチェックポイントとの互換性のために
+        Magenticの複雑なメタデータをトップレベルに保持します。
 
         Returns:
-            Dict ready for checkpoint persistence
+            チェックポイント永続化用の辞書
+
         """
         state: dict[str, Any] = {
             "plan_review_round": self._plan_review_round,
@@ -1064,17 +1065,18 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         return state
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        """Restore orchestrator state from checkpoint.
+        """チェックポイントからオーケストレーター状態を復元します。
 
-        Maintains backward compatibility with existing Magentic checkpoints
-        while supporting OrchestrationState structure.
+        既存のMagenticチェックポイントとの互換性を維持しつつ
+        OrchestrationState構造をサポートします。
 
         Args:
-            state: Checkpoint data dict
+            state: チェックポイントデータの辞書
+
         """
-        # Support both old format (direct keys) and new format (wrapped in OrchestrationState)
+        # 旧フォーマット（直接キー）と新フォーマット（OrchestrationStateでラップ）の両方をサポートします。
         if "metadata" in state and isinstance(state.get("metadata"), dict):
-            # New OrchestrationState format - extract metadata
+            # 新しいOrchestrationStateフォーマット - メタデータを抽出します。
             from ._orchestration_state import OrchestrationState
 
             orch_state = OrchestrationState.from_dict(state)
@@ -1120,7 +1122,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         self._reconcile_restored_participants()
 
     def _reconcile_restored_participants(self) -> None:
-        """Ensure restored participant roster matches the current workflow graph."""
+        """復元された参加者リストが現在のworkflow graphと一致していることを確認します。"""
         if self._context is None:
             return
 
@@ -1139,29 +1141,31 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
                 f"Missing names: {missing}; unexpected names: {unexpected}."
             )
 
-        # Refresh descriptions so prompt surfaces always reflect the rebuilt workflow inputs.
+        # prompt surfacesが再構築されたworkflow inputsを常に反映するように、説明を更新します。
         for name, description in expected.items():
             restored[name] = description
 
     def _snapshot_pattern_metadata(self) -> dict[str, Any]:
-        """Serialize pattern-specific state.
+        """パターン固有のstateをシリアライズします。
 
-        Magentic uses custom snapshot_state() instead of base class hooks.
-        This method exists to satisfy the base class contract.
+        Magenticはbase classのフックの代わりにカスタムのsnapshot_state()を使用します。
+        このメソッドはbase classの契約を満たすために存在します。
 
         Returns:
-            Empty dict (Magentic manages its own state)
+        空のdict（Magenticは自身のstateを管理します）
+
         """
         return {}
 
     def _restore_pattern_metadata(self, metadata: dict[str, Any]) -> None:
-        """Restore pattern-specific state.
+        """パターン固有のstateを復元します。
 
-        Magentic uses custom restore_state() instead of base class hooks.
-        This method exists to satisfy the base class contract.
+        Magenticはbase classのフックの代わりにカスタムのrestore_state()を使用します。
+        このメソッドはbase classの契約を満たすために存在します。
 
         Args:
-            metadata: Pattern-specific state dict (ignored)
+        metadata: パターン固有のstate dict（無視されます）
+
         """
         pass
 
@@ -1194,7 +1198,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             _MagenticResponseMessage | _MagenticRequestMessage | _MagenticPlanReviewRequest, ChatMessage
         ],
     ) -> None:
-        """Handle the initial start message to begin orchestration."""
+        """オーケストレーションを開始するための初期startメッセージを処理します。"""
         if getattr(self, "_terminated", False):
             return
         logger.info("Magentic Orchestrator: Received start message")
@@ -1206,25 +1210,25 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         if message.messages:
             self._context.chat_history.extend(message.messages)
         self._state_restored = True
-        # Non-streaming callback for the orchestrator receipt of the task
+        # タスクの受領に対するオーケストレーターの非ストリーミングコールバック
         await self._emit_orchestrator_message(context, message.task, ORCH_MSG_KIND_USER_TASK)
 
-        # Initial planning using the manager with real model calls
+        # 実際のモデル呼び出しを伴うマネージャーによる初期計画
         self._task_ledger = await self._manager.plan(self._context.clone(deep=True))
 
-        # If a human must sign off, ask now and return. The response handler will resume.
+        # 人間の承認が必要な場合は、今すぐ尋ねて戻ります。レスポンスハンドラーが再開します。
         if self._require_plan_signoff:
             await self._send_plan_review_request(context)
             return
 
-        # Add task ledger to conversation history
+        # タスク台帳を会話履歴に追加します。
         self._context.chat_history.append(self._task_ledger)
 
         logger.debug("Task ledger created.")
 
         await self._emit_orchestrator_message(context, self._task_ledger, ORCH_MSG_KIND_TASK_LEDGER)
 
-        # Start the inner loop
+        # 内部ループを開始します。
         ctx2 = cast(
             WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
             context,
@@ -1267,7 +1271,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         message: _MagenticResponseMessage,
         context: WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
     ) -> None:
-        """Handle responses from agents."""
+        """Agentからのレスポンスを処理します。"""
         if getattr(self, "_terminated", False):
             return
         await self._ensure_state_restored(context)
@@ -1276,7 +1280,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
 
         logger.debug("Magentic Orchestrator: Received response from agent")
 
-        # Add transfer message if needed
+        # 必要に応じて転送メッセージを追加します。
         if message.body.role != Role.USER:
             transfer_msg = ChatMessage(
                 role=Role.USER,
@@ -1284,10 +1288,10 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             )
             self._context.chat_history.append(transfer_msg)
 
-        # Add agent response to context
+        # Agentのレスポンスをcontextに追加します。
         self._context.chat_history.append(message.body)
 
-        # Continue with inner loop
+        # 内部ループを続行します。
         await self._run_inner_loop(context)
 
     @handler
@@ -1295,7 +1299,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         self,
         response: RequestResponse[_MagenticPlanReviewRequest, _MagenticPlanReviewReply],
         context: WorkflowContext[
-            # may broadcast ledger next, or ask for another round of review
+            # 次に台帳をブロードキャストするか、別のレビューラウンドを求めるかもしれません。
             _MagenticResponseMessage | _MagenticRequestMessage | _MagenticPlanReviewRequest, ChatMessage
         ],
     ) -> None:
@@ -1307,15 +1311,15 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
 
         human = response.data
         if human is None:  # type: ignore[unreachable]
-            # Defensive fallback: treat as revise with empty comments
+            # 防御的フォールバック：空のコメントで修正として扱います。
             human = _MagenticPlanReviewReply(decision=MagenticPlanReviewDecision.REVISE, comments="")
 
         if human.decision == MagenticPlanReviewDecision.APPROVE:
-            # Close the review loop on approval (no further plan review requests this run)
+            # 承認でレビューのループを閉じます（この実行ではこれ以上の計画レビュー要求はありません）。
             self._require_plan_signoff = False
-            # If the user supplied an edited plan, adopt it
+            # ユーザーが編集済みの計画を提供した場合、それを採用します。
             if human.edited_plan_text:
-                # Update the manager's internal ledger and rebuild the combined message
+                # マネージャーの内部台帳を更新し、結合メッセージを再構築します。
                 mgr_ledger = getattr(self._manager, "task_ledger", None)
                 if mgr_ledger is not None:
                     mgr_ledger.plan.text = human.edited_plan_text
@@ -1331,21 +1335,21 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
                     text=combined,
                     author_name=MAGENTIC_MANAGER_NAME,
                 )
-            # If approved with comments but no edited text, apply comments via replan and proceed (no extra review)
+            # コメント付きで承認されたが編集テキストがない場合、コメントを再計画に適用して進めます（追加のレビューなし）。
             elif human.comments:
-                # Record the human feedback for grounding
+                # 基盤付けのために人間のフィードバックを記録します。
                 self._context.chat_history.append(
                     ChatMessage(role=Role.USER, text=f"Human plan feedback: {human.comments}")
                 )
-                # Ask the manager to replan based on comments; proceed immediately
+                # コメントに基づいてマネージャーに再計画を依頼し、直ちに進めます。
                 self._task_ledger = await self._manager.replan(self._context.clone(deep=True))
 
-            # Record the signed-off plan (no broadcast)
+            # 承認済みの計画を記録します（ブロードキャストなし）。
             if self._task_ledger:
                 self._context.chat_history.append(self._task_ledger)
                 await self._emit_orchestrator_message(context, self._task_ledger, ORCH_MSG_KIND_TASK_LEDGER)
 
-            # Enter the normal coordination loop
+            # 通常の調整ループに入ります。
             ctx2 = cast(
                 WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
                 context,
@@ -1353,13 +1357,13 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             await self._run_inner_loop(ctx2)
             return
 
-        # Otherwise, REVISION round
+        # それ以外はREVISIONラウンドです。
         self._plan_review_round += 1
         if self._plan_review_round > self._max_plan_review_rounds:
             logger.warning("Magentic Orchestrator: Max plan review rounds reached. Proceeding with current plan.")
-            # Stop any further plan review requests for the rest of this run
+            # この実行の残り期間、これ以上の計画レビュー要求を停止します。
             self._require_plan_signoff = False
-            # Add a clear note to the conversation so users know review is closed
+            # レビューが終了したことをユーザーに知らせるために会話に明確なメモを追加します。
             notice = ChatMessage(
                 role=Role.ASSISTANT,
                 text=(
@@ -1372,7 +1376,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             await self._emit_orchestrator_message(context, notice, ORCH_MSG_KIND_NOTICE)
             if self._task_ledger:
                 self._context.chat_history.append(self._task_ledger)
-                # No further review requests; proceed directly into coordination
+                # これ以上のレビュー要求はなく、直接調整に進みます。
             ctx2 = cast(
                 WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
                 context,
@@ -1380,12 +1384,12 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             await self._run_inner_loop(ctx2)
             return
 
-        # If the user provided an edited plan, adopt it directly and ask them to confirm once more
+        # ユーザーが編集済みの計画を提供した場合、それを直接採用し、もう一度確認を求めます。
         if human.edited_plan_text:
             mgr_ledger2 = getattr(self._manager, "task_ledger", None)
             if mgr_ledger2 is not None:
                 mgr_ledger2.plan.text = human.edited_plan_text
-            # Rebuild combined message for preview in the next review request
+            # 次のレビュー要求でプレビューするために結合メッセージを再構築します。
             team_text = _team_block(self._participants)
             combined = self._manager.task_ledger_full_prompt.format(
                 task=self._context.task.text,
@@ -1397,13 +1401,13 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             await self._send_plan_review_request(context)
             return
 
-        # Else pass comments into the chat history and replan with the manager
+        # それ以外の場合、コメントをチャット履歴に渡し、マネージャーと再計画します。
         if human.comments:
             self._context.chat_history.append(
                 ChatMessage(role=Role.USER, text=f"Human plan feedback: {human.comments}")
             )
 
-        # Ask the manager to replan; this only adjusts the plan stage, not a full reset
+        # マネージャーに再計画を依頼します。これは計画段階のみを調整し、完全なリセットではありません。
         self._task_ledger = await self._manager.replan(self._context.clone(deep=True))
         await self._send_plan_review_request(context)
 
@@ -1411,30 +1415,30 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         self,
         context: WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
     ) -> None:
-        """Run the outer orchestration loop - planning phase."""
+        """外部オーケストレーションループを実行します - 計画フェーズ。"""
         if self._context is None:
             raise RuntimeError("Context not initialized")
 
         logger.info("Magentic Orchestrator: Outer loop - entering inner loop")
 
-        # Add task ledger to history if not already there
+        # まだ存在しない場合はタスク台帳を履歴に追加します。
         if self._task_ledger and (
             not self._context.chat_history or self._context.chat_history[-1] != self._task_ledger
         ):
             self._context.chat_history.append(self._task_ledger)
 
-        # Optionally surface the updated task ledger via message callback (no broadcast)
+        # オプションで更新されたタスク台帳をメッセージコールバックで表示します（ブロードキャストなし）。
         if self._task_ledger is not None:
             await self._emit_orchestrator_message(context, self._task_ledger, ORCH_MSG_KIND_TASK_LEDGER)
 
-        # Start inner loop
+        # 内部ループを開始します。
         await self._run_inner_loop(context)
 
     async def _run_inner_loop(
         self,
         context: WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
     ) -> None:
-        """Run the inner orchestration loop. Coordination phase. Serialized with a lock."""
+        """内部オーケストレーションループを実行します。調整フェーズ。ロックでシリアライズされます。"""
         if self._context is None or self._task_ledger is None:
             raise RuntimeError("Context or task ledger not initialized")
 
@@ -1444,12 +1448,12 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         self,
         context: WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
     ) -> None:
-        """Run inner loop with exclusive access."""
-        # Narrow optional context for the remainder of this method
+        """排他アクセスで内部ループを実行します。"""
+        # このメソッドの残りの部分でオプションのcontextを絞り込みます。
         ctx = self._context
         if ctx is None:
             raise RuntimeError("Context not initialized")
-        # Check limits first
+        # 最初に制限をチェックします。
         within_limits = await self._check_within_limits_or_complete(context)
         if not within_limits:
             return
@@ -1457,7 +1461,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         ctx.round_count += 1
         logger.info("Magentic Orchestrator: Inner loop - round %s", ctx.round_count)
 
-        # Create progress ledger using the manager
+        # マネージャーを使って進捗台帳を作成します。
         try:
             current_progress_ledger = await self._manager.create_progress_ledger(ctx.clone(deep=True))
         except Exception as ex:
@@ -1471,13 +1475,13 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             current_progress_ledger.next_speaker.answer,
         )
 
-        # Check for task completion
+        # タスク完了をチェックします。
         if current_progress_ledger.is_request_satisfied.answer:
             logger.info("Magentic Orchestrator: Task completed")
             await self._prepare_final_answer(context)
             return
 
-        # Check for stalling or looping
+        # 停滞やループをチェックします。
         if not current_progress_ledger.is_progress_being_made.answer or current_progress_ledger.is_in_loop.answer:
             ctx.stall_count += 1
         else:
@@ -1488,10 +1492,10 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             await self._reset_and_replan(context)
             return
 
-        # Determine the next speaker and instruction
+        # 次の話者と指示を決定します。
         answer_val = current_progress_ledger.next_speaker.answer
         if not isinstance(answer_val, str):
-            # Fallback to first participant if ledger returns non-string
+            # 台帳が非文字列を返した場合は最初の参加者にフォールバックします。
             logger.warning("Next speaker answer was not a string; selecting first participant as fallback")
             answer_val = next(iter(self._participants.keys()))
         next_speaker_value: str = answer_val
@@ -1502,7 +1506,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             await self._prepare_final_answer(context)
             return
 
-        # Add instruction to conversation (assistant guidance)
+        # 会話に指示を追加します（アシスタントのガイダンス）。
         instruction_msg = ChatMessage(
             role=Role.ASSISTANT,
             text=str(instruction),
@@ -1511,10 +1515,10 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         ctx.chat_history.append(instruction_msg)
         await self._emit_orchestrator_message(context, instruction_msg, ORCH_MSG_KIND_INSTRUCTION)
 
-        # Determine the selected agent's executor id
+        # 選択されたAgentのexecutor idを決定します。
         target_executor_id = f"agent_{next_speaker_value}"
 
-        # Request specific agent to respond
+        # 特定のAgentにレスポンスを要求します。
         logger.debug("Magentic Orchestrator: Requesting %s to respond", next_speaker_value)
         await context.send_message(
             _MagenticRequestMessage(
@@ -1529,40 +1533,40 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         self,
         context: WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
     ) -> None:
-        """Reset context and replan."""
+        """contextをリセットして再計画します。"""
         if self._context is None:
             return
 
         logger.info("Magentic Orchestrator: Resetting and replanning")
 
-        # Reset context
+        # contextをリセットします。
         self._context.reset()
 
-        # Replan
+        # 再計画します。
         self._task_ledger = await self._manager.replan(self._context.clone(deep=True))
         self._context.chat_history.append(self._task_ledger)
         await self._emit_orchestrator_message(context, self._task_ledger, ORCH_MSG_KIND_TASK_LEDGER)
 
-        # Internally reset all registered agent executors (no handler/messages involved)
+        # 登録されたすべてのAgent executorを内部的にリセットします（ハンドラーやメッセージは関与しません）。
         for agent in self._agent_executors.values():
             with contextlib.suppress(Exception):
                 agent.reset()
 
-        # Restart outer loop
+        # 外部ループを再起動します。
         await self._run_outer_loop(context)
 
     async def _prepare_final_answer(
         self,
         context: WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
     ) -> None:
-        """Prepare the final answer using the manager."""
+        """マネージャーを使って最終回答を準備します。"""
         if self._context is None:
             return
 
         logger.info("Magentic Orchestrator: Preparing final answer")
         final_answer = await self._manager.prepare_final_answer(self._context.clone(deep=True))
 
-        # Emit a completed event for the workflow
+        # workflowの完了イベントを発行します。
         await context.yield_output(final_answer)
         await context.add_event(MagenticFinalResultEvent(message=final_answer))
 
@@ -1570,7 +1574,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
         self,
         context: WorkflowContext[_MagenticResponseMessage | _MagenticRequestMessage, ChatMessage],
     ) -> bool:
-        """Check if orchestrator is within operational limits."""
+        """オーケストレーターが運用制限内にあるかチェックします。"""
         if self._context is None:
             return False
         ctx = self._context
@@ -1582,10 +1586,10 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             limit_type = "round" if hit_round_limit else "reset"
             logger.error("Magentic Orchestrator: Max %s count reached", limit_type)
 
-            # Only emit completion once and then mark terminated
+            # 完了は一度だけ発行し、その後終了済みとしてマークします。
             if not self._terminated:
                 self._terminated = True
-                # Get partial result
+                # 部分結果を取得します。
                 partial_result = _first_assistant(ctx.chat_history)
                 if partial_result is None:
                     partial_result = ChatMessage(
@@ -1594,7 +1598,7 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
                         author_name=MAGENTIC_MANAGER_NAME,
                     )
 
-                # Yield the partial result and signal completion
+                # 部分結果をyieldし、完了を通知します。
                 await context.yield_output(partial_result)
                 await context.add_event(MagenticFinalResultEvent(message=partial_result))
             return False
@@ -1607,8 +1611,8 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
             _MagenticResponseMessage | _MagenticRequestMessage | _MagenticPlanReviewRequest, ChatMessage
         ],
     ) -> None:
-        """Emit a PlanReviewRequest via RequestInfoExecutor."""
-        # If plan sign-off is disabled (e.g., ran out of review rounds), do nothing
+        """RequestInfoExecutorを介してPlanReviewRequestを発行します。"""
+        # 計画承認が無効（例：レビューラウンドが尽きた）場合は何もしません。
         if not self._require_plan_signoff:
             return
         ledger = getattr(self._manager, "task_ledger", None)
@@ -1629,12 +1633,13 @@ class MagenticOrchestratorExecutor(BaseGroupChatOrchestrator):
 
 
 class MagenticAgentExecutor(Executor):
-    """Magentic agent executor that wraps an agent for participation in workflows.
+    """Magentic agent executorはworkflowへの参加のためにAgentをラップします。
 
-    Leverages enhanced AgentExecutor with conversation injection hooks for:
-    - Receiving task ledger broadcasts
-    - Responding to specific agent requests
-    - Resetting agent state when needed
+    強化されたAgentExecutorを活用し、会話注入フックを提供します：
+    - タスク台帳のブロードキャスト受信
+    - 特定Agentからのリクエストへの応答
+    - 必要に応じたAgent stateのリセット
+
     """
 
     def __init__(
@@ -1649,10 +1654,11 @@ class MagenticAgentExecutor(Executor):
         self._state_restored = False
 
     def snapshot_state(self) -> dict[str, Any]:
-        """Capture current executor state for checkpointing.
+        """チェックポイント用に現在のexecutor stateをキャプチャします。
 
         Returns:
-            Dict containing serialized chat history
+        シリアライズされたチャット履歴を含むdict
+
         """
         from ._conversation_state import encode_chat_messages
 
@@ -1661,10 +1667,11 @@ class MagenticAgentExecutor(Executor):
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        """Restore executor state from checkpoint.
+        """チェックポイントからexecutor stateを復元します。
 
         Args:
-            state: Checkpoint data dict
+        state: チェックポイントデータdict
+
         """
         from ._conversation_state import decode_chat_messages
 
@@ -1700,18 +1707,18 @@ class MagenticAgentExecutor(Executor):
     async def handle_response_message(
         self, message: _MagenticResponseMessage, context: WorkflowContext[_MagenticResponseMessage]
     ) -> None:
-        """Handle response message (task ledger broadcast)."""
+        """レスポンスメッセージ（タスク台帳のブロードキャスト）を処理します。"""
         logger.debug("Agent %s: Received response message", self._agent_id)
 
         await self._ensure_state_restored(context)
 
-        # Check if this message is intended for this agent
+        # このメッセージがこのAgent宛てかどうかをチェックします。
         if message.target_agent is not None and message.target_agent != self._agent_id and not message.broadcast:
-            # Message is targeted to a different agent, ignore it
+            # メッセージは別のAgent宛てなので無視します。
             logger.debug("Agent %s: Ignoring message targeted to %s", self._agent_id, message.target_agent)
             return
 
-        # Add transfer message if needed
+        # 必要に応じて転送メッセージを追加します。
         if message.body.role != Role.USER:
             transfer_msg = ChatMessage(
                 role=Role.USER,
@@ -1719,27 +1726,28 @@ class MagenticAgentExecutor(Executor):
             )
             self._chat_history.append(transfer_msg)
 
-        # Add message to agent's history
+        # Agentの履歴にメッセージを追加します。
         self._chat_history.append(message.body)
 
     def _get_persona_adoption_role(self) -> Role:
-        """Determine the best role for persona adoption messages.
+        """persona adoptionメッセージに最適なroleを決定します。
 
-        Uses SYSTEM role if the agent supports it, otherwise falls back to USER.
+        AgentがSYSTEM roleをサポートする場合はそれを使用し、そうでなければUSERにフォールバックします。
+
         """
-        # Only BaseAgent-derived agents are assumed to support SYSTEM messages reliably.
-        from agent_framework import BaseAgent as _AF_AgentBase  # local import to avoid cycles
+        # BaseAgent派生のAgentのみがSYSTEMメッセージを確実にサポートすると想定されます。
+        from agent_framework import BaseAgent as _AF_AgentBase  # 循環を避けるためのローカルimport
 
         if isinstance(self._agent, _AF_AgentBase) and hasattr(self._agent, "chat_client"):
             return Role.SYSTEM
-        # For other agent types or when we can't determine support, use USER
+        # 他のAgentタイプやサポートが不明な場合はUSERを使用します。
         return Role.USER
 
     @handler
     async def handle_request_message(
         self, message: _MagenticRequestMessage, context: WorkflowContext[_MagenticResponseMessage, AgentRunResponse]
     ) -> None:
-        """Handle request to respond."""
+        """レスポンス要求を処理します。"""
         if message.agent_name != self._agent_id:
             return
 
@@ -1747,7 +1755,7 @@ class MagenticAgentExecutor(Executor):
 
         await self._ensure_state_restored(context)
 
-        # Add persona adoption message with appropriate role
+        # 適切なroleでpersona adoptionメッセージを追加します。
         persona_role = self._get_persona_adoption_role()
         persona_msg = ChatMessage(
             role=persona_role,
@@ -1755,12 +1763,12 @@ class MagenticAgentExecutor(Executor):
         )
         self._chat_history.append(persona_msg)
 
-        # Add the orchestrator's instruction as a USER message so the agent treats it as the prompt
+        # オーケストレーターの指示をUSERメッセージとして追加し、Agentがpromptとして扱うようにします。
         if message.instruction:
             self._chat_history.append(ChatMessage(role=Role.USER, text=message.instruction))
         try:
-            # If the participant is not an invokable BaseAgent, return a no-op response.
-            from agent_framework import BaseAgent as _AF_AgentBase  # local import to avoid cycles
+            # 参加者が呼び出し可能なBaseAgentでない場合はno-opレスポンスを返します。
+            from agent_framework import BaseAgent as _AF_AgentBase  # 循環を避けるためのローカルimport
 
             if not isinstance(self._agent, _AF_AgentBase):
                 response = ChatMessage(
@@ -1771,16 +1779,16 @@ class MagenticAgentExecutor(Executor):
                 self._chat_history.append(response)
                 await self._emit_agent_message_event(context, response)
             else:
-                # Invoke the agent
+                # Agentを呼び出します。
                 response = await self._invoke_agent(context)
                 self._chat_history.append(response)
 
-            # Send response back to orchestrator
+            # レスポンスをオーケストレーターに送信します。
             await context.send_message(_MagenticResponseMessage(body=response))
 
         except Exception as e:
             logger.warning("Agent %s invoke failed: %s", self._agent_id, e)
-            # Fallback response
+            # フォールバックレスポンス。
             response = ChatMessage(
                 role=Role.ASSISTANT,
                 text=f"Agent {self._agent_id}: Error processing request - {str(e)[:100]}",
@@ -1790,7 +1798,7 @@ class MagenticAgentExecutor(Executor):
             await context.send_message(_MagenticResponseMessage(body=response))
 
     def reset(self) -> None:
-        """Reset the internal chat history of the agent (internal operation)."""
+        """Agentの内部チャット履歴をリセットします（内部操作）。"""
         logger.debug("Agent %s: Resetting chat history", self._agent_id)
         self._chat_history.clear()
         self._state_restored = True
@@ -1844,11 +1852,11 @@ class MagenticAgentExecutor(Executor):
         self,
         ctx: WorkflowContext[_MagenticResponseMessage, AgentRunResponse],
     ) -> ChatMessage:
-        """Invoke the wrapped agent and return a response."""
+        """ラップされたAgentを呼び出し、レスポンスを返します。"""
         logger.debug(f"Agent {self._agent_id}: Running with {len(self._chat_history)} messages")
 
         updates: list[AgentRunResponseUpdate] = []
-        # The wrapped participant is guaranteed to be an BaseAgent when this is called.
+        # この呼び出し時、ラップされた参加者はBaseAgentであることが保証されています。
         agent = cast("AgentProtocol", self._agent)
         async for update in agent.run_stream(messages=self._chat_history):  # type: ignore[attr-defined]
             updates.append(update)
@@ -1877,65 +1885,61 @@ class MagenticAgentExecutor(Executor):
         return msg
 
 
-# endregion Magentic Executors
-
-# region Magentic Workflow Builder
+# endregion Magentic Executors region Magentic Workflow Builder
 
 
 class MagenticBuilder:
-    """Fluent builder for creating Magentic One multi-agent orchestration workflows.
+    """Magentic OneのマルチAgentオーケストレーションworkflowを作成するためのフルーエントビルダー。
 
-    Magentic One workflows use an LLM-powered manager to coordinate multiple agents through
-    dynamic task planning, progress tracking, and adaptive replanning. The manager creates
-    plans, selects agents, monitors progress, and determines when to replan or complete.
+    Magentic One workflowはLLM搭載のマネージャーを使い、複数のAgentを動的なタスク計画、進捗追跡、適応的再計画で調整します。マネージャーは計画を作成し、Agentを選択し、進捗を監視し、再計画や完了の判断を行います。
 
-    The builder provides a fluent API for configuring participants, the manager, optional
-    plan review, checkpointing, and event callbacks.
+    ビルダーは参加者、マネージャー、オプションの計画レビュー、チェックポイント、イベントコールバックの設定のためのフルーエントAPIを提供します。
 
     Usage:
 
     .. code-block:: python
 
-        from agent_framework import MagenticBuilder, StandardMagenticManager
-        from azure.ai.projects.aio import AIProjectClient
+    from agent_framework import MagenticBuilder, StandardMagenticManager
+    from azure.ai.projects.aio import AIProjectClient
 
-        # Create manager with LLM client
-        project_client = AIProjectClient.from_connection_string(...)
-        chat_client = project_client.inference.get_chat_completions_client()
+    # LLMクライアント付きマネージャーを作成
+    project_client = AIProjectClient.from_connection_string(...)
+    chat_client = project_client.inference.get_chat_completions_client()
 
-        # Build Magentic workflow with agents
-        workflow = (
-            MagenticBuilder()
-            .participants(researcher=research_agent, writer=writing_agent, coder=coding_agent)
-            .with_standard_manager(chat_client=chat_client, max_round_count=20, max_stall_count=3)
-            .with_plan_review(enable=True)
-            .with_checkpointing(checkpoint_storage)
-            .build()
-        )
+    # Agent付きMagentic workflowを構築
+    workflow = (
+        MagenticBuilder()
+        .participants(researcher=research_agent, writer=writing_agent, coder=coding_agent)
+        .with_standard_manager(chat_client=chat_client, max_round_count=20, max_stall_count=3)
+        .with_plan_review(enable=True)
+        .with_checkpointing(checkpoint_storage)
+        .build()
+    )
 
-        # Execute workflow
-        async for message in workflow.run("Research and write article about AI agents"):
-            print(message.text)
+    # workflowを実行
+    async for message in workflow.run("Research and write article about AI agents"):
+        print(message.text)
 
-    With custom manager:
+    カスタムマネージャーの場合:
 
     .. code-block:: python
 
-        # Create custom manager subclass
-        class MyCustomManager(MagenticManagerBase):
-            async def plan(self, context: MagenticContext) -> ChatMessage:
-                # Custom planning logic
-                ...
+    # カスタムマネージャーのサブクラスを作成
+    class MyCustomManager(MagenticManagerBase):
+        async def plan(self, context: MagenticContext) -> ChatMessage:
+            # カスタム計画ロジック
+            ...
 
 
-        manager = MyCustomManager()
-        workflow = MagenticBuilder().participants(agent1=agent1, agent2=agent2).with_standard_manager(manager).build()
+    manager = MyCustomManager()
+    workflow = MagenticBuilder().participants(agent1=agent1, agent2=agent2).with_standard_manager(manager).build()
 
     See Also:
-        - :class:`MagenticManagerBase`: Base class for custom managers
-        - :class:`StandardMagenticManager`: Default LLM-powered manager
-        - :class:`MagenticContext`: Context object passed to manager methods
-        - :class:`MagenticEvent`: Base class for workflow events
+    - :class:`MagenticManagerBase`: カスタムマネージャーの基底クラス
+    - :class:`StandardMagenticManager`: デフォルトのLLM搭載マネージャー
+    - :class:`MagenticContext`: マネージャーメソッドに渡されるContextオブジェクト
+    - :class:`MagenticEvent`: workflowイベントの基底クラス
+
     """
 
     def __init__(self) -> None:
@@ -2470,13 +2474,14 @@ class MagenticWorkflow:
             yield event
 
     async def run_with_string(self, task_text: str) -> WorkflowRunResult:
-        """Run the workflow with a task string and return all events.
+        """タスク文字列でワークフローを実行し、すべてのイベントを返します。
 
         Args:
-            task_text: The task description as a string.
+            task_text: タスクの説明を文字列で指定します。
 
         Returns:
-            WorkflowRunResult: All events generated during the workflow execution.
+            WorkflowRunResult: ワークフロー実行中に生成されたすべてのイベント。
+
         """
         events: list[WorkflowEvent] = []
         async for event in self.run_streaming_with_string(task_text):
@@ -2484,13 +2489,14 @@ class MagenticWorkflow:
         return WorkflowRunResult(events)
 
     async def run_with_message(self, task_message: ChatMessage) -> WorkflowRunResult:
-        """Run the workflow with a ChatMessage and return all events.
+        """ChatMessageでワークフローを実行し、すべてのイベントを返します。
 
         Args:
-            task_message: The task as a ChatMessage.
+            task_message: ChatMessageとしてのタスク。
 
         Returns:
-            WorkflowRunResult: All events generated during the workflow execution.
+            WorkflowRunResult: ワークフロー実行中に生成されたすべてのイベント。
+
         """
         events: list[WorkflowEvent] = []
         async for event in self.run_streaming_with_message(task_message):
@@ -2498,14 +2504,15 @@ class MagenticWorkflow:
         return WorkflowRunResult(events)
 
     async def run(self, message: Any | None = None) -> WorkflowRunResult:
-        """Run the workflow and return all events.
+        """ワークフローを実行し、すべてのイベントを返します。
 
         Args:
-            message: The message to send. If None and task_text was provided during construction,
-                    uses the preset task string.
+            message: 送信するメッセージ。Noneの場合、かつ構築時にtask_textが提供されていれば、
+                    事前設定されたタスク文字列を使用します。
 
         Returns:
-            WorkflowRunResult: All events generated during the workflow execution.
+            WorkflowRunResult: ワークフロー実行中に生成されたすべてのイベント。
+
         """
         events: list[WorkflowEvent] = []
         async for event in self.run_stream(message):
@@ -2518,34 +2525,34 @@ class MagenticWorkflow:
         checkpoint_storage: CheckpointStorage | None = None,
         responses: dict[str, Any] | None = None,
     ) -> WorkflowRunResult:
-        """Resume orchestration from a checkpoint and collect all resulting events."""
+        """チェックポイントからオーケストレーションを再開し、結果として得られるすべてのイベントを収集します。"""
         events: list[WorkflowEvent] = []
         async for event in self.run_stream_from_checkpoint(checkpoint_id, checkpoint_storage, responses):
             events.append(event)
         return WorkflowRunResult(events)
 
     async def send_responses_streaming(self, responses: dict[str, Any]) -> AsyncIterable[WorkflowEvent]:
-        """Forward responses to pending requests and stream resulting events.
+        """保留中のリクエストにレスポンスを転送し、結果のイベントをストリームします。
 
-        This delegates to the underlying Workflow implementation.
+        これは基盤となるWorkflowの実装に委譲されます。
+
         """
         async for event in self._workflow.send_responses_streaming(responses):
             yield event
 
     async def send_responses(self, responses: dict[str, Any]) -> WorkflowRunResult:
-        """Forward responses to pending requests and return all resulting events.
+        """保留中のリクエストにレスポンスを転送し、結果のすべてのイベントを返します。
 
-        This delegates to the underlying Workflow implementation.
+        これは基盤となるWorkflowの実装に委譲されます。
+
         """
         return await self._workflow.send_responses(responses)
 
     def __getattr__(self, name: str) -> Any:
-        """Delegate unknown attributes to the underlying workflow."""
+        """不明な属性は基盤となるworkflowに委譲します。"""
         return getattr(self._workflow, name)
 
 
-# endregion Magentic Workflow
-
-# Public aliases for types needed by users implementing custom plan review handlers
+# endregion Magentic Workflow カスタムプランレビューハンドラーを実装するユーザーが必要とする型の公開エイリアス
 MagenticPlanReviewRequest = _MagenticPlanReviewRequest
 MagenticPlanReviewReply = _MagenticPlanReviewReply

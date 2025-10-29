@@ -20,56 +20,56 @@ from agent_framework.observability import (
 
 
 class MockExecutor(Executor):
-    """Mock executor for testing."""
+    """テスト用のモックexecutor。"""
 
     def __init__(self, id: str = "mock_executor") -> None:
         super().__init__(id=id)
-        # Use private field to avoid Pydantic validation
+        # Pydantic検証を回避するためにプライベートフィールドを使用する
         self._processed_messages: list[str] = []
 
     @handler
     async def handle_message(self, message: str, ctx: WorkflowContext[str]) -> None:
-        """Handle string messages."""
+        """文字列メッセージを処理する。"""
         self._processed_messages.append(message)
         await ctx.send_message(f"processed: {message}")
 
     @property
     def processed_messages(self) -> list[str]:
-        """Access to processed messages for testing."""
+        """テスト用に処理済みメッセージへのアクセス。"""
         return self._processed_messages
 
 
 class SecondExecutor(Executor):
-    """Second executor for testing message chains."""
+    """メッセージチェーンのテスト用の2番目のexecutor。"""
 
     def __init__(self, id: str = "second_executor") -> None:
         super().__init__(id=id)
-        # Use private field to avoid Pydantic validation
+        # Pydantic検証を回避するためにプライベートフィールドを使用する
         self._processed_messages: list[str] = []
 
     @handler
     async def handle_message(self, message: str, ctx: WorkflowContext) -> None:
-        """Handle string messages."""
+        """文字列メッセージを処理する。"""
         self._processed_messages.append(message)
 
     @property
     def processed_messages(self) -> list[str]:
-        """Access to processed messages for testing."""
+        """テスト用に処理済みメッセージへのアクセス。"""
         return self._processed_messages
 
 
 class ProcessingExecutor(Executor):
-    """Executor that processes and forwards messages with a custom prefix."""
+    """カスタムプレフィックスでメッセージを処理し転送するexecutor。"""
 
     def __init__(self, id: str, prefix: str = "processed") -> None:
         super().__init__(id=id)
-        # Use private field to avoid Pydantic validation
+        # Pydantic検証を回避するためにプライベートフィールドを使用する
         self._processed_messages: list[str] = []
         self._prefix = prefix
 
     @handler
     async def handle_message(self, message: str, ctx: WorkflowContext[str]) -> None:
-        """Handle string messages and send them forward with prefix."""
+        """文字列メッセージを処理しプレフィックス付きで転送する。"""
         self._processed_messages.append(message)
         await ctx.send_message(f"{self._prefix}: {message}")
 
@@ -79,28 +79,28 @@ class ProcessingExecutor(Executor):
 
 
 class FanInAggregator(Executor):
-    """Fan-in aggregator that expects a list of inputs."""
+    """入力リストを期待するファンイン集約器。"""
 
     def __init__(self, id: str = "aggregator") -> None:
         super().__init__(id=id)
-        # Use private field to avoid Pydantic validation
+        # Pydanticのバリデーションを回避するためにプライベートフィールドを使用する
         self._processed_messages: list[Any] = []
 
     @handler
     async def handle_aggregated_data(self, messages: list[str], ctx: WorkflowContext) -> None:
-        # Process aggregated messages from fan-in
+        # fan-inからの集約メッセージを処理する
         aggregated = f"aggregated: {', '.join(messages)}"
         self._processed_messages.append(aggregated)
 
     @property
     def processed_messages(self) -> list[Any]:
-        """Access to processed messages for testing."""
+        """テストのために処理されたメッセージにアクセスする。"""
         return self._processed_messages
 
 
 async def test_span_creation_and_attributes(span_exporter: InMemorySpanExporter) -> None:
-    """Test creation and attributes of all span types (workflow, processing, sending)."""
-    # Create a mock workflow object
+    """すべてのspanタイプ（workflow、processing、sending）の作成と属性をテストする。"""
+    # モックのworkflowオブジェクトを作成する
     mock_workflow = cast(
         Workflow,
         type(
@@ -114,7 +114,7 @@ async def test_span_creation_and_attributes(span_exporter: InMemorySpanExporter)
         )(),
     )
 
-    # Test all span types in nested context
+    # ネストされたコンテキスト内のすべてのspanタイプをテストする
     with create_workflow_span(
         OtelAttr.WORKFLOW_RUN_SPAN,
         {
@@ -132,7 +132,7 @@ async def test_span_creation_and_attributes(span_exporter: InMemorySpanExporter)
                 OtelAttr.MESSAGE_SEND_SPAN, sending_attributes, kind=trace.SpanKind.PRODUCER
             ) as sending_span,
         ):
-            # Verify all spans are recording
+            # すべてのspanが記録されていることを検証する
             assert workflow_span is not None and workflow_span.is_recording()
             assert processing_span is not None and processing_span.is_recording()
             assert sending_span is not None and sending_span.is_recording()
@@ -140,7 +140,7 @@ async def test_span_creation_and_attributes(span_exporter: InMemorySpanExporter)
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 3
 
-    # Check workflow span
+    # workflow spanをチェックする
     workflow_span = next(s for s in spans if s.name == "workflow.run")
     assert workflow_span.kind == trace.SpanKind.INTERNAL
     assert workflow_span.attributes is not None
@@ -149,7 +149,7 @@ async def test_span_creation_and_attributes(span_exporter: InMemorySpanExporter)
     event_names = [event.name for event in workflow_span.events]
     assert "workflow.started" in event_names
 
-    # Check processing span
+    # processing spanをチェックする
     processing_span = next(s for s in spans if s.name == "executor.process")
     assert processing_span.kind == trace.SpanKind.INTERNAL
     assert processing_span.attributes is not None
@@ -157,7 +157,7 @@ async def test_span_creation_and_attributes(span_exporter: InMemorySpanExporter)
     assert processing_span.attributes.get("executor.type") == "TestExecutor"
     assert processing_span.attributes.get("message.type") == "TestMessage"
 
-    # Check sending span
+    # sending spanをチェックする
     sending_span = next(s for s in spans if s.name == "message.send")
     assert sending_span.kind == trace.SpanKind.PRODUCER
     assert sending_span.attributes is not None
@@ -166,14 +166,14 @@ async def test_span_creation_and_attributes(span_exporter: InMemorySpanExporter)
 
 
 async def test_trace_context_handling(span_exporter: InMemorySpanExporter) -> None:
-    """Test trace context propagation and handling in messages and executors."""
+    """メッセージとexecutorsにおけるtrace contextの伝播と処理をテストする。"""
     shared_state = SharedState()
     ctx = InProcRunnerContext()
     executor = MockExecutor("test-executor")
 
     span_exporter.clear()
 
-    # Test trace context propagation in messages
+    # メッセージにおけるtrace contextの伝播をテストする
     workflow_ctx: WorkflowContext[str] = WorkflowContext(
         "test-executor",
         ["source"],
@@ -183,10 +183,10 @@ async def test_trace_context_handling(span_exporter: InMemorySpanExporter) -> No
         source_span_ids=["1234567890123456"],
     )
 
-    # Send a message (this should create a sending span and propagate trace context)
+    # メッセージを送信する（これによりsending spanが作成され、trace contextが伝播されるはず）
     await workflow_ctx.send_message("test message")
 
-    # Check that message was created with trace context
+    # メッセージがtrace context付きで作成されたことを確認する
     messages = await ctx.drain_messages()
     assert len(messages) == 1
     message_list = list(messages.values())[0]
@@ -195,7 +195,7 @@ async def test_trace_context_handling(span_exporter: InMemorySpanExporter) -> No
     assert message.trace_context is not None
     assert message.source_span_id is not None
 
-    # Test executor trace context handling
+    # executorのtrace context処理をテストする
     await executor.execute(
         "test message",
         ["source"],  # source_executor_ids
@@ -205,7 +205,7 @@ async def test_trace_context_handling(span_exporter: InMemorySpanExporter) -> No
         source_span_ids=["1234567890123456"],
     )
 
-    # Check that spans were created with proper attributes
+    # spanが適切な属性で作成されたことを確認する
     spans = span_exporter.get_finished_spans()
     processing_spans = [s for s in spans if s.name == "executor.process"]
     sending_spans = [s for s in spans if s.name == "message.send"]
@@ -213,7 +213,7 @@ async def test_trace_context_handling(span_exporter: InMemorySpanExporter) -> No
     assert len(processing_spans) >= 1
     assert len(sending_spans) >= 1
 
-    # Verify processing span attributes
+    # processing spanの属性を検証する
     processing_span = processing_spans[0]
     assert processing_span.attributes is not None
     assert processing_span.attributes.get("executor.id") == "test-executor"
@@ -223,8 +223,8 @@ async def test_trace_context_handling(span_exporter: InMemorySpanExporter) -> No
 
 @pytest.mark.parametrize("enable_otel", [False], indirect=True)
 async def test_trace_context_disabled_when_tracing_disabled(enable_otel, span_exporter: InMemorySpanExporter) -> None:
-    """Test that no trace context is added when tracing is disabled."""
-    # Tracing should be disabled by default
+    """トレースが無効な場合にtrace contextが追加されないことをテストする。"""
+    # トレースはデフォルトで無効であるべきである
     shared_state = SharedState()
     ctx = InProcRunnerContext()
 
@@ -235,27 +235,27 @@ async def test_trace_context_disabled_when_tracing_disabled(enable_otel, span_ex
         ctx,
     )
 
-    # Send a message
+    # メッセージを送信する
     await workflow_ctx.send_message("test message")
 
-    # Check that message was created without trace context
+    # メッセージがtrace contextなしで作成されたことを確認する
     messages = await ctx.drain_messages()
     message = list(messages.values())[0][0]
 
-    # When tracing is disabled, trace_context should be None
+    # トレースが無効な場合、trace_contextはNoneであるべきである
     assert message.trace_context is None
     assert message.source_span_id is None
 
 
 async def test_end_to_end_workflow_tracing(span_exporter: InMemorySpanExporter) -> None:
-    """Test end-to-end tracing including workflow build, execution, and span linking with fan-in edges."""
-    # Create executors for fan-in scenario
+    """workflowのビルド、実行、fan-inエッジによるspanリンクを含むエンドツーエンドのトレースをテストする。"""
+    # fan-inシナリオ用のexecutorsを作成する
     executor1 = MockExecutor("executor1")
     executor2 = ProcessingExecutor("executor2", "second")
     executor3 = ProcessingExecutor("executor3", "third")
     aggregator = FanInAggregator("aggregator")
 
-    # Create workflow with fan-in: executor1 -> [executor2, executor3] -> aggregator
+    # fan-inを持つworkflowを作成する：executor1 -> [executor2, executor3] -> aggregator
     workflow = (
         WorkflowBuilder()
         .set_start_executor(executor1)
@@ -264,7 +264,7 @@ async def test_end_to_end_workflow_tracing(span_exporter: InMemorySpanExporter) 
         .build()
     )
 
-    # Verify build span was created
+    # build spanが作成されたことを検証する
     build_spans = [s for s in span_exporter.get_finished_spans() if s.name == "workflow.build"]
     assert len(build_spans) == 1
 
@@ -275,17 +275,17 @@ async def test_end_to_end_workflow_tracing(span_exporter: InMemorySpanExporter) 
     definition = build_span.attributes.get("workflow.definition")
     assert definition == workflow.to_json()
 
-    # Check build events
+    # buildイベントをチェックする
     assert build_span.events is not None
     build_event_names = [event.name for event in build_span.events]
     assert "build.started" in build_event_names
     assert "build.validation_completed" in build_event_names
     assert "build.completed" in build_event_names
 
-    # Clear spans to test workflow with name and description
+    # 名前と説明付きのworkflowをテストするためにspanをクリアする
     span_exporter.clear()
 
-    # Test workflow with name and description - verify OTEL attributes
+    # 名前と説明付きworkflowをテストし、OTEL属性を検証する
     (
         WorkflowBuilder(name="Test Pipeline", description="Test workflow description")
         .set_start_executor(MockExecutor("start"))
@@ -299,58 +299,58 @@ async def test_end_to_end_workflow_tracing(span_exporter: InMemorySpanExporter) 
     assert metadata_build_span.attributes.get(OtelAttr.WORKFLOW_NAME) == "Test Pipeline"
     assert metadata_build_span.attributes.get(OtelAttr.WORKFLOW_DESCRIPTION) == "Test workflow description"
 
-    # Clear spans to separate build from run tracing
+    # buildとrunのトレースを分離するためにspanをクリアする
     span_exporter.clear()
 
-    # Run workflow (this should create run spans)
+    # workflowを実行する（これによりrun spanが作成されるはず）
     events = []
     async for event in workflow.run_stream("test input"):
         events.append(event)
 
-    # Verify workflow executed correctly
+    # workflowが正しく実行されたことを検証する
     assert len(executor1.processed_messages) == 1
     assert executor1.processed_messages[0] == "test input"
     assert len(executor2.processed_messages) == 1
     assert executor2.processed_messages[0] == "processed: test input"
     assert len(executor3.processed_messages) == 1
-    assert executor3.processed_messages[0] == "processed: test input"  # executor3 receives from executor1 via fan-out
+    assert executor3.processed_messages[0] == "processed: test input"  # executor3はfan-out経由でexecutor1から受信する
     assert len(aggregator.processed_messages) == 1
-    # The aggregator should receive both processed messages from executor2 and executor3
+    # aggregatorはexecutor2とexecutor3の両方から処理済みメッセージを受け取るべきである
     aggregated_msg = aggregator.processed_messages[0]
     assert "second: processed: test input" in aggregated_msg
     assert "third: processed: test input" in aggregated_msg
 
-    # Check run spans (build spans should not be present after clear)
+    # run spanをチェックする（クリア後はbuild spanは存在しないはず）
     spans = span_exporter.get_finished_spans()
 
-    # Should have workflow span, processing spans, and sending spans
+    # workflow span、processing span、sending spanが存在するはずである
     workflow_spans = [s for s in spans if s.name == "workflow.run"]
     processing_spans = [s for s in spans if s.name == "executor.process"]
     sending_spans = [s for s in spans if s.name == "message.send"]
     build_spans_after_run = [s for s in spans if s.name == "workflow.build"]
 
     assert len(workflow_spans) == 1
-    assert len(processing_spans) >= 4  # executor1, executor2, executor3, aggregator
-    assert len(sending_spans) >= 3  # Messages sent between executors
-    assert len(build_spans_after_run) == 0  # No build spans should be present after clear
+    assert len(processing_spans) >= 4  # executor1、executor2、executor3、aggregator
+    assert len(sending_spans) >= 3  # executors間で送信されたメッセージ
+    assert len(build_spans_after_run) == 0  # クリア後はbuild spanは存在しないはずである
 
-    # Verify workflow span events
+    # workflow spanのイベントを検証する
     workflow_span = workflow_spans[0]
     assert workflow_span.events is not None
     event_names = [event.name for event in workflow_span.events]
     assert "workflow.started" in event_names
     assert "workflow.completed" in event_names
 
-    # Test fan-in span linking: find the aggregator's processing span
+    # fan-in spanリンクをテストする：aggregatorのprocessing spanを見つける
     aggregator_spans = [s for s in processing_spans if s.attributes and s.attributes.get("executor.id") == "aggregator"]
     assert len(aggregator_spans) == 1
 
     aggregator_span = aggregator_spans[0]
-    # The aggregator span should have links to the source spans (from executor2 and executor3)
-    # This tests that FanInEdgeRunner properly handles multiple trace contexts and span IDs
+    # aggregator spanはソースspan（executor2とexecutor3から）へのリンクを持つべきである
+    # これはFanInEdgeRunnerが複数のtrace contextとspan IDを適切に処理することをテストする
     assert aggregator_span.links is not None
 
-    # Find the sending spans from executor2 and executor3 by checking parent relationships
+    # parent関係をチェックしてexecutor2とexecutor3のsending spanを見つける
     executor2_processing_spans = [
         s for s in processing_spans if s.attributes and s.attributes.get("executor.id") == "executor2"
     ]
@@ -358,7 +358,7 @@ async def test_end_to_end_workflow_tracing(span_exporter: InMemorySpanExporter) 
         s for s in processing_spans if s.attributes and s.attributes.get("executor.id") == "executor3"
     ]
 
-    # Get span IDs from processing spans
+    # processing spanからspan IDを取得する
     executor2_processing_span_ids = {format(s.context.span_id, "016x") for s in executor2_processing_spans if s.context}
     executor3_processing_span_ids = {format(s.context.span_id, "016x") for s in executor3_processing_spans if s.context}
 
@@ -369,27 +369,27 @@ async def test_end_to_end_workflow_tracing(span_exporter: InMemorySpanExporter) 
         s for s in sending_spans if s.parent and format(s.parent.span_id, "016x") in executor3_processing_span_ids
     ]
 
-    # Verify that we have sending spans from both executors
+    # 両方のexecutorからsending spanがあることを検証する
     assert len(executor2_sending_spans) >= 1, "Should have at least one sending span from executor2"
     assert len(executor3_sending_spans) >= 1, "Should have at least one sending span from executor3"
 
-    # Verify that the aggregator span links point to the correct source spans
+    # aggregator spanのリンクが正しいソースspanを指していることを検証する
     linked_span_ids = {link.context.span_id for link in aggregator_span.links}
 
-    # Should have links from both executor2 and executor3's sending spans
+    # executor2とexecutor3のsending spanの両方からリンクがあるべきである
     executor2_span_ids = {s.context.span_id for s in executor2_sending_spans if s.context}
     executor3_span_ids = {s.context.span_id for s in executor3_sending_spans if s.context}
 
-    # At least one span from each executor should be linked
+    # 各executorから少なくとも1つのspanがリンクされているべきである
     assert bool(linked_span_ids & executor2_span_ids), "Aggregator should link to executor2's sending span"
     assert bool(linked_span_ids & executor3_span_ids), "Aggregator should link to executor3's sending span"
 
-    # Should have at least 2 links (one from each source executor)
+    # 少なくとも2つのリンク（各ソースexecutorから1つずつ）があるべきである
     assert len(aggregator_span.links) >= 2, f"Expected at least 2 links, got {len(aggregator_span.links)}"
 
 
 async def test_workflow_error_handling_in_tracing(span_exporter: InMemorySpanExporter) -> None:
-    """Test that workflow errors are properly recorded in traces."""
+    """workflowのエラーがトレースに適切に記録されることをテストする。"""
 
     class FailingExecutor(Executor):
         def __init__(self) -> None:
@@ -402,20 +402,20 @@ async def test_workflow_error_handling_in_tracing(span_exporter: InMemorySpanExp
     failing_executor = FailingExecutor()
     workflow = WorkflowBuilder().set_start_executor(failing_executor).build()
 
-    # Run workflow and expect error
+    # workflowを実行しエラーを期待する
     with pytest.raises(ValueError, match="Test error"):
         async for _ in workflow.run_stream("test input"):
             pass
 
     spans = span_exporter.get_finished_spans()
 
-    # Find workflow span
+    # workflow spanを見つける
     workflow_spans = [s for s in spans if s.name == "workflow.run"]
     assert len(workflow_spans) == 1
 
     workflow_span = workflow_spans[0]
 
-    # Verify error event and status are recorded
+    # エラーイベントとステータスが記録されていることを検証する
     assert workflow_span.events is not None
     event_names = [event.name for event in workflow_span.events]
     assert "workflow.started" in event_names
@@ -425,10 +425,10 @@ async def test_workflow_error_handling_in_tracing(span_exporter: InMemorySpanExp
 
 @pytest.mark.parametrize("enable_otel", [False], indirect=True)
 async def test_message_trace_context_serialization(span_exporter: InMemorySpanExporter) -> None:
-    """Test that message trace context is properly serialized/deserialized."""
+    """メッセージのtrace contextが適切にシリアライズ/デシリアライズされることをテストする。"""
     ctx = InProcRunnerContext(InMemoryCheckpointStorage())
 
-    # Create message with trace context
+    # trace context付きのメッセージを作成する
     message = Message(
         data="test",
         source_id="source",
@@ -439,31 +439,31 @@ async def test_message_trace_context_serialization(span_exporter: InMemorySpanEx
 
     await ctx.send_message(message)
 
-    # Create a checkpoint that includes the message
+    # メッセージを含むチェックポイントを作成する
     checkpoint_id = await ctx.create_checkpoint(SharedState(), 0)
     checkpoint = await ctx.load_checkpoint(checkpoint_id)
     assert checkpoint is not None
 
-    # Check serialized message includes trace context
+    # シリアライズされたメッセージにtrace contextが含まれていることを確認する
     serialized_msg = checkpoint.messages["source"][0]
     assert serialized_msg["trace_contexts"] == [{"traceparent": "00-trace-span-01"}]
     assert serialized_msg["source_span_ids"] == ["span123"]
 
-    # Test deserialization
+    # デシリアライズをテストする
     await ctx.apply_checkpoint(checkpoint)
     restored_messages = await ctx.drain_messages()
 
     restored_msg = list(restored_messages.values())[0][0]
-    assert restored_msg.trace_context == {"traceparent": "00-trace-span-01"}  # Test backward compatibility
-    assert restored_msg.source_span_id == "span123"  # Test backward compatibility
-    assert restored_msg.trace_contexts == [{"traceparent": "00-trace-span-01"}]  # Test new format
-    assert restored_msg.source_span_ids == ["span123"]  # Test new format
+    assert restored_msg.trace_context == {"traceparent": "00-trace-span-01"}  # 後方互換性をテストする
+    assert restored_msg.source_span_id == "span123"  # 後方互換性をテストする
+    assert restored_msg.trace_contexts == [{"traceparent": "00-trace-span-01"}]  # 新フォーマットをテストする
+    assert restored_msg.source_span_ids == ["span123"]  # 新フォーマットをテストする
 
 
 async def test_workflow_build_error_tracing(span_exporter: InMemorySpanExporter) -> None:
-    """Test that build errors are properly recorded in build spans."""
+    """build spanにビルドエラーが適切に記録されることをテストする。"""
 
-    # Test validation error by not setting start executor
+    # start executorを設定しないことでバリデーションエラーをテストする
     builder = WorkflowBuilder()
 
     with pytest.raises(ValueError, match="Starting executor must be set"):
@@ -475,7 +475,7 @@ async def test_workflow_build_error_tracing(span_exporter: InMemorySpanExporter)
     build_span = spans[0]
     assert build_span.name == "workflow.build"
 
-    # Verify error status and events
+    # エラーステータスとイベントを検証する
     assert build_span.status.status_code.name == "ERROR"
     assert build_span.events is not None
 
@@ -483,7 +483,7 @@ async def test_workflow_build_error_tracing(span_exporter: InMemorySpanExporter)
     assert "build.started" in event_names
     assert "build.error" in event_names
 
-    # Check error event attributes
+    # エラーイベントの属性をチェックする
     error_events = [event for event in build_span.events if event.name == "build.error"]
     assert len(error_events) == 1
 

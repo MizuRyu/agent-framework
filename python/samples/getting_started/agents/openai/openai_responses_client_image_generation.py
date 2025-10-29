@@ -17,9 +17,9 @@ and automated visual asset generation.
 
 
 def show_image_info(data_uri: str) -> None:
-    """Display information about the generated image."""
+    """生成された画像の情報を表示します。"""
     try:
-        # Extract format and size info from data URI
+        # データURIからフォーマットとサイズ情報を抽出します
         if data_uri.startswith("data:image/"):
             format_info = data_uri.split(";")[0].split("/")[1]
             base64_data = data_uri.split(",", 1)[1]
@@ -47,13 +47,13 @@ def show_image_info(data_uri: str) -> None:
 async def main() -> None:
     print("=== OpenAI Responses Image Generation Agent Example ===")
 
-    # Create an agent with customized image generation options
+    # カスタマイズされた画像生成オプションでAgentを作成します
     agent = OpenAIResponsesClient().create_agent(
         instructions="You are a helpful AI that can generate images.",
         tools=[
             {
                 "type": "image_generation",
-                # Core parameters
+                # コアパラメータ
                 "size": "1024x1024",
                 "background": "transparent",
                 "quality": "low",
@@ -69,7 +69,7 @@ async def main() -> None:
     result = await agent.run(query)
     print(f"Agent: {result.text}")
 
-    # Show information about the generated image
+    # 生成された画像の情報を表示します
     for message in result.messages:
         for content in message.contents:
             if isinstance(content, (DataContent, UriContent)) and content.uri:

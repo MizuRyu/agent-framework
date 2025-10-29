@@ -7,7 +7,7 @@ _IMPORTS: dict[str, tuple[str, list[str]]] = {
     "CopilotStudioAgent": ("agent_framework_copilotstudio", ["microsoft-copilotstudio", "copilotstudio"]),
     "__version__": ("agent_framework_copilotstudio", ["microsoft-copilotstudio", "copilotstudio"]),
     "acquire_token": ("agent_framework_copilotstudio", ["microsoft-copilotstudio", "copilotstudio"]),
-    # Purview (Graph Data Security & Governance) integration exports
+    # Purview (Graph Data Security & Governance) 統合のエクスポート
     "PurviewPolicyMiddleware": ("agent_framework_purview", ["microsoft-purview", "purview"]),
     "PurviewChatPolicyMiddleware": ("agent_framework_purview", ["microsoft-purview", "purview"]),
     "PurviewSettings": ("agent_framework_purview", ["microsoft-purview", "purview"]),

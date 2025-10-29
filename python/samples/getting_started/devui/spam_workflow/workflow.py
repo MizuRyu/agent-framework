@@ -2,17 +2,17 @@
 
 """Spam Detection Workflow Sample for DevUI.
 
-The following sample demonstrates a comprehensive 5-step workflow with multiple executors
-that process, analyze, detect spam, and handle email messages. This workflow illustrates
-complex branching logic and realistic processing delays to demonstrate the workflow framework.
+以下のサンプルは、複数のExecutorを用いた包括的な5ステップのワークフローを示します。
+このワークフローはメールメッセージを処理、分析、スパム検出、対応します。
+複雑な分岐ロジックと現実的な処理遅延を示し、ワークフローフレームワークを実証します。
 
 Workflow Steps:
-1. Email Preprocessor - Cleans and prepares the email
-2. Content Analyzer - Analyzes email content and structure
-3. Spam Detector - Determines if the message is spam
-4a. Spam Handler - Processes spam messages (quarantine, log, remove)
-4b. Message Responder - Handles legitimate messages (validate, respond)
-5. Final Processor - Completes the workflow with logging and cleanup
+1. Email Preprocessor - メールをクリーンアップし準備します
+2. Content Analyzer - メールの内容と構造を分析します
+3. Spam Detector - メッセージがスパムかどうか判定します
+4a. Spam Handler - スパムメッセージを隔離、ログ記録、削除します
+4b. Message Responder - 正当なメッセージを検証し応答します
+5. Final Processor - ロギングとクリーンアップでワークフローを完了します
 """
 
 import asyncio
@@ -33,7 +33,7 @@ from typing_extensions import Never
 
 @dataclass
 class EmailContent:
-    """A data class to hold the processed email content."""
+    """処理済みメール内容を保持するデータクラス。"""
 
     original_message: str
     cleaned_message: str
@@ -43,7 +43,7 @@ class EmailContent:
 
 @dataclass
 class ContentAnalysis:
-    """A data class to hold content analysis results."""
+    """内容分析結果を保持するデータクラス。"""
 
     email_content: EmailContent
     sentiment_score: float
@@ -54,7 +54,7 @@ class ContentAnalysis:
 
 @dataclass
 class SpamDetectorResponse:
-    """A data class to hold the spam detection results."""
+    """スパム検出結果を保持するデータクラス。"""
 
     analysis: ContentAnalysis
     is_spam: bool = False
@@ -62,14 +62,14 @@ class SpamDetectorResponse:
     spam_reasons: list[str] | None = None
 
     def __post_init__(self):
-        """Initialize spam_reasons list if None."""
+        """spam_reasonsリストをNoneの場合に初期化します。"""
         if self.spam_reasons is None:
             self.spam_reasons = []
 
 
 @dataclass
 class ProcessingResult:
-    """A data class to hold the final processing result."""
+    """最終処理結果を保持するデータクラス。"""
 
     original_message: str
     action_taken: str
@@ -81,7 +81,7 @@ class ProcessingResult:
 
 
 class EmailRequest(BaseModel):
-    """Request model for email processing."""
+    """メール処理用のRequestモデル。"""
 
     email: str = Field(
         description="The email message to be processed.",
@@ -90,18 +90,18 @@ class EmailRequest(BaseModel):
 
 
 class EmailPreprocessor(Executor):
-    """Step 1: An executor that preprocesses and cleans email content."""
+    """ステップ1: メール内容を前処理しクリーンアップするExecutor。"""
 
     @handler
     async def handle_email(self, email: EmailRequest, ctx: WorkflowContext[EmailContent]) -> None:
-        """Clean and preprocess the email message."""
-        await asyncio.sleep(1.5)  # Simulate preprocessing time
+        """メールメッセージをクリーンアップし前処理します。"""
+        await asyncio.sleep(1.5)  # 前処理時間をシミュレートします。
 
-        # Simulate email cleaning
+        # メールのクリーンアップをシミュレートします。
         cleaned = email.email.strip().lower()
         word_count = len(email.email.split())
 
-        # Check for suspicious patterns
+        # 疑わしいパターンをチェックします。
         suspicious_patterns = ["urgent", "limited time", "act now", "free money"]
         has_suspicious = any(pattern in cleaned for pattern in suspicious_patterns)
 
@@ -116,19 +116,19 @@ class EmailPreprocessor(Executor):
 
 
 class ContentAnalyzer(Executor):
-    """Step 2: An executor that analyzes email content and structure."""
+    """ステップ2: メール内容と構造を分析するExecutor。"""
 
     @handler
     async def handle_email_content(self, email_content: EmailContent, ctx: WorkflowContext[ContentAnalysis]) -> None:
-        """Analyze the email content for various indicators."""
-        await asyncio.sleep(2.0)  # Simulate analysis time
+        """メール内容の各種指標を分析します。"""
+        await asyncio.sleep(2.0)  # 分析時間をシミュレートします。
 
-        # Simulate content analysis
+        # 内容分析をシミュレートします。
         sentiment_score = 0.5 if email_content.has_suspicious_patterns else 0.8
         contains_links = "http" in email_content.cleaned_message or "www" in email_content.cleaned_message
         has_attachments = "attachment" in email_content.cleaned_message
 
-        # Build risk indicators
+        # リスク指標を構築します。
         risk_indicators: list[str] = []
         if email_content.has_suspicious_patterns:
             risk_indicators.append("suspicious_language")
@@ -151,23 +151,23 @@ class ContentAnalyzer(Executor):
 
 
 class SpamDetector(Executor):
-    """Step 3: An executor that determines if a message is spam based on analysis."""
+    """ステップ3: 分析に基づきメッセージがスパムか判定するExecutor。"""
 
     def __init__(self, spam_keywords: list[str], id: str):
-        """Initialize the executor with spam keywords."""
+        """スパムキーワードでExecutorを初期化します。"""
         super().__init__(id=id)
         self._spam_keywords = spam_keywords
 
     @handler
     async def handle_analysis(self, analysis: ContentAnalysis, ctx: WorkflowContext[SpamDetectorResponse]) -> None:
-        """Determine if the message is spam based on content analysis."""
-        await asyncio.sleep(1.8)  # Simulate detection time
+        """内容分析に基づきメッセージがスパムか判定します。"""
+        await asyncio.sleep(1.8)  # 検出時間をシミュレートします。
 
-        # Check for spam keywords
+        # スパムキーワードをチェックします。
         email_text = analysis.email_content.cleaned_message
         keyword_matches = [kw for kw in self._spam_keywords if kw in email_text]
 
-        # Calculate spam probability
+        # スパム確率を計算します。
         spam_score = 0.0
         spam_reasons: list[str] = []
 
@@ -197,7 +197,7 @@ class SpamDetector(Executor):
 
 
 class SpamHandler(Executor):
-    """Step 4a: An executor that handles spam messages with quarantine and logging."""
+    """ステップ4a: スパムメッセージを隔離しログ記録するExecutor。"""
 
     @handler
     async def handle_spam_detection(
@@ -205,11 +205,11 @@ class SpamHandler(Executor):
         spam_result: SpamDetectorResponse,
         ctx: WorkflowContext[ProcessingResult],
     ) -> None:
-        """Handle spam messages by quarantining and logging."""
+        """スパムメッセージを隔離しログ記録します。"""
         if not spam_result.is_spam:
             raise RuntimeError("Message is not spam, cannot process with spam handler.")
 
-        await asyncio.sleep(2.2)  # Simulate spam handling time
+        await asyncio.sleep(2.2)  # スパム処理時間をシミュレートします。
 
         result = ProcessingResult(
             original_message=spam_result.analysis.email_content.original_message,
@@ -225,7 +225,7 @@ class SpamHandler(Executor):
 
 
 class MessageResponder(Executor):
-    """Step 4b: An executor that responds to legitimate messages."""
+    """ステップ4b: 正当なメッセージに応答するExecutor。"""
 
     @handler
     async def handle_spam_detection(
@@ -233,11 +233,11 @@ class MessageResponder(Executor):
         spam_result: SpamDetectorResponse,
         ctx: WorkflowContext[ProcessingResult],
     ) -> None:
-        """Respond to legitimate messages."""
+        """正当なメッセージに応答します。"""
         if spam_result.is_spam:
             raise RuntimeError("Message is spam, cannot respond with message responder.")
 
-        await asyncio.sleep(2.5)  # Simulate response time
+        await asyncio.sleep(2.5)  # 応答時間をシミュレートします。
 
         result = ProcessingResult(
             original_message=spam_result.analysis.email_content.original_message,
@@ -253,7 +253,7 @@ class MessageResponder(Executor):
 
 
 class FinalProcessor(Executor):
-    """Step 5: An executor that completes the workflow with final logging and cleanup."""
+    """ステップ5: 最終ロギングとクリーンアップでワークフローを完了するExecutor。"""
 
     @handler
     async def handle_processing_result(
@@ -261,12 +261,12 @@ class FinalProcessor(Executor):
         result: ProcessingResult,
         ctx: WorkflowContext[Never, str],
     ) -> None:
-        """Complete the workflow with final processing and logging."""
-        await asyncio.sleep(1.5)  # Simulate final processing time
+        """最終処理とロギングでワークフローを完了します。"""
+        await asyncio.sleep(1.5)  # 最終処理時間をシミュレートします。
 
         total_time = result.processing_time + 1.5
 
-        # Include classification details in completion message
+        # 完了メッセージに分類詳細を含めます。
         classification = "SPAM" if result.is_spam else "LEGITIMATE"
         reasons = ", ".join(result.spam_reasons) if result.spam_reasons else "none"
 
@@ -281,10 +281,10 @@ class FinalProcessor(Executor):
         await ctx.yield_output(completion_message)
 
 
-# Create the workflow instance that DevUI can discover
+# DevUIが検出可能なワークフローインスタンスを作成します。
 spam_keywords = ["spam", "advertisement", "offer", "click here", "winner", "congratulations", "urgent"]
 
-# Create all the executors for the 5-step workflow
+# 5ステップワークフローの全Executorを作成します。
 email_preprocessor = EmailPreprocessor(id="email_preprocessor")
 content_analyzer = ContentAnalyzer(id="content_analyzer")
 spam_detector = SpamDetector(spam_keywords, id="spam_detector")
@@ -292,7 +292,7 @@ spam_handler = SpamHandler(id="spam_handler")
 message_responder = MessageResponder(id="message_responder")
 final_processor = FinalProcessor(id="final_processor")
 
-# Build the comprehensive 5-step workflow with branching logic
+# 分岐ロジックを含む包括的な5ステップワークフローを構築します。
 workflow = (
     WorkflowBuilder(
         name="Email Spam Detector",
@@ -313,14 +313,14 @@ workflow = (
     .build()
 )
 
-# Note: Workflow metadata is determined by executors and graph structure
+# 注意: ワークフローメタデータはExecutorとグラフ構造で決定されます。
 
 
 def main():
-    """Launch the spam detection workflow in DevUI."""
+    """DevUIでスパム検出ワークフローを起動します。"""
     from agent_framework.devui import serve
 
-    # Setup logging
+    # ログのセットアップ
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger = logging.getLogger(__name__)
 
@@ -328,7 +328,7 @@ def main():
     logger.info("Available at: http://localhost:8090")
     logger.info("Entity ID: workflow_spam_detection")
 
-    # Launch server with the workflow
+    # ワークフローでサーバーを起動します。
     serve(entities=[workflow], port=8090, auto_open=True)
 
 

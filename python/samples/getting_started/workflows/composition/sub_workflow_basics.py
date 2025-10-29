@@ -27,10 +27,10 @@ Prerequisites:
 """
 
 
-# Message types
+# メッセージタイプ。
 @dataclass
 class TextProcessingRequest:
-    """Request to process a text string."""
+    """テキスト文字列を処理するリクエスト。"""
 
     text: str
     task_id: str
@@ -38,7 +38,7 @@ class TextProcessingRequest:
 
 @dataclass
 class TextProcessingResult:
-    """Result of text processing."""
+    """テキスト処理の結果。"""
 
     task_id: str
     text: str
@@ -47,15 +47,15 @@ class TextProcessingResult:
 
 
 class AllTasksCompleted(WorkflowEvent):
-    """Event triggered when all processing tasks are complete."""
+    """すべての処理タスクが完了したときにトリガーされるイベント。"""
 
     def __init__(self, results: list[TextProcessingResult]):
         super().__init__(results)
 
 
-# Sub-workflow executor
+# サブワークフロー executor。
 class TextProcessor(Executor):
-    """Processes text strings - counts words and characters."""
+    """テキスト文字列を処理し、単語数と文字数をカウントします。"""
 
     def __init__(self):
         super().__init__(id="text_processor")
@@ -64,17 +64,17 @@ class TextProcessor(Executor):
     async def process_text(
         self, request: TextProcessingRequest, ctx: WorkflowContext[Never, TextProcessingResult]
     ) -> None:
-        """Process a text string and return statistics."""
+        """テキスト文字列を処理し、統計を返します。"""
         text_preview = f"'{request.text[:50]}{'...' if len(request.text) > 50 else ''}'"
         print(f"🔍 Sub-workflow processing text (Task {request.task_id}): {text_preview}")
 
-        # Simple text processing
+        # シンプルなテキスト処理。
         word_count = len(request.text.split()) if request.text.strip() else 0
         char_count = len(request.text)
 
         print(f"📊 Task {request.task_id}: {word_count} words, {char_count} characters")
 
-        # Create result
+        # 結果を作成します。
         result = TextProcessingResult(
             task_id=request.task_id,
             text=request.text,
@@ -83,13 +83,13 @@ class TextProcessor(Executor):
         )
 
         print(f"✅ Sub-workflow completed task {request.task_id}")
-        # Signal completion by yielding the result
+        # 結果を yield して完了を通知します。
         await ctx.yield_output(result)
 
 
-# Parent workflow
+# 親ワークフロー。
 class TextProcessingOrchestrator(Executor):
-    """Orchestrates multiple text processing tasks using sub-workflows."""
+    """サブワークフローを使って複数のテキスト処理タスクをオーケストレーションします。"""
 
     results: list[TextProcessingResult] = []
     expected_count: int = 0
@@ -99,13 +99,13 @@ class TextProcessingOrchestrator(Executor):
 
     @handler
     async def start_processing(self, texts: list[str], ctx: WorkflowContext[TextProcessingRequest]) -> None:
-        """Start processing multiple text strings."""
+        """複数のテキスト文字列の処理を開始します。"""
         print(f"📄 Starting processing of {len(texts)} text strings")
         print("=" * 60)
 
         self.expected_count = len(texts)
 
-        # Send each text to a sub-workflow
+        # 各テキストをサブワークフローに送信します。
         for i, text in enumerate(texts):
             task_id = f"task_{i + 1}"
             request = TextProcessingRequest(text=text, task_id=task_id)
@@ -114,17 +114,17 @@ class TextProcessingOrchestrator(Executor):
 
     @handler
     async def collect_result(self, result: TextProcessingResult, ctx: WorkflowContext) -> None:
-        """Collect results from sub-workflows."""
+        """サブワークフローから結果を収集します。"""
         print(f"📥 Collected result from {result.task_id}")
         self.results.append(result)
 
-        # Check if all results are collected
+        # すべての結果が収集されたか確認します。
         if len(self.results) == self.expected_count:
             print("\n🎉 All tasks completed!")
             await ctx.add_event(AllTasksCompleted(self.results))
 
     def get_summary(self) -> dict[str, Any]:
-        """Get a summary of all processing results."""
+        """すべての処理結果のサマリーを取得します。"""
         total_words = sum(result.word_count for result in self.results)
         total_chars = sum(result.char_count for result in self.results)
         avg_words = total_words / len(self.results) if self.results else 0
@@ -140,17 +140,17 @@ class TextProcessingOrchestrator(Executor):
 
 
 async def main():
-    """Main function to run the basic sub-workflow example."""
+    """基本的なサブワークフロー例を実行するメイン関数。"""
     print("🚀 Setting up sub-workflow...")
 
-    # Step 1: Create the text processing sub-workflow
+    # ステップ1：テキスト処理サブワークフローを作成します。
     text_processor = TextProcessor()
 
     processing_workflow = WorkflowBuilder().set_start_executor(text_processor).build()
 
     print("🔧 Setting up parent workflow...")
 
-    # Step 2: Create the parent workflow
+    # ステップ2：親ワークフローを作成します。
     orchestrator = TextProcessingOrchestrator()
     workflow_executor = WorkflowExecutor(processing_workflow, id="text_processor_workflow")
 
@@ -162,7 +162,7 @@ async def main():
         .build()
     )
 
-    # Step 3: Test data - various text strings
+    # ステップ3：テストデータ - さまざまなテキスト文字列。
     test_texts = [
         "Hello world! This is a simple test.",
         "Python is a powerful programming language used for many applications.",
@@ -175,14 +175,14 @@ async def main():
     print(f"\n🧪 Testing with {len(test_texts)} text strings")
     print("=" * 60)
 
-    # Step 4: Run the workflow
+    # ステップ4：ワークフローを実行します。
     await main_workflow.run(test_texts)
 
-    # Step 5: Display results
+    # ステップ5：結果を表示します。
     print("\n📊 Processing Results:")
     print("=" * 60)
 
-    # Sort results by task_id for consistent display
+    # 一貫した表示のために task_id で結果をソートします。
     sorted_results = sorted(orchestrator.results, key=lambda r: r.task_id)
 
     for result in sorted_results:
@@ -190,7 +190,7 @@ async def main():
         preview = preview.replace("\n", " ").strip() or "(empty)"
         print(f"✅ {result.task_id}: '{preview}' -> {result.word_count} words, {result.char_count} chars")
 
-    # Step 6: Display summary
+    # ステップ6：サマリーを表示します。
     summary = orchestrator.get_summary()
     print("\n📈 Summary:")
     print("=" * 60)

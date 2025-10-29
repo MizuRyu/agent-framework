@@ -2,16 +2,16 @@
 
 """Agent Workflow - Content Review with Quality Routing.
 
-This sample demonstrates:
-- Using agents directly as executors
-- Conditional routing based on structured outputs
-- Quality-based workflow paths with convergence
+このサンプルは以下を示します:
+- Agentを直接Executorとして使用
+- 構造化された出力に基づく条件付きルーティング
+- 品質に基づくワークフローパスと収束
 
-Use case: Content creation with automated review.
-Writer creates content, Reviewer evaluates quality:
-  - High quality (score >= 80): → Publisher → Summarizer
-  - Low quality (score < 80): → Editor → Publisher → Summarizer
-Both paths converge at Summarizer for final report.
+ユースケース: 自動レビュー付きコンテンツ作成。
+Writerがコンテンツを作成し、Reviewerが品質を評価:
+  - 高品質（スコア >= 80）: → Publisher → Summarizer
+  - 低品質（スコア < 80）: → Editor → Publisher → Summarizer
+両パスはSummarizerで最終レポートに収束します。
 """
 
 import os
@@ -22,21 +22,21 @@ from agent_framework.azure import AzureOpenAIChatClient
 from pydantic import BaseModel
 
 
-# Define structured output for review results
+# レビュー結果の構造化出力を定義します。
 class ReviewResult(BaseModel):
-    """Review evaluation with scores and feedback."""
+    """スコアとフィードバックによるレビュー評価。"""
 
-    score: int  # Overall quality score (0-100)
-    feedback: str  # Concise, actionable feedback
-    clarity: int  # Clarity score (0-100)
-    completeness: int  # Completeness score (0-100)
-    accuracy: int  # Accuracy score (0-100)
-    structure: int  # Structure score (0-100)
+    score: int  # 総合品質スコア（0-100）
+    feedback: str  # 簡潔で実行可能なフィードバック
+    clarity: int  # 明瞭さスコア（0-100）
+    completeness: int  # 完全性スコア（0-100）
+    accuracy: int  # 正確性スコア（0-100）
+    structure: int  # 構造スコア（0-100）
 
 
-# Condition function: route to editor if score < 80
+# 条件関数: スコアが80未満ならEditorへルーティングします。
 def needs_editing(message: Any) -> bool:
-    """Check if content needs editing based on review score."""
+    """レビューのスコアに基づき編集が必要かチェックします。"""
     if not isinstance(message, AgentExecutorResponse):
         return False
     try:
@@ -46,9 +46,9 @@ def needs_editing(message: Any) -> bool:
         return False
 
 
-# Condition function: content is approved (score >= 80)
+# 条件関数: コンテンツが承認された（スコア >= 80）場合。
 def is_approved(message: Any) -> bool:
-    """Check if content is approved (high quality)."""
+    """コンテンツが承認されたか（高品質か）をチェックします。"""
     if not isinstance(message, AgentExecutorResponse):
         return True
     try:
@@ -58,10 +58,10 @@ def is_approved(message: Any) -> bool:
         return True
 
 
-# Create Azure OpenAI chat client
+# Azure OpenAIのChat Clientを作成します。
 chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY", ""))
 
-# Create Writer agent - generates content
+# Writer Agentを作成します - コンテンツを生成します。
 writer = chat_client.create_agent(
     name="Writer",
     instructions=(
@@ -71,7 +71,7 @@ writer = chat_client.create_agent(
     ),
 )
 
-# Create Reviewer agent - evaluates and provides structured feedback
+# Reviewer Agentを作成します - 評価し構造化フィードバックを提供します。
 reviewer = chat_client.create_agent(
     name="Reviewer",
     instructions=(
@@ -89,7 +89,7 @@ reviewer = chat_client.create_agent(
     response_format=ReviewResult,
 )
 
-# Create Editor agent - improves content based on feedback
+# Editor Agentを作成します - フィードバックに基づきコンテンツを改善します。
 editor = chat_client.create_agent(
     name="Editor",
     instructions=(
@@ -100,7 +100,7 @@ editor = chat_client.create_agent(
     ),
 )
 
-# Create Publisher agent - formats content for publication
+# Publisher Agentを作成します - 出版用にコンテンツをフォーマットします。
 publisher = chat_client.create_agent(
     name="Publisher",
     instructions=(
@@ -110,7 +110,7 @@ publisher = chat_client.create_agent(
     ),
 )
 
-# Create Summarizer agent - creates final publication report
+# Summarizer Agentを作成します - 最終出版レポートを作成します。
 summarizer = chat_client.create_agent(
     name="Summarizer",
     instructions=(
@@ -123,11 +123,9 @@ summarizer = chat_client.create_agent(
     ),
 )
 
-# Build workflow with branching and convergence:
-# Writer → Reviewer → [branches]:
-#   - If score >= 80: → Publisher → Summarizer (direct approval path)
-#   - If score < 80: → Editor → Publisher → Summarizer (improvement path)
-# Both paths converge at Summarizer for final report
+# 分岐と収束を含むワークフローを構築します: Writer → Reviewer → [分岐]: - スコア >= 80: → Publisher →
+# Summarizer（直接承認パス） - スコア < 80: → Editor → Publisher → Summarizer（改善パス）
+# 両パスはSummarizerで最終レポートに収束します。
 workflow = (
     WorkflowBuilder(
         name="Content Review Workflow",
@@ -135,19 +133,19 @@ workflow = (
     )
     .set_start_executor(writer)
     .add_edge(writer, reviewer)
-    # Branch 1: High quality (>= 80) goes directly to publisher
+    # 分岐1: 高品質（>= 80）は直接Publisherへ。
     .add_edge(reviewer, publisher, condition=is_approved)
-    # Branch 2: Low quality (< 80) goes to editor first, then publisher
+    # 分岐2: 低品質（< 80）はまずEditorへ、その後Publisherへ。
     .add_edge(reviewer, editor, condition=needs_editing)
     .add_edge(editor, publisher)
-    # Both paths converge: Publisher → Summarizer
+    # 両パスはPublisher → Summarizerで収束します。
     .add_edge(publisher, summarizer)
     .build()
 )
 
 
 def main():
-    """Launch the branching workflow in DevUI."""
+    """DevUIで分岐ワークフローを起動します。"""
     import logging
 
     from agent_framework.devui import serve

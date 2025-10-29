@@ -27,8 +27,8 @@ a helpful message for the user, preventing raw exceptions from reaching the end 
 def unstable_data_service(
     query: Annotated[str, Field(description="The data query to execute.")],
 ) -> str:
-    """A simulated data service that sometimes throws exceptions."""
-    # Simulate failure
+    """時々例外をスローするシミュレートされたデータサービス。"""
+    # 失敗をシミュレートする
     raise TimeoutError("Data service request timed out")
 
 
@@ -43,7 +43,7 @@ async def exception_handling_middleware(
         print(f"[ExceptionHandlingMiddleware] Function {function_name} completed successfully.")
     except TimeoutError as e:
         print(f"[ExceptionHandlingMiddleware] Caught TimeoutError: {e}")
-        # Override function result to provide custom message in response.
+        # レスポンスにカスタムメッセージを提供するために関数結果を上書きする。
         context.result = (
             "Request Timeout: The data service is taking longer than expected to respond.",
             "Respond with message - 'Sorry for the inconvenience, please try again later.'",
@@ -51,11 +51,10 @@ async def exception_handling_middleware(
 
 
 async def main() -> None:
-    """Example demonstrating exception handling with middleware."""
+    """Middlewareによる例外処理のデモ。"""
     print("=== Exception Handling Middleware Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(

@@ -15,14 +15,14 @@ from tau2.domains.airline.environment import get_tasks
 
 
 def to_dumpable(result: dict[str, Any]) -> dict[str, Any]:
-    """Convert benchmark result to JSONL-serializable format.
+    """ベンチマーク結果をJSONLシリアライズ可能な形式に変換します。
 
-    Handles both successful runs and error cases, ensuring consistent output
-    format for downstream analysis. Converts Pydantic models to dictionaries
-    and extracts enum values for JSON compatibility.
+    成功した実行とエラーケースの両方を処理し、下流の分析のために一貫した出力形式を保証します。
+    Pydanticモデルを辞書に変換し、JSON互換性のためにenum値を抽出します。
+
     """
     if "error" in result:
-        # Error case: minimal structure with zero reward
+        # エラーケース: 報酬がゼロの最小限の構造
         return {
             "id": result["task"].id,
             "error": result["error"],
@@ -32,7 +32,7 @@ def to_dumpable(result: dict[str, Any]) -> dict[str, Any]:
             "config": result["config"],
             "task": result["task"].model_dump(),
         }
-    # Success case: full result structure
+    # 成功ケース: 完全な結果構造
     return {
         "id": result["task"].id,
         "evaluation": result["evaluation"].model_dump(),  # Detailed evaluation metrics
@@ -44,46 +44,46 @@ def to_dumpable(result: dict[str, Any]) -> dict[str, Any]:
 
 
 async def run_benchmark(assistant_model: str, user_model: str, debug_task_id: str | None, max_steps: int):
-    """Run comprehensive tau2 benchmark evaluation using agent framework.
+    """agentフレームワークを使用して包括的なtau2ベンチマーク評価を実行します。
 
-    This is the main function that:
+    これは主な関数であり、以下を行います:
 
-    1. Sets up output file handling (full benchmark vs debug mode)
-    2. Loads tau2 task dataset and configures LLM clients
-    3. Runs each task through the agent framework workflow
-    4. Evaluates performance using tau2's multi-dimensional metrics
-    5. Aggregates results and calculates overall benchmark scores
+    1. 出力ファイル処理の設定（完全なベンチマークモードとデバッグモード）
+    2. tau2タスクデータセットの読み込みとLLMクライアントの設定
+    3. 各タスクをagentフレームワークのワークフローで実行
+    4. tau2の多次元メトリクスを使用したパフォーマンス評価
+    5. 結果の集計と全体的なベンチマークスコアの計算
 
     Args:
-        assistant_model: Model ID for the customer service agent (e.g., "gpt-4o")
-        user_model: Model ID for the user simulator (e.g., "gpt-4o")
-        debug_task_id: Optional specific task ID to run (disables batch processing)
-        max_steps: Maximum conversation steps before forced termination
+        assistant_model: カスタマーサービスAgentのモデルID（例: "gpt-4o"）
+        user_model: ユーザーシミュレーターのモデルID（例: "gpt-4o"）
+        debug_task_id: 実行する特定のタスクID（オプション、バッチ処理を無効化）
+        max_steps: 強制終了前の最大会話ステップ数
 
     Output:
-        Creates timestamped JSONL file with detailed results for analysis
-        Prints summary statistics to console with colored logging
+        分析用の詳細な結果を含むタイムスタンプ付きJSONLファイルを作成
+        カラーロギング付きの要約統計をコンソールに出力
+
     """
-    # STEP 1: Configure output handling based on execution mode
+    # STEP 1: 実行モードに基づく出力処理の設定
     result_filename = None
     if debug_task_id is None:
-        # Full benchmark mode: create timestamped results file
-        timestamp = datetime.now().strftime("%m%d%H%M")  # Format: MMDDHHMM
+        # 完全なベンチマークモード: タイムスタンプ付き結果ファイルを作成
+        timestamp = datetime.now().strftime("%m%d%H%M")  # フォーマット: MMDDHHMM
         result_filename = f"results/{assistant_model}_user-{user_model}_{timestamp}.jsonl"
         os.makedirs("results", exist_ok=True)
         logger.info(f"Results will be saved to: {result_filename}")
     else:
-        # Debug mode: single task, no file output, verbose logging
+        # デバッグモード: 単一タスク、ファイル出力なし、詳細なロギング
         logger.info(f"Debug mode: targeting task ID {debug_task_id}")
 
-    # STEP 2: Load tau2 dataset and validate environment
-    tasks = get_tasks()  # Loads all tau2 airline customer service tasks
+    # STEP 2: tau2データセットの読み込みと環境の検証
+    tasks = get_tasks()  # すべてのtau2航空会社カスタマーサービスタスクを読み込みます
     logger.info(f"Found {len(tasks)} tasks in the dataset")
 
-    logger_ = logger.opt(colors=True)  # Enable colored console output
+    logger_ = logger.opt(colors=True)  # カラフルなコンソール出力を有効化
 
-    # Validate required OpenAI configuration
-    # Both models use the same endpoint but can be different model types
+    # 必要なOpenAI設定を検証 両モデルは同じエンドポイントを使用しますが、異なるモデルタイプでも可能です
     openai_base_url = os.getenv("OPENAI_BASE_URL")
     if openai_base_url is None:
         raise ValueError("OPENAI_BASE_URL must be set")
@@ -91,46 +91,45 @@ async def run_benchmark(assistant_model: str, user_model: str, debug_task_id: st
     if openai_api_key is None:
         raise ValueError("OPENAI_API_KEY must be set")
 
-    # STEP 3: Initialize LLM clients for both agent roles
-    # Assistant: handles customer service with access to tools and policies
+    # STEP 3: 両Agent役割のLLMクライアントを初期化 アシスタント: ツールとポリシーにアクセスしカスタマーサービスを担当
     assistant_chat_client = OpenAIChatClient(
         base_url=openai_base_url,
         api_key=openai_api_key,
         model_id=assistant_model,
     )
 
-    # User simulator: simulates realistic customer behavior and requests
+    # ユーザーシミュレーター: 現実的な顧客行動とリクエストをシミュレート
     user_simulator_chat_client = OpenAIChatClient(
         base_url=openai_base_url,
         api_key=openai_api_key,
         model_id=user_model,
     )
 
-    # STEP 4: Filter task set for debug mode
+    # STEP 4: デバッグモード用にタスクセットをフィルタリング
     if debug_task_id is not None:
         tasks = [task for task in tasks if task.id == debug_task_id]
         if not tasks:
             logger.error(f"Task ID {debug_task_id} not found in dataset")
             return
 
-    # STEP 5: Initialize evaluation tracking
-    all_rewards: list[float] = []  # Stores reward scores for final statistics
-    task_runner = TaskRunner(max_steps=max_steps)  # Reusable workflow orchestrator
+    # STEP 5: 評価トラッキングを初期化
+    all_rewards: list[float] = []  # 最終統計用に報酬スコアを保存
+    task_runner = TaskRunner(max_steps=max_steps)  # 再利用可能なワークフローオーケストレーター
 
-    # STEP 6: Execute benchmark across all tasks with proper file handling
+    # STEP 6: 適切なファイル処理で全タスクにわたるベンチマークを実行
     def write_result(result_fp, result):
-        """Write result to file if file pointer is provided."""
+        """ファイルポインタが提供されていれば結果をファイルに書き込みます。"""
         if result_fp is not None:
             result_fp.write(json.dumps(to_dumpable(result), default=str) + "\n")
 
-    # Use context manager for file handling
+    # ファイル処理にコンテキストマネージャを使用
     if result_filename:
         with open(result_filename, "a") as result_fp:
             for task in tasks:
                 logger_.info(f"<red>Testing task #{task.id}</red>")
                 logger_.info(f"<cyan>Purpose:</cyan> {task.description.purpose}")  # type: ignore
 
-                # Initialize result structure for this task
+                # このタスク用の結果構造を初期化
                 result: dict[str, Any] = {
                     "config": {
                         "assistant": assistant_chat_client.model_id,
@@ -139,48 +138,48 @@ async def run_benchmark(assistant_model: str, user_model: str, debug_task_id: st
                     "task": task,
                 }
 
-                # Log user scenario context for transparency
+                # 透明性のためユーザーシナリオのコンテキストをログに記録
                 if task.user_scenario and task.user_scenario.instructions:
                     logger_.info(f"<cyan>User scenario:</cyan> {task.user_scenario.instructions.reason_for_call}")  # type: ignore
 
                 try:
-                    # Execute the workflow: agent + user simulator conversation
+                    # ワークフローを実行: agent + ユーザーシミュレーターの会話
                     conversation = await task_runner.run(task, assistant_chat_client, user_simulator_chat_client)
 
-                    # Evaluate performance using tau2's comprehensive metrics
+                    # tau2の包括的なメトリクスを使用してパフォーマンスを評価
                     reward_value = task_runner.evaluate(task, conversation, task_runner.termination_reason)
 
-                    # Store detailed results for analysis
-                    result["evaluation"] = task_runner.full_reward_info  # Full evaluation breakdown
-                    result["messages"] = conversation  # Complete conversation history
-                    result["termination_reason"] = task_runner.termination_reason  # How conversation ended
+                    # 分析用に詳細な結果を保存
+                    result["evaluation"] = task_runner.full_reward_info  # 完全な評価内訳
+                    result["messages"] = conversation  # 完全な会話履歴
+                    result["termination_reason"] = task_runner.termination_reason  # 会話の終了方法
 
-                    # Log evaluation results (escape HTML for colored output)
+                    # 評価結果をログに記録（カラフル出力のためHTMLをエスケープ）
                     reward_str = str(task_runner.full_reward_info).replace("<", r"\<")
                     logger_.info(f"<cyan>Final evaluation:</cyan> {reward_str}")
 
                 except Exception as e:
-                    # Robust error handling: capture all failures for analysis
+                    # 堅牢なエラー処理: すべての失敗を分析用にキャプチャ
                     logger_.error(f"<red>Error testing task #{task.id}:</red> {e}")
-                    result["error"] = traceback.format_exc()  # Full stack trace for debugging
+                    result["error"] = traceback.format_exc()  # デバッグ用の完全なスタックトレース
 
-                    traceback.print_exc()  # Console output for immediate debugging
-                    reward_value = 0.0  # Zero score for failed runs
+                    traceback.print_exc()  # 即時デバッグ用のコンソール出力
+                    reward_value = 0.0  # 失敗した実行はスコアゼロ
 
-                # STEP 7: Persist results incrementally (enables partial analysis)
+                # STEP 7: 結果を逐次保存（部分的な分析を可能に）
                 write_result(result_fp, result)
 
-                all_rewards.append(reward_value)  # Track for final statistics
+                all_rewards.append(reward_value)  # 最終統計用に追跡
 
-                # Reset runner state for next task
+                # 次のタスクのためにrunnerの状態をリセット
                 task_runner.reinit()
     else:
-        # Debug mode without file output
+        # ファイル出力なしのデバッグモード
         for task in tasks:
             logger_.info(f"<red>Testing task #{task.id}</red>")
             logger_.info(f"<cyan>Purpose:</cyan> {task.description.purpose}")  # type: ignore
 
-            # Initialize result structure for this task
+            # このタスク用の結果構造を初期化
             result: dict[str, Any] = {
                 "config": {
                     "assistant": assistant_chat_client.model_id,
@@ -189,36 +188,36 @@ async def run_benchmark(assistant_model: str, user_model: str, debug_task_id: st
                 "task": task,
             }
 
-            # Log user scenario context for transparency
+            # 透明性のためユーザーシナリオのコンテキストをログに記録
             if task.user_scenario and task.user_scenario.instructions:
                 logger_.info(f"<cyan>User scenario:</cyan> {task.user_scenario.instructions.reason_for_call}")  # type: ignore
 
             try:
-                # Execute the workflow: agent + user simulator conversation
+                # ワークフローを実行: agent + ユーザーシミュレーターの会話
                 conversation = await task_runner.run(task, assistant_chat_client, user_simulator_chat_client)
 
-                # Evaluate performance using tau2's comprehensive metrics
+                # tau2の包括的なメトリクスを使用してパフォーマンスを評価
                 reward_value = task_runner.evaluate(task, conversation, task_runner.termination_reason)
 
-                # Log evaluation results (escape HTML for colored output)
+                # 評価結果をログに記録（カラフル出力のためHTMLをエスケープ）
                 reward_str = str(task_runner.full_reward_info).replace("<", r"\<")
                 logger_.info(f"<cyan>Final evaluation:</cyan> {reward_str}")
 
             except Exception as e:
-                # Robust error handling: capture all failures for analysis
+                # 堅牢なエラー処理: すべての失敗を分析用にキャプチャ
                 logger_.error(f"<red>Error testing task #{task.id}:</red> {e}")
-                traceback.print_exc()  # Console output for immediate debugging
-                reward_value = 0.0  # Zero score for failed runs
+                traceback.print_exc()  # 即時デバッグ用のコンソール出力
+                reward_value = 0.0  # 失敗した実行はスコアゼロ
 
-            all_rewards.append(reward_value)  # Track for final statistics
+            all_rewards.append(reward_value)  # 最終統計用に追跡
 
-            # Reset runner state for next task
+            # 次のタスクのためにrunnerの状態をリセット
             task_runner.reinit()
 
-    # STEP 8: Calculate overall benchmark performance and report final statistics
+    # STEP 8: 全体のベンチマークパフォーマンスを計算し最終統計を報告
     all_accuracy = sum(all_rewards) / len(all_rewards) if all_rewards else 0.0
 
-    # Report final statistics with colored formatting
+    # カラーフォーマット付きで最終統計を報告
     logger_.info("<green>Final Results:</green>")
     logger_.info(f"<cyan>All tasks accuracy:</cyan> {all_accuracy:.2f} ({int(sum(all_rewards))}/{len(tasks)})")
 
@@ -248,27 +247,26 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run tau2-agent-framework model test")
 
-    # Model configuration arguments
+    # モデル設定引数
     parser.add_argument("--assistant", type=str, default="gpt-4.1", help="Assistant model id, e.g., gpt-4.1-mini")
     parser.add_argument("--user", type=str, default="gpt-4.1", help="User model id")
 
-    # Execution mode arguments
+    # 実行モード引数
     parser.add_argument(
         "--debug-task-id", type=str, default=None, help="Debug a specific task ID (disables result file creation)"
     )
     parser.add_argument("--max-steps", type=int, default=100, help="Maximum number of steps to run")
 
-    # Environment configuration arguments
+    # 環境設定引数
     parser.add_argument("--disable-env-patch", action="store_true", help="Disable patching tau2-bench environment")
 
     args = parser.parse_args()
 
-    # Apply environment patch for tau2-bench compatibility
-    # This modifies tau2's environment to be more flexible with tool call validation
+    # tau2-bench互換性のため環境パッチを適用 これはtau2の環境をツール呼び出し検証に対してより柔軟にします
     if not args.disable_env_patch:
         patch_env_set_state()
 
-    # Execute benchmark with configured parameters
+    # 設定されたパラメータでベンチマークを実行
     asyncio.run(
         run_benchmark(
             assistant_model=args.assistant,

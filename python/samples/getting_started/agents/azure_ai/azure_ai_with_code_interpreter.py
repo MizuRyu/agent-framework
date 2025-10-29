@@ -18,7 +18,7 @@ for Python code execution and mathematical problem solving.
 
 
 def print_code_interpreter_inputs(response: AgentRunResponse) -> None:
-    """Helper method to access code interpreter data."""
+    """コードインタープリターのデータにアクセスするためのヘルパーメソッド。"""
 
     print("\nCode Interpreter Inputs during the run:")
     if response.raw_representation is None:
@@ -32,11 +32,10 @@ def print_code_interpreter_inputs(response: AgentRunResponse) -> None:
 
 
 async def main() -> None:
-    """Example showing how to use the HostedCodeInterpreterTool with Azure AI."""
+    """Azure AI で HostedCodeInterpreterTool を使う例。"""
     print("=== Azure AI Agent with Code Interpreter Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで `az login` コマンドを実行するか、AzureCliCredential を好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential) as chat_client,
@@ -50,8 +49,7 @@ async def main() -> None:
         print(f"User: {query}")
         response = await AgentRunResponse.from_agent_response_generator(agent.run_stream(query))
         print(f"Agent: {response}")
-        # To review the code interpreter outputs, you can access
-        # them from the response raw_representations, just uncomment the next line:
+        # コードインタープリターの出力を確認するには、レスポンスの raw_representations からアクセスできます。次の行のコメントを外してください:
         # print_code_interpreter_inputs(response)
 
 

@@ -20,15 +20,15 @@ same observability setup function.
 async def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
-    await asyncio.sleep(randint(0, 10) / 10.0)  # Simulate a network call
+    """指定された場所の天気を取得します。"""
+    await asyncio.sleep(randint(0, 10) / 10.0)  # ネットワークコールをシミュレートする
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 async def main():
-    # This will enable tracing and create the necessary tracing, logging and metrics providers
-    # based on environment variables. See the .env.example file for the available configuration options.
+    # トレーシングを有効にし、環境変数に基づいて必要なトレーシング、ロギング、メトリクスプロバイダーを作成します。
+    # 利用可能な設定オプションについては.env.exampleファイルを参照してください。
     setup_observability()
 
     questions = ["What's the weather in Amsterdam?", "and in Paris, and which is better?", "Why is the sky blue?"]

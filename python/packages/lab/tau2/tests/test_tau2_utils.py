@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for tau2 utils module."""
+"""tau2 utilsモジュールのテストです。"""
 
 import urllib.request
 from pathlib import Path
@@ -23,22 +23,22 @@ def tau2_airline_environment() -> Environment:
     airline_db_remote_path = "https://raw.githubusercontent.com/sierra-research/tau2-bench/5ba9e3e56db57c5e4114bf7f901291f09b2c5619/data/tau2/domains/airline/db.json"
     airline_policy_remote_path = "https://raw.githubusercontent.com/sierra-research/tau2-bench/5ba9e3e56db57c5e4114bf7f901291f09b2c5619/data/tau2/domains/airline/policy.md"
 
-    # Create cache directory
+    # キャッシュディレクトリを作成する
     cache_dir = Path(__file__).parent / "data"
     cache_dir.mkdir(exist_ok=True)
 
-    # Define cache file paths
+    # キャッシュファイルのパスを定義する
     db_cache_path = cache_dir / "airline_db.json"
     policy_cache_path = cache_dir / "airline_policy.md"
 
-    # Download files only if they don't exist in cache
+    # キャッシュに存在しない場合のみファイルをダウンロードする
     if not db_cache_path.exists():
         urllib.request.urlretrieve(airline_db_remote_path, db_cache_path)
 
     if not policy_cache_path.exists():
         urllib.request.urlretrieve(airline_policy_remote_path, policy_cache_path)
 
-    # Load data from cached files
+    # キャッシュされたファイルからデータを読み込む
     db = FlightDB.load(str(db_cache_path))
     tools = AirlineTools(db)
     with open(policy_cache_path) as fp:
@@ -52,36 +52,36 @@ def tau2_airline_environment() -> Environment:
 
 
 def test_convert_tau2_tool_to_ai_function_basic(tau2_airline_environment):
-    """Test basic conversion from tau2 tool to AIFunction."""
-    # Get real tools from tau2 environment
+    """tau2 toolからAIFunctionへの基本的な変換をテストします。"""
+    # tau2環境から実際のツールを取得する
     tools = tau2_airline_environment.get_tools()
 
-    # Use the first available tool for testing
+    # テストのために最初に利用可能なツールを使用する
     assert len(tools) > 0, "No tools available in environment"
     tau2_tool = tools[0]
 
-    # Convert the tool
+    # ツールを変換する
     ai_function = convert_tau2_tool_to_ai_function(tau2_tool)
 
-    # Verify the conversion
+    # 変換を検証する
     assert isinstance(ai_function, AIFunction)
     assert ai_function.name == tau2_tool.name
     assert ai_function.description == tau2_tool._get_description()
     assert ai_function.input_model == tau2_tool.params
 
-    # Test that the function is callable (we won't call it with real params to avoid side effects)
+    # 関数が呼び出し可能であることをテストする（副作用を避けるため実際のパラメータで呼び出しません）
     assert callable(ai_function.func)
 
 
 def test_convert_tau2_tool_to_ai_function_multiple_tools(tau2_airline_environment):
-    """Test conversion with multiple tau2 tools."""
-    # Get real tools from tau2 environment
+    """複数のtau2ツールでの変換をテストします。"""
+    # tau2環境から実際のツールを取得する
     tools = tau2_airline_environment.get_tools()
 
-    # Convert multiple tools
-    ai_functions = [convert_tau2_tool_to_ai_function(tool) for tool in tools[:3]]  # Test first 3 tools
+    # 複数のツールを変換する
+    ai_functions = [convert_tau2_tool_to_ai_function(tool) for tool in tools[:3]]  # 最初の3つのツールをテストする
 
-    # Verify all conversions
+    # すべての変換を検証する
     for ai_function, tau2_tool in zip(ai_functions, tools[:3], strict=False):
         assert isinstance(ai_function, AIFunction)
         assert ai_function.name == tau2_tool.name
@@ -91,7 +91,7 @@ def test_convert_tau2_tool_to_ai_function_multiple_tools(tau2_airline_environmen
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_system():
-    """Test converting system message."""
+    """systemメッセージの変換をテストする。"""
     messages = [ChatMessage(role=Role.SYSTEM, contents=[TextContent(text="System instruction")])]
 
     tau2_messages = convert_agent_framework_messages_to_tau2_messages(messages)
@@ -103,7 +103,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_system():
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_user():
-    """Test converting user message."""
+    """userメッセージの変換をテストする。"""
     messages = [ChatMessage(role=Role.USER, contents=[TextContent(text="Hello assistant")])]
 
     tau2_messages = convert_agent_framework_messages_to_tau2_messages(messages)
@@ -116,7 +116,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_user():
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_assistant():
-    """Test converting assistant message."""
+    """assistantメッセージの変換をテストする。"""
     messages = [ChatMessage(role=Role.ASSISTANT, contents=[TextContent(text="Hello user")])]
 
     tau2_messages = convert_agent_framework_messages_to_tau2_messages(messages)
@@ -129,7 +129,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_assistant():
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_with_function_call():
-    """Test converting message with function call."""
+    """function callを含むメッセージの変換をテストする。"""
     function_call = FunctionCallContent(call_id="call_123", name="test_function", arguments={"param": "value"})
 
     messages = [ChatMessage(role=Role.ASSISTANT, contents=[TextContent(text="I'll call a function"), function_call])]
@@ -151,7 +151,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_with_function_call():
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_with_function_result():
-    """Test converting message with function result."""
+    """function resultを含むメッセージの変換をテストする。"""
     function_result = FunctionResultContent(call_id="call_123", result={"success": True, "data": "result data"})
 
     messages = [ChatMessage(role=Role.TOOL, contents=[function_result])]
@@ -169,7 +169,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_with_function_result(
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_with_error():
-    """Test converting function result with error."""
+    """エラーを含むfunction resultの変換をテストする。"""
     function_result = FunctionResultContent(
         call_id="call_456", result="Error occurred", exception=Exception("Test error")
     )
@@ -184,7 +184,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_with_error():
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_multiple_text_contents():
-    """Test converting message with multiple text contents."""
+    """複数のテキストコンテンツを含むメッセージの変換をテストする。"""
     messages = [ChatMessage(role=Role.USER, contents=[TextContent(text="First part"), TextContent(text="Second part")])]
 
     tau2_messages = convert_agent_framework_messages_to_tau2_messages(messages)
@@ -195,7 +195,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_multiple_text_content
 
 
 def test_convert_agent_framework_messages_to_tau2_messages_complex_scenario():
-    """Test converting complex scenario with multiple message types."""
+    """複数のメッセージタイプを含む複雑なシナリオの変換をテストする。"""
     function_call = FunctionCallContent(call_id="call_789", name="complex_tool", arguments='{"key": "value"}')
 
     function_result = FunctionResultContent(call_id="call_789", result={"output": "tool result"})
@@ -217,7 +217,7 @@ def test_convert_agent_framework_messages_to_tau2_messages_complex_scenario():
     assert isinstance(tau2_messages[3], ToolMessage)
     assert isinstance(tau2_messages[4], AssistantMessage)
 
-    # Check the assistant message with tool call
+    # tool callを含むassistantメッセージをチェックする
     assert tau2_messages[2].tool_calls is not None
     assert len(tau2_messages[2].tool_calls) == 1
     assert tau2_messages[2].tool_calls[0].name == "complex_tool"

@@ -45,7 +45,7 @@ Prerequisites:
 
 @dataclass
 class ReviewRequest:
-    """Structured request passed from Worker to Reviewer for evaluation."""
+    """WorkerからReviewerへ評価のために渡される構造化リクエスト。"""
 
     request_id: str
     user_messages: list[ChatMessage]
@@ -54,7 +54,7 @@ class ReviewRequest:
 
 @dataclass
 class ReviewResponse:
-    """Structured response from Reviewer back to Worker."""
+    """ReviewerからWorkerへ返される構造化レスポンス。"""
 
     request_id: str
     feedback: str
@@ -62,7 +62,7 @@ class ReviewResponse:
 
 
 class Reviewer(Executor):
-    """Executor that reviews agent responses and provides structured feedback."""
+    """Agentのレスポンスをレビューし、構造化フィードバックを提供するExecutor。"""
 
     def __init__(self, id: str, chat_client: ChatClientProtocol) -> None:
         super().__init__(id=id)
@@ -72,12 +72,12 @@ class Reviewer(Executor):
     async def review(self, request: ReviewRequest, ctx: WorkflowContext[ReviewResponse]) -> None:
         print(f"Reviewer: Evaluating response for request {request.request_id[:8]}...")
 
-        # Define structured schema for the LLM to return.
+        # LLMが返す構造化スキーマを定義します。
         class _Response(BaseModel):
             feedback: str
             approved: bool
 
-        # Construct review instructions and context.
+        # レビュー指示とコンテキストを構築します。
         messages = [
             ChatMessage(
                 role=Role.SYSTEM,
@@ -92,11 +92,11 @@ class Reviewer(Executor):
                 ),
             )
         ]
-        # Add conversation history.
+        # 会話履歴を追加します。
         messages.extend(request.user_messages)
         messages.extend(request.agent_messages)
 
-        # Add explicit review instruction.
+        # 明示的なレビュー指示を追加します。
         messages.append(ChatMessage(role=Role.USER, text="Please review the agent's responses."))
 
         print("Reviewer: Sending review request to LLM...")
@@ -107,14 +107,14 @@ class Reviewer(Executor):
         print(f"Reviewer: Review complete - Approved: {parsed.approved}")
         print(f"Reviewer: Feedback: {parsed.feedback}")
 
-        # Send structured review result to Worker.
+        # 構造化されたレビュー結果をWorkerに送信します。
         await ctx.send_message(
             ReviewResponse(request_id=request.request_id, feedback=parsed.feedback, approved=parsed.approved)
         )
 
 
 class Worker(Executor):
-    """Executor that generates responses and incorporates feedback when necessary."""
+    """レスポンスを生成し、必要に応じてフィードバックを取り込むExecutor。"""
 
     def __init__(self, id: str, chat_client: ChatClientProtocol) -> None:
         super().__init__(id=id)
@@ -125,7 +125,7 @@ class Worker(Executor):
     async def handle_user_messages(self, user_messages: list[ChatMessage], ctx: WorkflowContext[ReviewRequest]) -> None:
         print("Worker: Received user messages, generating response...")
 
-        # Initialize chat with system prompt.
+        # システムプロンプトでチャットを初期化します。
         messages = [ChatMessage(role=Role.SYSTEM, text="You are a helpful assistant.")]
         messages.extend(user_messages)
 
@@ -133,15 +133,15 @@ class Worker(Executor):
         response = await self._chat_client.get_response(messages=messages)
         print(f"Worker: Response generated: {response.messages[-1].text}")
 
-        # Add agent messages to context.
+        # AgentのメッセージをContextに追加します。
         messages.extend(response.messages)
 
-        # Create review request and send to Reviewer.
+        # レビューリクエストを作成しReviewerに送信します。
         request = ReviewRequest(request_id=str(uuid4()), user_messages=user_messages, agent_messages=response.messages)
         print(f"Worker: Sending response for review (ID: {request.request_id[:8]})")
         await ctx.send_message(request)
 
-        # Track request for possible retry.
+        # 再試行の可能性のためにリクエストを追跡します。
         self._pending_requests[request.request_id] = (request, messages)
 
     @handler
@@ -159,7 +159,7 @@ class Worker(Executor):
             for message in request.agent_messages:
                 contents.extend(message.contents)
 
-            # Emit approved result to external consumer via AgentRunUpdateEvent.
+            # AgentRunUpdateEventを通じて承認済み結果を外部コンシューマに送出します。
             await ctx.add_event(
                 AgentRunUpdateEvent(self.id, data=AgentRunResponseUpdate(contents=contents, role=Role.ASSISTANT))
             )
@@ -168,26 +168,26 @@ class Worker(Executor):
         print(f"Worker: Response not approved. Feedback: {review.feedback}")
         print("Worker: Regenerating response with feedback...")
 
-        # Incorporate review feedback.
+        # レビューのフィードバックを取り込みます。
         messages.append(ChatMessage(role=Role.SYSTEM, text=review.feedback))
         messages.append(
             ChatMessage(role=Role.SYSTEM, text="Please incorporate the feedback and regenerate the response.")
         )
         messages.extend(request.user_messages)
 
-        # Retry with updated prompt.
+        # 更新されたプロンプトで再試行します。
         response = await self._chat_client.get_response(messages=messages)
         print(f"Worker: New response generated: {response.messages[-1].text}")
 
         messages.extend(response.messages)
 
-        # Send updated request for re-review.
+        # 再レビューのために更新されたリクエストを送信します。
         new_request = ReviewRequest(
             request_id=review.request_id, user_messages=request.user_messages, agent_messages=response.messages
         )
         await ctx.send_message(new_request)
 
-        # Track new request for further evaluation.
+        # さらなる評価のために新しいリクエストを追跡します。
         self._pending_requests[new_request.request_id] = (new_request, messages)
 
 
@@ -195,7 +195,7 @@ async def main() -> None:
     print("Starting Workflow Agent Demo")
     print("=" * 50)
 
-    # Initialize chat clients and executors.
+    # チャットクライアントとExecutorを初期化します。
     print("Creating chat client and executors...")
     mini_chat_client = OpenAIChatClient(model_id="gpt-4.1-nano")
     chat_client = OpenAIChatClient(model_id="gpt-4.1")
@@ -216,7 +216,7 @@ async def main() -> None:
     print("Query: 'Write code for parallel reading 1 million files on disk and write to a sorted output file.'")
     print("-" * 50)
 
-    # Run agent in streaming mode to observe incremental updates.
+    # インクリメンタルな更新を観察するためにストリーミングモードでAgentを実行します。
     async for event in agent.run_stream(
         "Write code for parallel reading 1 million files on disk and write to a sorted output file."
     ):

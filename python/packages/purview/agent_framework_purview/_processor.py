@@ -34,7 +34,7 @@ from ._settings import PurviewSettings
 
 
 def _is_valid_guid(value: str | None) -> bool:
-    """Check if a string is a valid GUID/UUID format using uuid module."""
+    """uuidモジュールを使って文字列が有効なGUID/UUID形式かどうかをチェックします。"""
     if not value:
         return False
     try:
@@ -45,7 +45,7 @@ def _is_valid_guid(value: str | None) -> bool:
 
 
 class ScopedContentProcessor:
-    """Combine protection scopes, process content, and content activities logic."""
+    """保護スコープの結合、コンテンツ処理、およびコンテンツアクティビティのロジック。"""
 
     def __init__(self, client: PurviewClient, settings: PurviewSettings):
         self._client = client
@@ -54,17 +54,18 @@ class ScopedContentProcessor:
     async def process_messages(
         self, messages: Iterable[ChatMessage], activity: Activity, user_id: str | None = None
     ) -> tuple[bool, str | None]:
-        """Process messages for policy evaluation.
+        """ポリシー評価のためにメッセージを処理します。
 
         Args:
-            messages: The messages to process
-            activity: The activity type (e.g., UPLOAD_TEXT)
-            user_id: Optional user_id to use for all messages. If provided, this is the fallback.
+            messages: 処理するメッセージ
+            activity: アクティビティタイプ（例：UPLOAD_TEXT）
+            user_id: すべてのメッセージに使用するOptionalなuser_id。指定された場合はフォールバックとして使われます。
 
         Returns:
-            A tuple of (should_block: bool, resolved_user_id: str | None).
-            The resolved_user_id can be stored and passed back when processing the response
-            to ensure the same user context is maintained throughout the request/response cycle.
+            タプル (should_block: bool, resolved_user_id: str | None) を返します。
+            resolved_user_idは保存してレスポンス処理時に渡すことで、
+            リクエスト／レスポンスサイクル全体で同じユーザーコンテキストを維持できます。
+
         """
         pc_requests, resolved_user_id = await self._map_messages(messages, activity, user_id)
         should_block = False
@@ -82,15 +83,16 @@ class ScopedContentProcessor:
     async def _map_messages(
         self, messages: Iterable[ChatMessage], activity: Activity, provided_user_id: str | None = None
     ) -> tuple[list[ProcessContentRequest], str | None]:
-        """Map messages to ProcessContentRequests.
+        """メッセージをProcessContentRequestsにマッピングします。
 
         Args:
-            messages: The messages to map
-            activity: The activity type
-            provided_user_id: Optional user_id to use. If provided, this is the fallback.
+            messages: マッピングするメッセージ
+            activity: アクティビティタイプ
+            provided_user_id: 使用するOptionalなuser_id。指定された場合はフォールバックとして使われます。
 
         Returns:
-            A tuple of (requests, resolved_user_id)
+            タプル (requests, resolved_user_id) を返します。
+
         """
         results: list[ProcessContentRequest] = []
         token_info = None
@@ -120,7 +122,7 @@ class ScopedContentProcessor:
         if not resolved_user_id:
             resolved_user_id = provided_user_id if provided_user_id and _is_valid_guid(provided_user_id) else None
 
-        # Return empty results if user_id is empty
+        # user_idが空の場合は空の結果を返します。
         if not resolved_user_id or not _is_valid_guid(resolved_user_id):
             return results, None
 
@@ -231,7 +233,8 @@ class ScopedContentProcessor:
         should_process: bool = False
         dlp_actions: list[DlpActionInfo] = []
         for scope in ps_response.scopes or []:
-            # Check if all activities in req_activity are present in scope.activities using bitwise flags.
+            # req_activity のすべてのアクティビティが bitwise フラグを使用して scope.activities
+            # に存在するかをチェックします。
             activity_match = bool(scope.activities and (scope.activities & req_activity) == req_activity)
             location_match = False
             if location is not None:

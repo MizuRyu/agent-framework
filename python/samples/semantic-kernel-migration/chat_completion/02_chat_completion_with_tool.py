@@ -1,8 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Demonstrate SK plugins vs Agent Framework tools with a chat agent.
+"""SKプラグインとAgent FrameworkツールをチャットAgentで比較します。
 
-Configure your OpenAI or Azure OpenAI credentials before running. The example
-exposes a "specials" tool that both SDKs call during the conversation.
+実行前にOpenAIまたはAzure OpenAIの認証情報を設定してください。この例では両SDKが会話中に呼び出す「specials」ツールを公開しています。
 """
 
 import asyncio
@@ -18,7 +17,7 @@ async def run_semantic_kernel() -> None:
         def specials(self) -> str:
             return "Clam chowder, Cobb salad, Chai tea"
 
-    # SK advertises tools by attaching plugin instances at construction time.
+    # SKは構築時にプラグインインスタンスを添付してツールを宣伝します。
     agent = ChatCompletionAgent(
         service=OpenAIChatCompletion(),
         name="Host",
@@ -41,7 +40,7 @@ async def run_agent_framework() -> None:
     async def specials() -> str:
         return "Clam chowder, Cobb salad, Chai tea"
 
-    # AF tools are provided as callables on each agent instance.
+    # AFのツールは各Agentインスタンスの呼び出し可能オブジェクトとして提供されます。
     chat_agent = OpenAIChatClient().create_agent(
         name="Host",
         instructions="Answer menu questions accurately.",

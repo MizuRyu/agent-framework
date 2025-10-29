@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Attach a lightweight function tool to the Responses API in SK and AF."""
+"""SKとAFでResponses APIに軽量な関数ツールを添付します。"""
 
 import asyncio
 
@@ -18,7 +18,7 @@ async def run_semantic_kernel() -> None:
     credential = AzureCliCredential()
     try:
         client = AzureResponsesAgent.create_client(credential=credential)
-        # Plugins advertise callable tools to the Responses agent.
+        # プラグインは呼び出し可能なツールをResponses Agentに宣伝します。
         agent = AzureResponsesAgent(
             ai_model_id=AzureOpenAISettings().responses_deployment_name,
             client=client,
@@ -45,7 +45,7 @@ async def run_agent_framework() -> None:
         chat_client=OpenAIResponsesClient(),
         instructions="Use the add tool when math is required.",
         name="MathExpert",
-        # AF registers the async function as a tool at construction.
+        # AFは非同期関数を構築時にツールとして登録します。
         tools=[add],
     )
     reply = await chat_agent.run("Use add(41, 1) and explain the result.")

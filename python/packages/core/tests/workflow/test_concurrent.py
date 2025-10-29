@@ -22,11 +22,11 @@ from agent_framework._workflows._checkpoint import InMemoryCheckpointStorage
 
 
 class _FakeAgentExec(Executor):
-    """Test executor that mimics an agent by emitting an AgentExecutorResponse.
+    """AgentExecutorResponseを発行することでエージェントを模倣するテスト用executor。
 
-    It takes the incoming AgentExecutorRequest, produces a single assistant message
-    with the configured reply text, and sends an AgentExecutorResponse that includes
-    full_conversation (the original user prompt followed by the assistant message).
+    受け取ったAgentExecutorRequestから、設定された返信テキストを持つ単一のassistantメッセージを生成し、
+    元のユーザープロンプトに続くassistantメッセージを含むfull_conversationを含むAgentExecutorResponseを送信します。
+
     """
 
     def __init__(self, id: str, reply_text: str) -> None:
@@ -47,13 +47,13 @@ def test_concurrent_builder_rejects_empty_participants() -> None:
 
 def test_concurrent_builder_rejects_duplicate_executors() -> None:
     a = _FakeAgentExec("dup", "A")
-    b = _FakeAgentExec("dup", "B")  # same executor id
+    b = _FakeAgentExec("dup", "B")  # 同じexecutor id
     with pytest.raises(ValueError):
         ConcurrentBuilder().participants([a, b])
 
 
 async def test_concurrent_default_aggregator_emits_single_user_and_assistants() -> None:
-    # Three synthetic agent executors
+    # 3つの合成エージェントexecutor
     e1 = _FakeAgentExec("agentA", "Alpha")
     e2 = _FakeAgentExec("agentB", "Beta")
     e3 = _FakeAgentExec("agentC", "Gamma")
@@ -74,7 +74,7 @@ async def test_concurrent_default_aggregator_emits_single_user_and_assistants() 
     assert output is not None
     messages: list[ChatMessage] = output
 
-    # Expect one user message + one assistant message per participant
+    # 参加者ごとに1つのユーザーメッセージ＋1つのアシスタントメッセージを期待します。
     assert len(messages) == 1 + 3
     assert messages[0].role == Role.USER
     assert "hello world" in messages[0].text
@@ -85,7 +85,7 @@ async def test_concurrent_default_aggregator_emits_single_user_and_assistants() 
 
 
 async def test_concurrent_custom_aggregator_callback_is_used() -> None:
-    # Two synthetic agent executors for brevity
+    # 簡潔さのための2つの合成エージェントexecutor
     e1 = _FakeAgentExec("agentA", "One")
     e2 = _FakeAgentExec("agentB", "Two")
 
@@ -110,7 +110,7 @@ async def test_concurrent_custom_aggregator_callback_is_used() -> None:
 
     assert completed
     assert output is not None
-    # Custom aggregator returns a string payload
+    # カスタムアグリゲーターは文字列ペイロードを返します。
     assert isinstance(output, str)
     assert output == "One | Two"
 
@@ -119,7 +119,7 @@ async def test_concurrent_custom_aggregator_sync_callback_is_used() -> None:
     e1 = _FakeAgentExec("agentA", "One")
     e2 = _FakeAgentExec("agentB", "Two")
 
-    # Sync callback with ctx parameter (should run via asyncio.to_thread)
+    # ctxパラメータ付きの同期コールバック（asyncio.to_thread経由で実行されるはず）
     def summarize_sync(results: list[AgentExecutorResponse], _ctx: WorkflowContext[Any]) -> str:  # type: ignore[unused-argument]
         texts: list[str] = []
         for r in results:

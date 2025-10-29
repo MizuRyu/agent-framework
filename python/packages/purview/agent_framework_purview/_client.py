@@ -30,10 +30,11 @@ from ._settings import PurviewSettings
 
 
 class PurviewClient:
-    """Async client for calling Graph Purview endpoints.
+    """Graph Purviewエンドポイントを呼び出すための非同期クライアント。
 
-    Supports both synchronous TokenCredential and asynchronous AsyncTokenCredential implementations.
-    A sync credential will be invoked in a thread to avoid blocking the event loop.
+    同期TokenCredentialと非同期AsyncTokenCredentialの両方の実装をサポートします。
+    同期クレデンシャルはイベントループをブロックしないようスレッド内で呼び出されます。
+
     """
 
     def __init__(
@@ -53,7 +54,7 @@ class PurviewClient:
         await self._client.aclose()
 
     async def _get_token(self, *, tenant_id: str | None = None) -> str:
-        """Acquire an access token using either async or sync credential."""
+        """非同期または同期のcredentialを使用してアクセストークンを取得します。"""
         scopes = self._settings.get_scopes()
         cred = self._credential
         token = cred.get_token(*scopes, tenant_id=tenant_id)
@@ -118,7 +119,7 @@ class PurviewClient:
         except ValueError:
             data = {}
         try:
-            # Prefer pydantic-style model_validate if present, else fall back to constructor.
+            # pydanticスタイルのmodel_validateが存在する場合はそちらを優先し、なければコンストラクタにフォールバックします。
             if hasattr(response_type, "model_validate"):
                 return response_type.model_validate(data)  # type: ignore[no-any-return]
             return response_type(**data)  # type: ignore[call-arg, no-any-return]

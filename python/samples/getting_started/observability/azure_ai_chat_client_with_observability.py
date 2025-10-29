@@ -25,10 +25,10 @@ You must add an Application Insights instance to your Azure AI project
 for this sample to work.
 """
 
-# For loading the `AZURE_AI_PROJECT_ENDPOINT` environment variable
+# `AZURE_AI_PROJECT_ENDPOINT` 環境変数の読み込み用
 dotenv.load_dotenv()
 
-# ANSI color codes for printing in blue and resetting after each print
+# 青色で印刷し、印刷後にリセットするANSIカラーコード
 BLUE = "\x1b[34m"
 RESET = "\x1b[0m"
 
@@ -36,23 +36,23 @@ RESET = "\x1b[0m"
 async def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
-    await asyncio.sleep(randint(0, 10) / 10.0)  # Simulate a network call
+    """指定された場所の天気を取得します。"""
+    await asyncio.sleep(randint(0, 10) / 10.0)  # ネットワークコールをシミュレートします
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 async def main() -> None:
-    """Run an AI service.
+    """AIサービスを実行します。
 
-    This function runs an AI service and prints the output.
-    Telemetry will be collected for the service execution behind the scenes,
-    and the traces will be sent to the configured telemetry backend.
+    この関数はAIサービスを実行し、出力を表示します。
+    バックグラウンドでサービス実行のテレメトリが収集され、
+    トレースは設定されたテレメトリバックエンドに送信されます。
 
-    The telemetry will include information about the AI service execution.
+    テレメトリにはAIサービス実行に関する情報が含まれます。
 
-    In azure_ai you will also see specific operations happening that are called by the Azure AI implementation,
-    such as `create_agent`.
+    azure_aiでは、Azure AI実装によって呼び出される特定の操作（例: `create_agent`）も確認できます。
+
     """
     questions = [
         "What's the weather in Amsterdam and in Paris?",
@@ -65,9 +65,8 @@ async def main() -> None:
         AIProjectClient(endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"], credential=credential) as project,
         AzureAIAgentClient(project_client=project) as client,
     ):
-        # This will enable tracing and configure the application to send telemetry data to the
-        # Application Insights instance attached to the Azure AI project.
-        # This will override any existing configuration.
+        # トレーシングを有効にし、アプリケーションがAzure AIプロジェクトに紐づくApplication
+        # Insightsインスタンスにテレメトリデータを送信するように設定します。 既存の設定は上書きされます。
         await client.setup_azure_ai_observability()
 
         with get_tracer().start_as_current_span(

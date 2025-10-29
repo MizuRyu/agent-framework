@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PendingRequestDetails:
-    """Lightweight information about a pending request captured in a checkpoint."""
+    """チェックポイントにキャプチャされた保留中リクエストの軽量情報。"""
 
     request_id: str
     prompt: str | None = None
@@ -32,10 +32,11 @@ class PendingRequestDetails:
 
 @dataclass
 class PendingRequestSnapshot:
-    """Snapshot of a pending request for internal tracking.
+    """内部追跡のための保留中リクエストのスナップショット。
 
-    This snapshot should be JSON-serializable and contain enough
-    information to reconstruct the original request if needed.
+    このスナップショットはJSONシリアライズ可能であり、
+    必要に応じて元のリクエストを再構築するのに十分な情報を含みます。
+
     """
 
     request_id: str
@@ -46,11 +47,11 @@ class PendingRequestSnapshot:
 
 @dataclass
 class RequestInfoMessage:
-    """Base class for all request messages in workflows.
+    """ワークフロー内のすべてのリクエストメッセージの基底クラス。
 
-    Any message that should be routed to the RequestInfoExecutor for external
-    handling must inherit from this class. This ensures type safety and makes
-    the request/response pattern explicit.
+    RequestInfoExecutorにルーティングされるべきメッセージはすべてこのクラスを継承しなければなりません。
+    これにより型安全性が保証され、リクエスト／レスポンスパターンが明示されます。
+
     """
 
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -67,10 +68,11 @@ TResponse = TypeVar("TResponse")
 
 @dataclass
 class RequestResponse(Generic[TRequest, TResponse]):
-    """Response type for request/response correlation in workflows.
+    """ワークフローにおけるリクエスト／レスポンス相関のためのレスポンスタイプ。
 
-    This type is used by RequestInfoExecutor to create correlated responses
-    that include the original request context for proper message routing.
+    このタイプはRequestInfoExecutorによって使用され、
+    元のリクエストコンテキストを含む相関レスポンスを作成し、適切なメッセージルーティングを可能にします。
+
     """
 
     data: TResponse
@@ -83,25 +85,24 @@ class RequestResponse(Generic[TRequest, TResponse]):
     """The ID of the original request."""
 
 
-# endregion: Request/Response Types
-
-
-# region Request Info Executor
+# endregion: Request/Response Types region Request Info Executor
 class RequestInfoExecutor(Executor):
-    """Built-in executor that handles request/response patterns in workflows.
+    """ワークフロー内のリクエスト／レスポンスパターンを処理する組み込みExecutor。
 
-    This executor acts as a gateway for external information requests. When it receives
-    a request message, it saves the request details and emits a RequestInfoEvent. When
-    a response is provided externally, it emits the response as a message.
+    このExecutorは外部情報リクエストのゲートウェイとして機能します。
+    リクエストメッセージを受け取るとリクエスト詳細を保存しRequestInfoEventを発行します。
+    外部からレスポンスが提供されると、それをメッセージとして発行します。
+
     """
 
     _PENDING_SHARED_STATE_KEY: ClassVar[str] = "_af_pending_request_info"
 
     def __init__(self, id: str):
-        """Initialize the RequestInfoExecutor with a unique ID.
+        """一意のIDでRequestInfoExecutorを初期化します。
 
         Args:
-            id: Unique ID for this RequestInfoExecutor.
+            id: このRequestInfoExecutorの一意のID。
+
         """
         super().__init__(id=id)
         self._request_events: dict[str, RequestInfoEvent] = {}
@@ -110,8 +111,8 @@ class RequestInfoExecutor(Executor):
 
     @handler
     async def handle_request(self, message: RequestInfoMessage, ctx: WorkflowContext) -> None:
-        """Run the RequestInfoExecutor with the given message."""
-        # Use source_executor_id from message if available, otherwise fall back to context
+        """指定されたメッセージでRequestInfoExecutorを実行します。"""
+        # messageのsource_executor_idを使用可能なら使い、そうでなければcontextを使用します。
         source_executor_id = message.source_executor_id or ctx.get_source_executor_id()
 
         event = RequestInfoEvent(
@@ -130,12 +131,13 @@ class RequestInfoExecutor(Executor):
         request_id: str,
         ctx: WorkflowContext[RequestResponse[RequestInfoMessage, Any]],
     ) -> None:
-        """Handle a response to a request.
+        """リクエストへのレスポンスを処理します。
 
         Args:
-            request_id: The ID of the request to which this response corresponds.
-            response_data: The data returned in the response.
-            ctx: The workflow context for sending the response.
+            request_id: このレスポンスが対応するリクエストのID。
+            response_data: レスポンスで返されるデータ。
+            ctx: レスポンス送信のためのworkflowコンテキスト。
+
         """
         event = self._request_events.get(request_id)
         if event is None:
@@ -145,7 +147,7 @@ class RequestInfoExecutor(Executor):
 
         self._request_events.pop(request_id, None)
 
-        # Create a correlated response that includes both the response data and original request
+        # レスポンスデータと元のリクエストの両方を含む相関レスポンスを作成します。
         if not isinstance(event.data, RequestInfoMessage):
             raise TypeError(f"Expected RequestInfoMessage, got {type(event.data)}")
         correlated_response = RequestResponse(data=response_data, original_request=event.data, request_id=request_id)
@@ -154,7 +156,7 @@ class RequestInfoExecutor(Executor):
         await self._erase_pending_request(request_id, cast(WorkflowContext, ctx))
 
     def snapshot_state(self) -> dict[str, Any]:
-        """Serialize pending requests so checkpoint restoration can resume seamlessly."""
+        """チェックポイント復元がシームレスに再開できるように保留中リクエストをシリアライズします。"""
 
         def _encode_event(event: RequestInfoEvent) -> dict[str, Any] | None:
             if event.data is None or not isinstance(event.data, RequestInfoMessage):
@@ -181,7 +183,7 @@ class RequestInfoExecutor(Executor):
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        """Restore pending request bookkeeping from checkpoint state."""
+        """チェックポイント状態から保留中リクエストの管理情報を復元します。"""
         self._request_events.clear()
         stored_events = state.get("request_events", {})
 
@@ -208,13 +210,13 @@ class RequestInfoExecutor(Executor):
             self._request_events[request_id] = event
 
     async def has_pending_request(self, request_id: str, ctx: WorkflowContext) -> bool:
-        """Check if there is a pending request with the given ID.
+        """指定されたIDの保留中のRequestがあるかどうかを確認します。
 
         Args:
-            request_id: The ID of the request to check.
-            ctx: The workflow context for accessing state if needed.
+            request_id: 確認するRequestのID。
+            ctx: 必要に応じてStateにアクセスするためのworkflowのContext。
 
-        Returns: True if the request is pending, False otherwise.
+        Returns: Requestが保留中であればTrue、そうでなければFalse。
         """
         if request_id in self._request_events:
             return True
@@ -222,9 +224,7 @@ class RequestInfoExecutor(Executor):
         pending_requests = await self._retrieve_existing_pending_requests(ctx)
         return request_id in pending_requests
 
-    # endregion: Public Methods
-
-    # region: Internal Methods
+    # endregion: Public Methods region: Internal Methods
 
     async def _record_pending_request(
         self,
@@ -232,7 +232,7 @@ class RequestInfoExecutor(Executor):
         source_executor_id: str,
         ctx: WorkflowContext,
     ) -> None:
-        """Record a pending request to the executor's state for checkpointing purposes."""
+        """チェックポイント目的でExecutorのStateに保留中のRequestを記録します。"""
         pending_request_snapshot = self._build_pending_request_snapshot(message, source_executor_id)
 
         existing_pending_requests = await self._retrieve_existing_pending_requests(ctx)
@@ -241,14 +241,14 @@ class RequestInfoExecutor(Executor):
         await self._persist_to_executor_state(existing_pending_requests, ctx)
 
     async def _erase_pending_request(self, request_id: str, ctx: WorkflowContext) -> None:
-        """Erase a pending request from the executor's state after it has been handled for checkpointing purposes."""
+        """チェックポイント目的で処理済みの保留中RequestをExecutorのStateから消去します。"""
         existing_pending_requests = await self._retrieve_existing_pending_requests(ctx)
         if request_id in existing_pending_requests:
             existing_pending_requests.pop(request_id)
             await self._persist_to_executor_state(existing_pending_requests, ctx)
 
     async def _retrieve_existing_pending_requests(self, ctx: WorkflowContext) -> dict[str, PendingRequestSnapshot]:
-        """Retrieve existing pending requests from executor state."""
+        """ExecutorのStateから既存の保留中Requestを取得します。"""
         executor_state = await ctx.get_executor_state()
         if executor_state is None:
             return {}
@@ -257,7 +257,7 @@ class RequestInfoExecutor(Executor):
         if not isinstance(stored_requests, dict):
             raise TypeError(f"Unexpected type for pending requests: {type(stored_requests).__name__}")
 
-        # Validate contents
+        # 内容を検証します
         for key, value in stored_requests.items():  # type: ignore
             if not isinstance(key, str) or not isinstance(value, PendingRequestSnapshot):
                 raise TypeError(
@@ -270,7 +270,7 @@ class RequestInfoExecutor(Executor):
     async def _persist_to_executor_state(
         self, pending: dict[str, PendingRequestSnapshot], ctx: WorkflowContext
     ) -> None:
-        """Persist the current pending requests to the executor's state."""
+        """現在の保留中RequestをExecutorのStateに永続化します。"""
         executor_state = await ctx.get_executor_state() or {}
         executor_state[self._PENDING_SHARED_STATE_KEY] = pending
         await ctx.set_executor_state(executor_state)
@@ -278,7 +278,7 @@ class RequestInfoExecutor(Executor):
     def _build_pending_request_snapshot(
         self, request: RequestInfoMessage, source_executor_id: str
     ) -> PendingRequestSnapshot:
-        """Build a snapshot of the pending request for checkpointing."""
+        """チェックポイント用に保留中Requestのスナップショットを作成します。"""
         request_as_json_safe_dict = self._convert_request_to_json_safe_dict(request)
 
         return PendingRequestSnapshot(
@@ -371,7 +371,7 @@ class RequestInfoExecutor(Executor):
             with contextlib.suppress(TypeError):
                 return target_cls(**value)  # type: ignore[arg-type]
 
-        # Backwards-compat handling for checkpoints that used to store pydantic as "dict"
+        # 以前はpydanticを"dict"として保存していたチェックポイントの後方互換処理
         if kind in {"dict", "pydantic", "json"} and isinstance(value, dict):
             from_dict = getattr(target_cls, "from_dict", None)
             if callable(from_dict):
@@ -543,7 +543,7 @@ class RequestInfoExecutor(Executor):
 
 
 def _make_json_safe(value: Any) -> Any:
-    """Recursively convert a value to a JSON-safe representation."""
+    """値を再帰的にJSON安全な表現に変換します。"""
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, Mapping):
@@ -557,7 +557,7 @@ def _make_json_safe(value: Any) -> Any:
 
 
 def _import_qualname(qualname: str) -> type[Any]:
-    """Import a type given its qualified name in the format 'module:TypeName'."""
+    """'module:TypeName'形式の修飾名から型をImportします。"""
     module_name, _, type_name = qualname.partition(":")
     if not module_name or not type_name:
         raise ValueError(f"Invalid qualified name: {qualname}")

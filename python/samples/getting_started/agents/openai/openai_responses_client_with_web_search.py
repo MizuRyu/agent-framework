@@ -17,7 +17,7 @@ async def main() -> None:
     client = OpenAIResponsesClient()
 
     message = "What is the current weather? Do not ask for my current location."
-    # Test that the client will use the web search tool with location
+    # クライアントがlocationを使ってweb検索ツールを使用することをテストする
     additional_properties = {
         "user_location": {
             "country": "US",

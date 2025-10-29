@@ -6,10 +6,10 @@ from agent_framework import Executor, WorkflowContext, handler
 
 
 def test_executor_without_id():
-    """Test that an executor without an ID raises an error when trying to run."""
+    """ID を持たない executor が実行しようとするとエラーを発生させることをテスト。"""
 
     class MockExecutorWithoutID(Executor):
-        """A mock executor that does not implement any handlers."""
+        """ハンドラを一切実装しないモック executor。"""
 
         pass
 
@@ -18,47 +18,47 @@ def test_executor_without_id():
 
 
 def test_executor_handler_without_annotations():
-    """Test that an executor with one handler without annotations raises an error when trying to run."""
+    """アノテーションなしの1つのハンドラを持つ executor が実行しようとするとエラーを発生させることをテスト。"""
 
     with pytest.raises(ValueError):
 
         class MockExecutorWithOneHandlerWithoutAnnotations(Executor):  # type: ignore
-            """A mock executor with one handler that does not implement any annotations."""
+            """アノテーションを一切実装しない1つのハンドラを持つモック executor。"""
 
             @handler
             async def handle(self, message, ctx) -> None:  # type: ignore
-                """A mock handler that does not implement any annotations."""
+                """アノテーションを一切実装しないモックハンドラ。"""
                 pass
 
 
 def test_executor_invalid_handler_signature():
-    """Test that an executor with an invalid handler signature raises an error when trying to run."""
+    """無効なハンドラシグネチャを持つ executor が実行しようとするとエラーを発生させることをテスト。"""
 
     with pytest.raises(ValueError):
 
         class MockExecutorWithInvalidHandlerSignature(Executor):  # type: ignore
-            """A mock executor with an invalid handler signature."""
+            """無効なハンドラシグネチャを持つモック executor。"""
 
             @handler  # type: ignore
             async def handle(self, message, other, ctx) -> None:  # type: ignore
-                """A mock handler with an invalid signature."""
+                """無効なシグネチャを持つモックハンドラ。"""
                 pass
 
 
 def test_executor_with_valid_handlers():
-    """Test that an executor with valid handlers can be instantiated and run."""
+    """有効なハンドラを持つ executor がインスタンス化され実行できることをテスト。"""
 
     class MockExecutorWithValidHandlers(Executor):  # type: ignore
-        """A mock executor with valid handlers."""
+        """有効なハンドラを持つモック executor。"""
 
         @handler
         async def handle_text(self, text: str, ctx: WorkflowContext) -> None:  # type: ignore
-            """A mock handler with a valid signature."""
+            """有効なシグネチャを持つモックハンドラ。"""
             pass
 
         @handler
         async def handle_number(self, number: int, ctx: WorkflowContext) -> None:  # type: ignore
-            """Another mock handler with a valid signature."""
+            """別の有効なシグネチャを持つモックハンドラ。"""
             pass
 
     executor = MockExecutorWithValidHandlers(id="test")
@@ -70,19 +70,19 @@ def test_executor_with_valid_handlers():
 
 
 def test_executor_handlers_with_output_types():
-    """Test that an executor with handlers that specify output types can be instantiated and run."""
+    """出力タイプを指定するハンドラを持つ executor がインスタンス化され実行できることをテスト。"""
 
     class MockExecutorWithOutputTypes(Executor):  # type: ignore
-        """A mock executor with handlers that specify output types."""
+        """出力タイプを指定するハンドラを持つモック executor。"""
 
         @handler
         async def handle_string(self, text: str, ctx: WorkflowContext[str]) -> None:  # type: ignore
-            """A mock handler that outputs a string."""
+            """文字列を出力するモックハンドラ。"""
             pass
 
         @handler
         async def handle_integer(self, number: int, ctx: WorkflowContext[int]) -> None:  # type: ignore
-            """A mock handler that outputs an integer."""
+            """整数を出力するモックハンドラ。"""
             pass
 
     executor = MockExecutorWithOutputTypes(id="test")

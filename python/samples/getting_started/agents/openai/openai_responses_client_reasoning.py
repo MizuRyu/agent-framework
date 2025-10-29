@@ -27,7 +27,7 @@ agent = OpenAIResponsesClient(model_id="gpt-5").create_agent(
 
 
 async def reasoning_example() -> None:
-    """Example of reasoning response (get results as they are generated)."""
+    """推論レスポンスの例（生成される結果を逐次取得）。"""
     print("\033[92m=== Reasoning Example ===\033[0m")
 
     query = "I need to solve the equation 3x + 11 = 14 and I need to prove the pythagorean theorem. Can you help me?"
@@ -47,7 +47,7 @@ async def reasoning_example() -> None:
 
 
 async def streaming_reasoning_example() -> None:
-    """Example of reasoning response (get results as they are generated)."""
+    """推論レスポンスの例（生成される結果を逐次取得）。"""
     print("\033[92m=== Streaming Reasoning Example ===\033[0m")
 
     query = "I need to solve the equation 3x + 11 = 14 and I need to prove the pythagorean theorem. Can you help me?"

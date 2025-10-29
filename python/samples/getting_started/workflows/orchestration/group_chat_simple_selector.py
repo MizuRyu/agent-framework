@@ -29,36 +29,37 @@ Prerequisites:
 
 
 def select_next_speaker(state: GroupChatStateSnapshot) -> str | None:
-    """Simple speaker selector that alternates between researcher and writer.
+    """研究者とライターが交互に話すシンプルなスピーカーセレクター。
 
-    This function demonstrates the core pattern:
-    1. Examine the current state of the group chat
-    2. Decide who should speak next
-    3. Return participant name or None to finish
+    この関数はコアパターンを示します：
+    1. グループチャットの現在の状態を調べる
+    2. 次に話すべき人を決定する
+    3. 参加者名を返すか、会話を終了するためにNoneを返す
 
     Args:
-        state: Immutable snapshot containing:
-            - task: ChatMessage - original user task
-            - participants: dict[str, str] - participant names → descriptions
-            - conversation: tuple[ChatMessage, ...] - full conversation history
-            - history: tuple[GroupChatTurn, ...] - turn-by-turn with speaker attribution
-            - round_index: int - number of selection rounds so far
-            - pending_agent: str | None - currently active agent (if any)
+        state: 不変のスナップショットで以下を含む：
+            - task: ChatMessage - 元のユーザータスク
+            - participants: dict[str, str] - 参加者名 → 説明
+            - conversation: tuple[ChatMessage, ...] - 会話の全履歴
+            - history: tuple[GroupChatTurn, ...] - 発言者帰属付きのターンごとの履歴
+            - round_index: int - これまでの選択ラウンド数
+            - pending_agent: str | None - 現在アクティブなAgent（あれば）
 
     Returns:
-        Name of next speaker, or None to finish the conversation
+        次の話者の名前、または会話を終了するためのNone
+
     """
     round_idx = state["round_index"]
     history = state["history"]
 
-    # Finish after 4 turns (researcher → writer → researcher → writer)
+    # 4ターン後に終了（研究者 → ライター → 研究者 → ライター）
     if round_idx >= 4:
         return None
 
-    # Get the last speaker from history
+    # 履歴から最後の話者を取得します。
     last_speaker = history[-1].speaker if history else None
 
-    # Simple alternation: researcher → writer → researcher → writer
+    # シンプルな交互：研究者 → ライター → 研究者 → ライター
     if last_speaker == "Researcher":
         return "Writer"
     return "Researcher"
@@ -79,9 +80,8 @@ async def main() -> None:
         chat_client=OpenAIChatClient(model_id="gpt-4o-mini"),
     )
 
-    # Two ways to specify participants:
-    # 1. List form - uses agent.name attribute: .participants([researcher, writer])
-    # 2. Dict form - explicit names: .participants(researcher=researcher, writer=writer)
+    # 参加者を指定する2つの方法： 1. リスト形式 - agent.name属性を使用：.participants([researcher, writer]) 2.
+    # 辞書形式 - 明示的な名前指定：.participants(researcher=researcher, writer=writer)
     workflow = (
         GroupChatBuilder()
         .select_speakers(select_next_speaker, display_name="Orchestrator")

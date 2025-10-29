@@ -7,11 +7,11 @@ import sys
 from dataclasses import fields, is_dataclass
 from typing import Any, cast
 
-# Checkpoint serialization helpers
+# チェックポイントのシリアライズヘルパー
 MODEL_MARKER = "__af_model__"
 DATACLASS_MARKER = "__af_dataclass__"
 
-# Guards to prevent runaway recursion while encoding arbitrary user data
+# 任意のユーザーデータのエンコード時に無限再帰を防ぐガード
 _MAX_ENCODE_DEPTH = 100
 _CYCLE_SENTINEL = "<cycle>"
 
@@ -20,24 +20,24 @@ logger = logging.getLogger(__name__)
 
 
 def encode_checkpoint_value(value: Any) -> Any:
-    """Recursively encode values into JSON-serializable structures.
+    """値を再帰的にJSONシリアライズ可能な構造にエンコードします。
 
-    - Objects exposing to_dict/to_json -> { MODEL_MARKER: "module:Class", value: encoded }
-    - dataclass instances -> { DATACLASS_MARKER: "module:Class", value: {field: encoded} }
-    - dict -> encode keys as str and values recursively
-    - list/tuple/set -> list of encoded items
-    - other -> returned as-is if already JSON-serializable
+    - to_dict/to_jsonを公開するオブジェクト -> { MODEL_MARKER: "module:Class", value: encoded }
+    - dataclassインスタンス -> { DATACLASS_MARKER: "module:Class", value: {field: encoded} }
+    - dict -> キーをstrに変換し値を再帰的にエンコード
+    - list/tuple/set -> エンコードされたアイテムのリスト
+    - その他 -> 既にJSONシリアライズ可能ならそのまま返す
 
-    Includes cycle and depth protection to avoid infinite recursion.
+    無限再帰を避けるためのサイクルおよび深さの保護を含みます。
     """
 
     def _enc(v: Any, stack: set[int], depth: int) -> Any:
-        # Depth guard
+        # 深さガード
         if depth > _MAX_ENCODE_DEPTH:
             logger.debug(f"Max encode depth reached at depth={depth} for type={type(v)}")
             return "<max_depth>"
 
-        # Structured model handling (objects exposing to_dict/to_json)
+        # 構造化モデルの処理（to_dict/to_jsonを公開するオブジェクト）
         if _supports_model_protocol(v):
             cls = cast(type[Any], type(v))  # type: ignore
             try:
@@ -64,7 +64,7 @@ def encode_checkpoint_value(value: Any) -> Any:
                 logger.debug(f"Structured model serialization failed for {cls}: {exc}")
                 return str(v)
 
-        # Dataclasses (instances only)
+        # Dataclass（インスタンスのみ）
         if is_dataclass(v) and not isinstance(v, type):
             oid = id(v)
             if oid in stack:
@@ -72,7 +72,7 @@ def encode_checkpoint_value(value: Any) -> Any:
                 return _CYCLE_SENTINEL
             stack.add(oid)
             try:
-                # type(v) already narrows sufficiently; cast was redundant
+                # type(v)は十分に絞り込まれているため、castは冗長でした
                 dc_cls: type[Any] = type(v)
                 field_values: dict[str, Any] = {}
                 for f in fields(v):  # type: ignore[arg-type]
@@ -84,7 +84,7 @@ def encode_checkpoint_value(value: Any) -> Any:
             finally:
                 stack.remove(oid)
 
-        # Collections
+        # コレクション
         if isinstance(v, dict):
             v_dict = cast("dict[object, object]", v)
             oid = id(v_dict)
@@ -117,10 +117,10 @@ def encode_checkpoint_value(value: Any) -> Any:
             finally:
                 stack.remove(oid)
 
-        # Primitives (or unknown objects): ensure JSON-serializable
+        # プリミティブ（または不明なオブジェクト）：JSONシリアライズ可能であることを保証
         if isinstance(v, (str, int, float, bool)) or v is None:
             return v
-        # Fallback: stringify unknown objects to avoid JSON serialization errors
+        # フォールバック：JSONシリアライズエラーを避けるため不明なオブジェクトを文字列化
         try:
             return str(v)
         except Exception:
@@ -130,10 +130,10 @@ def encode_checkpoint_value(value: Any) -> Any:
 
 
 def decode_checkpoint_value(value: Any) -> Any:
-    """Recursively decode values previously encoded by encode_checkpoint_value."""
+    """encode_checkpoint_valueでエンコードされた値を再帰的にデコードします。"""
     if isinstance(value, dict):
-        value_dict = cast(dict[str, Any], value)  # encoded form always uses string keys
-        # Structured model marker handling
+        value_dict = cast(dict[str, Any], value)  # エンコード形式は常に文字列キーを使用します
+        # 構造化モデルマーカーの処理
         if MODEL_MARKER in value_dict and "value" in value_dict:
             type_key: str | None = value_dict.get(MODEL_MARKER)  # type: ignore[assignment]
             strategy: str | None = value_dict.get("strategy")  # type: ignore[assignment]
@@ -158,7 +158,7 @@ def decode_checkpoint_value(value: Any) -> Any:
                             with contextlib.suppress(Exception):
                                 return cls.from_dict(decoded_payload)
             return decoded_payload
-        # Dataclass marker handling
+        # Dataclassマーカーの処理
         if DATACLASS_MARKER in value_dict and "value" in value_dict:
             type_key_dc: str | None = value_dict.get(DATACLASS_MARKER)  # type: ignore[assignment]
             raw_dc: Any = value_dict.get("value")
@@ -177,13 +177,13 @@ def decode_checkpoint_value(value: Any) -> Any:
                     logger.debug(f"Failed to decode dataclass {type_key_dc}: {exc}; returning raw value")
             return decoded_raw
 
-        # Regular dict: decode recursively
+        # 通常のdict：再帰的にデコード
         decoded: dict[str, Any] = {}
         for k_any, v_any in value_dict.items():
             decoded[k_any] = decode_checkpoint_value(v_any)
         return decoded
     if isinstance(value, list):
-        # After isinstance check, treat value as list[Any] for decoding
+        # isinstanceチェック後、値をlist[Any]として扱いデコード
         value_list: list[Any] = value  # type: ignore[assignment]
         return [decode_checkpoint_value(v_any) for v_any in value_list]
     return value
@@ -223,7 +223,7 @@ def _instantiate_checkpoint_dataclass(cls: type[Any], payload: Any) -> Any | Non
 
 
 def _supports_model_protocol(obj: object) -> bool:
-    """Detect objects that expose dictionary serialization hooks."""
+    """辞書シリアライズフックを公開するオブジェクトを検出します。"""
     try:
         obj_type: type[Any] = type(obj)
     except Exception:

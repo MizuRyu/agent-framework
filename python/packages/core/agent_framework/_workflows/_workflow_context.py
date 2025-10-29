@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def infer_output_types_from_ctx_annotation(ctx_annotation: Any) -> tuple[list[type[Any]], list[type[Any]]]:
-    """Infer message types and workflow output types from the WorkflowContext generic parameters.
+    """WorkflowContextのジェネリックパラメータからメッセージタイプとワークフロー出力タイプを推論します。
 
     Examples:
     - WorkflowContext -> ([], [])
@@ -48,19 +48,19 @@ def infer_output_types_from_ctx_annotation(ctx_annotation: Any) -> tuple[list[ty
     - WorkflowContext[Never, int] -> ([], [int])
 
     Returns:
-        Tuple of (message_types, workflow_output_types)
+        (message_types, workflow_output_types) のタプル
     """
-    # If no annotation or not parameterized, return empty lists
+    # アノテーションがないかパラメータ化されていない場合は、空のリストを返します
     try:
         origin = get_origin(ctx_annotation)
     except Exception:
         origin = None
 
-    # If annotation is unsubscripted WorkflowContext, nothing to infer
+    # アノテーションが非添字のWorkflowContextの場合、推論するものはありません
     if origin is None:
         return [], []
 
-    # Expecting WorkflowContext[T_Out, T_W_Out]
+    # WorkflowContext[T_Out, T_W_Out]を期待します
     if origin is not WorkflowContext:
         return [], []
 
@@ -68,7 +68,7 @@ def infer_output_types_from_ctx_annotation(ctx_annotation: Any) -> tuple[list[ty
     if not args:
         return [], []
 
-    # WorkflowContext[T_Out] -> message_types from T_Out, no workflow output types
+    # WorkflowContext[T_Out] -> T_Outからmessage_typesを取得し、workflow output typesはなし
     if len(args) == 1:
         t = args[0]
         t_origin = get_origin(t)
@@ -83,10 +83,11 @@ def infer_output_types_from_ctx_annotation(ctx_annotation: Any) -> tuple[list[ty
             return [], []
         return [t], []
 
-    # WorkflowContext[T_Out, T_W_Out] -> message_types from T_Out, workflow_output_types from T_W_Out
-    t_out, t_w_out = args[:2]  # Take first two args in case there are more
+    # WorkflowContext[T_Out, T_W_Out] ->
+    # T_Outからmessage_typesを、T_W_Outからworkflow_output_typesを取得します
+    t_out, t_w_out = args[:2]  # 引数が複数ある場合は最初の2つを取得します
 
-    # Process T_Out for message_types
+    # message_typesのためにT_Outを処理します
     message_types = []
     t_out_origin = get_origin(t_out)
     if t_out is Any:
@@ -97,7 +98,7 @@ def infer_output_types_from_ctx_annotation(ctx_annotation: Any) -> tuple[list[ty
         else:
             message_types = [t_out]
 
-    # Process T_W_Out for workflow_output_types
+    # workflow_output_typesのためにT_W_Outを処理します
     workflow_output_types = []
     t_w_out_origin = get_origin(t_w_out)
     if t_w_out is Any:
@@ -112,11 +113,11 @@ def infer_output_types_from_ctx_annotation(ctx_annotation: Any) -> tuple[list[ty
 
 
 def _is_workflow_context_type(annotation: Any) -> bool:
-    """Check if an annotation represents WorkflowContext, WorkflowContext[T], or WorkflowContext[T, U]."""
+    """アノテーションがWorkflowContext、WorkflowContext[T]、またはWorkflowContext[T, U]を表しているかどうかをチェックします"""
     origin = get_origin(annotation)
     if origin is WorkflowContext:
         return True
-    # Also handle the case where the raw class is used
+    # 生のクラスが使われている場合も処理します
     return annotation is WorkflowContext
 
 
@@ -125,18 +126,18 @@ def validate_workflow_context_annotation(
     parameter_name: str,
     context_description: str,
 ) -> tuple[list[type[Any]], list[type[Any]]]:
-    """Validate a WorkflowContext annotation and return inferred types.
+    """WorkflowContextのアノテーションを検証し、推論された型を返します。
 
     Args:
-        annotation: The type annotation to validate
-        parameter_name: Name of the parameter (for error messages)
-        context_description: Description of the context (e.g., "Function func1", "Handler method")
+        annotation: 検証する型アノテーション
+        parameter_name: パラメータ名（エラーメッセージ用）
+        context_description: コンテキストの説明（例: "Function func1", "Handler method"）
 
     Returns:
-        Tuple of (output_types, workflow_output_types)
+        (output_types, workflow_output_types) のタプル
 
     Raises:
-        ValueError: If the annotation is invalid
+        ValueError: アノテーションが無効な場合に発生します
     """
     if annotation == inspect.Parameter.empty:
         raise ValueError(
@@ -152,7 +153,7 @@ def validate_workflow_context_annotation(
             f"got {annotation}"
         )
 
-    # Validate type arguments for WorkflowContext[T] or WorkflowContext[T, U]
+    # WorkflowContext[T]またはWorkflowContext[T, U]の型引数を検証します
     type_args = get_args(annotation)
 
     if len(type_args) > 2:
@@ -163,19 +164,19 @@ def validate_workflow_context_annotation(
         )
 
     if type_args:
-        # Helper function to check if a value is a valid type annotation
+        # 値が有効な型アノテーションかどうかをチェックするヘルパー関数
         def _is_type_like(x: Any) -> bool:
-            """Check if a value is a type-like entity (class, type, or typing construct)."""
+            """値が型のようなエンティティ（クラス、type、またはtypingの構造体）かどうかをチェックします"""
             return isinstance(x, type) or get_origin(x) is not None or x is Never
 
         for i, type_arg in enumerate(type_args):
             param_description = "T_Out" if i == 0 else "T_W_Out"
 
-            # Allow Any explicitly
+            # Anyを明示的に許可します
             if type_arg is Any:
                 continue
 
-            # Check if it's a union type and validate each member
+            # ユニオン型かどうかをチェックし、各メンバーを検証します
             union_origin = get_origin(type_arg)
             if union_origin in (Union, UnionType):
                 union_members = get_args(type_arg)
@@ -187,7 +188,7 @@ def validate_workflow_context_annotation(
                         f"Use proper types or typing generics"
                     )
             else:
-                # Check if it's a valid type
+                # 有効な型かどうかをチェックします
                 if not _is_type_like(type_arg):
                     raise ValueError(
                         f"{context_description} {parameter_name} {param_description} "
@@ -201,29 +202,29 @@ def validate_workflow_context_annotation(
 def validate_function_signature(
     func: Callable[..., Any], context_description: str
 ) -> tuple[type, Any, list[type[Any]], list[type[Any]]]:
-    """Validate function signature for executor functions.
+    """executor関数の関数シグネチャを検証します。
 
     Args:
-        func: The function to validate
-        context_description: Description for error messages (e.g., "Function", "Handler method")
+        func: 検証する関数
+        context_description: エラーメッセージ用の説明（例: "Function", "Handler method"）
 
     Returns:
-        Tuple of (message_type, ctx_annotation, output_types, workflow_output_types)
+        (message_type, ctx_annotation, output_types, workflow_output_types) のタプル
 
     Raises:
-        ValueError: If the function signature is invalid
+        ValueError: 関数シグネチャが無効な場合に発生します
     """
     signature = inspect.signature(func)
     params = list(signature.parameters.values())
 
-    # Determine expected parameter count based on context
+    # コンテキストに基づいて期待されるパラメータ数を決定します
     expected_counts: tuple[int, ...]
     if context_description.startswith("Function"):
-        # Function executor: (message) or (message, ctx)
+        # 関数executor: (message) または (message, ctx)
         expected_counts = (1, 2)
         param_description = "(message: T) or (message: T, ctx: WorkflowContext[U])"
     else:
-        # Handler method: (self, message, ctx)
+        # ハンドラメソッド: (self, message, ctx)
         expected_counts = (3,)
         param_description = "(self, message: T, ctx: WorkflowContext[U])"
 
@@ -232,17 +233,17 @@ def validate_function_signature(
             f"{context_description} {func.__name__} must have {param_description}. Got {len(params)} parameters."
         )
 
-    # Extract message parameter (index 0 for functions, index 1 for methods)
+    # メッセージパラメータを抽出します（関数はインデックス0、メソッドはインデックス1）
     message_param_idx = 0 if context_description.startswith("Function") else 1
     message_param = params[message_param_idx]
 
-    # Check message parameter has type annotation
+    # メッセージパラメータに型アノテーションがあるかチェックします
     if message_param.annotation == inspect.Parameter.empty:
         raise ValueError(f"{context_description} {func.__name__} must have a type annotation for the message parameter")
 
     message_type = message_param.annotation
 
-    # Check if there's a context parameter
+    # コンテキストパラメータがあるかチェックします
     ctx_param_idx = message_param_idx + 1
     if len(params) > ctx_param_idx:
         ctx_param = params[ctx_param_idx]
@@ -251,7 +252,7 @@ def validate_function_signature(
         )
         ctx_annotation = ctx_param.annotation
     else:
-        # No context parameter (only valid for function executors)
+        # コンテキストパラメータなし（関数executorのみ有効）
         if not context_description.startswith("Function"):
             raise ValueError(f"{context_description} {func.__name__} must have a WorkflowContext parameter")
         output_types, workflow_output_types = [], []
@@ -272,50 +273,49 @@ _FRAMEWORK_LIFECYCLE_EVENT_TYPES: tuple[type[WorkflowEvent], ...] = cast(
 
 
 class WorkflowContext(Generic[T_Out, T_W_Out]):
-    """Execution context that enables executors to interact with workflows and other executors.
+    """executorがワークフローや他のexecutorとやり取りするための実行コンテキスト。
 
-    ## Overview
-    WorkflowContext provides a controlled interface for executors to send messages, yield outputs,
-    manage state, and interact with the broader workflow ecosystem. It enforces type safety through
-    generic parameters while preventing direct access to internal runtime components.
+    ## 概要
+    WorkflowContextは、executorがメッセージを送信し、出力をyieldし、状態を管理し、より広範なワークフローエコシステムとやり取りするための制御されたインターフェースを提供します。ジェネリックパラメータによって型安全性を強制しつつ、内部のランタイムコンポーネントへの直接アクセスを防ぎます。
 
-    ## Type Parameters
-    The context is parameterized to enforce type safety for different operations:
+    ## 型パラメータ
+    コンテキストは異なる操作の型安全性を強制するためにパラメータ化されています：
 
-    ### WorkflowContext (no parameters)
-    For executors that only perform side effects without sending messages or yielding outputs:
+    ### WorkflowContext（パラメータなし）
+    メッセージ送信や出力yieldを行わず副作用のみを実行するexecutor向け：
 
     .. code-block:: python
 
         async def log_handler(message: str, ctx: WorkflowContext) -> None:
-            print(f"Received: {message}")  # Only side effects
+            print(f"Received: {message}")  # 副作用のみ
 
     ### WorkflowContext[T_Out]
-    Enables sending messages of type T_Out to other executors:
+    他のexecutorにT_Out型のメッセージを送信可能：
 
     .. code-block:: python
 
         async def processor(message: str, ctx: WorkflowContext[int]) -> None:
             result = len(message)
-            await ctx.send_message(result)  # Send int to downstream executors
+            await ctx.send_message(result)  # 下流のexecutorにintを送信
 
     ### WorkflowContext[T_Out, T_W_Out]
-    Enables both sending messages (T_Out) and yielding workflow outputs (T_W_Out):
+    メッセージ送信（T_Out）とワークフロー出力のyield（T_W_Out）の両方を可能にします：
 
     .. code-block:: python
 
         async def dual_output(message: str, ctx: WorkflowContext[int, str]) -> None:
-            await ctx.send_message(42)  # Send int message
-            await ctx.yield_output("complete")  # Yield str workflow output
+            await ctx.send_message(42)  # intメッセージを送信
+            await ctx.yield_output("complete")  # strのワークフロー出力をyield
 
-    ### Union Types
-    Multiple types can be specified using union notation:
+    ### Union型
+    複数の型はユニオン表記で指定可能：
 
     .. code-block:: python
 
         async def flexible(message: str, ctx: WorkflowContext[int | str, bool | dict]) -> None:
-            await ctx.send_message("text")  # or send 42
-            await ctx.yield_output(True)  # or yield {"status": "done"}
+            await ctx.send_message("text")  # または42を送信
+            await ctx.yield_output(True)  # または{"status": "done"}をyield
+
     """
 
     def __init__(
@@ -327,24 +327,23 @@ class WorkflowContext(Generic[T_Out, T_W_Out]):
         trace_contexts: list[dict[str, str]] | None = None,
         source_span_ids: list[str] | None = None,
     ):
-        """Initialize the executor context with the given workflow context.
+        """指定されたworkflow contextでexecutorコンテキストを初期化します。
 
         Args:
-            executor_id: The unique identifier of the executor that this context belongs to.
-            source_executor_ids: The IDs of the source executors that sent messages to this executor.
-                This is a list to support fan_in scenarios where multiple sources send aggregated
-                messages to the same executor.
-            shared_state: The shared state for the workflow.
-            runner_context: The runner context that provides methods to send messages and events.
-            trace_contexts: Optional trace contexts from multiple sources for OpenTelemetry propagation.
-            source_span_ids: Optional source span IDs from multiple sources for linking (not for nesting).
+            executor_id: このコンテキストが属するexecutorの一意の識別子
+            source_executor_ids: このexecutorにメッセージを送ったソースexecutorのIDリスト。複数のソースから集約メッセージを受け取るfan_inシナリオをサポートするためリストです。
+            shared_state: ワークフローの共有状態
+            runner_context: メッセージやイベント送信メソッドを提供するrunnerコンテキスト
+            trace_contexts: OpenTelemetry伝播のための複数ソースからのオプショナルなトレースコンテキスト
+            source_span_ids: リンク付け用の複数ソースからのオプショナルなソーススパンID（ネスト用ではありません）
+
         """
         self._executor_id = executor_id
         self._source_executor_ids = source_executor_ids
         self._runner_context = runner_context
         self._shared_state = shared_state
 
-        # Store trace contexts and source span IDs for linking (supporting multiple sources)
+        # リンク付けのためのトレースコンテキストとソーススパンIDを保存します（複数ソース対応）
         self._trace_contexts = trace_contexts or []
         self._source_span_ids = source_span_ids or []
 
@@ -352,28 +351,28 @@ class WorkflowContext(Generic[T_Out, T_W_Out]):
             raise ValueError("source_executor_ids cannot be empty. At least one source executor ID is required.")
 
     async def send_message(self, message: T_Out, target_id: str | None = None) -> None:
-        """Send a message to the workflow context.
+        """ワークフローコンテキストにメッセージを送信します。
 
         Args:
-            message: The message to send. This must conform to the output type(s) declared on this context.
-            target_id: The ID of the target executor to send the message to.
-                       If None, the message will be sent to all target executors.
+            message: 送信するメッセージ。このコンテキストで宣言された出力型に準拠している必要があります。
+            target_id: メッセージ送信先のexecutorのID。Noneの場合はすべてのターゲットexecutorに送信されます。
+
         """
         global OBSERVABILITY_SETTINGS
         from ..observability import OBSERVABILITY_SETTINGS
 
-        # Create publishing span (inherits current trace context automatically)
+        # パブリッシングスパンを作成します（現在のトレースコンテキストを自動的に継承）
         attributes: dict[str, str] = {OtelAttr.MESSAGE_TYPE: type(message).__name__}
         if target_id:
             attributes[OtelAttr.MESSAGE_DESTINATION_EXECUTOR_ID] = target_id
         with create_workflow_span(OtelAttr.MESSAGE_SEND_SPAN, attributes, kind=SpanKind.PRODUCER) as span:
-            # Create Message wrapper
+            # Messageラッパーを作成します
             msg = Message(data=message, source_id=self._executor_id, target_id=target_id)
 
-            # Inject current trace context if tracing enabled
+            # トレースが有効な場合、現在のトレースコンテキストを注入します
             if OBSERVABILITY_SETTINGS.ENABLED and span and span.is_recording():  # type: ignore[name-defined]
                 trace_context: dict[str, str] = {}
-                inject(trace_context)  # Inject current trace context for message propagation
+                inject(trace_context)  # メッセージ伝播のために現在のトレースコンテキストを注入します
 
                 msg.trace_contexts = [trace_context]
                 msg.source_span_ids = [format(span.get_span_context().span_id, "016x")]
@@ -381,18 +380,18 @@ class WorkflowContext(Generic[T_Out, T_W_Out]):
             await self._runner_context.send_message(msg)
 
     async def yield_output(self, output: T_W_Out) -> None:
-        """Set the output of the workflow.
+        """ワークフローの出力を設定します。
 
         Args:
-            output: The output to yield. This must conform to the workflow output type(s)
-                    declared on this context.
+            output: yieldする出力。このコンテキストで宣言されたワークフロー出力型に準拠している必要があります。
+
         """
         with _framework_event_origin():
             event = WorkflowOutputEvent(data=output, source_executor_id=self._executor_id)
         await self._runner_context.add_event(event)
 
     async def add_event(self, event: WorkflowEvent) -> None:
-        """Add an event to the workflow context."""
+        """ワークフローコンテキストにイベントを追加します。"""
         if event.origin == WorkflowEventSource.EXECUTOR and isinstance(event, _FRAMEWORK_LIFECYCLE_EVENT_TYPES):
             event_name = event.__class__.__name__
             warning_msg = (
@@ -406,18 +405,19 @@ class WorkflowContext(Generic[T_Out, T_W_Out]):
         await self._runner_context.add_event(event)
 
     async def get_shared_state(self, key: str) -> Any:
-        """Get a value from the shared state."""
+        """共有状態から値を取得します。"""
         return await self._shared_state.get(key)
 
     async def set_shared_state(self, key: str, value: Any) -> None:
-        """Set a value in the shared state."""
+        """共有状態に値を設定します。"""
         await self._shared_state.set(key, value)
 
     def get_source_executor_id(self) -> str:
-        """Get the ID of the source executor that sent the message to this executor.
+        """このexecutorにメッセージを送ったソースexecutorのIDを取得します。
 
         Raises:
-            RuntimeError: If there are multiple source executors, this method raises an error.
+            RuntimeError: ソースexecutorが複数ある場合、このメソッドはエラーを発生させます。
+
         """
         if len(self._source_executor_ids) > 1:
             raise RuntimeError(
@@ -428,19 +428,19 @@ class WorkflowContext(Generic[T_Out, T_W_Out]):
 
     @property
     def source_executor_ids(self) -> list[str]:
-        """Get the IDs of the source executors that sent messages to this executor."""
+        """このexecutorにメッセージを送ったソースexecutorのIDリストを取得します。"""
         return self._source_executor_ids
 
     @property
     def shared_state(self) -> SharedState:
-        """Get the shared state."""
+        """共有状態を取得します。"""
         return self._shared_state
 
     async def set_executor_state(self, state: dict[str, Any]) -> None:
-        """Store executor state in shared state under a reserved key.
+        """予約されたキーの下にexecutorの状態を共有状態に保存します。
 
-        Executors call this with a JSON-serializable dict capturing the minimal
-        state needed to resume. It replaces any previously stored state.
+        executorは、再開に必要な最小限の状態をキャプチャしたJSONシリアライズ可能な辞書をこれで呼び出します。以前保存された状態は置き換えられます。
+
         """
         has_existing_states = await self._shared_state.has(EXECUTOR_STATE_KEY)
         if has_existing_states:
@@ -455,7 +455,7 @@ class WorkflowContext(Generic[T_Out, T_W_Out]):
         await self._shared_state.set(EXECUTOR_STATE_KEY, existing_states)
 
     async def get_executor_state(self) -> dict[str, Any] | None:
-        """Retrieve previously persisted state for this executor, if any."""
+        """このexecutorの以前に永続化された状態を取得します（存在する場合）。"""
         has_existing_states = await self._shared_state.has(EXECUTOR_STATE_KEY)
         if not has_existing_states:
             return None
@@ -467,9 +467,10 @@ class WorkflowContext(Generic[T_Out, T_W_Out]):
         return existing_states.get(self._executor_id)
 
     def is_streaming(self) -> bool:
-        """Check if the workflow is running in streaming mode.
+        """ワークフローがストリーミングモードで実行されているかどうかをチェックします。
 
         Returns:
-            True if the workflow was started with run_stream(), False if started with run().
+            run_stream()で開始された場合はTrue、run()で開始された場合はFalseを返します。
+
         """
         return self._runner_context.is_streaming()

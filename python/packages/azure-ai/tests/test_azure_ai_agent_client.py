@@ -74,14 +74,14 @@ def create_test_azure_ai_chat_client(
     should_delete_agent: bool = False,
     agent_name: str | None = None,
 ) -> AzureAIAgentClient:
-    """Helper function to create AzureAIAgentClient instances for testing, bypassing normal validation."""
+    """通常の検証をバイパスしてテスト用に AzureAIAgentClient インスタンスを作成するヘルパー関数。"""
     if azure_ai_settings is None:
         azure_ai_settings = AzureAISettings(env_file_path="test.env")
 
-    # Create client instance directly
+    # クライアントインスタンスを直接作成します。
     client = object.__new__(AzureAIAgentClient)
 
-    # Set attributes directly
+    # 属性を直接設定します。
     client.project_client = mock_ai_project_client
     client.credential = None
     client.agent_id = agent_id
@@ -98,7 +98,7 @@ def create_test_azure_ai_chat_client(
 
 
 def test_azure_ai_settings_init(azure_ai_unit_test_env: dict[str, str]) -> None:
-    """Test AzureAISettings initialization."""
+    """AzureAISettings の初期化をテストします。"""
     settings = AzureAISettings()
 
     assert settings.project_endpoint == azure_ai_unit_test_env["AZURE_AI_PROJECT_ENDPOINT"]
@@ -106,7 +106,7 @@ def test_azure_ai_settings_init(azure_ai_unit_test_env: dict[str, str]) -> None:
 
 
 def test_azure_ai_settings_init_with_explicit_values() -> None:
-    """Test AzureAISettings initialization with explicit values."""
+    """明示的な値での AzureAISettings 初期化をテストします。"""
     settings = AzureAISettings(
         project_endpoint="https://custom-endpoint.com/",
         model_deployment_name="custom-model",
@@ -117,7 +117,7 @@ def test_azure_ai_settings_init_with_explicit_values() -> None:
 
 
 def test_azure_ai_chat_client_init_with_client(mock_ai_project_client: MagicMock) -> None:
-    """Test AzureAIAgentClient initialization with existing project_client."""
+    """既存の project_client での AzureAIAgentClient 初期化をテストします。"""
     chat_client = create_test_azure_ai_chat_client(
         mock_ai_project_client, agent_id="existing-agent-id", thread_id="test-thread-id"
     )
@@ -133,10 +133,10 @@ def test_azure_ai_chat_client_init_auto_create_client(
     azure_ai_unit_test_env: dict[str, str],
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test AzureAIAgentClient initialization with auto-created project_client."""
+    """自動作成された project_client での AzureAIAgentClient 初期化をテストします。"""
     azure_ai_settings = AzureAISettings(**azure_ai_unit_test_env)  # type: ignore
 
-    # Create client instance directly
+    # クライアントインスタンスを直接作成します。
     chat_client = object.__new__(AzureAIAgentClient)
     chat_client.project_client = mock_ai_project_client
     chat_client.agent_id = None
@@ -155,11 +155,11 @@ def test_azure_ai_chat_client_init_auto_create_client(
 
 
 def test_azure_ai_chat_client_init_missing_project_endpoint() -> None:
-    """Test AzureAIAgentClient initialization when project_endpoint is missing and no project_client provided."""
-    # Mock AzureAISettings to return settings with None project_endpoint
+    """project_endpoint がなく project_client が提供されていない場合の AzureAIAgentClient 初期化をテストします。"""
+    # None の project_endpoint を返すように AzureAISettings をモックします。
     with patch("agent_framework_azure_ai._chat_client.AzureAISettings") as mock_settings:
         mock_settings_instance = MagicMock()
-        mock_settings_instance.project_endpoint = None  # This should trigger the error
+        mock_settings_instance.project_endpoint = None  # これによりエラーが発生するはずです。
         mock_settings_instance.model_deployment_name = "test-model"
         mock_settings_instance.agent_name = "test-agent"
         mock_settings.return_value = mock_settings_instance
@@ -175,12 +175,12 @@ def test_azure_ai_chat_client_init_missing_project_endpoint() -> None:
 
 
 def test_azure_ai_chat_client_init_missing_model_deployment_for_agent_creation() -> None:
-    """Test AzureAIAgentClient initialization when model deployment is missing for agent creation."""
-    # Mock AzureAISettings to return settings with None model_deployment_name
+    """agent 作成時にモデルデプロイメントがない場合の AzureAIAgentClient 初期化をテストします。"""
+    # None の model_deployment_name を返すように AzureAISettings をモックします。
     with patch("agent_framework_azure_ai._chat_client.AzureAISettings") as mock_settings:
         mock_settings_instance = MagicMock()
         mock_settings_instance.project_endpoint = "https://test.com"
-        mock_settings_instance.model_deployment_name = None  # This should trigger the error
+        mock_settings_instance.model_deployment_name = None  # これによりエラーが発生するはずです。
         mock_settings_instance.agent_name = "test-agent"
         mock_settings.return_value = mock_settings_instance
 
@@ -195,7 +195,7 @@ def test_azure_ai_chat_client_init_missing_model_deployment_for_agent_creation()
 
 
 def test_azure_ai_chat_client_from_dict(mock_ai_project_client: MagicMock) -> None:
-    """Test AzureAIAgentClient.from_dict method."""
+    """AzureAIAgentClient.from_dict メソッドをテストします。"""
     settings = {
         "project_client": mock_ai_project_client,
         "agent_id": "test-agent-id",
@@ -223,7 +223,7 @@ def test_azure_ai_chat_client_from_dict(mock_ai_project_client: MagicMock) -> No
 
 
 def test_azure_ai_chat_client_init_missing_credential(azure_ai_unit_test_env: dict[str, str]) -> None:
-    """Test AzureAIAgentClient.__init__ when async_credential is missing and no project_client provided."""
+    """async_credential がなく project_client が提供されていない場合の AzureAIAgentClient.__init__ をテストします。"""
     with pytest.raises(
         ServiceInitializationError, match="Azure credential is required when project_client is not provided"
     ):
@@ -237,9 +237,9 @@ def test_azure_ai_chat_client_init_missing_credential(azure_ai_unit_test_env: di
 
 
 def test_azure_ai_chat_client_init_validation_error(mock_azure_credential: MagicMock) -> None:
-    """Test that ValidationError in AzureAISettings is properly handled."""
+    """AzureAISettings の ValidationError が適切に処理されることをテストします。"""
     with patch("agent_framework_azure_ai._chat_client.AzureAISettings") as mock_settings:
-        # Create a proper ValidationError with empty errors list and model dict
+        # 空の errors リストと model 辞書で適切な ValidationError を作成します。
         mock_settings.side_effect = ValidationError.from_exception_data("AzureAISettings", [])
 
         with pytest.raises(ServiceInitializationError, match="Failed to create Azure AI settings."):
@@ -251,7 +251,7 @@ def test_azure_ai_chat_client_init_validation_error(mock_azure_credential: Magic
 
 
 def test_azure_ai_chat_client_from_settings() -> None:
-    """Test from_settings class method."""
+    """from_settings クラスメソッドをテストします。"""
     mock_project_client = MagicMock()
     settings = {
         "project_client": mock_project_client,
@@ -273,7 +273,7 @@ def test_azure_ai_chat_client_from_settings() -> None:
 async def test_azure_ai_chat_client_get_agent_id_or_create_existing_agent(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _get_agent_id_or_create when agent_id is already provided."""
+    """agent_id が既に提供されている場合の _get_agent_id_or_create をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="existing-agent-id")
 
     agent_id = await chat_client._get_agent_id_or_create()  # type: ignore
@@ -286,7 +286,7 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_create_new(
     mock_ai_project_client: MagicMock,
     azure_ai_unit_test_env: dict[str, str],
 ) -> None:
-    """Test _get_agent_id_or_create when creating a new agent."""
+    """新しい agent を作成する場合の _get_agent_id_or_create をテストします。"""
     azure_ai_settings = AzureAISettings(model_deployment_name=azure_ai_unit_test_env["AZURE_AI_MODEL_DEPLOYMENT_NAME"])
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, azure_ai_settings=azure_ai_settings)
 
@@ -299,13 +299,13 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_create_new(
 async def test_azure_ai_chat_client_tool_results_without_thread_error_via_public_api(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test that tool results without thread ID raise error through public API."""
+    """thread ID なしのツール結果がパブリック API 経由でエラーを発生させることをテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock get_agent
+    # get_agent をモックします。
     mock_ai_project_client.agents.get_agent = AsyncMock(return_value=None)
 
-    # Create messages with tool results but no thread/conversation ID
+    # thread/conversation ID なしのツール結果を含むメッセージを作成します。
     messages = [
         ChatMessage(role=Role.USER, text="Hello"),
         ChatMessage(
@@ -313,17 +313,17 @@ async def test_azure_ai_chat_client_tool_results_without_thread_error_via_public
         ),
     ]
 
-    # This should raise ValueError when called through public API
+    # パブリック API 経由で呼び出すと ValueError を発生させるはずです。
     with pytest.raises(ValueError, match="No thread ID was provided, but chat messages includes tool results"):
         async for _ in chat_client.get_streaming_response(messages):
             pass
 
 
 async def test_azure_ai_chat_client_thread_management_through_public_api(mock_ai_project_client: MagicMock) -> None:
-    """Test thread creation and management through public API."""
+    """パブリック API を通じたスレッド作成と管理をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock get_agent to avoid the async error
+    # 非同期エラーを回避するために get_agent をモックします。
     mock_ai_project_client.agents.get_agent = AsyncMock(return_value=None)
 
     mock_thread = MagicMock()
@@ -333,23 +333,23 @@ async def test_azure_ai_chat_client_thread_management_through_public_api(mock_ai
     mock_stream = AsyncMock()
     mock_ai_project_client.agents.runs.stream = AsyncMock(return_value=mock_stream)
 
-    # Create an async iterator that yields nothing (empty stream)
+    # 何も生成しない非同期イテレータを作成します（空のストリーム）。
     async def empty_async_iter():
         return
-        yield  # Make this a generator (unreachable)
+        yield  # これをジェネレータにします（到達不能）。
 
     mock_stream.__aenter__ = AsyncMock(return_value=empty_async_iter())
     mock_stream.__aexit__ = AsyncMock(return_value=None)
 
     messages = [ChatMessage(role=Role.USER, text="Hello")]
 
-    # Call without existing thread - should create new one
+    # 既存のスレッドなしで呼び出し - 新しいスレッドを作成するはずです。
     response = chat_client.get_streaming_response(messages)
-    # Consume the generator to trigger the method execution
+    # メソッド実行をトリガーするためにジェネレータを消費します。
     async for _ in response:
         pass
 
-    # Verify thread creation was called
+    # スレッド作成が呼び出されたことを検証します。
     mock_ai_project_client.agents.threads.create.assert_called_once()
 
 
@@ -357,7 +357,7 @@ async def test_azure_ai_chat_client_thread_management_through_public_api(mock_ai
 async def test_azure_ai_chat_client_get_agent_id_or_create_missing_model(
     mock_ai_project_client: MagicMock, azure_ai_unit_test_env: dict[str, str]
 ) -> None:
-    """Test _get_agent_id_or_create when model_deployment_name is missing."""
+    """model_deployment_name がない場合の _get_agent_id_or_create をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     with pytest.raises(ServiceInitializationError, match="Model deployment name is required"):
@@ -367,13 +367,13 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_missing_model(
 async def test_azure_ai_chat_client_cleanup_agent_if_needed_should_delete(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _cleanup_agent_if_needed when agent should be deleted."""
+    """agent を削除すべき場合の _cleanup_agent_if_needed をテストします。"""
     chat_client = create_test_azure_ai_chat_client(
         mock_ai_project_client, agent_id="agent-to-delete", should_delete_agent=True
     )
 
     await chat_client._cleanup_agent_if_needed()  # type: ignore
-    # Verify agent deletion was called
+    # agent 削除が呼び出されたことを検証します。
     mock_ai_project_client.agents.delete_agent.assert_called_once_with("agent-to-delete")
     assert not chat_client._should_delete_agent  # type: ignore
 
@@ -381,14 +381,14 @@ async def test_azure_ai_chat_client_cleanup_agent_if_needed_should_delete(
 async def test_azure_ai_chat_client_cleanup_agent_if_needed_should_not_delete(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _cleanup_agent_if_needed when agent should not be deleted."""
+    """agent を削除すべきでない場合の _cleanup_agent_if_needed をテストします。"""
     chat_client = create_test_azure_ai_chat_client(
         mock_ai_project_client, agent_id="agent-to-keep", should_delete_agent=False
     )
 
     await chat_client._cleanup_agent_if_needed()  # type: ignore
 
-    # Verify agent deletion was not called
+    # agent 削除が呼び出されなかったことを検証します。
     mock_ai_project_client.agents.delete_agent.assert_not_called()
     assert not chat_client._should_delete_agent  # type: ignore
 
@@ -396,7 +396,7 @@ async def test_azure_ai_chat_client_cleanup_agent_if_needed_should_not_delete(
 async def test_azure_ai_chat_client_cleanup_agent_if_needed_exception_handling(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _cleanup_agent_if_needed propagates exceptions (it doesn't handle them)."""
+    """_cleanup_agent_if_needed が例外を伝播することをテストします（例外は処理しません）。"""
     chat_client = create_test_azure_ai_chat_client(
         mock_ai_project_client, agent_id="agent-to-delete", should_delete_agent=True
     )
@@ -407,33 +407,33 @@ async def test_azure_ai_chat_client_cleanup_agent_if_needed_exception_handling(
 
 
 async def test_azure_ai_chat_client_aclose(mock_ai_project_client: MagicMock) -> None:
-    """Test aclose method calls cleanup."""
+    """aclose メソッドが cleanup を呼び出すことをテストします。"""
     chat_client = create_test_azure_ai_chat_client(
         mock_ai_project_client, agent_id="agent-to-delete", should_delete_agent=True
     )
 
     await chat_client.close()
 
-    # Verify agent deletion was called
+    # agent 削除が呼び出されたことを検証します。
     mock_ai_project_client.agents.delete_agent.assert_called_once_with("agent-to-delete")
 
 
 async def test_azure_ai_chat_client_async_context_manager(mock_ai_project_client: MagicMock) -> None:
-    """Test async context manager functionality."""
+    """非同期コンテキストマネージャの機能をテストします。"""
     chat_client = create_test_azure_ai_chat_client(
         mock_ai_project_client, agent_id="agent-to-delete", should_delete_agent=True
     )
 
-    # Test context manager
+    # コンテキストマネージャをテストします。
     async with chat_client:
-        pass  # Just test that we can enter and exit
+        pass  # 単に入退出できることをテストします。
 
-    # Verify cleanup was called on exit
+    # 退出時に cleanup が呼び出されたことを検証します。
     mock_ai_project_client.agents.delete_agent.assert_called_once_with("agent-to-delete")
 
 
 async def test_azure_ai_chat_client_create_run_options_basic(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_run_options with basic ChatOptions."""
+    """基本的な ChatOptions で _create_run_options をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     messages = [ChatMessage(role=Role.USER, text="Hello")]
@@ -446,7 +446,7 @@ async def test_azure_ai_chat_client_create_run_options_basic(mock_ai_project_cli
 
 
 async def test_azure_ai_chat_client_create_run_options_no_chat_options(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_run_options with no ChatOptions."""
+    """ChatOptions なしで _create_run_options をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     messages = [ChatMessage(role=Role.USER, text="Hello")]
@@ -458,11 +458,11 @@ async def test_azure_ai_chat_client_create_run_options_no_chat_options(mock_ai_p
 
 
 async def test_azure_ai_chat_client_create_run_options_with_image_content(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_run_options with image content."""
+    """画像コンテンツで _create_run_options をテストします。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock get_agent
+    # get_agent をモックします。
     mock_ai_project_client.agents.get_agent = AsyncMock(return_value=None)
 
     image_content = UriContent(uri="https://example.com/image.jpg", media_type="image/jpeg")
@@ -472,13 +472,13 @@ async def test_azure_ai_chat_client_create_run_options_with_image_content(mock_a
 
     assert "additional_messages" in run_options
     assert len(run_options["additional_messages"]) == 1
-    # Verify image was converted to MessageInputImageUrlBlock
+    # 画像が MessageInputImageUrlBlock に変換されたことを検証します。
     message = run_options["additional_messages"][0]
     assert len(message.content) == 1
 
 
 def test_azure_ai_chat_client_convert_function_results_to_tool_output_none(mock_ai_project_client: MagicMock) -> None:
-    """Test _convert_required_action_to_tool_output with None input."""
+    """None 入力で _convert_required_action_to_tool_output をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     run_id, tool_outputs, tool_approvals = chat_client._convert_required_action_to_tool_output(None)  # type: ignore
@@ -489,7 +489,7 @@ def test_azure_ai_chat_client_convert_function_results_to_tool_output_none(mock_
 
 
 async def test_azure_ai_chat_client_close_client_when_should_close_true(mock_ai_project_client: MagicMock) -> None:
-    """Test _close_client_if_needed closes project_client when should_close_client is True."""
+    """should_close_client が True のとき _close_client_if_needed が project_client を閉じることをテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
     chat_client._should_close_client = True  # type: ignore
 
@@ -501,7 +501,7 @@ async def test_azure_ai_chat_client_close_client_when_should_close_true(mock_ai_
 
 
 async def test_azure_ai_chat_client_close_client_when_should_close_false(mock_ai_project_client: MagicMock) -> None:
-    """Test _close_client_if_needed does not close project_client when should_close_client is False."""
+    """should_close_client が False のとき _close_client_if_needed が project_client を閉じないことをテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
     chat_client._should_close_client = False  # type: ignore
 
@@ -511,7 +511,7 @@ async def test_azure_ai_chat_client_close_client_when_should_close_false(mock_ai
 
 
 def test_azure_ai_chat_client_update_agent_name_when_current_is_none(mock_ai_project_client: MagicMock) -> None:
-    """Test _update_agent_name updates name when current agent_name is None."""
+    """現在の agent_name が None のとき _update_agent_name が名前を更新することをテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
     chat_client.agent_name = None  # type: ignore
 
@@ -521,7 +521,7 @@ def test_azure_ai_chat_client_update_agent_name_when_current_is_none(mock_ai_pro
 
 
 def test_azure_ai_chat_client_update_agent_name_when_current_exists(mock_ai_project_client: MagicMock) -> None:
-    """Test _update_agent_name does not update when current agent_name exists."""
+    """現在の agent_name が存在する場合、_update_agent_name が更新しないことをテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
     chat_client.agent_name = "ExistingName"  # type: ignore
 
@@ -531,7 +531,7 @@ def test_azure_ai_chat_client_update_agent_name_when_current_exists(mock_ai_proj
 
 
 def test_azure_ai_chat_client_update_agent_name_with_none_input(mock_ai_project_client: MagicMock) -> None:
-    """Test _update_agent_name with None input."""
+    """None 入力で _update_agent_name をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
     chat_client.agent_name = None  # type: ignore
 
@@ -541,10 +541,10 @@ def test_azure_ai_chat_client_update_agent_name_with_none_input(mock_ai_project_
 
 
 async def test_azure_ai_chat_client_create_run_options_with_messages(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_run_options with different message types."""
+    """異なるメッセージタイプで _create_run_options をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
-    # Test with system message (becomes instruction)
+    # system メッセージでテスト（指示に変換される）
     messages = [
         ChatMessage(role=Role.SYSTEM, text="You are a helpful assistant"),
         ChatMessage(role=Role.USER, text="Hello"),
@@ -555,11 +555,11 @@ async def test_azure_ai_chat_client_create_run_options_with_messages(mock_ai_pro
     assert "instructions" in run_options
     assert "You are a helpful assistant" in run_options["instructions"]
     assert "additional_messages" in run_options
-    assert len(run_options["additional_messages"]) == 1  # Only user message
+    assert len(run_options["additional_messages"]) == 1  # ユーザーメッセージのみ
 
 
 async def test_azure_ai_chat_client_instructions_sent_once(mock_ai_project_client: MagicMock) -> None:
-    """Ensure instructions are only sent once for AzureAIAgentClient."""
+    """AzureAIAgentClient で指示が一度だけ送信されることを保証します。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     instructions = "You are a helpful assistant."
@@ -572,7 +572,7 @@ async def test_azure_ai_chat_client_instructions_sent_once(mock_ai_project_clien
 
 
 async def test_azure_ai_chat_client_inner_get_response(mock_ai_project_client: MagicMock) -> None:
-    """Test _inner_get_response method."""
+    """_inner_get_response メソッドをテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
     messages = [ChatMessage(role=Role.USER, text="Hello")]
     chat_options = ChatOptions()
@@ -596,7 +596,7 @@ async def test_azure_ai_chat_client_inner_get_response(mock_ai_project_client: M
 async def test_azure_ai_chat_client_get_agent_id_or_create_with_run_options(
     mock_ai_project_client: MagicMock, azure_ai_unit_test_env: dict[str, str]
 ) -> None:
-    """Test _get_agent_id_or_create with run_options containing tools and instructions."""
+    """ツールと指示を含む run_options で _get_agent_id_or_create をテストします。"""
     azure_ai_settings = AzureAISettings(model_deployment_name=azure_ai_unit_test_env["AZURE_AI_MODEL_DEPLOYMENT_NAME"])
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, azure_ai_settings=azure_ai_settings)
 
@@ -610,7 +610,7 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_with_run_options(
     agent_id = await chat_client._get_agent_id_or_create(run_options)  # type: ignore
 
     assert agent_id == "test-agent-id"
-    # Verify create_agent was called with run_options parameters
+    # run_options パラメータで create_agent が呼び出されたことを検証します。
     mock_ai_project_client.agents.create_agent.assert_called_once()
     call_args = mock_ai_project_client.agents.create_agent.call_args[1]
     assert "tools" in call_args
@@ -619,7 +619,7 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_with_run_options(
 
 
 async def test_azure_ai_chat_client_prepare_thread_cancels_active_run(mock_ai_project_client: MagicMock) -> None:
-    """Test _prepare_thread cancels active thread run when provided."""
+    """提供された場合、アクティブなスレッド実行をキャンセルする _prepare_thread をテストします。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
     mock_thread_run = MagicMock()
@@ -635,7 +635,7 @@ async def test_azure_ai_chat_client_prepare_thread_cancels_active_run(mock_ai_pr
 
 
 def test_azure_ai_chat_client_create_function_call_contents_basic(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_function_call_contents with basic function call."""
+    """基本的な関数呼び出しで _create_function_call_contents をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     mock_tool_call = MagicMock(spec=RequiredFunctionToolCall)
@@ -658,7 +658,7 @@ def test_azure_ai_chat_client_create_function_call_contents_basic(mock_ai_projec
 
 
 def test_azure_ai_chat_client_create_function_call_contents_no_submit_action(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_function_call_contents when required_action is not SubmitToolOutputsAction."""
+    """required_action が SubmitToolOutputsAction でない場合の _create_function_call_contents をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     mock_event_data = MagicMock(spec=ThreadRun)
@@ -672,7 +672,7 @@ def test_azure_ai_chat_client_create_function_call_contents_no_submit_action(moc
 def test_azure_ai_chat_client_create_function_call_contents_non_function_tool_call(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _create_function_call_contents with non-function tool call."""
+    """関数ではないツール呼び出しで _create_function_call_contents をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     mock_tool_call = MagicMock()
@@ -691,7 +691,7 @@ def test_azure_ai_chat_client_create_function_call_contents_non_function_tool_ca
 async def test_azure_ai_chat_client_create_run_options_with_none_tool_choice(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _create_run_options with tool_choice set to 'none'."""
+    """tool_choice が 'none' に設定された場合の _create_run_options をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     chat_options = ChatOptions()
@@ -707,7 +707,7 @@ async def test_azure_ai_chat_client_create_run_options_with_none_tool_choice(
 async def test_azure_ai_chat_client_create_run_options_with_auto_tool_choice(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _create_run_options with tool_choice set to 'auto'."""
+    """tool_choice が 'auto' に設定された場合の _create_run_options をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     chat_options = ChatOptions()
@@ -723,7 +723,7 @@ async def test_azure_ai_chat_client_create_run_options_with_auto_tool_choice(
 async def test_azure_ai_chat_client_create_run_options_with_response_format(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _create_run_options with response_format configured."""
+    """response_format が設定された場合の _create_run_options をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     class TestResponseModel(BaseModel):
@@ -740,7 +740,7 @@ async def test_azure_ai_chat_client_create_run_options_with_response_format(
 
 
 def test_azure_ai_chat_client_service_url_method(mock_ai_project_client: MagicMock) -> None:
-    """Test service_url method returns endpoint."""
+    """service_url メソッドがエンドポイントを返すことをテストする。"""
     mock_ai_project_client._config.endpoint = "https://test-endpoint.com/"
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
@@ -749,11 +749,11 @@ def test_azure_ai_chat_client_service_url_method(mock_ai_project_client: MagicMo
 
 
 async def test_azure_ai_chat_client_prep_tools_ai_function(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with AIFunction tool."""
+    """AIFunction ツールで _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Create a mock AIFunction
+    # モックの AIFunction を作成する。
     mock_ai_function = MagicMock(spec=AIFunction)
     mock_ai_function.to_json_schema_spec.return_value = {"type": "function", "function": {"name": "test_function"}}
 
@@ -765,7 +765,7 @@ async def test_azure_ai_chat_client_prep_tools_ai_function(mock_ai_project_clien
 
 
 async def test_azure_ai_chat_client_prep_tools_code_interpreter(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with HostedCodeInterpreterTool."""
+    """HostedCodeInterpreterTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -778,13 +778,13 @@ async def test_azure_ai_chat_client_prep_tools_code_interpreter(mock_ai_project_
 
 
 async def test_azure_ai_chat_client_prep_tools_mcp_tool(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with HostedMCPTool."""
+    """HostedMCPTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
     mcp_tool = HostedMCPTool(name="Test MCP Tool", url="https://example.com/mcp", allowed_tools=["tool1", "tool2"])
 
-    # Mock McpTool to have a definitions attribute
+    # definitions 属性を持つように McpTool をモックする。
     with patch("agent_framework_azure_ai._chat_client.McpTool") as mock_mcp_tool_class:
         mock_mcp_tool = MagicMock()
         mock_mcp_tool.definitions = [{"type": "mcp", "name": "test_mcp"}]
@@ -794,7 +794,7 @@ async def test_azure_ai_chat_client_prep_tools_mcp_tool(mock_ai_project_client: 
 
         assert len(result) == 1
         assert result[0] == {"type": "mcp", "name": "test_mcp"}
-        # Check that the call was made (order of allowed_tools may vary)
+        # 呼び出しが行われたことを確認する（allowed_tools の順序は異なる場合がある）。
         mock_mcp_tool_class.assert_called_once()
         call_args = mock_mcp_tool_class.call_args[1]
         assert call_args["server_label"] == "Test_MCP_Tool"
@@ -803,7 +803,7 @@ async def test_azure_ai_chat_client_prep_tools_mcp_tool(mock_ai_project_client: 
 
 
 async def test_azure_ai_chat_client_create_run_options_mcp_never_require(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_run_options with HostedMCPTool having never_require approval mode."""
+    """approval モードが never_require の HostedMCPTool で _create_run_options をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
     mcp_tool = HostedMCPTool(name="Test MCP Tool", url="https://example.com/mcp", approval_mode="never_require")
@@ -812,14 +812,14 @@ async def test_azure_ai_chat_client_create_run_options_mcp_never_require(mock_ai
     chat_options = ChatOptions(tools=[mcp_tool], tool_choice="auto")
 
     with patch("agent_framework_azure_ai._chat_client.McpTool") as mock_mcp_tool_class:
-        # Mock _prep_tools to avoid actual tool preparation
+        # 実際のツール準備を避けるために _prep_tools をモックする。
         mock_mcp_tool_instance = MagicMock()
         mock_mcp_tool_instance.definitions = [{"type": "mcp", "name": "test_mcp"}]
         mock_mcp_tool_class.return_value = mock_mcp_tool_instance
 
         run_options, _ = await chat_client._create_run_options(messages, chat_options)  # type: ignore
 
-        # Verify tool_resources is created with correct MCP approval structure
+        # 正しい MCP 承認構造で tool_resources が作成されることを検証する。
         assert "tool_resources" in run_options, (
             f"Expected 'tool_resources' in run_options keys: {list(run_options.keys())}"
         )
@@ -832,10 +832,10 @@ async def test_azure_ai_chat_client_create_run_options_mcp_never_require(mock_ai
 
 
 async def test_azure_ai_chat_client_create_run_options_mcp_with_headers(mock_ai_project_client: MagicMock) -> None:
-    """Test _create_run_options with HostedMCPTool having headers."""
+    """ヘッダーを持つ HostedMCPTool で _create_run_options をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client)
 
-    # Test with headers
+    # ヘッダー付きでテストする。
     headers = {"Authorization": "Bearer DUMMY_TOKEN", "X-API-Key": "DUMMY_KEY"}
     mcp_tool = HostedMCPTool(
         name="Test MCP Tool", url="https://example.com/mcp", headers=headers, approval_mode="never_require"
@@ -845,14 +845,14 @@ async def test_azure_ai_chat_client_create_run_options_mcp_with_headers(mock_ai_
     chat_options = ChatOptions(tools=[mcp_tool], tool_choice="auto")
 
     with patch("agent_framework_azure_ai._chat_client.McpTool") as mock_mcp_tool_class:
-        # Mock _prep_tools to avoid actual tool preparation
+        # 実際のツール準備を避けるために _prep_tools をモックする。
         mock_mcp_tool_instance = MagicMock()
         mock_mcp_tool_instance.definitions = [{"type": "mcp", "name": "test_mcp"}]
         mock_mcp_tool_class.return_value = mock_mcp_tool_instance
 
         run_options, _ = await chat_client._create_run_options(messages, chat_options)  # type: ignore
 
-        # Verify tool_resources is created with headers
+        # ヘッダー付きで tool_resources が作成されることを検証する。
         assert "tool_resources" in run_options
         assert "mcp" in run_options["tool_resources"]
         assert len(run_options["tool_resources"]["mcp"]) == 1
@@ -864,7 +864,7 @@ async def test_azure_ai_chat_client_create_run_options_mcp_with_headers(mock_ai_
 
 
 async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with HostedWebSearchTool using Bing Grounding."""
+    """Bing Grounding を使用する HostedWebSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -878,12 +878,12 @@ async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding(mock_ai
         }
     )
 
-    # Mock connection get
+    # connection get をモックする。
     mock_connection = MagicMock()
     mock_connection.id = "test-connection-id"
     mock_ai_project_client.connections.get = AsyncMock(return_value=mock_connection)
 
-    # Mock BingGroundingTool
+    # BingGroundingTool をモックする。
     with patch("agent_framework_azure_ai._chat_client.BingGroundingTool") as mock_bing_grounding:
         mock_bing_tool = MagicMock()
         mock_bing_tool.definitions = [{"type": "bing_grounding"}]
@@ -901,7 +901,7 @@ async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding(mock_ai
 async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding_with_connection_id(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _prep_tools with HostedWebSearchTool using Bing Grounding with connection_id (no HTTP call)."""
+    """connection_id を使った Bing Grounding を使用する HostedWebSearchTool で _prep_tools をテストする（HTTP 呼び出しなし）。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -912,7 +912,7 @@ async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding_with_co
         }
     )
 
-    # Mock BingGroundingTool
+    # BingGroundingTool をモックする。
     with patch("agent_framework_azure_ai._chat_client.BingGroundingTool") as mock_bing_grounding:
         mock_bing_tool = MagicMock()
         mock_bing_tool.definitions = [{"type": "bing_grounding"}]
@@ -922,13 +922,13 @@ async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding_with_co
 
         assert len(result) == 1
         assert result[0] == {"type": "bing_grounding"}
-        # Verify that connection_id was used directly (no HTTP call to connections.get)
+        # connection_id が直接使用されたことを検証する（connections.get への HTTP 呼び出しなし）。
         mock_ai_project_client.connections.get.assert_not_called()
         mock_bing_grounding.assert_called_once_with(connection_id="direct-connection-id", count=3)
 
 
 async def test_azure_ai_chat_client_prep_tools_web_search_custom_bing(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with HostedWebSearchTool using Custom Bing Search."""
+    """Custom Bing Search を使用する HostedWebSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -940,12 +940,12 @@ async def test_azure_ai_chat_client_prep_tools_web_search_custom_bing(mock_ai_pr
         }
     )
 
-    # Mock connection get
+    # connection get をモックする。
     mock_connection = MagicMock()
     mock_connection.id = "custom-connection-id"
     mock_ai_project_client.connections.get = AsyncMock(return_value=mock_connection)
 
-    # Mock BingCustomSearchTool
+    # BingCustomSearchTool をモックする。
     with patch("agent_framework_azure_ai._chat_client.BingCustomSearchTool") as mock_custom_bing:
         mock_custom_tool = MagicMock()
         mock_custom_tool.definitions = [{"type": "bing_custom_search"}]
@@ -964,7 +964,7 @@ async def test_azure_ai_chat_client_prep_tools_web_search_custom_bing(mock_ai_pr
 async def test_azure_ai_chat_client_prep_tools_web_search_custom_bing_connection_error(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _prep_tools with HostedWebSearchTool when custom connection is not found."""
+    """カスタム接続が見つからない場合の HostedWebSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -975,7 +975,7 @@ async def test_azure_ai_chat_client_prep_tools_web_search_custom_bing_connection
         }
     )
 
-    # Mock connection get to raise HttpResponseError
+    # HttpResponseError を発生させるように connection get をモックする。
     mock_ai_project_client.connections.get = AsyncMock(side_effect=HttpResponseError("Connection not found"))
 
     with pytest.raises(ServiceInitializationError, match="Bing custom connection 'nonexistent-connection' not found"):
@@ -985,7 +985,7 @@ async def test_azure_ai_chat_client_prep_tools_web_search_custom_bing_connection
 async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding_connection_error(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _prep_tools with HostedWebSearchTool when Bing Grounding connection is not found."""
+    """Bing Grounding 接続が見つからない場合の HostedWebSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -995,7 +995,7 @@ async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding_connect
         }
     )
 
-    # Mock connection get to raise HttpResponseError
+    # HttpResponseError を発生させるように connection get をモックする。
     mock_ai_project_client.connections.get = AsyncMock(side_effect=HttpResponseError("Connection not found"))
 
     with pytest.raises(ServiceInitializationError, match="Bing connection 'nonexistent-bing-connection' not found"):
@@ -1005,14 +1005,14 @@ async def test_azure_ai_chat_client_prep_tools_web_search_bing_grounding_connect
 async def test_azure_ai_chat_client_prep_tools_file_search_with_vector_stores(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _prep_tools with HostedFileSearchTool using vector stores."""
+    """ベクターストアを使用する HostedFileSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
     vector_store_input = HostedVectorStoreContent(vector_store_id="vs-123")
     file_search_tool = HostedFileSearchTool(inputs=[vector_store_input])
 
-    # Mock FileSearchTool
+    # FileSearchTool をモックする。
     with patch("agent_framework_azure_ai._chat_client.FileSearchTool") as mock_file_search:
         mock_file_tool = MagicMock()
         mock_file_tool.definitions = [{"type": "file_search"}]
@@ -1029,7 +1029,7 @@ async def test_azure_ai_chat_client_prep_tools_file_search_with_vector_stores(
 
 
 async def test_azure_ai_chat_client_prep_tools_file_search_with_ai_search(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with HostedFileSearchTool using Azure AI Search."""
+    """Azure AI Search を使用する HostedFileSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -1042,18 +1042,18 @@ async def test_azure_ai_chat_client_prep_tools_file_search_with_ai_search(mock_a
         }
     )
 
-    # Mock connections.get_default
+    # connections.get_default をモックする。
     mock_connection = MagicMock()
     mock_connection.id = "search-connection-id"
     mock_ai_project_client.connections.get_default = AsyncMock(return_value=mock_connection)
 
-    # Mock AzureAISearchTool
+    # AzureAISearchTool をモックする。
     with patch("agent_framework_azure_ai._chat_client.AzureAISearchTool") as mock_ai_search:
         mock_search_tool = MagicMock()
         mock_search_tool.definitions = [{"type": "azure_ai_search"}]
         mock_ai_search.return_value = mock_search_tool
 
-        # Mock AzureAISearchQueryType
+        # AzureAISearchQueryType をモックする。
         with patch("agent_framework_azure_ai._chat_client.AzureAISearchQueryType") as mock_query_type:
             mock_query_type.SIMPLE = "simple"
             mock_query_type.return_value = "simple"
@@ -1075,7 +1075,7 @@ async def test_azure_ai_chat_client_prep_tools_file_search_with_ai_search(mock_a
 async def test_azure_ai_chat_client_prep_tools_file_search_invalid_query_type(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _prep_tools with HostedFileSearchTool using invalid query_type."""
+    """無効な query_type を使用する HostedFileSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
@@ -1083,12 +1083,12 @@ async def test_azure_ai_chat_client_prep_tools_file_search_invalid_query_type(
         additional_properties={"index_name": "test-index", "query_type": "invalid_type"}
     )
 
-    # Mock connections.get_default
+    # connections.get_default をモックする。
     mock_connection = MagicMock()
     mock_connection.id = "search-connection-id"
     mock_ai_project_client.connections.get_default = AsyncMock(return_value=mock_connection)
 
-    # Mock AzureAISearchQueryType to raise ValueError
+    # ValueError を発生させるように AzureAISearchQueryType をモックする。
     with patch("agent_framework_azure_ai._chat_client.AzureAISearchQueryType") as mock_query_type:
         mock_query_type.side_effect = ValueError("Invalid query type")
 
@@ -1097,13 +1097,13 @@ async def test_azure_ai_chat_client_prep_tools_file_search_invalid_query_type(
 
 
 async def test_azure_ai_chat_client_prep_tools_file_search_no_connection(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with HostedFileSearchTool when no AI Search connection exists."""
+    """AI Search 接続が存在しない場合の HostedFileSearchTool で _prep_tools をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
     file_search_tool = HostedFileSearchTool(additional_properties={"index_name": "test-index"})
 
-    # Mock connections.get_default to raise ValueError
+    # ValueError を発生させるように connections.get_default をモックする。
     mock_ai_project_client.connections.get_default = AsyncMock(side_effect=ValueError("No connection found"))
 
     with pytest.raises(ServiceInitializationError, match="No default Azure AI Search connection found"):
@@ -1113,12 +1113,12 @@ async def test_azure_ai_chat_client_prep_tools_file_search_no_connection(mock_ai
 async def test_azure_ai_chat_client_prep_tools_file_search_no_index_name(
     mock_ai_project_client: MagicMock, monkeypatch: MonkeyPatch
 ) -> None:
-    """Test _prep_tools with HostedFileSearchTool missing index_name and vector stores."""
+    """index_name とベクターストアが欠落している HostedFileSearchTool で _prep_tools をテストする。"""
     monkeypatch.delenv("AZURE_AI_SEARCH_INDEX_NAME", raising=False)
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # File search tool with no vector stores and no index_name
+    # ベクターストアも index_name もないファイル検索ツール。
     file_search_tool = HostedFileSearchTool()
 
     with pytest.raises(ServiceInitializationError, match="File search tool requires at least one vector store input"):
@@ -1126,7 +1126,7 @@ async def test_azure_ai_chat_client_prep_tools_file_search_no_index_name(
 
 
 async def test_azure_ai_chat_client_prep_tools_dict_tool(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with dictionary tool definition."""
+    """辞書によるツール定義で _prep_tools をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
     dict_tool = {"type": "custom_tool", "config": {"param": "value"}}
@@ -1138,7 +1138,7 @@ async def test_azure_ai_chat_client_prep_tools_dict_tool(mock_ai_project_client:
 
 
 async def test_azure_ai_chat_client_prep_tools_unsupported_tool(mock_ai_project_client: MagicMock) -> None:
-    """Test _prep_tools with unsupported tool type."""
+    """サポートされていないツールタイプで _prep_tools をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
     unsupported_tool = "not_a_tool"
@@ -1148,11 +1148,11 @@ async def test_azure_ai_chat_client_prep_tools_unsupported_tool(mock_ai_project_
 
 
 async def test_azure_ai_chat_client_get_active_thread_run_with_active_run(mock_ai_project_client: MagicMock) -> None:
-    """Test _get_active_thread_run when there's an active run."""
+    """アクティブな実行がある場合の _get_active_thread_run をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock an active run
+    # アクティブな実行をモックする。
     mock_run = MagicMock()
     mock_run.status = RunStatus.IN_PROGRESS
 
@@ -1167,11 +1167,11 @@ async def test_azure_ai_chat_client_get_active_thread_run_with_active_run(mock_a
 
 
 async def test_azure_ai_chat_client_get_active_thread_run_no_active_run(mock_ai_project_client: MagicMock) -> None:
-    """Test _get_active_thread_run when there's no active run."""
+    """アクティブな実行がない場合の _get_active_thread_run をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock a completed run (not active)
+    # 完了した実行（アクティブでない）をモックする。
     mock_run = MagicMock()
     mock_run.status = RunStatus.COMPLETED
 
@@ -1186,21 +1186,21 @@ async def test_azure_ai_chat_client_get_active_thread_run_no_active_run(mock_ai_
 
 
 async def test_azure_ai_chat_client_get_active_thread_run_no_thread(mock_ai_project_client: MagicMock) -> None:
-    """Test _get_active_thread_run with None thread_id."""
+    """thread_id が None の場合の _get_active_thread_run をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
     result = await chat_client._get_active_thread_run(None)  # type: ignore
 
     assert result is None
-    # Should not call list since thread_id is None
+    # thread_id が None のため list を呼び出すべきでない。
     mock_ai_project_client.agents.runs.list.assert_not_called()
 
 
 async def test_azure_ai_chat_client_service_url(mock_ai_project_client: MagicMock) -> None:
-    """Test service_url method."""
+    """service_url メソッドをテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock the config endpoint
+    # config エンドポイントをモックする。
     mock_config = MagicMock()
     mock_config.endpoint = "https://test-endpoint.com/"
     mock_ai_project_client._config = mock_config
@@ -1213,10 +1213,10 @@ async def test_azure_ai_chat_client_service_url(mock_ai_project_client: MagicMoc
 async def test_azure_ai_chat_client_convert_required_action_to_tool_output_function_result(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _convert_required_action_to_tool_output with FunctionResultContent."""
+    """FunctionResultContent を使った _convert_required_action_to_tool_output をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Test with simple result
+    # 単純な結果でテストする。
     function_result = FunctionResultContent(call_id='["run_123", "call_456"]', result="Simple result")
 
     run_id, tool_outputs, tool_approvals = chat_client._convert_required_action_to_tool_output([function_result])  # type: ignore
@@ -1230,11 +1230,11 @@ async def test_azure_ai_chat_client_convert_required_action_to_tool_output_funct
 
 
 async def test_azure_ai_chat_client_convert_required_action_invalid_call_id(mock_ai_project_client: MagicMock) -> None:
-    """Test _convert_required_action_to_tool_output with invalid call_id format."""
+    """無効な call_id フォーマットで _convert_required_action_to_tool_output をテストする。"""
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Invalid call_id format - should raise JSONDecodeError
+    # 無効な call_id フォーマット - JSONDecodeError を発生させるべき。
     function_result = FunctionResultContent(call_id="invalid_json", result="result")
 
     with pytest.raises(json.JSONDecodeError):
@@ -1244,15 +1244,15 @@ async def test_azure_ai_chat_client_convert_required_action_invalid_call_id(mock
 async def test_azure_ai_chat_client_convert_required_action_invalid_structure(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _convert_required_action_to_tool_output with invalid call_id structure."""
+    """無効な call_id 構造で _convert_required_action_to_tool_output をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Valid JSON but invalid structure (missing second element)
+    # 有効な JSON だが構造が無効（第2要素が欠落）。
     function_result = FunctionResultContent(call_id='["run_123"]', result="result")
 
     run_id, tool_outputs, tool_approvals = chat_client._convert_required_action_to_tool_output([function_result])  # type: ignore
 
-    # Should return None values when structure is invalid
+    # 構造が無効な場合は None 値を返すべき。
     assert run_id is None
     assert tool_outputs is None
     assert tool_approvals is None
@@ -1261,7 +1261,7 @@ async def test_azure_ai_chat_client_convert_required_action_invalid_structure(
 async def test_azure_ai_chat_client_convert_required_action_serde_model_results(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _convert_required_action_to_tool_output with BaseModel results."""
+    """BaseModel 結果で _convert_required_action_to_tool_output をテストする。"""
 
     class MockResult(SerializationMixin):
         def __init__(self, name: str, value: int):
@@ -1270,7 +1270,7 @@ async def test_azure_ai_chat_client_convert_required_action_serde_model_results(
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Test with BaseModel result
+    # BaseModel 結果でテストする。
     mock_result = MockResult(name="test", value=42)
     function_result = FunctionResultContent(call_id='["run_123", "call_456"]', result=mock_result)
 
@@ -1281,7 +1281,7 @@ async def test_azure_ai_chat_client_convert_required_action_serde_model_results(
     assert tool_outputs is not None
     assert len(tool_outputs) == 1
     assert tool_outputs[0].tool_call_id == "call_456"
-    # Should use model_dump_json for BaseModel
+    # BaseModel には model_dump_json を使用すべき。
     expected_json = mock_result.to_json()
     assert tool_outputs[0].output == expected_json
 
@@ -1289,7 +1289,7 @@ async def test_azure_ai_chat_client_convert_required_action_serde_model_results(
 async def test_azure_ai_chat_client_convert_required_action_multiple_results(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _convert_required_action_to_tool_output with multiple results."""
+    """複数の結果で _convert_required_action_to_tool_output をテストする。"""
 
     class MockResult(SerializationMixin):
         def __init__(self, data: str):
@@ -1297,7 +1297,7 @@ async def test_azure_ai_chat_client_convert_required_action_multiple_results(
 
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Test with multiple results - mix of BaseModel and regular objects
+    # 複数の結果でテスト - BaseModel と通常のオブジェクトの混合。
     mock_basemodel = MockResult(data="model_data")
     results_list = [mock_basemodel, {"key": "value"}, "string_result"]
     function_result = FunctionResultContent(call_id='["run_123", "call_456"]', result=results_list)
@@ -1309,7 +1309,7 @@ async def test_azure_ai_chat_client_convert_required_action_multiple_results(
     assert len(tool_outputs) == 1
     assert tool_outputs[0].tool_call_id == "call_456"
 
-    # Should JSON dump the entire results array since len > 1
+    # len > 1 のため結果配列全体を JSON dump すべき。
     expected_results = [
         mock_basemodel.to_dict(),
         {"key": "value"},
@@ -1322,10 +1322,10 @@ async def test_azure_ai_chat_client_convert_required_action_multiple_results(
 async def test_azure_ai_chat_client_convert_required_action_approval_response(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _convert_required_action_to_tool_output with FunctionApprovalResponseContent."""
+    """FunctionApprovalResponseContent で _convert_required_action_to_tool_output をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Test with approval response - need to provide required fields
+    # 承認レスポンスでテスト - 必須フィールドを提供する必要がある。
     approval_response = FunctionApprovalResponseContent(
         id='["run_123", "call_456"]',
         function_call=FunctionCallContent(call_id='["run_123", "call_456"]', name="test_function", arguments="{}"),
@@ -1345,10 +1345,10 @@ async def test_azure_ai_chat_client_convert_required_action_approval_response(
 async def test_azure_ai_chat_client_create_function_call_contents_approval_request(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _create_function_call_contents with approval action."""
+    """承認アクションで _create_function_call_contents をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock SubmitToolApprovalAction with RequiredMcpToolCall
+    # RequiredMcpToolCall を持つ SubmitToolApprovalAction をモックする。
     mock_tool_call = MagicMock(spec=RequiredMcpToolCall)
     mock_tool_call.id = "approval_call_123"
     mock_tool_call.name = "approve_action"
@@ -1372,17 +1372,17 @@ async def test_azure_ai_chat_client_create_function_call_contents_approval_reque
 async def test_azure_ai_chat_client_get_agent_id_or_create_with_agent_name(
     mock_ai_project_client: MagicMock, azure_ai_unit_test_env: dict[str, str]
 ) -> None:
-    """Test _get_agent_id_or_create uses default name when no agent_name set."""
+    """agent_name が設定されていない場合、_get_agent_id_or_create がデフォルト名を使用することをテストする。"""
     azure_ai_settings = AzureAISettings(model_deployment_name=azure_ai_unit_test_env["AZURE_AI_MODEL_DEPLOYMENT_NAME"])
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, azure_ai_settings=azure_ai_settings)
 
-    # Ensure agent_name is None to test the default
+    # デフォルトをテストするため agent_name を None にする。
     chat_client.agent_name = None  # type: ignore
 
     agent_id = await chat_client._get_agent_id_or_create(run_options={"model": azure_ai_settings.model_deployment_name})  # type: ignore
 
     assert agent_id == "test-agent-id"
-    # Verify create_agent was called with default "UnnamedAgent"
+    # create_agent がデフォルトの "UnnamedAgent" で呼ばれたことを検証する。
     mock_ai_project_client.agents.create_agent.assert_called_once()
     call_kwargs = mock_ai_project_client.agents.create_agent.call_args[1]
     assert call_kwargs["name"] == "UnnamedAgent"
@@ -1391,17 +1391,17 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_with_agent_name(
 async def test_azure_ai_chat_client_get_agent_id_or_create_with_response_format(
     mock_ai_project_client: MagicMock, azure_ai_unit_test_env: dict[str, str]
 ) -> None:
-    """Test _get_agent_id_or_create with response_format in run_options."""
+    """run_options に response_format がある場合の _get_agent_id_or_create をテストする。"""
     azure_ai_settings = AzureAISettings(model_deployment_name=azure_ai_unit_test_env["AZURE_AI_MODEL_DEPLOYMENT_NAME"])
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, azure_ai_settings=azure_ai_settings)
 
-    # Test with response_format in run_options
+    # run_options に response_format がある場合でテストする。
     run_options = {"response_format": {"type": "json_object"}, "model": azure_ai_settings.model_deployment_name}
 
     agent_id = await chat_client._get_agent_id_or_create(run_options)  # type: ignore
 
     assert agent_id == "test-agent-id"
-    # Verify create_agent was called with response_format
+    # create_agent が response_format で呼ばれたことを検証する。
     mock_ai_project_client.agents.create_agent.assert_called_once()
     call_kwargs = mock_ai_project_client.agents.create_agent.call_args[1]
     assert call_kwargs["response_format"] == {"type": "json_object"}
@@ -1410,11 +1410,11 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_with_response_format(
 async def test_azure_ai_chat_client_get_agent_id_or_create_with_tool_resources(
     mock_ai_project_client: MagicMock, azure_ai_unit_test_env: dict[str, str]
 ) -> None:
-    """Test _get_agent_id_or_create with tool_resources in run_options."""
+    """run_options に tool_resources がある場合の _get_agent_id_or_create をテストする。"""
     azure_ai_settings = AzureAISettings(model_deployment_name=azure_ai_unit_test_env["AZURE_AI_MODEL_DEPLOYMENT_NAME"])
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, azure_ai_settings=azure_ai_settings)
 
-    # Test with tool_resources in run_options
+    # run_options に tool_resources がある場合でテストする。
     run_options = {
         "tool_resources": {"vector_store_ids": ["vs-123"]},
         "model": azure_ai_settings.model_deployment_name,
@@ -1423,25 +1423,25 @@ async def test_azure_ai_chat_client_get_agent_id_or_create_with_tool_resources(
     agent_id = await chat_client._get_agent_id_or_create(run_options)  # type: ignore
 
     assert agent_id == "test-agent-id"
-    # Verify create_agent was called with tool_resources
+    # create_agent が tool_resources で呼ばれたことを検証する。
     mock_ai_project_client.agents.create_agent.assert_called_once()
     call_kwargs = mock_ai_project_client.agents.create_agent.call_args[1]
     assert call_kwargs["tool_resources"] == {"vector_store_ids": ["vs-123"]}
 
 
 async def test_azure_ai_chat_client_close_method(mock_ai_project_client: MagicMock) -> None:
-    """Test close method."""
+    """close メソッドをテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, should_delete_agent=True)
     chat_client._should_close_client = True
     chat_client.agent_id = "test-agent"
 
-    # Mock cleanup methods
+    # クリーンアップメソッドをモックする。
     mock_ai_project_client.agents.delete_agent = AsyncMock()
     mock_ai_project_client.close = AsyncMock()
 
     await chat_client.close()
 
-    # Verify cleanup was called
+    # クリーンアップが呼ばれたことを検証する。
     mock_ai_project_client.agents.delete_agent.assert_called_once_with("test-agent")
     mock_ai_project_client.close.assert_called_once()
 
@@ -1449,19 +1449,19 @@ async def test_azure_ai_chat_client_close_method(mock_ai_project_client: MagicMo
 async def test_azure_ai_chat_client_create_agent_stream_submit_tool_outputs(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test _create_agent_stream with tool outputs submission path."""
+    """ツール出力の送信パスで _create_agent_stream をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock active thread run that matches the tool run ID
+    # ツール実行 ID と一致するアクティブなスレッド実行をモックする。
     mock_thread_run = MagicMock()
     mock_thread_run.thread_id = "test-thread"
     mock_thread_run.id = "test-run-id"
     chat_client._get_active_thread_run = AsyncMock(return_value=mock_thread_run)
 
-    # Mock required action results with matching run ID
+    # 一致する実行 ID を持つ required action 結果をモックする。
     function_result = FunctionResultContent(call_id='["test-run-id", "test-call-id"]', result="test result")
 
-    # Mock submit_tool_outputs_stream
+    # submit_tool_outputs_stream をモックする。
     mock_handler = MagicMock()
     mock_ai_project_client.agents.runs.submit_tool_outputs_stream = AsyncMock()
 
@@ -1470,16 +1470,16 @@ async def test_azure_ai_chat_client_create_agent_stream_submit_tool_outputs(
             thread_id="test-thread", agent_id="test-agent", run_options={}, required_action_results=[function_result]
         )
 
-        # Should call submit_tool_outputs_stream since we have matching run ID
+        # 一致する実行 ID があるため submit_tool_outputs_stream を呼び出すべき。
         mock_ai_project_client.agents.runs.submit_tool_outputs_stream.assert_called_once()
         assert final_thread_id == "test-thread"
 
 
 def test_azure_ai_chat_client_extract_url_citations_with_citations(mock_ai_project_client: MagicMock) -> None:
-    """Test _extract_url_citations with MessageDeltaChunk containing URL citations."""
+    """URL 引用を含む MessageDeltaChunk で _extract_url_citations をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Create mock URL citation annotation
+    # モックの URL 引用注釈を作成する。
     mock_url_citation = MagicMock()
     mock_url_citation.url = "https://example.com/test"
     mock_url_citation.title = "Test Title"
@@ -1489,25 +1489,25 @@ def test_azure_ai_chat_client_extract_url_citations_with_citations(mock_ai_proje
     mock_annotation.start_index = 10
     mock_annotation.end_index = 20
 
-    # Create mock text content with annotations
+    # 注釈付きのモックテキストコンテンツを作成する。
     mock_text = MagicMock()
     mock_text.annotations = [mock_annotation]
 
     mock_text_content = MagicMock(spec=MessageDeltaTextContent)
     mock_text_content.text = mock_text
 
-    # Create mock delta
+    # モックの delta を作成する。
     mock_delta = MagicMock()
     mock_delta.content = [mock_text_content]
 
-    # Create mock MessageDeltaChunk
+    # モックの MessageDeltaChunk を作成する。
     mock_chunk = MagicMock(spec=MessageDeltaChunk)
     mock_chunk.delta = mock_delta
 
-    # Call the method
+    # メソッドを呼び出す。
     citations = chat_client._extract_url_citations(mock_chunk)  # type: ignore
 
-    # Verify results
+    # 結果を検証する。
     assert len(citations) == 1
     citation = citations[0]
     assert isinstance(citation, CitationAnnotation)
@@ -1521,52 +1521,52 @@ def test_azure_ai_chat_client_extract_url_citations_with_citations(mock_ai_proje
 
 
 def test_azure_ai_chat_client_extract_url_citations_no_citations(mock_ai_project_client: MagicMock) -> None:
-    """Test _extract_url_citations with MessageDeltaChunk containing no citations."""
+    """引用がない MessageDeltaChunk で _extract_url_citations をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Create mock text content without annotations
+    # 注釈なしのモックテキストコンテンツを作成する。
     mock_text_content = MagicMock(spec=MessageDeltaTextContent)
-    mock_text_content.text = None  # No text, so no annotations
+    mock_text_content.text = None  # テキストがないため注釈もない。
 
-    # Create mock delta
+    # モックの delta を作成する。
     mock_delta = MagicMock()
     mock_delta.content = [mock_text_content]
 
-    # Create mock MessageDeltaChunk
+    # モックの MessageDeltaChunk を作成する。
     mock_chunk = MagicMock(spec=MessageDeltaChunk)
     mock_chunk.delta = mock_delta
 
-    # Call the method
+    # メソッドを呼び出す。
     citations = chat_client._extract_url_citations(mock_chunk)  # type: ignore
 
-    # Verify no citations returned
+    # 引用が返されないことを検証する。
     assert len(citations) == 0
 
 
 def test_azure_ai_chat_client_extract_url_citations_empty_delta(mock_ai_project_client: MagicMock) -> None:
-    """Test _extract_url_citations with empty delta content."""
+    """空の delta コンテンツで _extract_url_citations をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Create mock delta with empty content
+    # 空のコンテンツを持つモック delta を作成する。
     mock_delta = MagicMock()
     mock_delta.content = []
 
-    # Create mock MessageDeltaChunk
+    # モックの MessageDeltaChunk を作成する。
     mock_chunk = MagicMock(spec=MessageDeltaChunk)
     mock_chunk.delta = mock_delta
 
-    # Call the method
+    # メソッドを呼び出す。
     citations = chat_client._extract_url_citations(mock_chunk)  # type: ignore
 
-    # Verify no citations returned
+    # 引用が返されないことを検証する。
     assert len(citations) == 0
 
 
 def test_azure_ai_chat_client_extract_url_citations_without_indices(mock_ai_project_client: MagicMock) -> None:
-    """Test _extract_url_citations with URL citations that don't have start/end indices."""
+    """開始/終了インデックスを持たない URL 引用で _extract_url_citations をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Create mock URL citation annotation without indices
+    # インデックスなしのモック URL 引用注釈を作成する。
     mock_url_citation = MagicMock()
     mock_url_citation.url = "https://example.com/no-indices"
 
@@ -1575,48 +1575,49 @@ def test_azure_ai_chat_client_extract_url_citations_without_indices(mock_ai_proj
     mock_annotation.start_index = None
     mock_annotation.end_index = None
 
-    # Create mock text content with annotations
+    # 注釈付きのモックテキストコンテンツを作成する。
     mock_text = MagicMock()
     mock_text.annotations = [mock_annotation]
 
     mock_text_content = MagicMock(spec=MessageDeltaTextContent)
     mock_text_content.text = mock_text
 
-    # Create mock delta
+    # モックの delta を作成する。
     mock_delta = MagicMock()
     mock_delta.content = [mock_text_content]
 
-    # Create mock MessageDeltaChunk
+    # モックの MessageDeltaChunk を作成する。
     mock_chunk = MagicMock(spec=MessageDeltaChunk)
     mock_chunk.delta = mock_delta
 
-    # Call the method
+    # メソッドを呼び出す。
     citations = chat_client._extract_url_citations(mock_chunk)  # type: ignore
 
-    # Verify results
+    # 結果を検証する。
     assert len(citations) == 1
     citation = citations[0]
     assert citation.url == "https://example.com/no-indices"
     assert citation.annotated_regions is not None
-    assert len(citation.annotated_regions) == 0  # No regions when indices are None
+    assert len(citation.annotated_regions) == 0  # インデックスが None の場合は領域なし。
 
 
 async def test_azure_ai_chat_client_setup_azure_ai_observability_resource_not_found(
     mock_ai_project_client: MagicMock,
 ) -> None:
-    """Test setup_azure_ai_observability when Application Insights connection string is not found."""
+    """Application Insights 接続文字列が見つからない場合の setup_azure_ai_observability をテストする。"""
     chat_client = create_test_azure_ai_chat_client(mock_ai_project_client, agent_id="test-agent")
 
-    # Mock telemetry.get_application_insights_connection_string to raise ResourceNotFoundError
+    # ResourceNotFoundError を発生させるように
+    # telemetry.get_application_insights_connection_string をモックする。
     mock_ai_project_client.telemetry.get_application_insights_connection_string = AsyncMock(
         side_effect=ResourceNotFoundError("No Application Insights found")
     )
 
-    # Mock logger.warning to capture the warning message
+    # 警告メッセージをキャプチャするために logger.warning をモックする
     with patch("agent_framework_azure_ai._chat_client.logger") as mock_logger:
         await chat_client.setup_azure_ai_observability()
 
-        # Verify warning was logged
+        # 警告がログに記録されたことを検証する
         mock_logger.warning.assert_called_once_with(
             "No Application Insights connection string found for the Azure AI Project, "
             "please call setup_observability() manually."
@@ -1626,14 +1627,14 @@ async def test_azure_ai_chat_client_setup_azure_ai_observability_resource_not_fo
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     return f"The weather in {location} is sunny with a high of 25°C."
 
 
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_get_response() -> None:
-    """Test Azure AI Chat Client response."""
+    """Azure AI Chat Client のレスポンスをテストする。"""
     async with AzureAIAgentClient(async_credential=AzureCliCredential()) as azure_ai_chat_client:
         assert isinstance(azure_ai_chat_client, ChatClientProtocol)
 
@@ -1647,7 +1648,7 @@ async def test_azure_ai_chat_client_get_response() -> None:
         )
         messages.append(ChatMessage(role="user", text="What's the weather like today?"))
 
-        # Test that the project_client can be used to get a response
+        # project_client を使ってレスポンスを取得できることをテストする
         response = await azure_ai_chat_client.get_response(messages=messages)
 
         assert response is not None
@@ -1658,14 +1659,14 @@ async def test_azure_ai_chat_client_get_response() -> None:
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_get_response_tools() -> None:
-    """Test Azure AI Chat Client response with tools."""
+    """ツールを使った Azure AI Chat Client のレスポンスをテストする。"""
     async with AzureAIAgentClient(async_credential=AzureCliCredential()) as azure_ai_chat_client:
         assert isinstance(azure_ai_chat_client, ChatClientProtocol)
 
         messages: list[ChatMessage] = []
         messages.append(ChatMessage(role="user", text="What's the weather like in Seattle?"))
 
-        # Test that the project_client can be used to get a response
+        # project_client を使ってレスポンスを取得できることをテストする
         response = await azure_ai_chat_client.get_response(
             messages=messages,
             tools=[get_weather],
@@ -1680,7 +1681,7 @@ async def test_azure_ai_chat_client_get_response_tools() -> None:
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_streaming() -> None:
-    """Test Azure AI Chat Client streaming response."""
+    """Azure AI Chat Client のストリーミングレスポンスをテストする。"""
     async with AzureAIAgentClient(async_credential=AzureCliCredential()) as azure_ai_chat_client:
         assert isinstance(azure_ai_chat_client, ChatClientProtocol)
 
@@ -1694,7 +1695,7 @@ async def test_azure_ai_chat_client_streaming() -> None:
         )
         messages.append(ChatMessage(role="user", text="What's the weather like today?"))
 
-        # Test that the project_client can be used to get a response
+        # project_client を使ってレスポンスを取得できることをテストする
         response = azure_ai_chat_client.get_streaming_response(messages=messages)
 
         full_message: str = ""
@@ -1711,14 +1712,14 @@ async def test_azure_ai_chat_client_streaming() -> None:
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_streaming_tools() -> None:
-    """Test Azure AI Chat Client streaming response with tools."""
+    """ツールを使った Azure AI Chat Client のストリーミングレスポンスをテストする。"""
     async with AzureAIAgentClient(async_credential=AzureCliCredential()) as azure_ai_chat_client:
         assert isinstance(azure_ai_chat_client, ChatClientProtocol)
 
         messages: list[ChatMessage] = []
         messages.append(ChatMessage(role="user", text="What's the weather like in Seattle?"))
 
-        # Test that the project_client can be used to get a response
+        # project_client を使ってレスポンスを取得できることをテストする
         response = azure_ai_chat_client.get_streaming_response(
             messages=messages,
             tools=[get_weather],
@@ -1738,14 +1739,14 @@ async def test_azure_ai_chat_client_streaming_tools() -> None:
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_basic_run() -> None:
-    """Test ChatAgent basic run functionality with AzureAIAgentClient."""
+    """AzureAIAgentClient を使った ChatAgent の基本的な実行機能をテストする。"""
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
     ) as agent:
-        # Run a simple query
+        # シンプルなクエリを実行する
         response = await agent.run("Hello! Please respond with 'Hello World' exactly.")
 
-        # Validate response
+        # レスポンスを検証する
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
         assert len(response.text) > 0
@@ -1755,11 +1756,11 @@ async def test_azure_ai_chat_client_agent_basic_run() -> None:
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_basic_run_streaming() -> None:
-    """Test ChatAgent basic streaming functionality with AzureAIAgentClient."""
+    """AzureAIAgentClient を使った ChatAgent の基本的なストリーミング機能をテストする。"""
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
     ) as agent:
-        # Run streaming query
+        # ストリーミングクエリを実行する
         full_message: str = ""
         async for chunk in agent.run_stream("Please respond with exactly: 'This is a streaming response test.'"):
             assert chunk is not None
@@ -1767,7 +1768,7 @@ async def test_azure_ai_chat_client_agent_basic_run_streaming() -> None:
             if chunk.text:
                 full_message += chunk.text
 
-        # Validate streaming response
+        # ストリーミングレスポンスを検証する
         assert len(full_message) > 0
         assert "streaming response test" in full_message.lower()
 
@@ -1775,22 +1776,22 @@ async def test_azure_ai_chat_client_agent_basic_run_streaming() -> None:
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_thread_persistence() -> None:
-    """Test ChatAgent thread persistence across runs with AzureAIAgentClient."""
+    """AzureAIAgentClient を使った ChatAgent のスレッド持続性を複数回の実行でテストする。"""
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
         instructions="You are a helpful assistant with good memory.",
     ) as agent:
-        # Create a new thread that will be reused
+        # 再利用される新しいスレッドを作成する
         thread = agent.get_new_thread()
 
-        # First message - establish context
+        # 最初のメッセージ - コンテキストを確立する
         first_response = await agent.run(
             "Remember this number: 42. What number did I just tell you to remember?", thread=thread
         )
         assert isinstance(first_response, AgentRunResponse)
         assert "42" in first_response.text
 
-        # Second message - test conversation memory
+        # 2番目のメッセージ - 会話のメモリをテストする
         second_response = await agent.run(
             "What number did I tell you to remember in my previous message?", thread=thread
         )
@@ -1801,72 +1802,72 @@ async def test_azure_ai_chat_client_agent_thread_persistence() -> None:
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_existing_thread_id() -> None:
-    """Test ChatAgent existing thread ID functionality with AzureAIAgentClient."""
+    """AzureAIAgentClient を使った ChatAgent の既存スレッドID機能をテストする。"""
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
         instructions="You are a helpful assistant with good memory.",
     ) as first_agent:
-        # Start a conversation and get the thread ID
+        # 会話を開始してスレッドIDを取得する
         thread = first_agent.get_new_thread()
         first_response = await first_agent.run("My name is Alice. Remember this.", thread=thread)
 
-        # Validate first response
+        # 最初のレスポンスを検証する
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
 
-        # The thread ID is set after the first response
+        # 最初のレスポンス後にスレッドIDが設定される
         existing_thread_id = thread.service_thread_id
         assert existing_thread_id is not None
 
-    # Now continue with the same thread ID in a new agent instance
+    # 新しいエージェントインスタンスで同じスレッドIDを使って続行する
     async with ChatAgent(
         chat_client=AzureAIAgentClient(thread_id=existing_thread_id, async_credential=AzureCliCredential()),
         instructions="You are a helpful assistant with good memory.",
     ) as second_agent:
-        # Create a thread with the existing ID
+        # 既存のIDでスレッドを作成する
         thread = AgentThread(service_thread_id=existing_thread_id)
 
-        # Ask about the previous conversation
+        # 前の会話について質問する
         response2 = await second_agent.run("What is my name?", thread=thread)
 
-        # Validate that the agent remembers the previous conversation
+        # エージェントが前の会話を覚えていることを検証する
         assert isinstance(response2, AgentRunResponse)
         assert response2.text is not None
-        # Should reference Alice from the previous conversation
+        # 前の会話のAliceを参照しているはずである
         assert "alice" in response2.text.lower()
 
 
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_code_interpreter():
-    """Test ChatAgent with code interpreter through AzureAIAgentClient."""
+    """AzureAIAgentClient を通じてコードインタープリターを使った ChatAgent をテストする。"""
 
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
         instructions="You are a helpful assistant that can write and execute Python code.",
         tools=[HostedCodeInterpreterTool()],
     ) as agent:
-        # Request code execution
+        # コード実行をリクエストする
         response = await agent.run("Write Python code to calculate the factorial of 5 and show the result.")
 
-        # Validate response
+        # レスポンスを検証する
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
-        # Factorial of 5 is 120
+        # 5の階乗は120である
         assert "120" in response.text or "factorial" in response.text.lower()
 
 
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_file_search():
-    """Test ChatAgent with file search through AzureAIAgentClient."""
+    """AzureAIAgentClient を通じてファイル検索を使った ChatAgent をテストする。"""
 
     client = AzureAIAgentClient(async_credential=AzureCliCredential())
     file: FileInfo | None = None
     vector_store: VectorStore | None = None
 
     try:
-        # 1. Read and upload the test file to the Azure AI agent service
+        # 1. テストファイルを読み込み、Azure AI agent サービスにアップロードする
         test_file_path = Path(__file__).parent / "resources" / "employees.pdf"
         file = await client.project_client.agents.files.upload_and_poll(
             file_path=str(test_file_path), purpose="assistants"
@@ -1875,7 +1876,7 @@ async def test_azure_ai_chat_client_agent_file_search():
             file_ids=[file.id], name="test_employees_vectorstore"
         )
 
-        # 2. Create file search tool with uploaded resources
+        # 2. アップロードしたリソースでファイル検索ツールを作成する
         file_search_tool = HostedFileSearchTool(inputs=[HostedVectorStoreContent(vector_store_id=vector_store.id)])
 
         async with ChatAgent(
@@ -1883,24 +1884,24 @@ async def test_azure_ai_chat_client_agent_file_search():
             instructions="You are a helpful assistant that can search through uploaded employee files.",
             tools=[file_search_tool],
         ) as agent:
-            # 3. Test file search functionality
+            # 3. ファイル検索機能をテストする
             response = await agent.run("Who is the youngest employee in the files?")
 
-            # Validate response
+            # レスポンスを検証する
             assert isinstance(response, AgentRunResponse)
             assert response.text is not None
-            # Should find information about Alice Johnson (age 24) being the youngest
+            # Alice Johnson（24歳）が最年少である情報を見つけるはずである
             assert any(term in response.text.lower() for term in ["alice", "johnson", "24"])
 
     finally:
-        # 4. Cleanup: Delete the vector store and file
+        # 4. クリーンアップ：ベクターストアとファイルを削除する
         try:
             if vector_store:
                 await client.project_client.agents.vector_stores.delete(vector_store.id)
             if file:
                 await client.project_client.agents.files.delete(file.id)
         except Exception:
-            # Ignore cleanup errors to avoid masking the actual test failure
+            # 実際のテスト失敗を隠さないようにクリーンアップエラーは無視する
             pass
         finally:
             await client.close()
@@ -1908,7 +1909,7 @@ async def test_azure_ai_chat_client_agent_file_search():
 
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_hosted_mcp_tool() -> None:
-    """Integration test for HostedMCPTool with Azure AI Agent using Microsoft Learn MCP."""
+    """Microsoft Learn MCP を使った Azure AI Agent の HostedMCPTool の統合テスト。"""
 
     mcp_tool = HostedMCPTool(
         name="Microsoft Learn MCP",
@@ -1931,44 +1932,44 @@ async def test_azure_ai_chat_client_agent_hosted_mcp_tool() -> None:
         assert response.text is not None
         assert len(response.text) > 0
 
-        # With never_require approval mode, there should be no approval requests
+        # never_require 承認モードでは承認リクエストが発生しないはずである
         assert len(response.user_input_requests) == 0, (
             f"Expected no approval requests with never_require mode, but got {len(response.user_input_requests)}"
         )
 
-        # Should contain Azure-related content since it's asking about Azure CLI
+        # Azure CLI について尋ねているため、Azure 関連の内容が含まれているはずである
         assert any(term in response.text.lower() for term in ["azure", "storage", "account", "cli"])
 
 
 @pytest.mark.flaky
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_level_tool_persistence():
-    """Test that agent-level tools persist across multiple runs with AzureAIAgentClient."""
+    """AzureAIAgentClient を使ったエージェントレベルのツールが複数回の実行で持続することをテストする。"""
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
         instructions="You are a helpful assistant that uses available tools.",
         tools=[get_weather],
     ) as agent:
-        # First run - agent-level tool should be available
+        # 最初の実行 - エージェントレベルのツールが利用可能であるはずである
         first_response = await agent.run("What's the weather like in Chicago?")
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
-        # Should use the agent-level weather tool
+        # エージェントレベルの天気ツールを使うはずである
         assert any(term in first_response.text.lower() for term in ["chicago", "sunny", "25"])
 
-        # Second run - agent-level tool should still be available (persistence test)
+        # 2回目の実行 - エージェントレベルのツールがまだ利用可能であるはずである（持続性テスト）
         second_response = await agent.run("What's the weather in Miami?")
 
         assert isinstance(second_response, AgentRunResponse)
         assert second_response.text is not None
-        # Should use the agent-level weather tool again
+        # 再びエージェントレベルの天気ツールを使うはずである
         assert any(term in second_response.text.lower() for term in ["miami", "sunny", "25"])
 
 
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_chat_options_run_level() -> None:
-    """Test ChatOptions parameter coverage at run level."""
+    """実行レベルでの ChatOptions パラメータのカバレッジをテストする。"""
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
         instructions="You are a helpful assistant.",
@@ -1998,7 +1999,7 @@ async def test_azure_ai_chat_client_agent_chat_options_run_level() -> None:
 
 @skip_if_azure_ai_integration_tests_disabled
 async def test_azure_ai_chat_client_agent_chat_options_agent_level() -> None:
-    """Test ChatOptions parameter coverage agent level."""
+    """エージェントレベルでの ChatOptions パラメータのカバレッジをテストする。"""
     async with ChatAgent(
         chat_client=AzureAIAgentClient(async_credential=AzureCliCredential()),
         instructions="You are a helpful assistant.",

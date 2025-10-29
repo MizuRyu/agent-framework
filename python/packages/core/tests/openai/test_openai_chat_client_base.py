@@ -133,7 +133,7 @@ async def test_cmc_structured_output_no_fcc(
     mock_create.return_value = mock_chat_completion_response
     chat_history.append(ChatMessage(role="user", text="hello world"))
 
-    # Define a mock response format
+    # モックレスポンス形式を定義する
     class Test(BaseModel):
         name: str
 
@@ -313,7 +313,7 @@ async def test_get_streaming_structured_output_no_fcc(
     mock_create.return_value = stream
     chat_history.append(ChatMessage(role="user", text="hello world"))
 
-    # Define a mock response format
+    # モックレスポンス形式を定義する
     class Test(BaseModel):
         name: str
 

@@ -17,7 +17,7 @@ __all__ = ["AzureOpenAIAssistantsClient"]
 
 
 class AzureOpenAIAssistantsClient(OpenAIAssistantsClient):
-    """Azure OpenAI Assistants client."""
+    """Azure OpenAI Assistants クライアント。"""
 
     DEFAULT_AZURE_API_VERSION: ClassVar[str] = "2024-05-01-preview"
 
@@ -41,62 +41,57 @@ class AzureOpenAIAssistantsClient(OpenAIAssistantsClient):
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
     ) -> None:
-        """Initialize an Azure OpenAI Assistants client.
+        """Azure OpenAI Assistants クライアントを初期化します。
 
         Keyword Args:
-            deployment_name: The Azure OpenAI deployment name for the model to use.
-                Can also be set via environment variable AZURE_OPENAI_CHAT_DEPLOYMENT_NAME.
-            assistant_id: The ID of an Azure OpenAI assistant to use.
-                If not provided, a new assistant will be created (and deleted after the request).
-            assistant_name: The name to use when creating new assistants.
-            thread_id: Default thread ID to use for conversations. Can be overridden by
-                conversation_id property when making a request.
-                If not provided, a new thread will be created (and deleted after the request).
-            api_key: The API key to use. If provided will override the env vars or .env file value.
-                Can also be set via environment variable AZURE_OPENAI_API_KEY.
-            endpoint: The deployment endpoint. If provided will override the value
-                in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_ENDPOINT.
-            base_url: The deployment base URL. If provided will override the value
-                in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_BASE_URL.
-            api_version: The deployment API version. If provided will override the value
-                in the env vars or .env file.
-                Can also be set via environment variable AZURE_OPENAI_API_VERSION.
-            ad_token: The Azure Active Directory token.
-            ad_token_provider: The Azure Active Directory token provider.
-            token_endpoint: The token endpoint to request an Azure token.
-                Can also be set via environment variable AZURE_OPENAI_TOKEN_ENDPOINT.
-            credential: The Azure credential to use for authentication.
-            default_headers: The default headers mapping of string keys to
-                string values for HTTP requests.
-            async_client: An existing client to use.
-            env_file_path: Use the environment settings file as a fallback
-                to environment variables.
-            env_file_encoding: The encoding of the environment settings file.
+            deployment_name: 使用するモデルの Azure OpenAI デプロイメント名。
+                環境変数 AZURE_OPENAI_CHAT_DEPLOYMENT_NAME でも設定可能です。
+            assistant_id: 使用する Azure OpenAI アシスタントの ID。
+                指定しない場合、新しいアシスタントが作成され（リクエスト後に削除されます）。
+            assistant_name: 新しいアシスタント作成時に使用する名前。
+            thread_id: 会話に使用するデフォルトのスレッドID。リクエスト時の conversation_id プロパティで上書き可能。
+                指定しない場合、新しいスレッドが作成され（リクエスト後に削除されます）。
+            api_key: 使用する API キー。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_API_KEY でも設定可能です。
+            endpoint: デプロイメントのエンドポイント。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_ENDPOINT でも設定可能です。
+            base_url: デプロイメントのベース URL。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_BASE_URL でも設定可能です。
+            api_version: デプロイメントの API バージョン。指定すると環境変数や .env ファイルの値を上書きします。
+                環境変数 AZURE_OPENAI_API_VERSION でも設定可能です。
+            ad_token: Azure Active Directory トークン。
+            ad_token_provider: Azure Active Directory トークンプロバイダー。
+            token_endpoint: Azure トークンを要求するトークンエンドポイント。
+                環境変数 AZURE_OPENAI_TOKEN_ENDPOINT でも設定可能です。
+            credential: 認証に使用する Azure 資格情報。
+            default_headers: HTTP リクエストのための文字列キーから文字列値へのデフォルトヘッダーのマッピング。
+            async_client: 使用する既存のクライアント。
+            env_file_path: 環境変数の代わりに環境設定ファイルを使用。
+            env_file_encoding: 環境設定ファイルのエンコーディング。
 
         Examples:
             .. code-block:: python
 
                 from agent_framework.azure import AzureOpenAIAssistantsClient
 
-                # Using environment variables
+                # 環境変数を使用する場合
                 # Set AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com
                 # Set AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4
                 # Set AZURE_OPENAI_API_KEY=your-key
                 client = AzureOpenAIAssistantsClient()
 
-                # Or passing parameters directly
+                # またはパラメータを直接渡す場合
                 client = AzureOpenAIAssistantsClient(
                     endpoint="https://your-endpoint.openai.azure.com", deployment_name="gpt-4", api_key="your-key"
                 )
 
-                # Or loading from a .env file
+                # または .env ファイルから読み込む場合
                 client = AzureOpenAIAssistantsClient(env_file_path="path/to/.env")
+
         """
         try:
             azure_openai_settings = AzureOpenAISettings(
-                # pydantic settings will see if there is a value, if not, will try the env var or .env file
+                # pydantic の設定は値があるか確認し、なければ環境変数や .env ファイルを試みます
                 api_key=api_key,  # type: ignore
                 base_url=base_url,  # type: ignore
                 endpoint=endpoint,  # type: ignore
@@ -116,7 +111,7 @@ class AzureOpenAIAssistantsClient(OpenAIAssistantsClient):
                 "or 'AZURE_OPENAI_CHAT_DEPLOYMENT_NAME' environment variable."
             )
 
-        # Handle authentication: try API key first, then AD token, then Entra ID
+        # 認証を処理します: まず API キー、次に AD トークン、最後に Entra ID を試みます
         if (
             not async_client
             and not azure_openai_settings.api_key
@@ -130,7 +125,7 @@ class AzureOpenAIAssistantsClient(OpenAIAssistantsClient):
         if not async_client and not azure_openai_settings.api_key and not ad_token and not ad_token_provider:
             raise ServiceInitializationError("The Azure OpenAI API key, ad_token, or ad_token_provider is required.")
 
-        # Create Azure client if not provided
+        # 提供されていなければ Azure クライアントを作成します
         if not async_client:
             client_params: dict[str, Any] = {
                 "api_version": azure_openai_settings.api_version,

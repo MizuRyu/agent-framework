@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Session management for agent execution tracking."""
+"""Agent実行トラッキングのためのセッション管理。"""
 
 import logging
 import uuid
@@ -9,27 +9,28 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Type aliases for better readability
+# 可読性向上のための型エイリアス
 SessionData = dict[str, Any]
 RequestRecord = dict[str, Any]
 SessionSummary = dict[str, Any]
 
 
 class SessionManager:
-    """Manages execution sessions for tracking requests and context."""
+    """リクエストとContextのトラッキングのための実行セッションを管理する。"""
 
     def __init__(self) -> None:
-        """Initialize the session manager."""
+        """セッションマネージャーを初期化する。"""
         self.sessions: dict[str, SessionData] = {}
 
     def create_session(self, session_id: str | None = None) -> str:
-        """Create a new execution session.
+        """新しい実行セッションを作成する。
 
         Args:
-            session_id: Optional session ID, if not provided a new one is generated
+            session_id: OptionalなセッションID。指定しない場合は新規生成される
 
         Returns:
-            Session ID
+            セッションID
+
         """
         if not session_id:
             session_id = str(uuid.uuid4())
@@ -46,21 +47,23 @@ class SessionManager:
         return session_id
 
     def get_session(self, session_id: str) -> SessionData | None:
-        """Get session information.
+        """セッション情報を取得する。
 
         Args:
-            session_id: Session ID
+            session_id: セッションID
 
         Returns:
-            Session data or None if not found
+            セッションデータまたは見つからなければNone
+
         """
         return self.sessions.get(session_id)
 
     def close_session(self, session_id: str) -> None:
-        """Close and cleanup a session.
+        """セッションを閉じてクリーンアップする。
 
         Args:
-            session_id: Session ID to close
+            session_id: 閉じるセッションID
+
         """
         if session_id in self.sessions:
             self.sessions[session_id]["active"] = False
@@ -69,17 +72,18 @@ class SessionManager:
     def add_request_record(
         self, session_id: str, entity_id: str, executor_name: str, request_input: Any, model_id: str
     ) -> str:
-        """Add a request record to a session.
+        """セッションにリクエスト記録を追加する。
 
         Args:
-            session_id: Session ID
-            entity_id: ID of the entity being executed
-            executor_name: Name of the executor
-            request_input: Input for the request
-            model_id: Model name
+            session_id: セッションID
+            entity_id: 実行されるエンティティのID
+            executor_name: executorの名前
+            request_input: リクエストの入力
+            model_id: モデル名
 
         Returns:
-            Request ID
+            リクエストID
+
         """
         session = self.get_session(session_id)
         if not session:
@@ -98,12 +102,13 @@ class SessionManager:
         return str(request_record["id"])
 
     def update_request_record(self, session_id: str, request_id: str, updates: dict[str, Any]) -> None:
-        """Update a request record in a session.
+        """セッション内のリクエスト記録を更新する。
 
         Args:
-            session_id: Session ID
-            request_id: Request ID to update
-            updates: Dictionary of updates to apply
+            session_id: セッションID
+            request_id: 更新するリクエストID
+            updates: 適用する更新内容の辞書
+
         """
         session = self.get_session(session_id)
         if not session:
@@ -115,13 +120,14 @@ class SessionManager:
                 break
 
     def get_session_history(self, session_id: str) -> SessionSummary | None:
-        """Get session execution history.
+        """セッションの実行履歴を取得する。
 
         Args:
-            session_id: Session ID
+            session_id: セッションID
 
         Returns:
-            Session history or None if not found
+            セッション履歴または見つからなければNone
+
         """
         session = self.get_session(session_id)
         if not session:
@@ -148,10 +154,11 @@ class SessionManager:
         }
 
     def get_active_sessions(self) -> list[SessionSummary]:
-        """Get list of active sessions.
+        """アクティブなセッションのリストを取得する。
 
         Returns:
-            List of active session summaries
+            アクティブなセッションのサマリーリスト
+
         """
         active_sessions = []
 
@@ -171,10 +178,11 @@ class SessionManager:
         return active_sessions
 
     def cleanup_old_sessions(self, max_age_hours: int = 24) -> None:
-        """Cleanup old sessions to prevent memory leaks.
+        """メモリリーク防止のため古いセッションをクリーンアップする。
 
         Args:
-            max_age_hours: Maximum age of sessions to keep in hours
+            max_age_hours: 保持するセッションの最大年齢（時間）
+
         """
         cutoff_time = datetime.now().timestamp() - (max_age_hours * 3600)
 

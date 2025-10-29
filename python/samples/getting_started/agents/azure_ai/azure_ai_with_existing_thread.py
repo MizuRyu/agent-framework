@@ -22,7 +22,7 @@ by providing thread IDs for thread reuse patterns.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -30,18 +30,17 @@ def get_weather(
 async def main() -> None:
     print("=== Azure AI Chat Client with Existing Thread ===")
 
-    # Create the client
+    # クライアントを作成する
     async with (
         AzureCliCredential() as credential,
         AIProjectClient(endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"], credential=credential) as client,
     ):
-        # Create an thread that will persist
+        # 永続するスレッドを作成する
         created_thread = await client.agents.threads.create()
 
         try:
             async with ChatAgent(
-                # passing in the client is optional here, so if you take the agent_id from the portal
-                # you can use it directly without the two lines above.
+                # ここでクライアントを渡すのはオプションです。ポータルから agent_id を取得すれば、上記の2行なしで直接使用できます。
                 chat_client=AzureAIAgentClient(project_client=client),
                 instructions="You are a helpful weather agent.",
                 tools=get_weather,
@@ -51,7 +50,7 @@ async def main() -> None:
                 result = await agent.run("What's the weather like in Tokyo?", thread=thread)
                 print(f"Result: {result}\n")
         finally:
-            # Clean up the thread manually
+            # スレッドを手動でクリーンアップする
             await client.agents.threads.delete(created_thread.id)
 
 

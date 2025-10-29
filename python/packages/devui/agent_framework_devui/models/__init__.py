@@ -1,9 +1,8 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Agent Framework DevUI Models - OpenAI-compatible types and custom extensions."""
+"""Agent Framework DevUIモデル - OpenAI互換の型とカスタム拡張。"""
 
-# Import discovery models
-# Import all OpenAI types directly from the openai package
+# discoveryモデルをインポート openaiパッケージからすべてのOpenAI型を直接インポートします
 from openai.types.conversations import Conversation, ConversationDeletedResource
 from openai.types.conversations.conversation_item import ConversationItem
 from openai.types.responses import (
@@ -40,10 +39,10 @@ from ._openai_custom import (
     ResponseWorkflowEventComplete,
 )
 
-# Type alias for compatibility
+# 互換性のための型エイリアス
 OpenAIResponse = Response
 
-# Export all types for easy importing
+# 簡単にインポートできるようにすべての型をエクスポート
 __all__ = [
     "AgentFrameworkRequest",
     "Conversation",

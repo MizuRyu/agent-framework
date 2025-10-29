@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Tests for Purview chat middleware."""
+"""Purview chat middleware のテスト。"""
 
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -123,27 +123,27 @@ class TestPurviewChatPolicyMiddleware:
     async def test_chat_middleware_handles_post_check_exception(
         self, middleware: PurviewChatPolicyMiddleware, chat_context: ChatContext
     ) -> None:
-        """Test that exceptions in post-check are logged but don't affect result."""
+        """post-check 内の例外がログに記録されるが結果に影響しないことをテスト。"""
         call_count = 0
 
         async def mock_process_messages(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return (False, "user-123")  # Pre-check succeeds
-            raise Exception("Post-check error")  # Post-check fails
+                return (False, "user-123")  # Pre-check が成功する
+            raise Exception("Post-check error")  # Post-check が失敗する
 
         with patch.object(middleware._processor, "process_messages", side_effect=mock_process_messages):
 
             async def mock_next(ctx: ChatContext) -> None:
-                # Create a mock result with messages attribute
+                # messages 属性を持つモック結果を作成する
                 result = MagicMock()
                 result.messages = [ChatMessage(role=Role.ASSISTANT, text="Response")]
                 ctx.result = result
 
             await middleware.process(chat_context, mock_next)
 
-            # Should have been called twice (pre and post)
+            # 2回呼ばれているはず（pre と post）
             assert call_count == 2
-            # Result should still be set
+            # 結果はまだ設定されているはず
             assert chat_context.result is not None

@@ -1,15 +1,15 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""AutoGen Swarm pattern vs Agent Framework HandoffBuilder.
+"""AutoGen の Swarm パターンと Agent Framework の HandoffBuilder の比較。
 
-Demonstrates agent handoff coordination where agents can transfer control
-to other specialized agents based on the task requirements.
+エージェントがタスク要件に基づいて他の専門エージェントに制御を渡す
+エージェントハンドオフの調整を示します。
 """
 
 import asyncio
 
 
 async def run_autogen() -> None:
-    """AutoGen's Swarm pattern with human-in-the-loop handoffs."""
+    """AutoGen の Swarm パターンによる human-in-the-loop ハンドオフ。"""
     from autogen_agentchat.agents import AssistantAgent
     from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination
     from autogen_agentchat.messages import HandoffMessage
@@ -19,7 +19,7 @@ async def run_autogen() -> None:
 
     client = OpenAIChatCompletionClient(model="gpt-4.1-mini")
 
-    # Create triage agent that routes to specialists
+    # 専門家にルーティングするトリアージエージェントを作成します
     triage_agent = AssistantAgent(
         name="triage",
         model_client=client,
@@ -32,7 +32,7 @@ async def run_autogen() -> None:
         model_client_stream=True,
     )
 
-    # Create billing specialist
+    # 請求専門家を作成します
     billing_agent = AssistantAgent(
         name="billing_agent",
         model_client=client,
@@ -45,7 +45,7 @@ async def run_autogen() -> None:
         model_client_stream=True,
     )
 
-    # Create technical support specialist
+    # 技術サポート専門家を作成します
     tech_support = AssistantAgent(
         name="technical_support",
         model_client=client,
@@ -58,14 +58,14 @@ async def run_autogen() -> None:
         model_client_stream=True,
     )
 
-    # Create swarm team with human-in-the-loop termination
+    # human-in-the-loop 終了を持つ Swarm チームを作成します
     termination = HandoffTermination(target="user") | TextMentionTermination("TERMINATE")
     team = Swarm(
         participants=[triage_agent, billing_agent, tech_support],
         termination_condition=termination,
     )
 
-    # Scripted user responses for demonstration
+    # デモ用のスクリプト化されたユーザー応答
     scripted_responses = [
         "I was charged twice for my subscription",
         "Yes, the charge of $49.99 appears twice on my credit card statement.",
@@ -73,13 +73,13 @@ async def run_autogen() -> None:
     ]
     response_index = 0
 
-    # Run with human-in-the-loop pattern
+    # human-in-the-loop パターンで実行します
     print("[AutoGen] Swarm handoff conversation:")
     task_result = await Console(team.run_stream(task=scripted_responses[response_index]))
     last_message = task_result.messages[-1]
     response_index += 1
 
-    # Continue conversation when agents handoff to user
+    # エージェントがユーザーにハンドオフしたときに会話を続けます
     while (
         isinstance(last_message, HandoffMessage)
         and last_message.target == "user"
@@ -94,7 +94,7 @@ async def run_autogen() -> None:
 
 
 async def run_agent_framework() -> None:
-    """Agent Framework's HandoffBuilder for agent coordination."""
+    """Agent Framework の HandoffBuilder によるエージェント調整。"""
     from agent_framework import (
         AgentRunUpdateEvent,
         HandoffBuilder,
@@ -107,7 +107,7 @@ async def run_agent_framework() -> None:
 
     client = OpenAIChatClient(model_id="gpt-4.1-mini")
 
-    # Create triage agent
+    # トリアージエージェントを作成します
     triage_agent = client.create_agent(
         name="triage",
         instructions=(
@@ -118,22 +118,21 @@ async def run_agent_framework() -> None:
         description="Routes requests to appropriate specialists",
     )
 
-    # Create billing specialist
+    # 請求専門家を作成します
     billing_agent = client.create_agent(
         name="billing_agent",
         instructions="You are a billing specialist. Help with payment and billing questions. Provide clear assistance.",
         description="Handles billing and payment questions",
     )
 
-    # Create technical support specialist
+    # 技術サポート専門家を作成します
     tech_support = client.create_agent(
         name="technical_support",
         instructions="You are technical support. Help with technical issues. Provide clear assistance.",
         description="Handles technical support questions",
     )
 
-    # Create handoff workflow - simpler configuration
-    # After specialists respond, control returns to user (via triage as coordinator)
+    # ハンドオフワークフローを作成します - より簡単な設定 専門家が応答した後、制御はユーザーに戻ります（トリアージがコーディネーターとして）
     workflow = (
         HandoffBuilder(
             name="support_handoff",
@@ -145,14 +144,14 @@ async def run_agent_framework() -> None:
         .build()
     )
 
-    # Scripted user responses
+    # スクリプト化されたユーザー応答
     scripted_responses = [
         "I was charged twice for my subscription",
         "Yes, the charge of $49.99 appears twice on my credit card statement.",
         "Thank you for your help!",
     ]
 
-    # Run with initial message
+    # 初期メッセージで実行します
     print("[Agent Framework] Handoff conversation:")
     print("---------- user ----------")
     print(scripted_responses[0])
@@ -163,7 +162,7 @@ async def run_agent_framework() -> None:
 
     async for event in workflow.run_stream(scripted_responses[0]):
         if isinstance(event, AgentRunUpdateEvent):
-            # Print executor name header when switching to a new agent
+            # 新しいエージェントに切り替わる際に executor 名のヘッダーを表示します
             if current_executor != event.executor_id:
                 if stream_line_open:
                     print()
@@ -181,7 +180,7 @@ async def run_agent_framework() -> None:
                 print()
                 stream_line_open = False
 
-    # Process scripted responses
+    # スクリプト化された応答を処理します
     response_index = 1
     while pending_requests and response_index < len(scripted_responses):
         user_response = scripted_responses[response_index]
@@ -195,7 +194,7 @@ async def run_agent_framework() -> None:
 
         async for event in workflow.send_responses_streaming(responses):
             if isinstance(event, AgentRunUpdateEvent):
-                # Print executor name header when switching to a new agent
+                # 新しいエージェントに切り替わる際に executor 名のヘッダーを表示します
                 if current_executor != event.executor_id:
                     if stream_line_open:
                         print()
@@ -220,7 +219,7 @@ async def run_agent_framework() -> None:
 
     if stream_line_open:
         print()
-    print()  # Final newline after conversation
+    print()  # 会話の最後に改行を入れます
 
 
 async def main() -> None:

@@ -42,13 +42,13 @@ Key benefits of decorator approach:
 
 
 def get_current_time() -> str:
-    """Get the current time."""
+    """現在の時刻を取得する。"""
     return f"Current time is {datetime.datetime.now().strftime('%H:%M:%S')}"
 
 
 @agent_middleware  # Decorator marks this as agent middleware - no type annotations needed
 async def simple_agent_middleware(context, next):  # type: ignore - parameters intentionally untyped to demonstrate decorator functionality
-    """Agent middleware that runs before and after agent execution."""
+    """Agent実行の前後に動作するAgent Middleware。"""
     print("[Agent Middleware] Before agent execution")
     await next(context)
     print("[Agent Middleware] After agent execution")
@@ -56,18 +56,17 @@ async def simple_agent_middleware(context, next):  # type: ignore - parameters i
 
 @function_middleware  # Decorator marks this as function middleware - no type annotations needed
 async def simple_function_middleware(context, next):  # type: ignore - parameters intentionally untyped to demonstrate decorator functionality
-    """Function middleware that runs before and after function calls."""
+    """関数呼び出しの前後に動作するFunction Middleware。"""
     print(f"[Function Middleware] Before calling: {context.function.name}")  # type: ignore
     await next(context)
     print(f"[Function Middleware] After calling: {context.function.name}")  # type: ignore
 
 
 async def main() -> None:
-    """Example demonstrating decorator-based middleware."""
+    """デコレータベースのMiddlewareを示す例。"""
     print("=== Decorator Middleware Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(

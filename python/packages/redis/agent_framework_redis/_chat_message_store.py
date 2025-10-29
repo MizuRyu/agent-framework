@@ -12,7 +12,7 @@ from agent_framework._serialization import SerializationMixin
 
 
 class RedisStoreState(SerializationMixin):
-    """State model for serializing and deserializing Redis chat message store data."""
+    """RedisチャットメッセージストアデータのシリアライズおよびデシリアライズのためのStateモデル。"""
 
     def __init__(
         self,
@@ -21,7 +21,7 @@ class RedisStoreState(SerializationMixin):
         key_prefix: str = "chat_messages",
         max_messages: int | None = None,
     ) -> None:
-        """State model for serializing and deserializing Redis chat message store data."""
+        """RedisチャットメッセージストアデータのシリアライズおよびデシリアライズのためのStateモデル。"""
         self.thread_id = thread_id
         self.redis_url = redis_url
         self.key_prefix = key_prefix
@@ -29,27 +29,27 @@ class RedisStoreState(SerializationMixin):
 
 
 class RedisChatMessageStore:
-    """Redis-backed implementation of ChatMessageStoreProtocol using Redis Lists.
+    """Redis Listsを使用したChatMessageStoreProtocolのRedisバックエンド実装。
 
-    This implementation provides persistent, thread-safe chat message storage using Redis Lists.
-    Messages are stored as JSON-serialized strings in chronological order, with each conversation
-    thread isolated by a unique Redis key.
+    この実装はRedis Listsを用いて永続的かつスレッドセーフなチャットメッセージストレージを提供します。
+    メッセージはJSONシリアライズされた文字列として時系列順に保存され、各会話スレッドはユニークなRedisキーで分離されます。
 
-    Key Features:
+    主な特徴:
     ============
-    - **Persistent Storage**: Messages survive application restarts and crashes
-    - **Thread Isolation**: Each conversation thread has its own Redis key namespace
-    - **Auto Message Limits**: Configurable automatic trimming of old messages using LTRIM
-    - **Performance Optimized**: Uses native Redis operations for efficiency
-    - **State Serialization**: Full compatibility with Agent Framework thread serialization
-    - **Initial Message Support**: Pre-load conversations with existing message history
-    - **Production Ready**: Atomic operations, error handling, connection pooling
+    - **永続ストレージ**: アプリケーションの再起動やクラッシュ後もメッセージが保持されます
+    - **スレッド分離**: 各会話スレッドは独自のRedisキー名前空間を持ちます
+    - **自動メッセージ制限**: LTRIMを用いた古いメッセージの自動トリミングが設定可能
+    - **パフォーマンス最適化**: ネイティブRedis操作を使用して効率化
+    - **Stateシリアライズ対応**: Agent Frameworkのスレッドシリアライズと完全互換
+    - **初期メッセージ対応**: 既存のメッセージ履歴で会話を事前ロード可能
+    - **本番対応**: 原子操作、エラーハンドリング、接続プーリング
 
-    Redis Operations:
-    - RPUSH: Add messages to the end of the list (chronological order)
-    - LRANGE: Retrieve messages in chronological order
-    - LTRIM: Maintain message limits by trimming old messages
-    - DELETE: Clear all messages for a thread
+    Redis操作:
+    - RPUSH: リストの末尾にメッセージを追加（時系列順）
+    - LRANGE: メッセージを時系列順に取得
+    - LTRIM: 古いメッセージをトリミングして制限を維持
+    - DELETE: スレッドの全メッセージをクリア
+
     """
 
     def __init__(
@@ -60,187 +60,190 @@ class RedisChatMessageStore:
         max_messages: int | None = None,
         messages: Sequence[ChatMessage] | None = None,
     ) -> None:
-        """Initialize the Redis chat message store.
+        """Redisチャットメッセージストアを初期化します。
 
-        Creates a Redis-backed chat message store for a specific conversation thread.
-        The store will automatically create a Redis connection and manage message
-        persistence using Redis List operations.
+        特定の会話スレッド用にRedisバックエンドのチャットメッセージストアを作成します。
+        ストアは自動的にRedis接続を作成し、Redis List操作を用いてメッセージの永続化を管理します。
 
         Args:
-            redis_url: Redis connection URL (e.g., "redis://localhost:6379").
-                      Required for establishing Redis connection.
-            thread_id: Unique identifier for this conversation thread.
-                      If not provided, a UUID will be auto-generated.
-                      This becomes part of the Redis key: {key_prefix}:{thread_id}
-            key_prefix: Prefix for Redis keys to namespace different applications.
-                       Defaults to 'chat_messages'. Useful for multi-tenant scenarios.
-            max_messages: Maximum number of messages to retain in Redis.
-                         When exceeded, oldest messages are automatically trimmed using LTRIM.
-                         None means unlimited storage.
-            messages: Initial messages to pre-populate the conversation.
-                     These are added to Redis on first access if the Redis key is empty.
-                     Useful for resuming conversations or seeding with context.
+            redis_url: Redis接続URL（例: "redis://localhost:6379"）。
+                      Redis接続確立に必須です。
+            thread_id: この会話スレッドのユニーク識別子。
+                      指定しない場合はUUIDが自動生成されます。
+                      Redisキーの一部になります: {key_prefix}:{thread_id}
+            key_prefix: Redisキーのプレフィックスで異なるアプリケーションの名前空間を区別します。
+                       デフォルトは'chat_messages'。マルチテナントシナリオに有用です。
+            max_messages: Redisに保持する最大メッセージ数。
+                         超過時はLTRIMで古いメッセージが自動トリミングされます。
+                         Noneは無制限を意味します。
+            messages: 会話を事前に埋める初期メッセージ。
+                     Redisキーが空の場合、最初のアクセス時にRedisに追加されます。
+                     会話の再開やコンテキストのシードに有用です。
 
         Raises:
-            ValueError: If redis_url is None (Redis connection is required).
-            redis.ConnectionError: If unable to connect to Redis server.
+            ValueError: redis_urlがNoneの場合（Redis接続必須）。
+            redis.ConnectionError: Redisサーバーに接続できない場合。
+
 
 
         """
-        # Validate required parameters
+        # 必須パラメータを検証します
         if redis_url is None:
             raise ValueError("redis_url is required for Redis connection")
 
-        # Store configuration
+        # ストアの設定
         self.redis_url = redis_url
         self.thread_id = thread_id or f"thread_{uuid4()}"
         self.key_prefix = key_prefix
         self.max_messages = max_messages
 
-        # Initialize Redis client with connection pooling and async support
+        # 接続プーリングと非同期サポートでRedisクライアントを初期化します
         self._redis_client = redis.from_url(redis_url, decode_responses=True)  # type: ignore[no-untyped-call]
 
-        # Handle initial messages (will be moved to Redis on first access)
+        # 初期メッセージを処理します（最初のアクセス時にRedisに移動されます）
         self._initial_messages = list(messages) if messages else []
         self._initial_messages_added = False
 
     @property
     def redis_key(self) -> str:
-        """Get the Redis key for this thread's messages.
+        """このスレッドのメッセージ用Redisキーを取得します。
 
-        The key format is: {key_prefix}:{thread_id}
+        キーフォーマットは: {key_prefix}:{thread_id}
 
         Returns:
-            Redis key string used for storing this thread's messages.
+            このスレッドのメッセージ保存に使用されるRedisキー文字列。
 
         Example:
-            For key_prefix="chat_messages" and thread_id="user_123_session_456":
-            Returns "chat_messages:user_123_session_456"
+            key_prefix="chat_messages"、thread_id="user_123_session_456"の場合:
+            "chat_messages:user_123_session_456"を返します
+
         """
         return f"{self.key_prefix}:{self.thread_id}"
 
     async def _ensure_initial_messages_added(self) -> None:
-        """Ensure initial messages are added to Redis if not already present.
+        """初期メッセージがまだ存在しない場合にRedisに追加されることを保証します。
 
-        This method is called before any Redis operations to guarantee that
-        initial messages provided during construction are persisted to Redis.
+        このメソッドはRedis操作の前に呼び出され、
+        コンストラクション時に提供された初期メッセージがRedisに永続化されることを保証します。
+
         """
         if not self._initial_messages or self._initial_messages_added:
             return
 
-        # Check if Redis key already has messages (prevents duplicate additions)
+        # Redisキーにすでにメッセージがあるか確認します（重複追加を防止）
         existing_count = await self._redis_client.llen(self.redis_key)  # type: ignore[misc]  # type: ignore[misc]
         if existing_count == 0:
-            # Add initial messages using atomic pipeline operation
+            # 原子パイプライン操作を用いて初期メッセージを追加します
             await self._add_redis_messages(self._initial_messages)
 
-        # Mark as completed and free memory
+        # 完了としてマークしメモリを解放します
         self._initial_messages_added = True
         self._initial_messages.clear()
 
     async def _add_redis_messages(self, messages: Sequence[ChatMessage]) -> None:
-        """Add multiple messages to Redis using atomic pipeline operation.
+        """原子パイプライン操作を用いて複数のメッセージをRedisに追加します。
 
-        This internal method efficiently adds multiple messages to the Redis list
-        using a single atomic transaction to ensure consistency.
+        この内部メソッドは単一の原子トランザクションで複数メッセージを効率的にRedisリストに追加し、一貫性を保証します。
 
         Args:
-            messages: Sequence of ChatMessage objects to add to Redis.
+            messages: Redisに追加するChatMessageオブジェクトのシーケンス。
+
         """
         if not messages:
             return
 
-        # Pre-serialize all messages for efficient pipeline operation
+        # 効率的なパイプライン操作のためにすべてのメッセージを事前シリアライズします
         serialized_messages = [self._serialize_message(message) for message in messages]
 
-        # Use Redis pipeline for atomic batch operation
+        # 原子バッチ操作のためにRedisパイプラインを使用します
         async with self._redis_client.pipeline(transaction=True) as pipe:
             for serialized_message in serialized_messages:
                 await pipe.rpush(self.redis_key, serialized_message)  # type: ignore[misc]
             await pipe.execute()
 
     async def add_messages(self, messages: Sequence[ChatMessage]) -> None:
-        """Add messages to the Redis store (ChatMessageStoreProtocol protocol method).
+        """Redisストアにメッセージを追加します（ChatMessageStoreProtocolプロトコルメソッド）。
 
-        This method implements the required ChatMessageStoreProtocol protocol for adding messages.
-        Messages are appended to the Redis list in chronological order, with automatic
-        trimming if message limits are configured.
+        このメソッドはメッセージ追加のために必要なChatMessageStoreProtocolプロトコルを実装します。
+        メッセージは時系列順にRedisリストに追加され、メッセージ制限が設定されている場合は自動トリミングされます。
 
         Args:
-            messages: Sequence of ChatMessage objects to add to the store.
-                     Can be empty (no-op) or contain multiple messages.
+            messages: ストアに追加するChatMessageオブジェクトのシーケンス。
+                     空でも（no-op）、複数メッセージでも可能です。
 
-        Thread Safety:
-        - Atomic pipeline ensures all messages are added together
-        - LTRIM operation is atomic for consistent message limits
+        スレッドセーフ:
+        - 原子パイプラインによりすべてのメッセージが一括追加されます
+        - LTRIM操作はメッセージ制限の一貫性を保つため原子です
 
         Example:
             .. code-block:: python
 
                 messages = [ChatMessage(role="user", text="Hello"), ChatMessage(role="assistant", text="Hi there!")]
                 await store.add_messages(messages)
+
         """
         if not messages:
             return
 
-        # Ensure any initial messages are persisted first
+        # 初期メッセージが永続化されていることを保証します
         await self._ensure_initial_messages_added()
 
-        # Add new messages using atomic pipeline operation
+        # 原子パイプライン操作を用いて新しいメッセージを追加します
         await self._add_redis_messages(messages)
 
-        # Apply message limit if configured (automatic cleanup)
+        # 設定されていればメッセージ制限を適用します（自動クリーンアップ）
         if self.max_messages is not None:
             current_count = await self._redis_client.llen(self.redis_key)  # type: ignore[misc]
             if current_count > self.max_messages:
-                # Keep only the most recent max_messages using LTRIM
+                # LTRIMを使って最新のmax_messagesのみを保持します
                 await self._redis_client.ltrim(self.redis_key, -self.max_messages, -1)  # type: ignore[misc]
 
     async def list_messages(self) -> list[ChatMessage]:
-        """Get all messages from the store in chronological order (ChatMessageStoreProtocol protocol method).
+        """ストアからすべてのメッセージを時系列順に取得します（ChatMessageStoreProtocolプロトコルメソッド）。
 
-        This method implements the required ChatMessageStoreProtocol protocol for retrieving messages.
-        Returns all messages stored in Redis, ordered from oldest (index 0) to newest (index -1).
+        このメソッドはメッセージ取得のために必要なChatMessageStoreProtocolプロトコルを実装します。
+        Redisに保存されたすべてのメッセージを古い順（インデックス0）から新しい順（インデックス-1）で返します。
 
         Returns:
-            List of ChatMessage objects in chronological order (oldest first).
-            Returns empty list if no messages exist or if Redis connection fails.
+            時系列順（古い順）のChatMessageオブジェクトのリスト。
+            メッセージが存在しないかRedis接続に失敗した場合は空リストを返します。
 
         Example:
             .. code-block:: python
 
-                # Get all conversation history
+                # 会話履歴をすべて取得
                 messages = await store.list_messages()
+
         """
-        # Ensure any initial messages are persisted to Redis first
+        # 初期メッセージがRedisに永続化されていることを保証します
         await self._ensure_initial_messages_added()
 
         messages = []
-        # Retrieve all messages from Redis list (oldest to newest)
+        # Redisリストからすべてのメッセージを取得します（古い順から新しい順）
         redis_messages = await self._redis_client.lrange(self.redis_key, 0, -1)  # type: ignore[misc]
 
         if redis_messages:
             for serialized_message in redis_messages:
-                # Deserialize each JSON message back to ChatMessage
+                # 各JSONメッセージをChatMessageにデシリアライズします
                 message = self._deserialize_message(serialized_message)
                 messages.append(message)
 
         return messages
 
     async def serialize(self, **kwargs: Any) -> Any:
-        """Serialize the current store state for persistence (ChatMessageStoreProtocol protocol method).
+        """現在のストア状態をシリアライズして永続化します（ChatMessageStoreProtocolプロトコルメソッド）。
 
-        This method implements the required ChatMessageStoreProtocol protocol for state serialization.
-        Captures the Redis connection configuration and thread information needed to
-        reconstruct the store and reconnect to the same conversation data.
+        このメソッドは状態シリアライズのために必要なChatMessageStoreProtocolプロトコルを実装します。
+        Redis接続設定とスレッド情報をキャプチャし、
+        ストアを再構築して同じ会話データに再接続可能にします。
 
         Keyword Args:
-            **kwargs: Additional arguments passed to Pydantic model_dump() for serialization.
-                     Common options: exclude_none=True, by_alias=True
+            **kwargs: Pydanticのmodel_dump()に渡される追加引数。
+                     一般的なオプション: exclude_none=True, by_alias=True
 
         Returns:
-            Dictionary containing serialized store configuration that can be persisted
-            to databases, files, or other storage mechanisms.
+            データベースやファイルなどに永続化可能なシリアライズ済みストア設定の辞書。
+
         """
         state = RedisStoreState(
             thread_id=self.thread_id,
@@ -252,32 +255,33 @@ class RedisChatMessageStore:
 
     @classmethod
     async def deserialize(cls, serialized_store_state: Any, **kwargs: Any) -> RedisChatMessageStore:
-        """Deserialize state data into a new store instance (ChatMessageStoreProtocol protocol method).
+        """シリアライズ済み状態データから新しいストアインスタンスをデシリアライズします（ChatMessageStoreProtocolプロトコルメソッド）。
 
-        This method implements the required ChatMessageStoreProtocol protocol for state deserialization.
-        Creates a new RedisChatMessageStore instance from previously serialized data,
-        allowing the store to reconnect to the same conversation data in Redis.
+        このメソッドは状態デシリアライズのために必要なChatMessageStoreProtocolプロトコルを実装します。
+        以前にシリアライズされたデータから新しいRedisChatMessageStoreインスタンスを作成し、
+        Redisの同じ会話データに再接続可能にします。
 
         Args:
-            serialized_store_state: Previously serialized state data from serialize_state().
-                                   Should be a dictionary with thread_id, redis_url, etc.
+            serialized_store_state: serialize_state()からの以前にシリアライズされた状態データ。
+                                   thread_id、redis_urlなどを含む辞書であるべきです。
 
         Keyword Args:
-            **kwargs: Additional arguments passed to Pydantic model validation.
+            **kwargs: Pydanticのモデル検証に渡される追加引数。
 
         Returns:
-            A new RedisChatMessageStore instance configured from the serialized state.
+            シリアライズ状態から設定された新しいRedisChatMessageStoreインスタンス。
 
         Raises:
-            ValueError: If required fields are missing or invalid in the serialized state.
+            ValueError: シリアライズ状態に必須フィールドが欠落または無効な場合。
+
         """
         if not serialized_store_state:
             raise ValueError("serialized_store_state is required for deserialization")
 
-        # Validate and parse the serialized state using Pydantic
+        # Pydanticを用いてシリアライズ済み状態を検証および解析します
         state = RedisStoreState.from_dict(serialized_store_state, **kwargs)
 
-        # Create and return a new store instance with the deserialized configuration
+        # デシリアライズされた設定で新しいストアインスタンスを作成して返します
         return cls(
             redis_url=state.redis_url,
             thread_id=state.thread_id,
@@ -286,133 +290,139 @@ class RedisChatMessageStore:
         )
 
     async def update_from_state(self, serialized_store_state: Any, **kwargs: Any) -> None:
-        """Deserialize state data into this store instance (ChatMessageStoreProtocol protocol method).
+        """このストアインスタンスに状態データをデシリアライズします（ChatMessageStoreProtocolプロトコルメソッド）。
 
-        This method implements the required ChatMessageStoreProtocol protocol for state deserialization.
-        Restores the store configuration from previously serialized data, allowing the store
-        to reconnect to the same conversation data in Redis.
+        このメソッドは状態デシリアライズのために必要なChatMessageStoreProtocolプロトコルを実装します。
+        以前にシリアライズされたデータからストア設定を復元し、
+        Redisの同じ会話データに再接続可能にします。
 
         Args:
-            serialized_store_state: Previously serialized state data from serialize_state().
-                                   Should be a dictionary with thread_id, redis_url, etc.
+            serialized_store_state: serialize_state()からの以前にシリアライズされた状態データ。
+                                   thread_id、redis_urlなどを含む辞書であるべきです。
 
         Keyword Args:
-            **kwargs: Additional arguments passed to Pydantic model validation.
+            **kwargs: Pydanticのモデル検証に渡される追加引数。
+
         """
         if not serialized_store_state:
             return
 
-        # Validate and parse the serialized state using Pydantic
+        # Pydanticを用いてシリアライズ済み状態を検証および解析します
         state = RedisStoreState.from_dict(serialized_store_state, **kwargs)
 
-        # Update store configuration from deserialized state
+        # デシリアライズされた状態からストア設定を更新します
         self.thread_id = state.thread_id
         if state.redis_url is not None:
             self.redis_url = state.redis_url
         self.key_prefix = state.key_prefix
         self.max_messages = state.max_messages
 
-        # Recreate Redis client if the URL changed
+        # URLが変更された場合はRedisクライアントを再作成します
         if state.redis_url and state.redis_url != getattr(self, "_last_redis_url", None):
             self._redis_client = redis.from_url(state.redis_url, decode_responses=True)  # type: ignore[no-untyped-call]
             self._last_redis_url = state.redis_url
 
-        # Reset initial message state since we're connecting to existing data
+        # 既存データに接続するため初期メッセージ状態をリセットします
         self._initial_messages_added = False
 
     async def clear(self) -> None:
-        """Remove all messages from the store.
+        """ストアからすべてのメッセージを削除します。
 
-        Permanently deletes all messages for this conversation thread by removing
-        the Redis key. This operation cannot be undone.
+        この会話スレッドのすべてのメッセージをRedisキーを削除することで永久に削除します。
+        この操作は元に戻せません。
 
-        Warning:
-        - This permanently deletes all conversation history
-        - Consider exporting messages before clearing if backup is needed
+        警告:
+        - 会話履歴が永久に削除されます
+        - バックアップが必要な場合はクリア前にメッセージをExportすることを検討してください
 
         Example:
             .. code-block:: python
 
-                # Clear conversation history
+                # 会話履歴をクリア
                 await store.clear()
 
-                # Verify messages are gone
+                # メッセージが消えたことを確認
                 messages = await store.list_messages()
                 assert len(messages) == 0
+
         """
         await self._redis_client.delete(self.redis_key)
 
     def _serialize_message(self, message: ChatMessage) -> str:
-        """Serialize a ChatMessage to JSON string.
+        """ChatMessageをJSON文字列にシリアライズします。
 
         Args:
-            message: ChatMessage to serialize.
+            message: シリアライズするChatMessage。
 
         Returns:
-            JSON string representation of the message.
+            メッセージのJSON文字列表現。
+
         """
-        # Serialize to compact JSON (no extra whitespace for Redis efficiency)
+        # コンパクトJSONにシリアライズします（Redis効率化のため余分な空白なし）
         return message.to_json(separators=(",", ":"))
 
     def _deserialize_message(self, serialized_message: str) -> ChatMessage:
-        """Deserialize a JSON string to ChatMessage.
+        """JSON文字列をChatMessageにデシリアライズします。
 
         Args:
-            serialized_message: JSON string representation of a message.
+            serialized_message: メッセージのJSON文字列表現。
 
         Returns:
-            ChatMessage object.
+            ChatMessageオブジェクト。
+
         """
-        # Reconstruct ChatMessage using custom deserialization
+        # カスタムデシリアライズを使用してChatMessageを再構築する
         return ChatMessage.from_json(serialized_message)
 
     # ============================================================================
-    # List-like Convenience Methods (Redis-optimized async versions)
+    # リストのような便利メソッド（Redis最適化された非同期版）
     # ============================================================================
 
     def __bool__(self) -> bool:
-        """Return True since the store always exists once created.
+        """ストアは一度作成されると常に存在するため、Trueを返します。
 
-        This method is called by Python's truthiness checks (if store:).
-        Since a RedisChatMessageStore instance always represents a valid store,
-        this always returns True.
+        このメソッドはPythonの真偽値チェック（if store:）によって呼び出されます。
+        RedisChatMessageStoreインスタンスは常に有効なストアを表すため、
+        常にTrueを返します。
 
         Returns:
-            Always True - the store exists and is ready for operations.
+            常にTrue - ストアは存在し、操作の準備ができています。
 
         Note:
-            This is used by the Agent Framework to check if a message store
-            is configured: `if thread.message_store:`
+            これはAgent Frameworkがメッセージストアが設定されているかをチェックするために使用します：`if thread.message_store:`
+
         """
         return True
 
     async def __len__(self) -> int:
-        """Return the number of messages in the Redis store.
+        """Redisストア内のメッセージ数を返します。
 
-        Provides efficient message counting using Redis LLEN command.
-        This is the async equivalent of Python's built-in len() function.
+        RedisのLLENコマンドを使用して効率的にメッセージ数をカウントします。
+        これはPythonの組み込みlen()関数の非同期版に相当します。
 
         Returns:
-            The count of messages currently stored in Redis.
+            現在Redisに格納されているメッセージの数。
+
         """
         await self._ensure_initial_messages_added()
         return await self._redis_client.llen(self.redis_key)  # type: ignore[misc,no-any-return]
 
     async def getitem(self, index: int) -> ChatMessage:
-        """Get a message by index using Redis LINDEX.
+        """RedisのLINDEXを使用してインデックスでメッセージを取得します。
 
         Args:
-            index: The index of the message to retrieve.
+            index: 取得するメッセージのインデックス。
 
         Returns:
-            The ChatMessage at the specified index.
+            指定されたインデックスのChatMessage。
 
         Raises:
-            IndexError: If the index is out of range.
+            IndexError: インデックスが範囲外の場合。
+
         """
         await self._ensure_initial_messages_added()
 
-        # Use Redis LINDEX for efficient single-item access
+        # 効率的な単一アイテムアクセスのためにRedis LINDEXを使用する
         serialized_message = await self._redis_client.lindex(self.redis_key, index)  # type: ignore[misc]
         if serialized_message is None:
             raise IndexError("list index out of range")
@@ -420,66 +430,70 @@ class RedisChatMessageStore:
         return self._deserialize_message(serialized_message)
 
     async def setitem(self, index: int, item: ChatMessage) -> None:
-        """Set a message at the specified index using Redis LSET.
+        """RedisのLSETを使用して指定されたインデックスにメッセージを設定します。
 
         Args:
-            index: The index at which to set the message.
-            item: The ChatMessage to set at the specified index.
+            index: メッセージを設定するインデックス。
+            item: 指定されたインデックスに設定するChatMessage。
 
         Raises:
-            IndexError: If the index is out of range.
+            IndexError: インデックスが範囲外の場合。
+
         """
         await self._ensure_initial_messages_added()
 
-        # Validate index exists using LLEN
+        # LLENを使用してインデックスの存在を検証する
         current_count = await self._redis_client.llen(self.redis_key)  # type: ignore[misc]
         if index < 0:
             index = current_count + index
         if index < 0 or index >= current_count:
             raise IndexError("list index out of range")
 
-        # Use Redis LSET for efficient single-item update
+        # 効率的な単一アイテム更新のためにRedis LSETを使用する
         serialized_message = self._serialize_message(item)
         await self._redis_client.lset(self.redis_key, index, serialized_message)  # type: ignore[misc]
 
     async def append(self, item: ChatMessage) -> None:
-        """Append a message to the end of the store.
+        """ストアの末尾にメッセージを追加します。
 
         Args:
-            item: The ChatMessage to append.
+            item: 追加するChatMessage。
+
         """
         await self.add_messages([item])
 
     async def count(self) -> int:
-        """Return the number of messages in the Redis store.
+        """Redisストア内のメッセージ数を返します。
 
         Returns:
-            The count of messages currently stored in Redis.
+            現在Redisに格納されているメッセージの数。
+
         """
         await self._ensure_initial_messages_added()
         return await self._redis_client.llen(self.redis_key)  # type: ignore[misc,no-any-return]
 
     async def index(self, item: ChatMessage) -> int:
-        """Return the index of the first occurrence of the specified message.
+        """指定されたメッセージの最初の出現のインデックスを返します。
 
-        Uses Redis LINDEX to iterate through the list without loading all messages.
-        Still O(N) but more memory efficient for large lists.
+        RedisのLINDEXを使用してリスト全体を読み込まずに反復します。
+        依然としてO(N)ですが、大きなリストに対してよりメモリ効率的です。
 
         Args:
-            item: The ChatMessage to find.
+            item: 検索するChatMessage。
 
         Returns:
-            The index of the first occurrence of the message.
+            メッセージの最初の出現のインデックス。
 
         Raises:
-            ValueError: If the message is not found in the store.
+            ValueError: メッセージがストアに見つからない場合。
+
         """
         await self._ensure_initial_messages_added()
 
         target_serialized = self._serialize_message(item)
         list_length = await self._redis_client.llen(self.redis_key)  # type: ignore[misc]
 
-        # Iterate through Redis list using LINDEX
+        # LINDEXを使用してRedisリストを反復処理する
         for i in range(list_length):
             redis_message = await self._redis_client.lindex(self.redis_key, i)  # type: ignore[misc]
             if redis_message == target_serialized:
@@ -488,41 +502,44 @@ class RedisChatMessageStore:
         raise ValueError("ChatMessage not found in store")
 
     async def remove(self, item: ChatMessage) -> None:
-        """Remove the first occurrence of the specified message from the store.
+        """ストアから指定されたメッセージの最初の出現を削除します。
 
-        Uses Redis LREM command for efficient removal by value.
-        O(N) but performed natively in Redis without data transfer.
+        RedisのLREMコマンドを使用して値による効率的な削除を行います。
+        O(N)ですが、データ転送なしにRedis内でネイティブに実行されます。
 
         Args:
-            item: The ChatMessage to remove.
+            item: 削除するChatMessage。
 
         Raises:
-            ValueError: If the message is not found in the store.
+            ValueError: メッセージがストアに見つからない場合。
+
         """
         await self._ensure_initial_messages_added()
 
-        # Serialize the message to match Redis storage format
+        # メッセージをRedisのストレージ形式に合わせてシリアライズする
         target_serialized = self._serialize_message(item)
 
-        # Use LREM to remove first occurrence (count=1)
+        # LREMを使用して最初の出現を削除する（count=1）
         removed_count = await self._redis_client.lrem(self.redis_key, 1, target_serialized)  # type: ignore[misc]
 
         if removed_count == 0:
             raise ValueError("ChatMessage not found in store")
 
     async def extend(self, items: Sequence[ChatMessage]) -> None:
-        """Extend the store by appending all messages from the iterable.
+        """イテラブルからすべてのメッセージを追加してストアを拡張します。
 
         Args:
-            items: Sequence of ChatMessage objects to append.
+            items: 追加するChatMessageのシーケンス。
+
         """
         await self.add_messages(items)
 
     async def ping(self) -> bool:
-        """Test the Redis connection.
+        """Redis接続をテストします。
 
         Returns:
-            True if the connection is successful, False otherwise.
+            接続が成功した場合はTrue、そうでなければFalse。
+
         """
         try:
             await self._redis_client.ping()  # type: ignore[misc]
@@ -531,16 +548,16 @@ class RedisChatMessageStore:
             return False
 
     async def aclose(self) -> None:
-        """Close the Redis connection.
+        """Redis接続を閉じます。
 
-        This method provides a clean way to close the underlying Redis connection
-        when the store is no longer needed. This is particularly useful in samples
-        and applications where explicit resource cleanup is desired.
+        このメソッドは、ストアが不要になったときに基盤となるRedis接続をクリーンに閉じる方法を提供します。
+        これは特にサンプルや明示的なリソースクリーンアップが望まれるアプリケーションで有用です。
+
         """
         await self._redis_client.aclose()  # type: ignore[misc]
 
     def __repr__(self) -> str:
-        """String representation of the store."""
+        """ストアの文字列表現。"""
         return (
             f"RedisChatMessageStore(thread_id='{self.thread_id}', "
             f"redis_key='{self.redis_key}', max_messages={self.max_messages})"

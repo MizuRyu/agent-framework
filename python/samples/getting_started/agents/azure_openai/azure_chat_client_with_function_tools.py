@@ -21,44 +21,42 @@ showing both agent-level and query-level tool configuration patterns.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 def get_time() -> str:
-    """Get the current UTC time."""
+    """現在のUTC時間を取得します。"""
     current_time = datetime.now(timezone.utc)
     return f"The current UTC time is {current_time.strftime('%Y-%m-%d %H:%M:%S')}."
 
 
 async def tools_on_agent_level() -> None:
-    """Example showing tools defined when creating the agent."""
+    """エージェント作成時に定義されたツールを示す例です。"""
     print("=== Tools Defined on Agent Level ===")
 
-    # Tools are provided when creating the agent
-    # The agent can use these tools for any query during its lifetime
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # エージェント作成時にツールが提供されます エージェントはその生涯の間、任意のクエリに対してこれらのツールを使用できます 認証のために、ターミナルで `az
+    # login` コマンドを実行するか、AzureCliCredential を好みの認証オプションに置き換えてください。
     agent = ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant that can provide weather and time information.",
         tools=[get_weather, get_time],  # Tools defined at agent creation
     )
 
-    # First query - agent can use weather tool
+    # 最初のクエリ - エージェントはweatherツールを使用できます
     query1 = "What's the weather like in New York?"
     print(f"User: {query1}")
     result1 = await agent.run(query1)
     print(f"Agent: {result1}\n")
 
-    # Second query - agent can use time tool
+    # 2番目のクエリ - エージェントはtimeツールを使用できます
     query2 = "What's the current UTC time?"
     print(f"User: {query2}")
     result2 = await agent.run(query2)
     print(f"Agent: {result2}\n")
 
-    # Third query - agent can use both tools if needed
+    # 3番目のクエリ - 必要に応じて両方のツールを使用できます
     query3 = "What's the weather in London and what's the current UTC time?"
     print(f"User: {query3}")
     result3 = await agent.run(query3)
@@ -66,55 +64,53 @@ async def tools_on_agent_level() -> None:
 
 
 async def tools_on_run_level() -> None:
-    """Example showing tools passed to the run method."""
+    """runメソッドに渡されたツールを示す例です。"""
     print("=== Tools Passed to Run Method ===")
 
-    # Agent created without tools
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # ツールなしで作成されたエージェント 認証のために、ターミナルで `az login` コマンドを実行するか、AzureCliCredential
+    # を好みの認証オプションに置き換えてください。
     agent = ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant.",
-        # No tools defined here
+        # ここにはツールが定義されていません
     )
 
-    # First query with weather tool
+    # weatherツールを使った最初のクエリ
     query1 = "What's the weather like in Seattle?"
     print(f"User: {query1}")
-    result1 = await agent.run(query1, tools=[get_weather])  # Tool passed to run method
+    result1 = await agent.run(query1, tools=[get_weather])  # runメソッドに渡されたツール
     print(f"Agent: {result1}\n")
 
-    # Second query with time tool
+    # timeツールを使った2番目のクエリ
     query2 = "What's the current UTC time?"
     print(f"User: {query2}")
-    result2 = await agent.run(query2, tools=[get_time])  # Different tool for this query
+    result2 = await agent.run(query2, tools=[get_time])  # このクエリには異なるツール
     print(f"Agent: {result2}\n")
 
-    # Third query with multiple tools
+    # 複数のツールを使った3番目のクエリ
     query3 = "What's the weather in Chicago and what's the current UTC time?"
     print(f"User: {query3}")
-    result3 = await agent.run(query3, tools=[get_weather, get_time])  # Multiple tools
+    result3 = await agent.run(query3, tools=[get_weather, get_time])  # 複数のツール
     print(f"Agent: {result3}\n")
 
 
 async def mixed_tools_example() -> None:
-    """Example showing both agent-level tools and run-method tools."""
+    """エージェントレベルのツールとrunメソッドのツールの両方を示す例です。"""
     print("=== Mixed Tools Example (Agent + Run Method) ===")
 
-    # Agent created with some base tools
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # いくつかの基本ツールで作成されたエージェント 認証のために、ターミナルで `az login` コマンドを実行するか、AzureCliCredential
+    # を好みの認証オプションに置き換えてください。
     agent = ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
         instructions="You are a comprehensive assistant that can help with various information requests.",
         tools=[get_weather],  # Base tool available for all queries
     )
 
-    # Query using both agent tool and additional run-method tools
+    # エージェントツールと追加のrunメソッドツールの両方を使ったクエリ
     query = "What's the weather in Denver and what's the current UTC time?"
     print(f"User: {query}")
 
-    # Agent has access to get_weather (from creation) + additional tools from run method
+    # エージェントはget_weather（作成時から）とrunメソッドからの追加ツールにアクセスできます
     result = await agent.run(
         query,
         tools=[get_time],  # Additional tools for this specific query

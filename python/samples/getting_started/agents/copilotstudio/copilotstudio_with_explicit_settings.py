@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+# 著作権 (c) Microsoft。無断転載を禁じます。
 
 import asyncio
 import os
@@ -13,30 +13,28 @@ This sample demonstrates explicit configuration of CopilotStudioAgent with manua
 token management and custom ConnectionSettings for production environments.
 """
 
-# Environment variables needed:
-# COPILOTSTUDIOAGENT__ENVIRONMENTID - Environment ID where your copilot is deployed
-# COPILOTSTUDIOAGENT__SCHEMANAME - Agent identifier/schema name of your copilot
-# COPILOTSTUDIOAGENT__AGENTAPPID - Client ID for authentication
-# COPILOTSTUDIOAGENT__TENANTID - Tenant ID for authentication
+# 必要な環境変数: COPILOTSTUDIOAGENT__ENVIRONMENTID - Copilotがデプロイされている環境ID
+# COPILOTSTUDIOAGENT__SCHEMANAME - CopilotのAgent識別子/スキーマ名 COPILOTSTUDIOAGENT__AGENTAPPID
+# - 認証用クライアントID COPILOTSTUDIOAGENT__TENANTID - 認証用テナントID
 
 
 async def example_with_connection_settings() -> None:
-    """Example using explicit ConnectionSettings and CopilotClient."""
+    """明示的なConnectionSettingsとCopilotClientを使用した例。"""
     print("=== Copilot Studio Agent with Connection Settings ===")
 
-    # Configuration from environment variables
+    # 環境変数からの設定
     environment_id = os.environ["COPILOTSTUDIOAGENT__ENVIRONMENTID"]
     agent_identifier = os.environ["COPILOTSTUDIOAGENT__SCHEMANAME"]
     client_id = os.environ["COPILOTSTUDIOAGENT__AGENTAPPID"]
     tenant_id = os.environ["COPILOTSTUDIOAGENT__TENANTID"]
 
-    # Acquire token using the acquire_token function
+    # acquire_token関数を使ってトークンを取得します
     token = acquire_token(
         client_id=client_id,
         tenant_id=tenant_id,
     )
 
-    # Create connection settings
+    # 接続設定を作成します
     settings = ConnectionSettings(
         environment_id=environment_id,
         agent_identifier=agent_identifier,
@@ -45,13 +43,13 @@ async def example_with_connection_settings() -> None:
         custom_power_platform_cloud=None,  # Optional: for custom cloud endpoints
     )
 
-    # Create CopilotClient with explicit settings
+    # 明示的な設定でCopilotClientを作成します
     client = CopilotClient(settings=settings, token=token)
 
-    # Create agent with explicit client
+    # 明示的なクライアントでAgentを作成します
     agent = CopilotStudioAgent(client=client)
 
-    # Run a simple query
+    # シンプルなクエリを実行します
     query = "What is the capital of Italy?"
     print(f"User: {query}")
     result = await agent.run(query)
@@ -59,16 +57,16 @@ async def example_with_connection_settings() -> None:
 
 
 async def example_with_explicit_parameters() -> None:
-    """Example using CopilotStudioAgent with all parameters explicitly provided."""
+    """すべてのパラメーターを明示的に指定したCopilotStudioAgentの例です。"""
     print("\n=== Copilot Studio Agent with All Explicit Parameters ===")
 
-    # Configuration from environment variables
+    # 環境変数からの設定
     environment_id = os.environ["COPILOTSTUDIOAGENT__ENVIRONMENTID"]
     agent_identifier = os.environ["COPILOTSTUDIOAGENT__SCHEMANAME"]
     client_id = os.environ["COPILOTSTUDIOAGENT__AGENTAPPID"]
     tenant_id = os.environ["COPILOTSTUDIOAGENT__TENANTID"]
 
-    # Create agent with all parameters explicitly
+    # すべてのパラメーターを明示的に指定してAgentを作成します
     agent = CopilotStudioAgent(
         environment_id=environment_id,
         agent_identifier=agent_identifier,
@@ -78,7 +76,7 @@ async def example_with_explicit_parameters() -> None:
         agent_type=AgentType.PUBLISHED,
     )
 
-    # Run a simple query
+    # シンプルなクエリを実行します
     query = "What is the capital of Japan?"
     print(f"User: {query}")
     result = await agent.run(query)

@@ -17,35 +17,37 @@ logger = logging.getLogger(__name__)
 
 
 class EdgeRunner(ABC):
-    """Abstract base class for edge runners that handle message delivery."""
+    """メッセージ配信を処理するエッジランナーの抽象基底クラス。"""
 
     def __init__(self, edge_group: EdgeGroup, executors: dict[str, Executor]) -> None:
-        """Initialize the edge runner with an edge group and executor map.
+        """エッジグループとexecutorマップでエッジランナーを初期化します。
 
         Args:
-            edge_group: The edge group to run.
-            executors: Map of executor IDs to executor instances.
+            edge_group: 実行するエッジグループ。
+            executors: executor IDからexecutorインスタンスへのマップ。
+
         """
         self._edge_group = edge_group
         self._executors = executors
 
     @abstractmethod
     async def send_message(self, message: Message, shared_state: SharedState, ctx: RunnerContext) -> bool:
-        """Send a message through the edge group.
+        """エッジグループを通じてメッセージを送信します。
 
         Args:
-            message: The message to send.
-            shared_state: The shared state to use for holding data.
-            ctx: The context for the runner.
+            message: 送信するメッセージ。
+            shared_state: データ保持に使用する共有状態。
+            ctx: ランナーのコンテキスト。
 
         Returns:
-            bool: True if the message was processed successfully,
-                False if the target executor cannot handle the message.
+            bool: メッセージが正常に処理された場合はTrue、
+                対象のexecutorがメッセージを処理できない場合はFalse。
+
         """
         raise NotImplementedError
 
     def _can_handle(self, executor_id: str, message_data: Any) -> bool:
-        """Check if an executor can handle the given message data."""
+        """executorが指定されたメッセージデータを処理できるかどうかをチェックします。"""
         if executor_id not in self._executors:
             return False
         return self._executors[executor_id].can_handle(message_data)
@@ -58,13 +60,13 @@ class EdgeRunner(ABC):
         shared_state: SharedState,
         ctx: RunnerContext,
     ) -> None:
-        """Execute a message on a target executor with trace context."""
+        """トレースコンテキストを用いてターゲットexecutorでメッセージを実行します。"""
         if target_id not in self._executors:
             raise RuntimeError(f"Target executor {target_id} not found.")
 
         target_executor = self._executors[target_id]
 
-        # Execute with trace context parameters
+        # トレースコンテキストパラメータを用いて実行します。
         await target_executor.execute(
             message.data,
             source_ids,  # source_executor_ids
@@ -76,14 +78,14 @@ class EdgeRunner(ABC):
 
 
 class SingleEdgeRunner(EdgeRunner):
-    """Runner for single edge groups."""
+    """単一のエッジグループ用のランナー。"""
 
     def __init__(self, edge_group: SingleEdgeGroup, executors: dict[str, Executor]) -> None:
         super().__init__(edge_group, executors)
         self._edge = edge_group.edges[0]
 
     async def send_message(self, message: Message, shared_state: SharedState, ctx: RunnerContext) -> bool:
-        """Send a message through the single edge."""
+        """単一のエッジを通じてメッセージを送信します。"""
         should_execute = False
         target_id = None
         source_id = None
@@ -117,7 +119,7 @@ class SingleEdgeRunner(EdgeRunner):
                             OtelAttr.EDGE_GROUP_DELIVERED: False,
                             OtelAttr.EDGE_GROUP_DELIVERY_STATUS: EdgeGroupDeliveryStatus.DROPPED_CONDITION_FALSE.value,
                         })
-                        # Return True here because message was processed, just condition failed
+                        # ここでTrueを返すのは、メッセージは処理されたが条件が失敗したためです。
                         return True
                 else:
                     span.set_attributes({
@@ -132,7 +134,7 @@ class SingleEdgeRunner(EdgeRunner):
                 })
                 raise e
 
-        # Execute outside the span
+        # スパンの外で実行します。
         if should_execute and target_id and source_id:
             await self._execute_on_target(target_id, [source_id], message, shared_state, ctx)
             return True
@@ -141,7 +143,7 @@ class SingleEdgeRunner(EdgeRunner):
 
 
 class FanOutEdgeRunner(EdgeRunner):
-    """Runner for fan-out edge groups."""
+    """ファンアウトエッジグループ用のランナー。"""
 
     def __init__(self, edge_group: FanOutEdgeGroup, executors: dict[str, Executor]) -> None:
         super().__init__(edge_group, executors)
@@ -153,10 +155,10 @@ class FanOutEdgeRunner(EdgeRunner):
         )
 
     async def send_message(self, message: Message, shared_state: SharedState, ctx: RunnerContext) -> bool:
-        """Send a message through all edges in the fan-out edge group."""
+        """ファンアウトエッジグループ内のすべてのエッジを通じてメッセージを送信します。"""
         deliverable_edges = []
         single_target_edge = None
-        # Process routing logic within span
+        # スパン内でルーティングロジックを処理します。
         with create_edge_group_processing_span(
             self._edge_group.__class__.__name__,
             edge_group_id=self._edge_group.id,
@@ -180,7 +182,7 @@ class FanOutEdgeRunner(EdgeRunner):
                     )
 
                 if message.target_id:
-                    # If the target ID is specified and the selection result contains it, send the message to that edge
+                    # ターゲットIDが指定され、選択結果に含まれている場合、そのエッジにメッセージを送信します。
                     if message.target_id in selection_results:
                         edge = self._target_map.get(message.target_id)
                         if edge and self._can_handle(edge.target_id, message.data):
@@ -195,24 +197,24 @@ class FanOutEdgeRunner(EdgeRunner):
                                     OtelAttr.EDGE_GROUP_DELIVERED: False,
                                     OtelAttr.EDGE_GROUP_DELIVERY_STATUS: EdgeGroupDeliveryStatus.DROPPED_CONDITION_FALSE.value,  # noqa: E501
                                 })
-                                # For targeted messages with condition failure, return True (message was processed)
+                                # 条件失敗のターゲットメッセージの場合、Trueを返します（メッセージは処理済み）。
                                 return True
                         else:
                             span.set_attributes({
                                 OtelAttr.EDGE_GROUP_DELIVERED: False,
                                 OtelAttr.EDGE_GROUP_DELIVERY_STATUS: EdgeGroupDeliveryStatus.DROPPED_TYPE_MISMATCH.value,  # noqa: E501
                             })
-                            # For targeted messages that can't be handled, return False
+                            # 処理できないターゲットメッセージの場合、Falseを返します。
                             return False
                     else:
                         span.set_attributes({
                             OtelAttr.EDGE_GROUP_DELIVERED: False,
                             OtelAttr.EDGE_GROUP_DELIVERY_STATUS: EdgeGroupDeliveryStatus.DROPPED_TARGET_MISMATCH.value,
                         })
-                        # For targeted messages not in selection, return False
+                        # 選択に含まれないターゲットメッセージの場合、Falseを返します。
                         return False
                 else:
-                    # If no target ID, send the message to the selected targets
+                    # ターゲットIDがない場合、選択されたターゲットにメッセージを送信します。
                     for target_id in selection_results:
                         edge = self._target_map[target_id]
                         if self._can_handle(edge.target_id, message.data) and edge.should_route(message.data):
@@ -236,7 +238,7 @@ class FanOutEdgeRunner(EdgeRunner):
                 })
                 raise e
 
-        # Execute outside the span
+        # スパンの外で実行します。
         if single_target_edge:
             await self._execute_on_target(
                 single_target_edge.target_id, [single_target_edge.source_id], message, shared_state, ctx
@@ -253,26 +255,25 @@ class FanOutEdgeRunner(EdgeRunner):
             results = await asyncio.gather(*tasks)
             return any(results)
 
-        # If we get here, it's a broadcast message with no deliverable edges
+        # ここに到達した場合は、配信可能なエッジがないブロードキャストメッセージです。
         return False
 
     def _validate_selection_result(self, selection_results: list[str]) -> bool:
-        """Validate the selection results to ensure all IDs are valid target executor IDs."""
+        """選択結果を検証し、すべてのIDが有効なターゲットexecutor IDであることを確認します。"""
         return all(result in self._target_ids for result in selection_results)
 
 
 class FanInEdgeRunner(EdgeRunner):
-    """Runner for fan-in edge groups."""
+    """ファンインエッジグループ用のランナー。"""
 
     def __init__(self, edge_group: FanInEdgeGroup, executors: dict[str, Executor]) -> None:
         super().__init__(edge_group, executors)
         self._edges = edge_group.edges
-        # Buffer to hold messages before sending them to the target executor
-        # Key is the source executor ID, value is a list of messages
+        # ターゲットexecutorに送信する前にメッセージを保持するバッファ キーは送信元executor ID、値はメッセージのリスト。
         self._buffer: dict[str, list[Message]] = defaultdict(list)
 
     async def send_message(self, message: Message, shared_state: SharedState, ctx: RunnerContext) -> bool:
-        """Send a message through all edges in the fan-in edge group."""
+        """ファンインエッジグループ内のすべてのエッジを通じてメッセージを送信します。"""
         execution_data: dict[str, Any] | None = None
         with create_edge_group_processing_span(
             self._edge_group.__class__.__name__,
@@ -290,16 +291,16 @@ class FanInEdgeRunner(EdgeRunner):
                     })
                     return False
 
-                # Check if target can handle list of message data (fan-in aggregates multiple messages)
+                # ターゲットがメッセージデータのリストを処理できるかチェックします（ファンインは複数メッセージを集約）。
                 if self._can_handle(self._edges[0].target_id, [message.data]):
-                    # If the edge can handle the data, buffer the message
+                    # エッジがデータを処理できる場合、メッセージをバッファに格納します。
                     self._buffer[message.source_id].append(message)
                     span.set_attributes({
                         OtelAttr.EDGE_GROUP_DELIVERED: True,
                         OtelAttr.EDGE_GROUP_DELIVERY_STATUS: EdgeGroupDeliveryStatus.BUFFERED.value,
                     })
                 else:
-                    # If the edge cannot handle the data, return False
+                    # エッジがデータを処理できない場合、Falseを返します。
                     span.set_attributes({
                         OtelAttr.EDGE_GROUP_DELIVERED: False,
                         OtelAttr.EDGE_GROUP_DELIVERY_STATUS: EdgeGroupDeliveryStatus.DROPPED_TYPE_MISMATCH.value,
@@ -307,17 +308,17 @@ class FanInEdgeRunner(EdgeRunner):
                     return False
 
                 if self._is_ready_to_send():
-                    # If all edges in the group have data, prepare for execution
+                    # グループ内のすべてのエッジにデータがある場合、実行準備をします。
                     messages_to_send = [msg for edge in self._edges for msg in self._buffer[edge.source_id]]
                     self._buffer.clear()
-                    # Send aggregated data to target
+                    # 集約されたデータをターゲットに送信します。
                     aggregated_data = [msg.data for msg in messages_to_send]
 
-                    # Collect all trace contexts and source span IDs for fan-in linking
+                    # ファンインリンク用にすべてのトレースコンテキストと送信元スパンIDを収集します。
                     trace_contexts = [msg.trace_context for msg in messages_to_send if msg.trace_context]
                     source_span_ids = [msg.source_span_id for msg in messages_to_send if msg.source_span_id]
 
-                    # Create a new Message object for the aggregated data
+                    # 集約データ用の新しいMessageオブジェクトを作成します。
                     aggregated_message = Message(
                         data=aggregated_data,
                         source_id=self._edge_group.__class__.__name__,  # This won't be used in self._execute_on_target.
@@ -329,7 +330,7 @@ class FanInEdgeRunner(EdgeRunner):
                         OtelAttr.EDGE_GROUP_DELIVERY_STATUS: EdgeGroupDeliveryStatus.DELIVERED.value,
                     })
 
-                    # Store execution data for later
+                    # 後で使用するために実行データを保存します。
                     execution_data = {
                         "target_id": self._edges[0].target_id,
                         "source_ids": [edge.source_id for edge in self._edges],
@@ -343,36 +344,37 @@ class FanInEdgeRunner(EdgeRunner):
                 })
                 raise e
 
-        # Execute outside the span if needed
+        # 必要に応じてスパンの外で実行します。
         if execution_data:
             await self._execute_on_target(
                 execution_data["target_id"], execution_data["source_ids"], execution_data["message"], shared_state, ctx
             )
             return True
 
-        return True  # Return True for buffered messages (waiting for more)
+        return True  # バッファリングされたメッセージの場合はTrueを返します（さらに待機中）。
 
     def _is_ready_to_send(self) -> bool:
-        """Check if all edges in the group have data to send."""
+        """グループ内のすべてのエッジに送信データがあるかチェックします。"""
         return all(self._buffer[edge.source_id] for edge in self._edges)
 
 
 class SwitchCaseEdgeRunner(FanOutEdgeRunner):
-    """Runner for switch-case edge groups (inherits from FanOutEdgeRunner)."""
+    """スイッチケースエッジグループ用のランナー（FanOutEdgeRunnerを継承）。"""
 
     def __init__(self, edge_group: SwitchCaseEdgeGroup, executors: dict[str, Executor]) -> None:
         super().__init__(edge_group, executors)
 
 
 def create_edge_runner(edge_group: EdgeGroup, executors: dict[str, Executor]) -> EdgeRunner:
-    """Factory function to create the appropriate edge runner for an edge group.
+    """エッジグループに適したエッジランナーを作成するファクトリ関数。
 
     Args:
-        edge_group: The edge group to create a runner for.
-        executors: Map of executor IDs to executor instances.
+        edge_group: ランナーを作成するエッジグループ。
+        executors: executor IDからexecutorインスタンスへのマップ。
 
     Returns:
-        The appropriate EdgeRunner instance.
+        適切なEdgeRunnerインスタンス。
+
     """
     if isinstance(edge_group, SingleEdgeGroup):
         return SingleEdgeRunner(edge_group, executors)

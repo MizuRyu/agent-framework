@@ -41,54 +41,56 @@ Prerequisites:
 
 
 class Writer(Executor):
-    """Custom executor that owns a domain specific agent for content generation.
+    """コンテンツ生成のためのドメイン固有Agentを所有するカスタムexecutor。
 
-    This class demonstrates:
-    - Attaching a ChatAgent to an Executor so it participates as a node in a workflow.
-    - Using a @handler method to accept a typed input and forward a typed output via ctx.send_message.
+    このクラスは以下を示します:
+    - ChatAgentをExecutorにアタッチし、ワークフローのノードとして参加させる方法。
+    - @handlerメソッドを使い、型付き入力を受け取りctx.send_messageで型付き出力を転送する方法。
+
     """
 
     agent: ChatAgent
 
     def __init__(self, chat_client: AzureOpenAIChatClient, id: str = "writer"):
-        # Create a domain specific agent using your configured AzureOpenAIChatClient.
+        # 設定済みのAzureOpenAIChatClientを使ってドメイン固有Agentを作成します。
         self.agent = chat_client.create_agent(
             instructions=(
                 "You are an excellent content writer. You create new content and edit contents based on the feedback."
             ),
         )
-        # Associate this agent with the executor node. The base Executor stores it on self.agent.
+        # このAgentをexecutorノードに関連付けます。基底Executorはself.agentに保存します。
         super().__init__(id=id)
 
     @handler
     async def handle(self, message: ChatMessage, ctx: WorkflowContext[list[ChatMessage]]) -> None:
-        """Generate content and forward the updated conversation.
+        """コンテンツを生成し、更新された会話を転送します。
 
-        Contract for this handler:
-        - message is the inbound user ChatMessage.
-        - ctx is a WorkflowContext that expects a list[ChatMessage] to be sent downstream.
+        このhandlerの契約:
+        - messageは受信したユーザーのChatMessageです。
+        - ctxは下流にlist[ChatMessage]を送信することを期待するWorkflowContextです。
 
-        Pattern shown here:
-        1) Seed the conversation with the inbound message.
-        2) Run the attached agent to produce assistant messages.
-        3) Forward the cumulative messages to the next executor with ctx.send_message.
+        ここで示すパターン:
+        1) 受信メッセージで会話を初期化します。
+        2) アタッチされたAgentを実行してアシスタントメッセージを生成します。
+        3) 累積したメッセージをctx.send_messageで次のexecutorに転送します。
+
         """
-        # Start the conversation with the incoming user message.
+        # 受信したユーザーメッセージで会話を開始します。
         messages: list[ChatMessage] = [message]
-        # Run the agent and extend the conversation with the agent's messages.
+        # Agentを実行し、Agentのメッセージで会話を拡張します。
         response = await self.agent.run(messages)
         messages.extend(response.messages)
-        # Forward the accumulated messages to the next executor in the workflow.
+        # 累積したメッセージをワークフロー内の次のexecutorに転送します。
         await ctx.send_message(messages)
 
 
 class Reviewer(Executor):
-    """Custom executor that owns a review agent and completes the workflow."""
+    """レビューAgentを所有しワークフローを完了するカスタムexecutor。"""
 
     agent: ChatAgent
 
     def __init__(self, chat_client: AzureOpenAIChatClient, id: str = "reviewer"):
-        # Create a domain specific agent that evaluates and refines content.
+        # コンテンツを評価・改善するドメイン固有Agentを作成します。
         self.agent = chat_client.create_agent(
             instructions=(
                 "You are an excellent content reviewer. You review the content and provide feedback to the writer."
@@ -98,29 +100,29 @@ class Reviewer(Executor):
 
     @handler
     async def handle(self, messages: list[ChatMessage], ctx: WorkflowContext[Never, str]) -> None:
-        """Review the full conversation transcript and yield the final output.
+        """会話の全トランスクリプトをレビューし最終出力をyieldします。
 
-        This node consumes all messages so far. It uses its agent to produce the final text,
-        then yields the output. The workflow completes when it becomes idle.
+        このノードはこれまでのすべてのメッセージを消費します。Agentを使って最終テキストを生成し、
+        出力をyieldします。ワークフローはアイドル状態になると完了します。
+
         """
         response = await self.agent.run(messages)
         await ctx.yield_output(response.text)
 
 
 async def main():
-    """Build the two node workflow and run it with streaming to observe events."""
-    # Create the Azure chat client. AzureCliCredential uses your current az login.
+    """2ノードのワークフローを構築し、ストリーミングでイベントを観察しながら実行します。"""
+    # Azureチャットクライアントを作成します。AzureCliCredentialは現在のaz loginを使用します。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
-    # Instantiate the two agent backed executors.
+    # 2つのAgentバックのexecutorをインスタンス化します。
     writer = Writer(chat_client)
     reviewer = Reviewer(chat_client)
 
-    # Build the workflow using the fluent builder.
-    # Set the start node and connect an edge from writer to reviewer.
+    # フルーエントビルダーを使ってワークフローを構築します。 開始ノードを設定し、writerからreviewerへのエッジを接続します。
     workflow = WorkflowBuilder().set_start_executor(writer).add_edge(writer, reviewer).build()
 
-    # Run the workflow with the user's initial message and stream events as they occur.
-    # This surfaces executor events, workflow outputs, run-state changes, and errors.
+    # ユーザーの初期メッセージでワークフローを実行し、発生するイベントをストリームします。
+    # これによりexecutorイベント、ワークフロー出力、run状態の変化、エラーが表面化します。
     async for event in workflow.run_stream(
         ChatMessage(role="user", text="Create a slogan for a new electric SUV that is affordable and fun to drive.")
     ):

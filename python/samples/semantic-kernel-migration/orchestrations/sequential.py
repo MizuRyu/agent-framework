@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Side-by-side sequential orchestrations for Agent Framework and Semantic Kernel."""
+"""Agent FrameworkとSemantic Kernelの逐次オーケストレーションを並べて示します。"""
 
 import asyncio
 from collections.abc import Sequence
@@ -17,9 +17,7 @@ from semantic_kernel.contents import ChatMessageContent
 PROMPT = "Write a tagline for a budget-friendly eBike."
 
 
-######################################################################
-# Semantic Kernel orchestration path
-######################################################################
+#  Semantic Kernelのオーケストレーションパス
 
 
 def build_semantic_kernel_agents() -> list[Agent]:
@@ -55,9 +53,7 @@ async def sk_agent_response_callback(
         print(f"# {item.name}\n{content}\n")
 
 
-######################################################################
-# Agent Framework orchestration path
-######################################################################
+#  Agent Frameworkのオーケストレーションパス
 
 
 async def run_agent_framework_example(prompt: str) -> list[ChatMessage]:

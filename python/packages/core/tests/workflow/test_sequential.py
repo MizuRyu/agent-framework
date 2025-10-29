@@ -25,7 +25,7 @@ from agent_framework._workflows._checkpoint import InMemoryCheckpointStorage
 
 
 class _EchoAgent(BaseAgent):
-    """Simple agent that appends a single assistant message with its name."""
+    """自身の名前を付加した単一の assistant メッセージを追加するシンプルな agent。"""
 
     async def run(  # type: ignore[override]
         self,
@@ -43,12 +43,12 @@ class _EchoAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        # Minimal async generator with one assistant update
+        # 1つの assistant 更新を持つ最小限の非同期ジェネレータ。
         yield AgentRunResponseUpdate(contents=[TextContent(text=f"{self.display_name} reply")])
 
 
 class _SummarizerExec(Executor):
-    """Custom executor that summarizes by appending a short assistant message."""
+    """短い assistant メッセージを付加して要約するカスタム executor。"""
 
     @handler
     async def summarize(self, conversation: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage]]) -> None:
@@ -110,7 +110,7 @@ async def test_sequential_with_custom_executor_summary() -> None:
     assert completed
     assert output is not None
     msgs: list[ChatMessage] = output
-    # Expect: [user, A1 reply, summary]
+    # 期待： [user, A1 reply, summary]
     assert len(msgs) == 3
     assert msgs[0].role == Role.USER
     assert msgs[1].role == Role.ASSISTANT and "A1 reply" in msgs[1].text

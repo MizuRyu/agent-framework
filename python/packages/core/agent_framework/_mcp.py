@@ -58,7 +58,7 @@ __all__ = [
 def _mcp_prompt_message_to_chat_message(
     mcp_type: types.PromptMessage | types.SamplingMessage,
 ) -> ChatMessage:
-    """Convert a MCP container type to a Agent Framework type."""
+    """MCPのコンテナタイプをAgent Frameworkのタイプに変換します。"""
     return ChatMessage(
         role=Role(value=mcp_type.role),
         contents=[_mcp_type_to_ai_content(mcp_type.content)],
@@ -69,14 +69,14 @@ def _mcp_prompt_message_to_chat_message(
 def _mcp_call_tool_result_to_ai_contents(
     mcp_type: types.CallToolResult,
 ) -> list[Contents]:
-    """Convert a MCP container type to a Agent Framework type."""
+    """MCPのコンテナタイプをAgent Frameworkのタイプに変換します。"""
     return [_mcp_type_to_ai_content(item) for item in mcp_type.content]
 
 
 def _mcp_type_to_ai_content(
     mcp_type: types.ImageContent | types.TextContent | types.AudioContent | types.EmbeddedResource | types.ResourceLink,
 ) -> Contents:
-    """Convert a MCP type to a Agent Framework type."""
+    """MCPのタイプをAgent Frameworkのタイプに変換します。"""
     match mcp_type:
         case types.TextContent():
             return TextContent(text=mcp_type.text, raw_representation=mcp_type)
@@ -106,7 +106,7 @@ def _mcp_type_to_ai_content(
 def _ai_content_to_mcp_types(
     content: Contents,
 ) -> types.TextContent | types.ImageContent | types.AudioContent | types.EmbeddedResource | types.ResourceLink | None:
-    """Convert a BaseContent type to a MCP type."""
+    """BaseContentタイプをMCPタイプに変換します。"""
     match content:
         case TextContent():
             return types.TextContent(type="text", text=content.text)
@@ -121,9 +121,8 @@ def _ai_content_to_mcp_types(
                     resource=types.BlobResourceContents(
                         blob=content.uri,
                         mimeType=content.media_type,
-                        # uri's are not limited in MCP but they have to be set.
-                        # the uri of data content, contains the data uri, which
-                        # is not the uri meant here, UriContent would match this.
+                        # uriはMCPでは制限されませんが、設定する必要があります。 data contentのuriはdata uriを含み、
+                        # ここで意味するuriとは異なります。UriContentがこれに該当します。
                         uri=content.additional_properties.get("uri", "af://binary")
                         if content.additional_properties
                         else "af://binary",  # type: ignore[reportArgumentType]
@@ -146,7 +145,7 @@ def _ai_content_to_mcp_types(
 def _chat_message_to_mcp_types(
     content: ChatMessage,
 ) -> list[types.TextContent | types.ImageContent | types.AudioContent | types.EmbeddedResource | types.ResourceLink]:
-    """Convert a ChatMessage to a list of MCP types."""
+    """ChatMessageをMCPタイプのリストに変換します。"""
     messages: list[
         types.TextContent | types.ImageContent | types.AudioContent | types.EmbeddedResource | types.ResourceLink
     ] = []
@@ -158,18 +157,17 @@ def _chat_message_to_mcp_types(
 
 
 def _get_input_model_from_mcp_prompt(prompt: types.Prompt) -> type[BaseModel]:
-    """Creates a Pydantic model from a prompt's parameters."""
-    # Check if 'arguments' is missing or empty
+    """プロンプトのパラメータからPydanticモデルを作成します。"""
+    # 'arguments'が欠落または空であるかをチェックします。
     if not prompt.arguments:
         return create_model(f"{prompt.name}_input")
 
     field_definitions: dict[str, Any] = {}
     for prompt_argument in prompt.arguments:
-        # For prompts, all arguments are typically required and string type
-        # unless specified otherwise in the prompt argument
-        python_type = str  # Default type for prompt arguments
+        # プロンプトでは、すべての引数は通常必須で文字列型です。 ただしプロンプト引数で別途指定がある場合を除きます。
+        python_type = str  # プロンプト引数のデフォルトタイプ。
 
-        # Create field definition for create_model
+        # create_model用のフィールド定義を作成します。
         if prompt_argument.required:
             field_definitions[prompt_argument.name] = (python_type, ...)
         else:
@@ -179,31 +177,31 @@ def _get_input_model_from_mcp_prompt(prompt: types.Prompt) -> type[BaseModel]:
 
 
 def _get_input_model_from_mcp_tool(tool: types.Tool) -> type[BaseModel]:
-    """Creates a Pydantic model from a tools parameters."""
+    """ツールのパラメータからPydanticモデルを作成します。"""
     properties = tool.inputSchema.get("properties", None)
     required = tool.inputSchema.get("required", [])
     definitions = tool.inputSchema.get("$defs", {})
 
-    # Check if 'properties' is missing or not a dictionary
+    # 'properties'が欠落しているか辞書でないかをチェックします。
     if not properties:
         return create_model(f"{tool.name}_input")
 
     def resolve_type(prop_details: dict[str, Any]) -> type:
-        """Resolve JSON Schema type to Python type, handling $ref."""
-        # Handle $ref by resolving the reference
+        """JSON SchemaのタイプをPythonのタイプに解決し、$refを処理します。"""
+        # $refを参照を解決して処理します。
         if "$ref" in prop_details:
             ref = prop_details["$ref"]
-            # Extract the reference path (e.g., "#/$defs/CustomerIdParam" -> "CustomerIdParam")
+            # 参照パスを抽出します（例: "#/$defs/CustomerIdParam" -> "CustomerIdParam"）。
             if ref.startswith("#/$defs/"):
                 def_name = ref.split("/")[-1]
                 if def_name in definitions:
-                    # Resolve the reference and use its type
+                    # 参照を解決し、そのタイプを使用します。
                     resolved = definitions[def_name]
                     return resolve_type(resolved)
-            # If we can't resolve the ref, default to dict for safety
+            # 参照を解決できない場合は安全のためdictをデフォルトとします。
             return dict
 
-        # Map JSON Schema types to Python types
+        # JSON SchemaのタイプをPythonのタイプにマッピングします。
         json_type = prop_details.get("type", "string")
         match json_type:
             case "integer":
@@ -225,7 +223,7 @@ def _get_input_model_from_mcp_tool(tool: types.Tool) -> type[BaseModel]:
 
         python_type = resolve_type(prop_details)
 
-        # Create field definition for create_model
+        # create_model用のフィールド定義を作成します。
         if prop_name in required:
             field_definitions[prop_name] = (python_type, ...)
         else:
@@ -236,7 +234,7 @@ def _get_input_model_from_mcp_tool(tool: types.Tool) -> type[BaseModel]:
 
 
 def _normalize_mcp_name(name: str) -> str:
-    """Normalize MCP tool/prompt names to allowed identifier pattern (A-Za-z0-9_.-)."""
+    """MCPのツール/プロンプト名を許可された識別子パターン（A-Za-z0-9_.-）に正規化します。"""
     return re.sub(r"[^A-Za-z0-9_.-]", "-", name)
 
 
@@ -244,21 +242,22 @@ def _normalize_mcp_name(name: str) -> str:
 
 
 class MCPTool:
-    """Main MCP class for connecting to Model Context Protocol servers.
+    """Model Context Protocolサーバーに接続するためのメインMCPクラス。
 
-    This is the base class for MCP tool implementations. It handles connection management,
-    tool and prompt loading, and communication with MCP servers.
+    これはMCPツール実装の基底クラスです。接続管理、
+    ツールおよびプロンプトの読み込み、MCPサーバーとの通信を処理します。
 
-    Note:
-        MCPTool cannot be instantiated directly. Use one of the subclasses:
-        MCPStdioTool, MCPStreamableHTTPTool, or MCPWebsocketTool.
+    注意:
+        MCPToolは直接インスタンス化できません。以下のサブクラスを使用してください:
+        MCPStdioTool、MCPStreamableHTTPTool、またはMCPWebsocketTool。
 
     Examples:
-        See the subclass documentation for usage examples:
+        使用例はサブクラスのドキュメントを参照してください:
 
-        - :class:`MCPStdioTool` for stdio-based MCP servers
-        - :class:`MCPStreamableHTTPTool` for HTTP-based MCP servers
-        - :class:`MCPWebsocketTool` for WebSocket-based MCP servers
+        - stdioベースのMCPサーバー用 :class:`MCPStdioTool`
+        - HTTPベースのMCPサーバー用 :class:`MCPStreamableHTTPTool`
+        - WebSocketベースのMCPサーバー用 :class:`MCPWebsocketTool`
+
     """
 
     def __init__(
@@ -274,11 +273,12 @@ class MCPTool:
         chat_client: "ChatClientProtocol | None" = None,
         additional_properties: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize the MCP Tool base.
+        """MCP Toolの基底を初期化します。
 
-        Note:
-            Do not use this method, use one of the subclasses: MCPStreamableHTTPTool, MCPWebsocketTool
-            or MCPStdioTool.
+        注意:
+            このメソッドは使用せず、サブクラスのMCPStreamableHTTPTool、MCPWebsocketTool
+            またはMCPStdioToolを使用してください。
+
         """
         self.name = name
         self.description = description or ""
@@ -299,19 +299,20 @@ class MCPTool:
 
     @property
     def functions(self) -> list[AIFunction[Any, Any]]:
-        """Get the list of functions that are allowed."""
+        """許可されている関数のリストを取得します。"""
         if not self.allowed_tools:
             return self._functions
         return [func for func in self._functions if func.name in self.allowed_tools]
 
     async def connect(self) -> None:
-        """Connect to the MCP server.
+        """MCPサーバーに接続します。
 
-        Establishes a connection to the MCP server, initializes the session,
-        and loads tools and prompts if configured to do so.
+        MCPサーバーへの接続を確立し、セッションを初期化し、
+        設定されていればツールとプロンプトを読み込みます。
 
         Raises:
-            ToolException: If connection or session initialization fails.
+            ToolException: 接続またはセッション初期化に失敗した場合。
+
         """
         if not self.session:
             try:
@@ -344,7 +345,7 @@ class MCPTool:
                 await session.initialize()
             except Exception as ex:
                 await self._exit_stack.aclose()
-                # Provide context about initialization failure
+                # 初期化失敗に関するコンテキストを提供します。
                 command = getattr(self, "command", None)
                 if command:
                     args_str = " ".join(getattr(self, "args", []))
@@ -355,7 +356,7 @@ class MCPTool:
                 raise ToolException(error_msg, inner_exception=ex) from ex
             self.session = session
         elif self.session._request_id == 0:  # type: ignore[reportPrivateUsage]
-            # If the session is not initialized, we need to reinitialize it
+            # セッションが初期化されていない場合、再初期化が必要です。
             await self.session.initialize()
         logger.debug("Connected to MCP server: %s", self.session)
         self.is_connected = True
@@ -375,22 +376,22 @@ class MCPTool:
     async def sampling_callback(
         self, context: RequestContext[ClientSession, Any], params: types.CreateMessageRequestParams
     ) -> types.CreateMessageResult | types.ErrorData:
-        """Callback function for sampling.
+        """サンプリング用のコールバック関数。
 
-        This function is called when the MCP server needs to get a message completed.
-        It uses the configured chat client to generate responses.
+        MCPサーバーがメッセージの生成を必要とするときに呼び出されます。
+        設定されたチャットクライアントを使用してレスポンスを生成します。
 
-        Note:
-            This is a simple version of this function. It can be overridden to allow
-            more complex sampling. It gets added to the session at initialization time,
-            so overriding it is the best way to customize this behavior.
+        注意:
+            これはこの関数の簡易版です。より複雑なサンプリングを許可するためにオーバーライド可能です。
+            初期化時にセッションに追加されるため、カスタマイズする最良の方法です。
 
         Args:
-            context: The request context from the MCP server.
-            params: The message creation request parameters.
+            context: MCPサーバーからのリクエストコンテキスト。
+            params: メッセージ作成リクエストのパラメータ。
 
         Returns:
-            Either a CreateMessageResult with the generated message or ErrorData if generation fails.
+            生成されたメッセージを含むCreateMessageResult、または生成失敗時のErrorData。
+
         """
         if not self.chat_client:
             return types.ErrorData(
@@ -419,7 +420,7 @@ class MCPTool:
                 message="Failed to get chat message content.",
             )
         mcp_contents = _chat_message_to_mcp_types(response.messages[0])
-        # grab the first content that is of type TextContent or ImageContent
+        # TextContentまたはImageContentタイプの最初のコンテンツを取得します。
         mcp_content = next(
             (content for content in mcp_contents if isinstance(content, (types.TextContent, types.ImageContent))),
             None,
@@ -436,16 +437,17 @@ class MCPTool:
         )
 
     async def logging_callback(self, params: types.LoggingMessageNotificationParams) -> None:
-        """Callback function for logging.
+        """ログ用のコールバック関数。
 
-        This function is called when the MCP Server sends a log message.
-        By default it will log the message to the logger with the level set in the params.
+        MCPサーバーがログメッセージを送信するときに呼び出されます。
+        デフォルトでは、paramsで設定されたレベルでロガーにメッセージを記録します。
 
-        Note:
-            Subclass MCPTool and override this function if you want to adapt the behavior.
+        注意:
+            MCPToolをサブクラス化し、この関数をオーバーライドして動作を適応可能です。
 
         Args:
-            params: The logging message notification parameters from the MCP server.
+            params: MCPサーバーからのログメッセージ通知のパラメータ。
+
         """
         logger.log(LOG_LEVEL_MAPPING[params.level], params.data)
 
@@ -453,19 +455,19 @@ class MCPTool:
         self,
         message: RequestResponder[types.ServerRequest, types.ClientResult] | types.ServerNotification | Exception,
     ) -> None:
-        """Handle messages from the MCP server.
+        """MCPサーバーからのメッセージを処理します。
 
-        By default this function will handle exceptions on the server by logging them,
-        and it will trigger a reload of the tools and prompts when the list changed
-        notification is received.
+        デフォルトでは、この関数はサーバー上の例外をログに記録して処理し、
+        リスト変更通知を受け取った際にツールとプロンプトのリロードをトリガーします。
 
-        Note:
-            If you want to extend this behavior, you can subclass MCPTool and override
-            this function. If you want to keep the default behavior, make sure to call
-            ``super().message_handler(message)``.
+        注意:
+            この動作を拡張したい場合は、MCPToolをサブクラス化して
+            この関数をオーバーライドしてください。デフォルトの動作を保持したい場合は、
+            ``super().message_handler(message)``を呼び出すようにしてください。
 
-        Args:
-            message: The message from the MCP server (request responder, notification, or exception).
+        引数:
+            message: MCPサーバーからのメッセージ（リクエストレスポンダー、通知、または例外）。
+
         """
         if isinstance(message, Exception):
             logger.error("Error from MCP server: %s", message, exc_info=message)
@@ -492,13 +494,14 @@ class MCPTool:
         return self.approval_mode  # type: ignore[reportReturnType]
 
     async def load_prompts(self) -> None:
-        """Load prompts from the MCP server.
+        """MCPサーバーからプロンプトをロードします。
 
-        Retrieves available prompts from the connected MCP server and converts
-        them into AIFunction instances.
+        接続されたMCPサーバーから利用可能なプロンプトを取得し、
+        それらをAIFunctionインスタンスに変換します。
 
-        Raises:
-            ToolExecutionException: If the MCP server is not connected.
+        例外:
+            ToolExecutionException: MCPサーバーに接続されていない場合。
+
         """
         if not self.session:
             raise ToolExecutionException("MCP server not connected, please call connect() before using this method.")
@@ -524,13 +527,14 @@ class MCPTool:
             self._functions.append(func)
 
     async def load_tools(self) -> None:
-        """Load tools from the MCP server.
+        """MCPサーバーからツールをロードします。
 
-        Retrieves available tools from the connected MCP server and converts
-        them into AIFunction instances.
+        接続されたMCPサーバーから利用可能なツールを取得し、
+        それらをAIFunctionインスタンスに変換します。
 
-        Raises:
-            ToolExecutionException: If the MCP server is not connected.
+        例外:
+            ToolExecutionException: MCPサーバーに接続されていない場合。
+
         """
         if not self.session:
             raise ToolExecutionException("MCP server not connected, please call connect() before using this method.")
@@ -546,7 +550,7 @@ class MCPTool:
             local_name = _normalize_mcp_name(tool.name)
             input_model = _get_input_model_from_mcp_tool(tool)
             approval_mode = self._determine_approval_mode(local_name)
-            # Create AIFunctions out of each tool
+            # 各ツールからAIFunctionを作成します
             func: AIFunction[BaseModel, list[Contents]] = AIFunction(
                 func=partial(self.call_tool, tool.name),
                 name=local_name,
@@ -557,9 +561,10 @@ class MCPTool:
             self._functions.append(func)
 
     async def close(self) -> None:
-        """Disconnect from the MCP server.
+        """MCPサーバーから切断します。
 
-        Closes the connection and cleans up resources.
+        接続を閉じてリソースをクリーンアップします。
+
         """
         await self._exit_stack.aclose()
         self.session = None
@@ -567,28 +572,30 @@ class MCPTool:
 
     @abstractmethod
     def get_mcp_client(self) -> _AsyncGeneratorContextManager[Any, None]:
-        """Get an MCP client.
+        """MCPクライアントを取得します。
 
-        Returns:
-            An async context manager for the MCP client transport.
+        戻り値:
+            MCPクライアントトランスポートの非同期コンテキストマネージャ。
+
         """
         pass
 
     async def call_tool(self, tool_name: str, **kwargs: Any) -> list[Contents]:
-        """Call a tool with the given arguments.
+        """指定された引数でツールを呼び出します。
 
-        Args:
-            tool_name: The name of the tool to call.
+        引数:
+            tool_name: 呼び出すツールの名前。
 
-        Keyword Args:
-            kwargs: Arguments to pass to the tool.
+        キーワード引数:
+            kwargs: ツールに渡す引数。
 
-        Returns:
-            A list of content items returned by the tool.
+        戻り値:
+            ツールから返されたコンテンツアイテムのリスト。
 
-        Raises:
-            ToolExecutionException: If the MCP server is not connected, tools are not loaded,
-                or the tool call fails.
+        例外:
+            ToolExecutionException: MCPサーバーに接続されていない、ツールがロードされていない、
+                またはツール呼び出しが失敗した場合。
+
         """
         if not self.session:
             raise ToolExecutionException("MCP server not connected, please call connect() before using this method.")
@@ -604,20 +611,21 @@ class MCPTool:
             raise ToolExecutionException(f"Failed to call tool '{tool_name}'.", inner_exception=ex) from ex
 
     async def get_prompt(self, prompt_name: str, **kwargs: Any) -> list[ChatMessage]:
-        """Call a prompt with the given arguments.
+        """指定された引数でプロンプトを呼び出します。
 
-        Args:
-            prompt_name: The name of the prompt to retrieve.
+        引数:
+            prompt_name: 取得するプロンプトの名前。
 
-        Keyword Args:
-            kwargs: Arguments to pass to the prompt.
+        キーワード引数:
+            kwargs: プロンプトに渡す引数。
 
-        Returns:
-            A list of chat messages returned by the prompt.
+        戻り値:
+            プロンプトから返されたチャットメッセージのリスト。
 
-        Raises:
-            ToolExecutionException: If the MCP server is not connected, prompts are not loaded,
-                or the prompt call fails.
+        例外:
+            ToolExecutionException: MCPサーバーに接続されていない、プロンプトがロードされていない、
+                またはプロンプト呼び出しが失敗した場合。
+
         """
         if not self.session:
             raise ToolExecutionException("MCP server not connected, please call connect() before using this method.")
@@ -634,16 +642,17 @@ class MCPTool:
             raise ToolExecutionException(f"Failed to call prompt '{prompt_name}'.", inner_exception=ex) from ex
 
     async def __aenter__(self) -> Self:
-        """Enter the async context manager.
+        """非同期コンテキストマネージャに入ります。
 
-        Connects to the MCP server automatically.
+        MCPサーバーに自動的に接続します。
 
-        Returns:
-            The MCPTool instance.
+        戻り値:
+            MCPToolインスタンス。
 
-        Raises:
-            ToolException: If connection fails.
-            ToolExecutionException: If context manager setup fails.
+        例外:
+            ToolException: 接続に失敗した場合。
+            ToolExecutionException: コンテキストマネージャのセットアップに失敗した場合。
+
         """
         try:
             await self.connect()
@@ -657,14 +666,15 @@ class MCPTool:
     async def __aexit__(
         self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: Any
     ) -> None:
-        """Exit the async context manager.
+        """非同期コンテキストマネージャを終了します。
 
-        Closes the connection and cleans up resources.
+        接続を閉じてリソースをクリーンアップします。
 
-        Args:
-            exc_type: The exception type if an exception was raised, None otherwise.
-            exc_value: The exception value if an exception was raised, None otherwise.
-            traceback: The exception traceback if an exception was raised, None otherwise.
+        引数:
+            exc_type: 例外が発生した場合の例外タイプ、そうでなければNone。
+            exc_value: 例外が発生した場合の例外値、そうでなければNone。
+            traceback: 例外が発生した場合のトレースバック、そうでなければNone。
+
         """
         await self.close()
 
@@ -673,17 +683,17 @@ class MCPTool:
 
 
 class MCPStdioTool(MCPTool):
-    """MCP tool for connecting to stdio-based MCP servers.
+    """stdioベースのMCPサーバーに接続するためのMCPツール。
 
-    This class connects to MCP servers that communicate via standard input/output,
-    typically used for local processes.
+    このクラスは標準入力/出力を介して通信するMCPサーバーに接続します。
+    通常はローカルプロセスで使用されます。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import MCPStdioTool, ChatAgent
 
-            # Create an MCP stdio tool
+            # MCP stdioツールを作成
             mcp_tool = MCPStdioTool(
                 name="filesystem",
                 command="npx",
@@ -691,10 +701,11 @@ class MCPStdioTool(MCPTool):
                 description="File system operations",
             )
 
-            # Use with a chat agent
+            # チャットエージェントと共に使用
             async with mcp_tool:
                 agent = ChatAgent(chat_client=client, name="assistant", tools=mcp_tool)
                 response = await agent.run("List files in the directory")
+
     """
 
     def __init__(
@@ -716,36 +727,38 @@ class MCPStdioTool(MCPTool):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the MCP stdio tool.
+        """MCP stdioツールを初期化します。
 
-        Note:
-            The arguments are used to create a StdioServerParameters object,
-            which is then used to create a stdio client. See ``mcp.client.stdio.stdio_client``
-            and ``mcp.client.stdio.stdio_server_parameters`` for more details.
+        注意:
+            引数はStdioServerParametersオブジェクトを作成するために使用され、
+            それを用いてstdioクライアントが作成されます。
+            詳細は``mcp.client.stdio.stdio_client``および
+            ``mcp.client.stdio.stdio_server_parameters``を参照してください。
 
-        Args:
-            name: The name of the tool.
-            command: The command to run the MCP server.
+        引数:
+            name: ツールの名前。
+            command: MCPサーバーを実行するコマンド。
 
-        Keyword Args:
-            load_tools: Whether to load tools from the MCP server.
-            load_prompts: Whether to load prompts from the MCP server.
-            request_timeout: The default timeout in seconds for all requests.
-            session: The session to use for the MCP connection.
-            description: The description of the tool.
-            approval_mode: The approval mode for the tool. This can be:
-                - "always_require": The tool always requires approval before use.
-                - "never_require": The tool never requires approval before use.
-                - A dict with keys `always_require_approval` or `never_require_approval`,
-                  followed by a sequence of strings with the names of the relevant tools.
-                A tool should not be listed in both, if so, it will require approval.
-            allowed_tools: A list of tools that are allowed to use this tool.
-            additional_properties: Additional properties.
-            args: The arguments to pass to the command.
-            env: The environment variables to set for the command.
-            encoding: The encoding to use for the command output.
-            chat_client: The chat client to use for sampling.
-            kwargs: Any extra arguments to pass to the stdio client.
+        キーワード引数:
+            load_tools: MCPサーバーからツールをロードするかどうか。
+            load_prompts: MCPサーバーからプロンプトをロードするかどうか。
+            request_timeout: すべてのリクエストのデフォルトタイムアウト（秒）。
+            session: MCP接続に使用するセッション。
+            description: ツールの説明。
+            approval_mode: ツールの承認モード。以下のいずれか:
+                - "always_require": ツールは常に使用前に承認が必要。
+                - "never_require": ツールは使用前に承認を必要としない。
+                - `always_require_approval`または`never_require_approval`キーを持つ辞書で、
+                  関連ツールの名前のシーケンスを指定。
+                ツールは両方にリストされるべきではなく、もしそうなら承認が必要になります。
+            allowed_tools: このツールの使用を許可されたツールのリスト。
+            additional_properties: 追加のプロパティ。
+            args: コマンドに渡す引数。
+            env: コマンドの環境変数。
+            encoding: コマンド出力に使用するエンコーディング。
+            chat_client: サンプリングに使用するチャットクライアント。
+            kwargs: stdioクライアントに渡す追加の引数。
+
         """
         super().__init__(
             name=name,
@@ -766,10 +779,11 @@ class MCPStdioTool(MCPTool):
         self._client_kwargs = kwargs
 
     def get_mcp_client(self) -> _AsyncGeneratorContextManager[Any, None]:
-        """Get an MCP stdio client.
+        """MCP stdioクライアントを取得します。
 
-        Returns:
-            An async context manager for the stdio client transport.
+        戻り値:
+            stdioクライアントトランスポートの非同期コンテキストマネージャ。
+
         """
         args: dict[str, Any] = {
             "command": self.command,
@@ -784,16 +798,16 @@ class MCPStdioTool(MCPTool):
 
 
 class MCPStreamableHTTPTool(MCPTool):
-    """MCP tool for connecting to HTTP-based MCP servers.
+    """HTTPベースのMCPサーバーに接続するためのMCPツール。
 
-    This class connects to MCP servers that communicate via streamable HTTP/SSE.
+    このクラスはストリーム可能なHTTP/SSEを介して通信するMCPサーバーに接続します。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import MCPStreamableHTTPTool, ChatAgent
 
-            # Create an MCP HTTP tool
+            # MCP HTTPツールを作成
             mcp_tool = MCPStreamableHTTPTool(
                 name="web-api",
                 url="https://api.example.com/mcp",
@@ -801,10 +815,11 @@ class MCPStreamableHTTPTool(MCPTool):
                 description="Web API operations",
             )
 
-            # Use with a chat agent
+            # チャットエージェントと共に使用
             async with mcp_tool:
                 agent = ChatAgent(chat_client=client, name="assistant", tools=mcp_tool)
                 response = await agent.run("Fetch data from the API")
+
     """
 
     def __init__(
@@ -827,38 +842,39 @@ class MCPStreamableHTTPTool(MCPTool):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the MCP streamable HTTP tool.
+        """MCPストリーム可能HTTPツールを初期化します。
 
-        Note:
-            The arguments are used to create a streamable HTTP client.
-            See ``mcp.client.streamable_http.streamablehttp_client`` for more details.
-            Any extra arguments passed to the constructor will be passed to the
-            streamable HTTP client constructor.
+        注意:
+            引数はストリーム可能なHTTPクライアントを作成するために使用されます。
+            詳細は``mcp.client.streamable_http.streamablehttp_client``を参照してください。
+            コンストラクタに渡された追加の引数はすべて
+            ストリーム可能HTTPクライアントのコンストラクタに渡されます。
 
-        Args:
-            name: The name of the tool.
-            url: The URL of the MCP server.
+        引数:
+            name: ツールの名前。
+            url: MCPサーバーのURL。
 
-        Keyword Args:
-            load_tools: Whether to load tools from the MCP server.
-            load_prompts: Whether to load prompts from the MCP server.
-            request_timeout: The default timeout in seconds for all requests.
-            session: The session to use for the MCP connection.
-            description: The description of the tool.
-            approval_mode: The approval mode for the tool. This can be:
-                - "always_require": The tool always requires approval before use.
-                - "never_require": The tool never requires approval before use.
-                - A dict with keys `always_require_approval` or `never_require_approval`,
-                  followed by a sequence of strings with the names of the relevant tools.
-                A tool should not be listed in both, if so, it will require approval.
-            allowed_tools: A list of tools that are allowed to use this tool.
-            additional_properties: Additional properties.
-            headers: The headers to send with the request.
-            timeout: The timeout for the request.
-            sse_read_timeout: The timeout for reading from the SSE stream.
-            terminate_on_close: Close the transport when the MCP client is terminated.
-            chat_client: The chat client to use for sampling.
-            kwargs: Any extra arguments to pass to the SSE client.
+        キーワード引数:
+            load_tools: MCPサーバーからツールをロードするかどうか。
+            load_prompts: MCPサーバーからプロンプトをロードするかどうか。
+            request_timeout: すべてのリクエストのデフォルトタイムアウト（秒）。
+            session: MCP接続に使用するセッション。
+            description: ツールの説明。
+            approval_mode: ツールの承認モード。以下のいずれか:
+                - "always_require": ツールは常に使用前に承認が必要。
+                - "never_require": ツールは使用前に承認を必要としない。
+                - `always_require_approval`または`never_require_approval`キーを持つ辞書で、
+                  関連ツールの名前のシーケンスを指定。
+                ツールは両方にリストされるべきではなく、もしそうなら承認が必要になります。
+            allowed_tools: このツールの使用を許可されたツールのリスト。
+            additional_properties: 追加のプロパティ。
+            headers: リクエストに送信するヘッダー。
+            timeout: リクエストのタイムアウト。
+            sse_read_timeout: SSEストリームの読み取りタイムアウト。
+            terminate_on_close: MCPクライアント終了時にトランスポートを閉じるかどうか。
+            chat_client: サンプリングに使用するチャットクライアント。
+            kwargs: SSEクライアントに渡す追加の引数。
+
         """
         super().__init__(
             name=name,
@@ -880,10 +896,11 @@ class MCPStreamableHTTPTool(MCPTool):
         self._client_kwargs = kwargs
 
     def get_mcp_client(self) -> _AsyncGeneratorContextManager[Any, None]:
-        """Get an MCP streamable HTTP client.
+        """MCPストリーム可能HTTPクライアントを取得します。
 
-        Returns:
-            An async context manager for the streamable HTTP client transport.
+        戻り値:
+            ストリーム可能HTTPクライアントトランスポートの非同期コンテキストマネージャ。
+
         """
         args: dict[str, Any] = {
             "url": self.url,
@@ -902,24 +919,25 @@ class MCPStreamableHTTPTool(MCPTool):
 
 
 class MCPWebsocketTool(MCPTool):
-    """MCP tool for connecting to WebSocket-based MCP servers.
+    """WebSocketベースのMCPサーバーに接続するためのMCPツール。
 
-    This class connects to MCP servers that communicate via WebSocket.
+    このクラスはWebSocketを介して通信するMCPサーバーに接続します。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import MCPWebsocketTool, ChatAgent
 
-            # Create an MCP WebSocket tool
+            # MCP WebSocketツールを作成
             mcp_tool = MCPWebsocketTool(
                 name="realtime-service", url="wss://service.example.com/mcp", description="Real-time service operations"
             )
 
-            # Use with a chat agent
+            # チャットエージェントと共に使用
             async with mcp_tool:
                 agent = ChatAgent(chat_client=client, name="assistant", tools=mcp_tool)
                 response = await agent.run("Connect to the real-time service")
+
     """
 
     def __init__(
@@ -938,34 +956,35 @@ class MCPWebsocketTool(MCPTool):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the MCP WebSocket tool.
+        """MCP WebSocketツールを初期化します。
 
-        Note:
-            The arguments are used to create a WebSocket client.
-            See ``mcp.client.websocket.websocket_client`` for more details.
-            Any extra arguments passed to the constructor will be passed to the
-            WebSocket client constructor.
+        注意:
+            引数はWebSocketクライアントを作成するために使用されます。
+            詳細は``mcp.client.websocket.websocket_client``を参照してください。
+            コンストラクタに渡された追加の引数はすべて
+            WebSocketクライアントのコンストラクタに渡されます。
 
-        Args:
-            name: The name of the tool.
-            url: The URL of the MCP server.
+        引数:
+            name: ツールの名前。
+            url: MCPサーバーのURL。
 
-        Keyword Args:
-            load_tools: Whether to load tools from the MCP server.
-            load_prompts: Whether to load prompts from the MCP server.
-            request_timeout: The default timeout in seconds for all requests.
-            session: The session to use for the MCP connection.
-            description: The description of the tool.
-            approval_mode: The approval mode for the tool. This can be:
-                - "always_require": The tool always requires approval before use.
-                - "never_require": The tool never requires approval before use.
-                - A dict with keys `always_require_approval` or `never_require_approval`,
-                  followed by a sequence of strings with the names of the relevant tools.
-                A tool should not be listed in both, if so, it will require approval.
-            allowed_tools: A list of tools that are allowed to use this tool.
-            additional_properties: Additional properties.
-            chat_client: The chat client to use for sampling.
-            kwargs: Any extra arguments to pass to the WebSocket client.
+        キーワード引数:
+            load_tools: MCPサーバーからツールをロードするかどうか。
+            load_prompts: MCPサーバーからプロンプトをロードするかどうか。
+            request_timeout: すべてのリクエストのデフォルトタイムアウト（秒）。
+            session: MCP接続に使用するセッション。
+            description: ツールの説明。
+            approval_mode: ツールの承認モード。以下のいずれか:
+                - "always_require": ツールは常に使用前に承認が必要。
+                - "never_require": ツールは使用前に承認を必要としない。
+                - `always_require_approval`または`never_require_approval`キーを持つ辞書で、
+                  関連ツールの名前のシーケンスを指定。
+                ツールは両方にリストされるべきではなく、もしそうなら承認が必要になります。
+            allowed_tools: このツールの使用を許可されたツールのリスト。
+            additional_properties: 追加のプロパティ。
+            chat_client: サンプリングに使用するチャットクライアント。
+            kwargs: WebSocketクライアントに渡す追加の引数。
+
         """
         super().__init__(
             name=name,
@@ -983,10 +1002,11 @@ class MCPWebsocketTool(MCPTool):
         self._client_kwargs = kwargs
 
     def get_mcp_client(self) -> _AsyncGeneratorContextManager[Any, None]:
-        """Get an MCP WebSocket client.
+        """MCP WebSocketクライアントを取得します。
 
-        Returns:
-            An async context manager for the WebSocket client transport.
+        戻り値:
+            WebSocketクライアントトランスポートの非同期コンテキストマネージャ。
+
         """
         args: dict[str, Any] = {
             "url": self.url,

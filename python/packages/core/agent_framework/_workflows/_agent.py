@@ -38,9 +38,9 @@ logger = logging.getLogger(__name__)
 
 
 class WorkflowAgent(BaseAgent):
-    """An `Agent` subclass that wraps a workflow and exposes it as an agent."""
+    """ワークフローをラップし、エージェントとして公開する`Agent`のサブクラス。"""
 
-    # Class variable for the request info function name
+    # リクエスト情報関数名のクラス変数
     REQUEST_INFO_FUNCTION_NAME: ClassVar[str] = "request_info"
 
     @dataclass
@@ -74,21 +74,21 @@ class WorkflowAgent(BaseAgent):
         description: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the WorkflowAgent.
+        """WorkflowAgentを初期化します。
 
-        Args:
-            workflow: The workflow to wrap as an agent.
+        引数:
+            workflow: エージェントとしてラップするワークフロー。
 
-        Keyword Args:
-            id: Unique identifier for the agent. If None, will be generated.
-            name: Optional name for the agent.
-            description: Optional description of the agent.
-            **kwargs: Additional keyword arguments passed to BaseAgent.
+        キーワード引数:
+            id: エージェントの一意識別子。Noneの場合は生成されます。
+            name: エージェントの名前（オプション）。
+            description: エージェントの説明（オプション）。
+            **kwargs: BaseAgentに渡される追加のキーワード引数。
+
         """
         if id is None:
             id = f"WorkflowAgent_{uuid.uuid4().hex[:8]}"
-        # Initialize with standard BaseAgent parameters first
-        # Validate the workflow's start executor can handle agent-facing message inputs
+        # まず標準のBaseAgentパラメータで初期化します ワークフローの開始executorがエージェント向けメッセージ入力を処理できるか検証します
         try:
             start_executor = workflow.get_start_executor()
         except KeyError as exc:  # Defensive: workflow lacks a configured entry point
@@ -116,21 +116,22 @@ class WorkflowAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Get a response from the workflow agent (non-streaming).
+        """ワークフローエージェントからレスポンスを取得します（非ストリーミング）。
 
-        This method collects all streaming updates and merges them into a single response.
+        このメソッドはすべてのストリーミング更新を収集し、単一のレスポンスに統合します。
 
-        Args:
-            messages: The message(s) to send to the workflow.
+        引数:
+            messages: ワークフローに送信するメッセージ。
 
-        Keyword Args:
-            thread: The conversation thread. If None, a new thread will be created.
-            **kwargs: Additional keyword arguments.
+        キーワード引数:
+            thread: 会話スレッド。Noneの場合は新しいスレッドが作成されます。
+            **kwargs: 追加のキーワード引数。
 
-        Returns:
-            The final workflow response as an AgentRunResponse.
+        戻り値:
+            AgentRunResponseとしての最終的なワークフローレスポンス。
+
         """
-        # Collect all streaming updates
+        # すべてのストリーミング更新を収集します
         response_updates: list[AgentRunResponseUpdate] = []
         input_messages = normalize_messages_input(messages)
         thread = thread or self.get_new_thread()
@@ -139,10 +140,10 @@ class WorkflowAgent(BaseAgent):
         async for update in self._run_stream_impl(input_messages, response_id):
             response_updates.append(update)
 
-        # Convert updates to final response.
+        # 更新を最終レスポンスに変換します。
         response = self.merge_updates(response_updates, response_id)
 
-        # Notify thread of new messages (both input and response messages)
+        # スレッドに新しいメッセージ（入力およびレスポンスメッセージの両方）を通知します
         await self._notify_thread_of_new_messages(thread, input_messages, response.messages)
 
         return response
@@ -154,17 +155,18 @@ class WorkflowAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Stream response updates from the workflow agent.
+        """ワークフローエージェントからのレスポンス更新をストリームします。
 
-        Args:
-            messages: The message(s) to send to the workflow.
+        引数:
+            messages: ワークフローに送信するメッセージ。
 
-        Keyword Args:
-            thread: The conversation thread. If None, a new thread will be created.
-            **kwargs: Additional keyword arguments.
+        キーワード引数:
+            thread: 会話スレッド。Noneの場合は新しいスレッドが作成されます。
+            **kwargs: 追加のキーワード引数。
 
-        Yields:
-            AgentRunResponseUpdate objects representing the workflow execution progress.
+        生成:
+            ワークフロー実行の進行を表すAgentRunResponseUpdateオブジェクト。
+
         """
         input_messages = normalize_messages_input(messages)
         thread = thread or self.get_new_thread()
@@ -175,10 +177,10 @@ class WorkflowAgent(BaseAgent):
             response_updates.append(update)
             yield update
 
-        # Convert updates to final response.
+        # 更新を最終レスポンスに変換します。
         response = self.merge_updates(response_updates, response_id)
 
-        # Notify thread of new messages (both input and response messages)
+        # スレッドに新しいメッセージ（入力およびレスポンスメッセージの両方）を通知します
         await self._notify_thread_of_new_messages(thread, input_messages, response.messages)
 
     async def _run_stream_impl(
@@ -186,42 +188,38 @@ class WorkflowAgent(BaseAgent):
         input_messages: list[ChatMessage],
         response_id: str,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Internal implementation of streaming execution.
+        """ストリーミング実行の内部実装。
 
-        Args:
-            input_messages: Normalized input messages to process.
-            response_id: The unique response ID for this workflow execution.
+        引数:
+            input_messages: 処理する正規化された入力メッセージ。
+            response_id: このワークフロー実行の一意のレスポンスID。
 
-        Yields:
-            AgentRunResponseUpdate objects representing the workflow execution progress.
+        生成:
+            ワークフロー実行の進行を表すAgentRunResponseUpdateオブジェクト。
+
         """
-        # Determine the event stream based on whether we have function responses
+        # 関数レスポンスがあるかどうかに基づいてイベントストリームを決定します
         if bool(self.pending_requests):
-            # This is a continuation - use send_responses_streaming to send function responses back
+            # これは継続です - 関数レスポンスを返すにはsend_responses_streamingを使用してください
             logger.info(f"Continuing workflow to address {len(self.pending_requests)} requests")
 
-            # Extract function responses from input messages, and ensure that
-            # only function responses are present in messages if there is any
-            # pending request.
+            # 入力メッセージから関数レスポンスを抽出し、保留中のリクエストがある場合は関数レスポンスのみがメッセージに存在することを保証します。
             function_responses = self._extract_function_responses(input_messages)
 
-            # Pop pending requests if fulfilled.
+            # 満たされた保留中のリクエストをポップします。
             for request_id in list(self.pending_requests.keys()):
                 if request_id in function_responses:
                     self.pending_requests.pop(request_id)
 
-            # NOTE: It is possible that some pending requests are not fulfilled,
-            # and we will let the workflow to handle this -- the agent does not
-            # have an opinion on this.
+            # 注意: 一部の保留中リクエストが満たされない可能性があり、これについてはワークフローに任せます -- エージェントはこれに関して意見を持ちません。
             event_stream = self.workflow.send_responses_streaming(function_responses)
         else:
-            # Execute workflow with streaming (initial run or no function responses)
-            # Pass the new input messages directly to the workflow
+            # ストリーミングでワークフローを実行します（初回実行または関数レスポンスなし） 新しい入力メッセージを直接ワークフローに渡します。
             event_stream = self.workflow.run_stream(input_messages)
 
-        # Process events from the stream
+        # ストリームからのイベントを処理します。
         async for event in event_stream:
-            # Convert workflow event to agent update
+            # ワークフローイベントをエージェント更新に変換します。
             update = self._convert_workflow_event_to_agent_update(response_id, event)
             if update:
                 yield update
@@ -231,20 +229,21 @@ class WorkflowAgent(BaseAgent):
         response_id: str,
         event: WorkflowEvent,
     ) -> AgentRunResponseUpdate | None:
-        """Convert a workflow event to an AgentRunResponseUpdate.
+        """ワークフローイベントをAgentRunResponseUpdateに変換します。
 
-        Only AgentRunUpdateEvent and RequestInfoEvent are processed and the rest
-        are not relevant. Returns None if the event is not relevant.
+        AgentRunUpdateEventとRequestInfoEventのみ処理し、それ以外は関連しません。
+        イベントが関連しない場合はNoneを返します。
+
         """
         match event:
             case AgentRunUpdateEvent(data=update):
-                # Direct pass-through of update in an agent streaming event
+                # エージェントストリーミングイベントでの更新の直接パススルー
                 if update:
                     return cast(AgentRunResponseUpdate, update)
                 return None
 
             case RequestInfoEvent(request_id=request_id):
-                # Store the pending request for later correlation
+                # 後で相関付けるために保留中のリクエストを保存します。
                 self.pending_requests[request_id] = event
 
                 args = self.RequestInfoFunctionArgs(request_id=request_id, data=event.data).to_dict()
@@ -268,18 +267,18 @@ class WorkflowAgent(BaseAgent):
                     created_at=datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 )
             case _:
-                # Ignore non-agent workflow events
+                # エージェント以外のワークフローイベントを無視します。
                 pass
-        # We only care about the above two events and discard the rest.
+        # 上記2つのイベントのみを扱い、それ以外は破棄します。
         return None
 
     def _extract_function_responses(self, input_messages: list[ChatMessage]) -> dict[str, Any]:
-        """Extract function responses from input messages."""
+        """入力メッセージから関数レスポンスを抽出します。"""
         function_responses: dict[str, Any] = {}
         for message in input_messages:
             for content in message.contents:
                 if isinstance(content, FunctionApprovalResponseContent):
-                    # Parse the function arguments to recover request payload
+                    # 関数の引数を解析してリクエストペイロードを復元する
                     arguments_payload = content.function_call.arguments
                     if isinstance(arguments_payload, str):
                         try:
@@ -320,30 +319,29 @@ class WorkflowAgent(BaseAgent):
         return function_responses
 
     class _ResponseState(TypedDict):
-        """State for grouping response updates by message_id."""
+        """message_idごとにレスポンスの更新をグループ化するための状態。"""
 
         by_msg: dict[str, list[AgentRunResponseUpdate]]
         dangling: list[AgentRunResponseUpdate]
 
     @staticmethod
     def merge_updates(updates: list[AgentRunResponseUpdate], response_id: str) -> AgentRunResponse:
-        """Merge streaming updates into a single AgentRunResponse.
+        """ストリーミング更新を単一のAgentRunResponseにマージします。
 
-        Behavior:
-        - Group updates by response_id; within each response_id, group by message_id and keep a dangling bucket for
-          updates without message_id.
-        - Convert each group (per message and dangling) into an intermediate AgentRunResponse via
-          AgentRunResponse.from_agent_run_response_updates, then sort by created_at and merge.
-        - Append messages from updates without any response_id at the end (global dangling), while aggregating metadata.
+        動作:
+        - response_idごとに更新をグループ化し、各response_id内ではmessage_idごとにグループ化し、message_idのない更新用の保留バケットを保持します。
+        - 各グループ（メッセージごとおよび保留分）をAgentRunResponse.from_agent_run_response_updatesを使って中間のAgentRunResponseに変換し、created_atでソートしてマージします。
+        - response_idのない更新からのメッセージは最後に追加（グローバル保留）し、メタデータを集約します。
 
         Args:
-            updates: The list of AgentRunResponseUpdate objects to merge.
-            response_id: The response identifier to set on the returned AgentRunResponse.
+            updates: マージするAgentRunResponseUpdateオブジェクトのリスト。
+            response_id: 返されるAgentRunResponseに設定するレスポンス識別子。
 
         Returns:
-            An AgentRunResponse with messages in processing order and aggregated metadata.
+            処理順にメッセージが並び、メタデータが集約されたAgentRunResponse。
+
         """
-        # PHASE 1: GROUP UPDATES BY RESPONSE_ID AND MESSAGE_ID
+        # PHASE 1: RESPONSE_IDおよびMESSAGE_IDによる更新のグループ化
         states: dict[str, WorkflowAgent._ResponseState] = {}
         global_dangling: list[AgentRunResponseUpdate] = []
 
@@ -402,7 +400,7 @@ class WorkflowAgent(BaseAgent):
                 additional_properties=incoming.additional_properties or current.additional_properties,
             )
 
-        # PHASE 2: CONVERT GROUPED UPDATES TO RESPONSES AND MERGE
+        # PHASE 2: グループ化された更新をレスポンスに変換してマージ
         final_messages: list[ChatMessage] = []
         merged_usage: UsageDetails | None = None
         latest_created_at: str | None = None
@@ -449,7 +447,7 @@ class WorkflowAgent(BaseAgent):
                     else:
                         raw_representations.append(cast_value)
 
-        # PHASE 3: HANDLE GLOBAL DANGLING UPDATES (NO RESPONSE_ID)
+        # PHASE 3: グローバル保留更新の処理（RESPONSE_IDなし）
         if global_dangling:
             flattened = AgentRunResponse.from_agent_run_response_updates(global_dangling)
             final_messages.extend(flattened.messages)
@@ -471,7 +469,7 @@ class WorkflowAgent(BaseAgent):
                 else:
                     raw_representations.append(cast_flat)
 
-        # PHASE 4: CONSTRUCT FINAL RESPONSE WITH INPUT RESPONSE_ID
+        # PHASE 4: 入力RESPONSE_IDを用いた最終レスポンスの構築
         return AgentRunResponse(
             messages=final_messages,
             response_id=response_id,

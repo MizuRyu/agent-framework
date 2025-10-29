@@ -39,7 +39,7 @@ Prerequisites:
 
 
 class Summarizer(Executor):
-    """Simple summarizer: consumes full conversation and appends an assistant summary."""
+    """シンプルな要約器: 会話全体を消費し、アシスタントの要約を追加します。"""
 
     @handler
     async def summarize(self, conversation: list[ChatMessage], ctx: WorkflowContext[Never, list[ChatMessage]]) -> None:
@@ -51,18 +51,18 @@ class Summarizer(Executor):
 
 
 async def main() -> None:
-    # 1) Create a content agent
+    # 1) コンテンツAgentを作成します
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     content = chat_client.create_agent(
         instructions="Produce a concise paragraph answering the user's request.",
         name="content",
     )
 
-    # 2) Build sequential workflow: content -> summarizer
+    # 2) 逐次ワークフローを構築します: content -> summarizer
     summarizer = Summarizer(id="summarizer")
     workflow = SequentialBuilder().participants([content, summarizer]).build()
 
-    # 3) Run and print final conversation
+    # 3) 実行して最終会話を出力します
     events = await workflow.run("Explain the benefits of budget eBikes for commuters.")
     outputs = events.get_outputs()
 

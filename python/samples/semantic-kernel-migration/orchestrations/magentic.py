@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Side-by-side Magentic orchestrations for Agent Framework and Semantic Kernel."""
+"""Agent FrameworkとSemantic KernelのMagenticオーケストレーションを並べて示します。"""
 
 import asyncio
 from collections.abc import Sequence
@@ -29,9 +29,7 @@ PROMPT = (
 )
 
 
-######################################################################
-# Semantic Kernel orchestration path
-######################################################################
+#  Semantic Kernelのオーケストレーションパス
 
 
 async def build_semantic_kernel_agents() -> list[Agent]:
@@ -113,9 +111,7 @@ def _print_semantic_kernel_outputs(outputs: Sequence[ChatMessageContent]) -> Non
         print(f"**{item.name}**\n{content}\n")
 
 
-######################################################################
-# Agent Framework orchestration path
-######################################################################
+#  Agent Frameworkのオーケストレーションパス
 
 
 async def run_agent_framework_example(prompt: str) -> str | None:

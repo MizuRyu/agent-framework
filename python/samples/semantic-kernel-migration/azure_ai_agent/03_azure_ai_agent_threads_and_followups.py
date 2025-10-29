@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Maintain Azure AI agent conversation state across turns in SK and AF."""
+"""SKとAFでAzure AI Agentの会話状態をターン間で維持します。"""
 
 import asyncio
 
@@ -19,7 +19,7 @@ async def run_semantic_kernel() -> None:
             agent = AzureAIAgent(client=client, definition=definition)
 
             thread: AzureAIAgentThread | None = None
-            # SK returns the updated AzureAIAgentThread on each response.
+            # SKは各レスポンスで更新されたAzureAIAgentThreadを返します。
             first = await agent.get_response("Outline the onboarding checklist.", thread=thread)
             thread = first.thread
             print("[SK][turn1]", first.message.content)
@@ -43,7 +43,7 @@ async def run_agent_framework() -> None:
             instructions="Track follow-up questions within the same thread.",
         ) as agent:
             thread = agent.get_new_thread()
-            # AF threads are explicit and can be serialized for external storage.
+            # AFのスレッドは明示的で外部ストレージ用にシリアライズ可能です。
             first = await agent.run("Outline the onboarding checklist.", thread=thread)
             print("[AF][turn1]", first.text)
 

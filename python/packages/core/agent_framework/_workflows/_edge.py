@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+# Microsoftの著作権表示。すべての権利を保有します。
 
 import logging
 import uuid
@@ -13,12 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_function_name(func: Callable[..., Any]) -> str:
-    """Map a Python callable to a concise, human-focused identifier.
+    """Pythonのcallableを簡潔で人間に分かりやすい識別子にマッピングします。
 
-    The workflow graph persists references to callables by recording only an
-    identifier. This helper inspects standard callable metadata and picks a
-    stable value so that serialized representations remain intelligible when
-    they are later rendered in logs or reconstructed during deserialization.
+    ワークフローグラフはcallableへの参照を識別子のみを記録して永続化します。このヘルパーは標準的なcallableのメタデータを検査し、シリアライズされた表現がログで表示されたりデシリアライズ時に再構築されたりするときに理解しやすい安定した値を選びます。
 
     Examples:
         .. code-block:: python
@@ -36,13 +33,9 @@ def _extract_function_name(func: Callable[..., Any]) -> str:
 
 
 def _missing_callable(name: str) -> Callable[..., Any]:
-    """Create a defensive placeholder for callables that cannot be restored.
+    """復元できないcallableのための防御的なプレースホルダーを作成します。
 
-    When a workflow is deserialized in an environment that lacks the original
-    Python callable, we install a proxy that fails loudly. Surfacing the error
-    at invocation time preserves a clean separation between I/O concerns and
-    runtime execution, while making it obvious which callable needs to be
-    re-registered.
+    ワークフローが元のPython callableが存在しない環境でデシリアライズされるとき、呼び出し時に明確に失敗するプロキシを設置します。これによりI/Oの関心事とランタイム実行の分離が保たれ、どのcallableを再登録すべきかが明確になります。
 
     Examples:
         .. code-block:: python
@@ -62,13 +55,9 @@ def _missing_callable(name: str) -> Callable[..., Any]:
 
 @dataclass(init=False)
 class Edge(DictConvertible):
-    """Model a directed, optionally-conditional hand-off between two executors.
+    """2つのexecutor間の有向かつオプションで条件付きのハンドオフをモデル化します。
 
-    Each `Edge` captures the minimal metadata required to move a message from
-    one executor to another inside the workflow graph. It optionally embeds a
-    boolean predicate that decides if the edge should be taken at runtime. By
-    serialising the edge down to primitives we can reconstruct the topology of
-    a workflow irrespective of the original Python process.
+    各`Edge`はワークフローグラフ内でメッセージを1つのexecutorから別のexecutorに移動させるために必要な最小限のメタデータをキャプチャします。オプションで、エッジを実行時に通過すべきかを決定するブール述語を埋め込むことができます。エッジをプリミティブにシリアライズすることで、元のPythonプロセスに関係なくワークフローのトポロジーを再構築できます。
 
     Examples:
         .. code-block:: python
@@ -93,29 +82,25 @@ class Edge(DictConvertible):
         *,
         condition_name: str | None = None,
     ) -> None:
-        """Initialize a fully-specified edge between two workflow executors.
+        """2つのworkflow executor間の完全に指定されたエッジを初期化します。
 
         Parameters
         ----------
         source_id:
-            Canonical identifier of the upstream executor instance.
+        上流executorインスタンスの正準識別子。
         target_id:
-            Canonical identifier of the downstream executor instance.
+        下流executorインスタンスの正準識別子。
         condition:
-            Optional predicate that receives the message payload and returns
-            `True` when the edge should be traversed. When omitted, the edge is
-            considered unconditionally active.
+        メッセージペイロードを受け取り、エッジを通過すべきときに`True`を返すオプションの述語。省略時はエッジは無条件に有効とみなされます。
         condition_name:
-            Optional override that pins a human-friendly name for the condition
-            when the callable cannot be introspected (for example after
-            deserialization).
+        callableをイントロスペクトできない場合（例えばデシリアライズ後）に条件の人間に分かりやすい名前を固定するオプションのオーバーライド。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                edge = Edge("fetch", "parse", condition=lambda data: data.is_valid)
-                assert edge.source_id == "fetch"
-                assert edge.target_id == "parse"
+            edge = Edge("fetch", "parse", condition=lambda data: data.is_valid)
+            assert edge.source_id == "fetch"
+            assert edge.target_id == "parse"
         """
         if not source_id:
             raise ValueError("Edge source_id must be a non-empty string")
@@ -128,54 +113,45 @@ class Edge(DictConvertible):
 
     @property
     def id(self) -> str:
-        """Return the stable identifier used to reference this edge.
+        """このエッジを参照するために使用される安定した識別子を返します。
 
-        The identifier combines the source and target executor identifiers with
-        a deterministic separator. This allows other graph structures such as
-        adjacency lists or visualisations to refer to an edge without carrying
-        the full object.
+        識別子はソースとターゲットのexecutor識別子を決定論的なセパレータで結合します。これにより隣接リストや可視化などの他のグラフ構造が完全なオブジェクトを持たずにエッジを参照できます。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                edge = Edge("reader", "writer")
-                assert edge.id == "reader->writer"
+            edge = Edge("reader", "writer")
+            assert edge.id == "reader->writer"
         """
         return f"{self.source_id}{self.ID_SEPARATOR}{self.target_id}"
 
     def should_route(self, data: Any) -> bool:
-        """Evaluate the edge predicate against an incoming payload.
+        """受信ペイロードに対してエッジの述語を評価します。
 
-        When the edge was defined without an explicit predicate the method
-        returns `True`, signalling an unconditional routing rule. Otherwise the
-        user-supplied callable decides whether the message should proceed along
-        this edge. Any exception raised by the callable is deliberately allowed
-        to surface to the caller to avoid masking logic bugs.
+        エッジが明示的な述語なしで定義されている場合、このメソッドは`True`を返し無条件のルーティングルールを示します。そうでなければユーザー提供のcallableがメッセージをこのエッジに進めるかどうかを決定します。callableによって発生した例外はロジックのバグを隠さないために意図的に呼び出し元に伝播されます。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                edge = Edge("stage1", "stage2", condition=lambda payload: payload["score"] > 0.8)
-                assert edge.should_route({"score": 0.9}) is True
-                assert edge.should_route({"score": 0.4}) is False
+            edge = Edge("stage1", "stage2", condition=lambda payload: payload["score"] > 0.8)
+            assert edge.should_route({"score": 0.9}) is True
+            assert edge.should_route({"score": 0.4}) is False
         """
         if self._condition is None:
             return True
         return self._condition(data)
 
     def to_dict(self) -> dict[str, Any]:
-        """Produce a JSON-serialisable view of the edge metadata.
+        """エッジのメタデータのJSONシリアライズ可能なビューを生成します。
 
-        The representation includes the source and target executor identifiers
-        plus the condition name when it is known. Serialisation intentionally
-        omits the live callable to keep payloads transport-friendly.
+        表現にはソースとターゲットのexecutor識別子に加え、条件名が知られている場合は含まれます。シリアライズは意図的にライブcallableを省略し、ペイロードをトランスポートに適したものに保ちます。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                edge = Edge("reader", "writer", condition=lambda payload: payload["ok"])
-                snapshot = edge.to_dict()
-                assert snapshot == {"source_id": "reader", "target_id": "writer", "condition_name": "<lambda>"}
+            edge = Edge("reader", "writer", condition=lambda payload: payload["ok"])
+            snapshot = edge.to_dict()
+            assert snapshot == {"source_id": "reader", "target_id": "writer", "condition_name": "<lambda>"}
         """
         payload = {"source_id": self.source_id, "target_id": self.target_id}
         if self.condition_name is not None:
@@ -184,20 +160,17 @@ class Edge(DictConvertible):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Edge":
-        """Reconstruct an `Edge` from its serialised dictionary form.
+        """シリアライズされた辞書形式から`Edge`を再構築します。
 
-        The deserialised edge will lack the executable predicate because we do
-        not attempt to hydrate Python callables from storage. Instead, the
-        stored `condition_name` is preserved so that downstream consumers can
-        detect missing callables and re-register them where appropriate.
+        デシリアライズされたエッジは実行可能な述語を欠きます。なぜならストレージからPython callableを復元しようとしないためです。代わりに保存された`condition_name`は保持され、下流の消費者がcallableの欠如を検出し適切に再登録できるようにします。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                payload = {"source_id": "reader", "target_id": "writer", "condition_name": "is_ready"}
-                edge = Edge.from_dict(payload)
-                assert edge.source_id == "reader"
-                assert edge.condition_name == "is_ready"
+            payload = {"source_id": "reader", "target_id": "writer", "condition_name": "is_ready"}
+            edge = Edge.from_dict(payload)
+            assert edge.source_id == "reader"
+            assert edge.condition_name == "is_ready"
         """
         return cls(
             source_id=data["source_id"],
@@ -209,13 +182,9 @@ class Edge(DictConvertible):
 
 @dataclass
 class Case:
-    """Runtime wrapper combining a switch-case predicate with its target.
+    """スイッチケース述語とそのターゲットを組み合わせたランタイムラッパー。
 
-    Each `Case` couples a boolean predicate with the executor that should
-    handle the message when the predicate evaluates to `True`. The runtime
-    keeps this lightweight container separate from the serialisable
-    `SwitchCaseEdgeGroupCase` so that execution can operate with live callables
-    without polluting persisted state.
+    各`Case`はブール述語と、その述語が`True`評価されたときにメッセージを処理すべきexecutorを結びつけます。ランタイムはこの軽量コンテナをシリアライズ可能な`SwitchCaseEdgeGroupCase`から分離して保持し、実行時にライブcallableを使いながら永続化されたstateを汚染しません。
 
     Examples:
         .. code-block:: python
@@ -236,11 +205,9 @@ class Case:
 
 @dataclass
 class Default:
-    """Runtime representation of the default branch in a switch-case group.
+    """スイッチケースグループのデフォルトブランチのランタイム表現。
 
-    The default branch is invoked only when no other case predicates match. In
-    practice it is guaranteed to exist so that routing never produces an empty
-    target.
+    デフォルトブランチは他のどのケース述語もマッチしなかった場合にのみ呼び出されます。実際には必ず存在し、ルーティングが空のターゲットを生成しないことが保証されます。
 
     Examples:
         .. code-block:: python
@@ -259,13 +226,9 @@ class Default:
 
 @dataclass(init=False)
 class EdgeGroup(DictConvertible):
-    """Bundle edges that share a common routing semantics under a single id.
+    """共通のルーティング意味論を共有するエッジを単一のidの下にまとめます。
 
-    The workflow runtime manipulates `EdgeGroup` instances rather than raw
-    edges so it can reason about higher-order routing behaviours such as
-    fan-out, fan-in, switch-case, and other graph patterns. The base class stores the
-    identifying information and handles serialisation duties so specialised
-    groups need only maintain their additional state.
+    ワークフローランタイムは生のエッジではなく`EdgeGroup`インスタンスを操作し、ファンアウト、ファンイン、スイッチケース、その他のグラフパターンのような高次のルーティング動作を推論できます。基底クラスは識別情報を保持しシリアライズ処理を担当するため、特殊化されたグループは追加の状態のみを管理すればよいです。
 
     Examples:
         .. code-block:: python
@@ -289,26 +252,23 @@ class EdgeGroup(DictConvertible):
         id: str | None = None,
         type: str | None = None,
     ) -> None:
-        """Construct an edge group shell around a set of `Edge` instances.
+        """`Edge`インスタンスのセットの周りにエッジグループのシェルを構築します。
 
         Parameters
         ----------
         edges:
-            Sequence of edges that participate in this group. When omitted we
-            start from an empty list so subclasses can append later.
+        このグループに参加するエッジのシーケンス。省略時は空リストから開始し、サブクラスが後で追加できます。
         id:
-            Stable identifier for the group. Defaults to a random UUID so
-            serialised graphs remain uniquely addressable.
+        グループの安定識別子。デフォルトはランダムなUUIDで、シリアライズされたグラフが一意にアドレス可能になります。
         type:
-            Logical discriminator used to recover the appropriate subclass when
-            de-serialising.
+        デシリアライズ時に適切なサブクラスを復元するための論理的識別子。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                edges = [Edge("validate", "persist")]
-                group = EdgeGroup(edges, id="stage", type="Custom")
-                assert group.to_dict()["type"] == "Custom"
+            edges = [Edge("validate", "persist")]
+            group = EdgeGroup(edges, id="stage", type="Custom")
+            assert group.to_dict()["type"] == "Custom"
         """
         self.id = id or f"{self.__class__.__name__}/{uuid.uuid4()}"
         self.type = type or self.__class__.__name__
@@ -316,44 +276,41 @@ class EdgeGroup(DictConvertible):
 
     @property
     def source_executor_ids(self) -> list[str]:
-        """Return the deduplicated list of upstream executor ids.
+        """上流executorの重複排除されたリストを返します。
 
-        The property preserves order-of-first-appearance so the caller can rely
-        on deterministic iteration when reconstructing graph topology.
+        プロパティは最初に出現した順序を保持するため、呼び出し元はグラフトポロジーを再構築するときに決定論的な反復を信頼できます。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                group = EdgeGroup([Edge("read", "write"), Edge("read", "archive")])
-                assert group.source_executor_ids == ["read"]
+            group = EdgeGroup([Edge("read", "write"), Edge("read", "archive")])
+            assert group.source_executor_ids == ["read"]
         """
         return list(dict.fromkeys(edge.source_id for edge in self.edges))
 
     @property
     def target_executor_ids(self) -> list[str]:
-        """Return the ordered, deduplicated list of downstream executor ids.
+        """下流executorの順序付きかつ重複排除されたリストを返します。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                group = EdgeGroup([Edge("read", "write"), Edge("read", "archive")])
-                assert group.target_executor_ids == ["write", "archive"]
+            group = EdgeGroup([Edge("read", "write"), Edge("read", "archive")])
+            assert group.target_executor_ids == ["write", "archive"]
         """
         return list(dict.fromkeys(edge.target_id for edge in self.edges))
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise the group metadata and contained edges into primitives.
+        """グループのメタデータと含まれるエッジをプリミティブにシリアライズします。
 
-        The payload captures each edge through its own `to_dict` call, enabling
-        round-tripping through formats such as JSON without leaking Python
-        objects.
+        ペイロードは各エッジをそれぞれの`to_dict`呼び出しでキャプチャし、JSONのようなフォーマットを通じたラウンドトリップを可能にし、Pythonオブジェクトの漏洩を防ぎます。
 
         Examples:
-            .. code-block:: python
+        .. code-block:: python
 
-                group = EdgeGroup([Edge("read", "write")])
-                snapshot = group.to_dict()
-                assert snapshot["edges"][0]["source_id"] == "read"
+            group = EdgeGroup([Edge("read", "write")])
+            snapshot = group.to_dict()
+            assert snapshot["edges"][0]["source_id"] == "read"
         """
         return {
             "id": self.id,
@@ -363,12 +320,9 @@ class EdgeGroup(DictConvertible):
 
     @classmethod
     def register(cls, subclass: builtin_type["EdgeGroup"]) -> builtin_type["EdgeGroup"]:
-        """Register a subclass so deserialisation can recover the right type.
+        """サブクラスを登録して、デシリアライズ時に正しい型を復元できるようにします。
 
-        Registration is typically performed via the decorator syntax applied to
-        each concrete edge group. The registry stores classes by their
-        `__name__`, which must therefore remain stable across versions when
-        persisted workflows are in circulation.
+        登録は通常、各具体的なEdgeGroupに適用されるデコレータ構文を通じて行われます。レジストリはクラスをその`__name__`で保存するため、永続化されたワークフローが流通している場合はバージョン間で安定している必要があります。
 
         Examples:
             .. code-block:: python
@@ -379,19 +333,16 @@ class EdgeGroup(DictConvertible):
 
 
                 assert EdgeGroup._TYPE_REGISTRY["CustomGroup"] is CustomGroup
+
         """
         cls._TYPE_REGISTRY[subclass.__name__] = subclass
         return subclass
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "EdgeGroup":
-        """Hydrate the correct `EdgeGroup` subclass from serialised state.
+        """シリアライズされた状態から正しい`EdgeGroup`サブクラスを復元します。
 
-        The method inspects the `type` field, allocates the corresponding class
-        without executing subclass `__init__`, and then manually restores any
-        subtype-specific attributes. This keeps deserialisation deterministic
-        even for complex group types that configure additional runtime
-        callables.
+        このメソッドは`type`フィールドを調査し、対応するクラスをサブクラスの`__init__`を実行せずに割り当て、その後サブタイプ固有の属性を手動で復元します。これにより、追加のランタイムコール可能オブジェクトを設定する複雑なグループタイプでもデシリアライズが決定的になります。
 
         Examples:
             .. code-block:: python
@@ -399,6 +350,7 @@ class EdgeGroup(DictConvertible):
                 payload = {"type": "EdgeGroup", "edges": [{"source_id": "a", "target_id": "b"}]}
                 group = EdgeGroup.from_dict(payload)
                 assert isinstance(group, EdgeGroup)
+
         """
         group_type = data.get("type", "EdgeGroup")
         target_cls = cls._TYPE_REGISTRY.get(group_type, EdgeGroup)
@@ -407,7 +359,7 @@ class EdgeGroup(DictConvertible):
         obj = target_cls.__new__(target_cls)  # type: ignore[misc]
         EdgeGroup.__init__(obj, edges=edges, id=data.get("id"), type=group_type)
 
-        # Handle FanOutEdgeGroup-specific attributes
+        # FanOutEdgeGroup固有の属性を処理します
         if isinstance(obj, FanOutEdgeGroup):
             obj.selection_func_name = data.get("selection_func_name")  # type: ignore[attr-defined]
             obj._selection_func = (  # type: ignore[attr-defined]
@@ -417,7 +369,7 @@ class EdgeGroup(DictConvertible):
             )
             obj._target_ids = [edge.target_id for edge in obj.edges]  # type: ignore[attr-defined]
 
-        # Handle SwitchCaseEdgeGroup-specific attributes
+        # SwitchCaseEdgeGroup固有の属性を処理します
         if isinstance(obj, SwitchCaseEdgeGroup):
             cases_payload = data.get("cases", [])
             restored_cases: list[SwitchCaseEdgeGroupCase | SwitchCaseEdgeGroupDefault] = []
@@ -436,7 +388,7 @@ class EdgeGroup(DictConvertible):
 @EdgeGroup.register
 @dataclass(init=False)
 class SingleEdgeGroup(EdgeGroup):
-    """Convenience wrapper for a solitary edge, keeping the group API uniform."""
+    """単一のエッジのための便利なラッパーで、グループAPIを統一的に保ちます。"""
 
     def __init__(
         self,
@@ -446,13 +398,14 @@ class SingleEdgeGroup(EdgeGroup):
         *,
         id: str | None = None,
     ) -> None:
-        """Create a one-to-one edge group between two executors.
+        """2つのExecutor間の1対1のエッジグループを作成します。
 
         Examples:
             .. code-block:: python
 
                 group = SingleEdgeGroup("ingest", "validate")
                 assert group.edges[0].source_id == "ingest"
+
         """
         edge = Edge(source_id=source_id, target_id=target_id, condition=condition)
         super().__init__([edge], id=id, type=self.__class__.__name__)
@@ -461,12 +414,10 @@ class SingleEdgeGroup(EdgeGroup):
 @EdgeGroup.register
 @dataclass(init=False)
 class FanOutEdgeGroup(EdgeGroup):
-    """Represent a broadcast-style edge group with optional selection logic.
+    """オプションの選択ロジックを持つブロードキャストスタイルのエッジグループを表現します。
 
-    A fan-out forwards a message produced by a single source executor to one
-    or more downstream executors. At runtime we may further narrow the targets
-    by executing a `selection_func` that inspects the payload and returns the
-    subset of ids that should receive the message.
+    ファンアウトは単一のソースExecutorが生成したメッセージを1つ以上の下流Executorに転送します。ランタイムでは、ペイロードを検査してメッセージを受け取るべきIDのサブセットを返す`selection_func`を実行してターゲットをさらに絞り込むことがあります。
+
     """
 
     selection_func_name: str | None
@@ -482,26 +433,20 @@ class FanOutEdgeGroup(EdgeGroup):
         selection_func_name: str | None = None,
         id: str | None = None,
     ) -> None:
-        """Create a fan-out mapping from a single source to many targets.
+        """単一のソースから複数のターゲットへのファンアウトマッピングを作成します。
 
         Parameters
         ----------
         source_id:
-            Identifier of the upstream executor broadcasting the message.
+            メッセージをブロードキャストする上流Executorの識別子。
         target_ids:
-            Ordered set of downstream executor identifiers that may receive the
-            message. At least two targets are required to preserve the fan-out
-            semantics.
+            メッセージを受け取る可能性のある下流Executorの順序付きセット。ファンアウトの意味を保つために少なくとも2つのターゲットが必要です。
         selection_func:
-            Optional callable that returns the subset of `target_ids` that
-            should be active for a given payload. The callable receives the
-            original message plus a copy of all configured target ids.
+            指定されたペイロードに対してアクティブにすべき`target_ids`のサブセットを返すオプションのコール可能オブジェクト。元のメッセージとすべての設定されたターゲットIDのコピーを受け取ります。
         selection_func_name:
-            Static identifier used when persisting the fan-out. Needed when the
-            callable cannot be introspected or is unavailable during
-            deserialisation.
+            ファンアウトの永続化時に使用される静的識別子。コール可能オブジェクトがイントロスペクトできないかデシリアライズ時に利用できない場合に必要です。
         id:
-            Stable identifier for the group; defaults to an autogenerated UUID.
+            グループの安定した識別子。デフォルトは自動生成されたUUIDです。
 
         Examples:
             .. code-block:: python
@@ -512,6 +457,7 @@ class FanOutEdgeGroup(EdgeGroup):
 
                 group = FanOutEdgeGroup("sensor", ["db", "cache"], selection_func=choose_targets)
                 assert group.selection_func is choose_targets
+
         """
         if len(target_ids) <= 1:
             raise ValueError("FanOutEdgeGroup must contain at least two targets.")
@@ -527,39 +473,38 @@ class FanOutEdgeGroup(EdgeGroup):
 
     @property
     def target_ids(self) -> list[str]:
-        """Return a shallow copy of the configured downstream executor ids.
+        """設定された下流ExecutorのIDの浅いコピーを返します。
 
-        The list is defensively copied to prevent callers from mutating the
-        internal state while still providing deterministic ordering.
+        内部状態の変更を防ぐためにリストは防御的にコピーされ、決定的な順序を提供します。
 
         Examples:
             .. code-block:: python
 
                 group = FanOutEdgeGroup("node", ["alpha", "beta"])
                 assert group.target_ids == ["alpha", "beta"]
+
         """
         return list(self._target_ids)
 
     @property
     def selection_func(self) -> Callable[[Any, list[str]], list[str]] | None:
-        """Expose the runtime callable used to select active fan-out targets.
+        """アクティブなファンアウトターゲットを選択するために使用されるランタイムコール可能オブジェクトを公開します。
 
-        When no selection function was supplied the property returns `None`,
-        signalling that all targets must receive the payload.
+        選択関数が指定されていない場合、このプロパティは`None`を返し、すべてのターゲットがペイロードを受け取る必要があることを示します。
 
         Examples:
             .. code-block:: python
 
                 group = FanOutEdgeGroup("source", ["x", "y"], selection_func=None)
                 assert group.selection_func is None
+
         """
         return self._selection_func
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise the fan-out group while preserving selection metadata.
+        """選択メタデータを保持しながらファンアウトグループをシリアライズします。
 
-        In addition to the base `EdgeGroup` payload we embed the human-friendly
-        name of the selection function. The callable itself is not persisted.
+        基本の`EdgeGroup`ペイロードに加えて、選択関数の人間に読みやすい名前を埋め込みます。コール可能オブジェクト自体は永続化されません。
 
         Examples:
             .. code-block:: python
@@ -567,6 +512,7 @@ class FanOutEdgeGroup(EdgeGroup):
                 group = FanOutEdgeGroup("source", ["a", "b"], selection_func=lambda *_: ["a"])
                 snapshot = group.to_dict()
                 assert snapshot["selection_func_name"] == "<lambda>"
+
         """
         payload = super().to_dict()
         payload["selection_func_name"] = self.selection_func_name
@@ -576,30 +522,30 @@ class FanOutEdgeGroup(EdgeGroup):
 @EdgeGroup.register
 @dataclass(init=False)
 class FanInEdgeGroup(EdgeGroup):
-    """Represent a converging set of edges that feed a single downstream executor.
+    """単一の下流Executorにメッセージを供給する収束型のエッジセットを表現します。
 
-    Fan-in groups are typically used when multiple upstream stages independently
-    produce messages that should all arrive at the same downstream processor.
+    ファンイングループは複数の上流ステージが独立してメッセージを生成し、それらがすべて同じ下流プロセッサに届く必要がある場合に通常使用されます。
+
     """
 
     def __init__(self, source_ids: Sequence[str], target_id: str, *, id: str | None = None) -> None:
-        """Build a fan-in mapping that merges several sources into one target.
+        """複数のソースを1つのターゲットにマージするファンインマッピングを構築します。
 
         Parameters
         ----------
         source_ids:
-            Sequence of upstream executor identifiers contributing messages.
+            メッセージを提供する上流Executorの識別子のシーケンス。
         target_id:
-            Downstream executor that receives every message emitted by the
-            sources.
+            すべてのソースからのメッセージを受け取る下流Executor。
         id:
-            Optional explicit identifier for the edge group.
+            エッジグループのオプションの明示的識別子。
 
         Examples:
             .. code-block:: python
 
                 group = FanInEdgeGroup(["parser", "enricher"], target_id="writer")
                 assert group.to_dict()["edges"][0]["target_id"] == "writer"
+
         """
         if len(source_ids) <= 1:
             raise ValueError("FanInEdgeGroup must contain at least two sources.")
@@ -610,13 +556,10 @@ class FanInEdgeGroup(EdgeGroup):
 
 @dataclass(init=False)
 class SwitchCaseEdgeGroupCase(DictConvertible):
-    """Persistable description of a single conditional branch in a switch-case.
+    """switch-caseの単一の条件分岐の永続化可能な記述。
 
-    Unlike the runtime `Case` object this serialisable variant stores only the
-    target identifier and a descriptive name for the predicate. When the
-    underlying callable is unavailable during deserialisation we substitute a
-    proxy placeholder that fails loudly, ensuring the missing dependency is
-    immediately visible.
+    ランタイムの`Case`オブジェクトとは異なり、このシリアライズ可能なバリアントはターゲット識別子と述語の説明的な名前のみを保存します。デシリアライズ時に基盤となるコール可能オブジェクトが利用できない場合は、即座に欠落依存性が明らかになるように明確に失敗するプロキシプレースホルダーを代わりに使用します。
+
     """
 
     target_id: str
@@ -631,25 +574,23 @@ class SwitchCaseEdgeGroupCase(DictConvertible):
         *,
         condition_name: str | None = None,
     ) -> None:
-        """Record the routing metadata for a conditional case branch.
+        """条件付きケース分岐のルーティングメタデータを記録します。
 
         Parameters
         ----------
         condition:
-            Optional live predicate. When omitted we fall back to a placeholder
-            that raises at runtime to highlight missing registrations.
+            オプションのライブ述語。省略した場合は、登録漏れを強調するためにランタイムで例外を発生させるプレースホルダーにフォールバックします。
         target_id:
-            Identifier of the executor that should handle messages when the
-            predicate succeeds.
+            述語が成功したときにメッセージを処理すべきExecutorの識別子。
         condition_name:
-            Human-friendly label for the predicate used for diagnostics and
-            on-disk persistence.
+            診断やオンディスク永続化に使用される述語の人間に読みやすいラベル。
 
         Examples:
             .. code-block:: python
 
                 case = SwitchCaseEdgeGroupCase(lambda payload: payload["type"] == "csv", target_id="csv_handler")
                 assert case.condition_name == "<lambda>"
+
         """
         if not target_id:
             raise ValueError("SwitchCaseEdgeGroupCase requires a target_id")
@@ -665,11 +606,9 @@ class SwitchCaseEdgeGroupCase(DictConvertible):
 
     @property
     def condition(self) -> Callable[[Any], bool]:
-        """Return the predicate associated with this case.
+        """このケースに関連付けられた述語を返します。
 
-        The placeholder installed during deserialisation raises a
-        `RuntimeError` when invoked so that workflow authors are forced to
-        provide the missing callable explicitly.
+        デシリアライズ時にインストールされるプレースホルダーは呼び出されると`RuntimeError`を発生させるため、ワークフロー作成者は欠落しているコール可能オブジェクトを明示的に提供する必要があります。
 
         Examples:
             .. code-block:: python
@@ -680,17 +619,19 @@ class SwitchCaseEdgeGroupCase(DictConvertible):
                     guard({})
                 except RuntimeError:
                     pass
+
         """
         return self._condition
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise the case metadata without the executable predicate.
+        """実行可能な述語なしでケースメタデータをシリアライズします。
 
         Examples:
             .. code-block:: python
 
                 case = SwitchCaseEdgeGroupCase(lambda _: True, target_id="handler")
                 assert case.to_dict()["target_id"] == "handler"
+
         """
         payload = {"target_id": self.target_id, "type": self.type}
         if self.condition_name is not None:
@@ -699,7 +640,7 @@ class SwitchCaseEdgeGroupCase(DictConvertible):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SwitchCaseEdgeGroupCase":
-        """Instantiate a case from its serialised dictionary payload.
+        """シリアライズされた辞書ペイロードからケースをインスタンス化します。
 
         Examples:
             .. code-block:: python
@@ -707,6 +648,7 @@ class SwitchCaseEdgeGroupCase(DictConvertible):
                 payload = {"target_id": "handler", "condition_name": "is_ready"}
                 case = SwitchCaseEdgeGroupCase.from_dict(payload)
                 assert case.target_id == "handler"
+
         """
         return cls(
             condition=None,
@@ -717,23 +659,24 @@ class SwitchCaseEdgeGroupCase(DictConvertible):
 
 @dataclass(init=False)
 class SwitchCaseEdgeGroupDefault(DictConvertible):
-    """Persistable descriptor for the fallback branch of a switch-case group.
+    """switch-caseグループのフォールバック分岐の永続化可能な記述。
 
-    The default branch is guaranteed to exist and is invoked when every other
-    case predicate fails to match the payload.
+    デフォルト分岐は必ず存在し、他のすべてのケース述語がペイロードにマッチしなかった場合に呼び出されます。
+
     """
 
     target_id: str
     type: str
 
     def __init__(self, target_id: str) -> None:
-        """Point the default branch toward the given executor identifier.
+        """デフォルト分岐を指定されたExecutor識別子に向けます。
 
         Examples:
             .. code-block:: python
 
                 fallback = SwitchCaseEdgeGroupDefault(target_id="dead_letter")
                 assert fallback.target_id == "dead_letter"
+
         """
         if not target_id:
             raise ValueError("SwitchCaseEdgeGroupDefault requires a target_id")
@@ -741,19 +684,20 @@ class SwitchCaseEdgeGroupDefault(DictConvertible):
         self.type = "Default"
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise the default branch metadata for persistence or logging.
+        """永続化やログ記録のためにデフォルト分岐のメタデータをシリアライズします。
 
         Examples:
             .. code-block:: python
 
                 fallback = SwitchCaseEdgeGroupDefault("dead_letter")
                 assert fallback.to_dict()["type"] == "Default"
+
         """
         return {"target_id": self.target_id, "type": self.type}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SwitchCaseEdgeGroupDefault":
-        """Recreate the default branch from its persisted form.
+        """永続化された形式からデフォルト分岐を再作成します。
 
         Examples:
             .. code-block:: python
@@ -761,6 +705,7 @@ class SwitchCaseEdgeGroupDefault(DictConvertible):
                 payload = {"target_id": "dead_letter", "type": "Default"}
                 fallback = SwitchCaseEdgeGroupDefault.from_dict(payload)
                 assert fallback.target_id == "dead_letter"
+
         """
         return cls(target_id=data["target_id"])
 
@@ -768,11 +713,10 @@ class SwitchCaseEdgeGroupDefault(DictConvertible):
 @EdgeGroup.register
 @dataclass(init=False)
 class SwitchCaseEdgeGroup(FanOutEdgeGroup):
-    """Fan-out variant that mimics a traditional switch/case control flow.
+    """従来のswitch/case制御フローを模倣するファンアウトバリアント。
 
-    Each case inspects the message payload and decides whether it should handle
-    the message. Exactly one case-or the default branch-returns a target at
-    runtime, preserving single-dispatch semantics.
+    各ケースはメッセージペイロードを検査し、そのメッセージを処理すべきかどうかを決定します。ランタイムでは正確に1つのケースまたはデフォルト分岐がターゲットを返し、単一ディスパッチの意味を保持します。
+
     """
 
     cases: list[SwitchCaseEdgeGroupCase | SwitchCaseEdgeGroupDefault]
@@ -784,18 +728,16 @@ class SwitchCaseEdgeGroup(FanOutEdgeGroup):
         *,
         id: str | None = None,
     ) -> None:
-        """Configure a switch/case routing structure for a single source executor.
+        """単一のソースExecutorのためのswitch/caseルーティング構造を構成します。
 
         Parameters
         ----------
         source_id:
-            Identifier of the executor producing the message to be routed.
+            メッセージをルーティングするExecutorの識別子。
         cases:
-            Ordered sequence of case descriptors concluding with a
-            `SwitchCaseEdgeGroupDefault`. Ordering matters because the runtime
-            evaluates each branch sequentially until one matches.
+            `SwitchCaseEdgeGroupDefault`で終わる順序付きのケース記述子のシーケンス。順序は重要で、ランタイムは各分岐を順に評価してマッチするものを探します。
         id:
-            Optional explicit identifier for the edge group.
+            エッジグループのオプションの明示的識別子。
 
         Examples:
             .. code-block:: python
@@ -807,6 +749,7 @@ class SwitchCaseEdgeGroup(FanOutEdgeGroup):
                 group = SwitchCaseEdgeGroup("router", cases)
                 encoded = group.to_dict()
                 assert encoded["cases"][0]["type"] == "Case"
+
         """
         if len(cases) < 2:
             raise ValueError("SwitchCaseEdgeGroup must contain at least two cases (including the default case).")
@@ -833,21 +776,20 @@ class SwitchCaseEdgeGroup(FanOutEdgeGroup):
             raise RuntimeError("No matching case found in SwitchCaseEdgeGroup")
 
         target_ids = [case.target_id for case in cases]
-        # Call FanOutEdgeGroup constructor directly to avoid type checking issues
+        # 型チェックの問題を避けるためにFanOutEdgeGroupのコンストラクタを直接呼び出します
         edges = [Edge(source_id=source_id, target_id=target) for target in target_ids]
         EdgeGroup.__init__(self, edges, id=id, type=self.__class__.__name__)
 
-        # Initialize FanOutEdgeGroup-specific attributes
+        # FanOutEdgeGroup固有の属性を初期化します
         self._target_ids = list(target_ids)  # type: ignore[attr-defined]
         self._selection_func = selection_func  # type: ignore[attr-defined]
         self.selection_func_name = None  # type: ignore[attr-defined]
         self.cases = list(cases)
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise the switch-case group, capturing all case descriptors.
+        """すべてのケース記述子をキャプチャしてswitch-caseグループをシリアライズします。
 
-        Each case is converted using `encode_value` to respect dataclass
-        semantics as well as any nested serialisable structures.
+        各ケースは`encode_value`を使って変換され、dataclassのセマンティクスやネストされたシリアライズ可能な構造を尊重します。
 
         Examples:
             .. code-block:: python
@@ -861,6 +803,7 @@ class SwitchCaseEdgeGroup(FanOutEdgeGroup):
                 )
                 snapshot = group.to_dict()
                 assert len(snapshot["cases"]) == 2
+
         """
         payload = super().to_dict()
         payload["cases"] = [encode_value(case) for case in self.cases]

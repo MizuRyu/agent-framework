@@ -4,22 +4,22 @@ from typing import Any
 from pytest import fixture
 
 
-# region Connector Settings fixtures
+# region Connector Settingsのフィクスチャ
 @fixture
 def exclude_list(request: Any) -> list[str]:
-    """Fixture that returns a list of environment variables to exclude."""
+    """除外する環境変数のリストを返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else []
 
 
 @fixture
 def override_env_param_dict(request: Any) -> dict[str, str]:
-    """Fixture that returns a dict of environment variables to override."""
+    """上書きする環境変数の辞書を返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else {}
 
 
 @fixture()
 def openai_unit_test_env(monkeypatch, exclude_list, override_env_param_dict):  # type: ignore
-    """Fixture to set environment variables for OpenAISettings."""
+    """OpenAISettings用の環境変数を設定するフィクスチャ。"""
 
     if exclude_list is None:
         exclude_list = []

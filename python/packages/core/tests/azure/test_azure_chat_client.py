@@ -37,7 +37,7 @@ from agent_framework.openai import (
     OpenAIContentFilterException,
 )
 
-# region Service Setup
+# region サービスセットアップ
 
 skip_if_azure_integration_tests_disabled = pytest.mark.skipif(
     os.getenv("RUN_INTEGRATION_TESTS", "false").lower() != "true"
@@ -49,7 +49,7 @@ skip_if_azure_integration_tests_disabled = pytest.mark.skipif(
 
 
 def test_init(azure_openai_unit_test_env: dict[str, str]) -> None:
-    # Test successful initialization
+    # 正常な初期化のテスト
     azure_chat_client = AzureOpenAIChatClient()
 
     assert azure_chat_client.client is not None
@@ -59,7 +59,7 @@ def test_init(azure_openai_unit_test_env: dict[str, str]) -> None:
 
 
 def test_init_client(azure_openai_unit_test_env: dict[str, str]) -> None:
-    # Test successful initialization with client
+    # クライアントを使った正常な初期化のテスト
     client = MagicMock(spec=AsyncAzureOpenAI)
     azure_chat_client = AzureOpenAIChatClient(async_client=client)
 
@@ -68,7 +68,7 @@ def test_init_client(azure_openai_unit_test_env: dict[str, str]) -> None:
 
 
 def test_init_base_url(azure_openai_unit_test_env: dict[str, str]) -> None:
-    # Custom header for testing
+    # テスト用のカスタムヘッダー
     default_headers = {"X-Unit-Test": "test-guid"}
 
     azure_chat_client = AzureOpenAIChatClient(
@@ -85,7 +85,7 @@ def test_init_base_url(azure_openai_unit_test_env: dict[str, str]) -> None:
 
 
 def test_azure_openai_chat_client_instructions_sent_once(azure_openai_unit_test_env: dict[str, str]) -> None:
-    """Ensure instructions are only included once when preparing Azure OpenAI chat requests."""
+    """Azure OpenAIチャットリクエストの準備時に指示が一度だけ含まれることを保証する。"""
     client = AzureOpenAIChatClient()
     instructions = "You are a helpful assistant."
     chat_options = ChatOptions(instructions=instructions)
@@ -149,17 +149,16 @@ def test_serialize(azure_openai_unit_test_env: dict[str, str]) -> None:
     assert settings["api_version"] == dumped_settings["api_version"]
     assert "api_key" not in dumped_settings
 
-    # Assert that the default header we added is present in the dumped_settings default headers
+    # 追加したデフォルトヘッダーがdumped_settingsのデフォルトヘッダーに存在することをアサートする
     for key, value in default_headers.items():
         assert key in dumped_settings["default_headers"]
         assert dumped_settings["default_headers"][key] == value
 
-    # Assert that the 'User-agent' header is not present in the dumped_settings default headers
+    # 'User-agent'ヘッダーがdumped_settingsのデフォルトヘッダーに存在しないことをアサートする
     assert USER_AGENT_KEY not in dumped_settings["default_headers"]
 
 
-# endregion
-# region CMC
+# endregion region CMC
 
 
 @pytest.fixture
@@ -598,16 +597,16 @@ async def test_get_streaming(
         model=azure_openai_unit_test_env["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
         stream=True,
         messages=azure_chat_client._prepare_chat_history_for_request(chat_history),  # type: ignore
-        # NOTE: The `stream_options={"include_usage": True}` is explicitly enforced in
-        # `OpenAIChatCompletionBase._inner_get_streaming_response`.
-        # To ensure consistency, we align the arguments here accordingly.
+        # 注意: `stream_options={"include_usage": True}` は
+        # `OpenAIChatCompletionBase._inner_get_streaming_response` で明示的に強制されています。
+        # 一貫性を保つために、ここでも引数を合わせています。
         stream_options={"include_usage": True},
     )
 
 
 @ai_function
 def get_story_text() -> str:
-    """Returns a story about Emily and David."""
+    """EmilyとDavidの物語を返す。"""
     return (
         "Emily and David, two passionate scientists, met during a research expedition to Antarctica. "
         "Bonded by their love for the natural world and shared curiosity, they uncovered a "
@@ -618,14 +617,14 @@ def get_story_text() -> str:
 
 @ai_function
 def get_weather(location: str) -> str:
-    """Get the current weather for a location."""
+    """指定された場所の現在の天気を取得する。"""
     return f"The weather in {location} is sunny and 72°F."
 
 
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_response() -> None:
-    """Test Azure OpenAI chat completion responses."""
+    """Azure OpenAIチャット完了レスポンスのテスト。"""
     azure_chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     assert isinstance(azure_chat_client, ChatClientProtocol)
 
@@ -641,12 +640,12 @@ async def test_azure_openai_chat_client_response() -> None:
     )
     messages.append(ChatMessage(role="user", text="who are Emily and David?"))
 
-    # Test that the client can be used to get a response
+    # クライアントがレスポンス取得に使用できることをテストする
     response = await azure_chat_client.get_response(messages=messages)
 
     assert response is not None
     assert isinstance(response, ChatResponse)
-    # Check for any relevant keywords that indicate the AI understood the context
+    # AIがコンテキストを理解したことを示す関連キーワードをチェックする
     assert any(
         word in response.text.lower() for word in ["scientists", "research", "antarctica", "glaciology", "climate"]
     )
@@ -655,14 +654,14 @@ async def test_azure_openai_chat_client_response() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_response_tools() -> None:
-    """Test AzureOpenAI chat completion responses."""
+    """AzureOpenAIチャット完了レスポンスのテスト。"""
     azure_chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     assert isinstance(azure_chat_client, ChatClientProtocol)
 
     messages: list[ChatMessage] = []
     messages.append(ChatMessage(role="user", text="who are Emily and David?"))
 
-    # Test that the client can be used to get a response
+    # クライアントがレスポンス取得に使用できることをテストする
     response = await azure_chat_client.get_response(
         messages=messages,
         tools=[get_story_text],
@@ -677,7 +676,7 @@ async def test_azure_openai_chat_client_response_tools() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_streaming() -> None:
-    """Test Azure OpenAI chat completion responses."""
+    """Azure OpenAIチャット完了レスポンスのテスト。"""
     azure_chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     assert isinstance(azure_chat_client, ChatClientProtocol)
 
@@ -693,7 +692,7 @@ async def test_azure_openai_chat_client_streaming() -> None:
     )
     messages.append(ChatMessage(role="user", text="who are Emily and David?"))
 
-    # Test that the client can be used to get a response
+    # クライアントがレスポンス取得に使用できることをテストする
     response = azure_chat_client.get_streaming_response(messages=messages)
 
     full_message: str = ""
@@ -712,14 +711,14 @@ async def test_azure_openai_chat_client_streaming() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_streaming_tools() -> None:
-    """Test AzureOpenAI chat completion responses."""
+    """AzureOpenAIチャット完了レスポンスのテスト。"""
     azure_chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     assert isinstance(azure_chat_client, ChatClientProtocol)
 
     messages: list[ChatMessage] = []
     messages.append(ChatMessage(role="user", text="who are Emily and David?"))
 
-    # Test that the client can be used to get a response
+    # クライアントがレスポンス取得に使用できることをテストする
     response = azure_chat_client.get_streaming_response(
         messages=messages,
         tools=[get_story_text],
@@ -739,11 +738,11 @@ async def test_azure_openai_chat_client_streaming_tools() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_agent_basic_run():
-    """Test Azure OpenAI chat client agent basic run functionality with AzureOpenAIChatClient."""
+    """AzureOpenAIChatClientを使ったAzure OpenAIチャットクライアントエージェントの基本的な実行機能のテスト。"""
     async with ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
     ) as agent:
-        # Test basic run
+        # 基本的な実行のテスト
         response = await agent.run("Please respond with exactly: 'This is a response test.'")
 
         assert isinstance(response, AgentRunResponse)
@@ -755,11 +754,11 @@ async def test_azure_openai_chat_client_agent_basic_run():
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_agent_basic_run_streaming():
-    """Test Azure OpenAI chat client agent basic streaming functionality with AzureOpenAIChatClient."""
+    """AzureOpenAIChatClientを使ったAzure OpenAIチャットクライアントエージェントの基本的なストリーミング機能のテスト。"""
     async with ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
     ) as agent:
-        # Test streaming run
+        # ストリーミング実行のテスト
         full_text = ""
         async for chunk in agent.run_stream("Please respond with exactly: 'This is a streaming response test.'"):
             assert isinstance(chunk, AgentRunResponseUpdate)
@@ -773,21 +772,21 @@ async def test_azure_openai_chat_client_agent_basic_run_streaming():
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_agent_thread_persistence():
-    """Test Azure OpenAI chat client agent thread persistence across runs with AzureOpenAIChatClient."""
+    """AzureOpenAIChatClientを使ったAzure OpenAIチャットクライアントエージェントの実行間でのスレッド永続性のテスト。"""
     async with ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant with good memory.",
     ) as agent:
-        # Create a new thread that will be reused
+        # 再利用される新しいスレッドを作成する
         thread = agent.get_new_thread()
 
-        # First interaction
+        # 最初のインタラクション
         response1 = await agent.run("My name is Alice. Remember this.", thread=thread)
 
         assert isinstance(response1, AgentRunResponse)
         assert response1.text is not None
 
-        # Second interaction - test memory
+        # 2回目のインタラクション - メモリをテストする
         response2 = await agent.run("What is my name?", thread=thread)
 
         assert isinstance(response2, AgentRunResponse)
@@ -798,31 +797,31 @@ async def test_azure_openai_chat_client_agent_thread_persistence():
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_agent_existing_thread():
-    """Test Azure OpenAI chat client agent with existing thread to continue conversations across agent instances."""
-    # First conversation - capture the thread
+    """既存のスレッドを使ってAzure OpenAIチャットクライアントエージェントがエージェントインスタンス間で会話を継続できるかテストする。"""
+    # 最初の会話 - スレッドを取得する
     preserved_thread = None
 
     async with ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant with good memory.",
     ) as first_agent:
-        # Start a conversation and capture the thread
+        # 会話を開始してスレッドを取得する
         thread = first_agent.get_new_thread()
         first_response = await first_agent.run("My name is Alice. Remember this.", thread=thread)
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
 
-        # Preserve the thread for reuse
+        # スレッドを保存して再利用する
         preserved_thread = thread
 
-    # Second conversation - reuse the thread in a new agent instance
+    # 2回目の会話 - 新しいエージェントインスタンスでスレッドを再利用する
     if preserved_thread:
         async with ChatAgent(
             chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
             instructions="You are a helpful assistant with good memory.",
         ) as second_agent:
-            # Reuse the preserved thread
+            # 保存したスレッドを再利用する
             second_response = await second_agent.run("What is my name?", thread=preserved_thread)
 
             assert isinstance(second_response, AgentRunResponse)
@@ -833,25 +832,25 @@ async def test_azure_openai_chat_client_agent_existing_thread():
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_chat_client_agent_level_tool_persistence():
-    """Test that agent-level tools persist across multiple runs with Azure Chat Client."""
+    """Azure Chat Clientでエージェントレベルのツールが複数回の実行で持続することをテストする。"""
 
     async with ChatAgent(
         chat_client=AzureOpenAIChatClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant that uses available tools.",
         tools=[get_weather],  # Agent-level tool
     ) as agent:
-        # First run - agent-level tool should be available
+        # 最初の実行 - エージェントレベルのツールが利用可能であるべき
         first_response = await agent.run("What's the weather like in Chicago?")
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
-        # Should use the agent-level weather tool
+        # エージェントレベルの天気ツールを使用するはずである
         assert any(term in first_response.text.lower() for term in ["chicago", "sunny", "72"])
 
-        # Second run - agent-level tool should still be available (persistence test)
+        # 2回目の実行 - エージェントレベルのツールがまだ利用可能であるべき（持続性テスト）
         second_response = await agent.run("What's the weather in Miami?")
 
         assert isinstance(second_response, AgentRunResponse)
         assert second_response.text is not None
-        # Should use the agent-level weather tool again
+        # 再びエージェントレベルの天気ツールを使用するはずである
         assert any(term in second_response.text.lower() for term in ["miami", "sunny", "72"])

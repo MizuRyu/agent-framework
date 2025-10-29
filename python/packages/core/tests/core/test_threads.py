@@ -11,7 +11,7 @@ from agent_framework.exceptions import AgentThreadException
 
 
 class MockChatMessageStore:
-    """Mock implementation of ChatMessageStoreProtocol for testing."""
+    """テスト用の ChatMessageStoreProtocol のモック実装。"""
 
     def __init__(self, messages: list[ChatMessage] | None = None) -> None:
         self._messages = messages or []
@@ -42,7 +42,7 @@ class MockChatMessageStore:
 
 @pytest.fixture
 def sample_messages() -> list[ChatMessage]:
-    """Fixture providing sample chat messages for testing."""
+    """テスト用のサンプルチャットメッセージを提供するフィクスチャ。"""
     return [
         ChatMessage(role=Role.USER, text="Hello", message_id="msg1"),
         ChatMessage(role=Role.ASSISTANT, text="Hi there!", message_id="msg2"),
@@ -52,35 +52,35 @@ def sample_messages() -> list[ChatMessage]:
 
 @pytest.fixture
 def sample_message() -> ChatMessage:
-    """Fixture providing a single sample chat message for testing."""
+    """テスト用の単一のサンプルチャットメッセージを提供するフィクスチャ。"""
     return ChatMessage(role=Role.USER, text="Test message", message_id="test1")
 
 
 class TestAgentThread:
-    """Test cases for AgentThread class."""
+    """AgentThread クラスのテストケース。"""
 
     def test_init_with_no_parameters(self) -> None:
-        """Test AgentThread initialization with no parameters."""
+        """パラメータなしでの AgentThread 初期化をテストします。"""
         thread = AgentThread()
         assert thread.service_thread_id is None
         assert thread.message_store is None
 
     def test_init_with_service_thread_id(self) -> None:
-        """Test AgentThread initialization with service_thread_id."""
+        """service_thread_id を指定した AgentThread 初期化をテストします。"""
         service_thread_id = "test-conversation-123"
         thread = AgentThread(service_thread_id=service_thread_id)
         assert thread.service_thread_id == service_thread_id
         assert thread.message_store is None
 
     def test_init_with_message_store(self) -> None:
-        """Test AgentThread initialization with message_store."""
+        """message_store を指定した AgentThread 初期化をテストします。"""
         store = ChatMessageStore()
         thread = AgentThread(message_store=store)
         assert thread.service_thread_id is None
         assert thread.message_store is store
 
     def test_service_thread_id_property_setter(self) -> None:
-        """Test service_thread_id property setter."""
+        """service_thread_id プロパティのセッターをテストします。"""
         thread = AgentThread()
         service_thread_id = "test-conversation-456"
 
@@ -88,7 +88,7 @@ class TestAgentThread:
         assert thread.service_thread_id == service_thread_id
 
     def test_service_thread_id_setter_with_existing_message_store_raises_error(self) -> None:
-        """Test that setting service_thread_id when message_store exists raises AgentThreadException."""
+        """message_store が存在する場合に service_thread_id を設定すると AgentThreadException が発生することをテストします。"""
         store = ChatMessageStore()
         thread = AgentThread(message_store=store)
 
@@ -96,13 +96,13 @@ class TestAgentThread:
             thread.service_thread_id = "test-conversation-789"
 
     def test_service_thread_id_setter_with_none_values(self) -> None:
-        """Test service_thread_id setter with None values does nothing."""
+        """None 値での service_thread_id セッターは何もしないことをテストします。"""
         thread = AgentThread()
-        thread.service_thread_id = None  # Should not raise error
+        thread.service_thread_id = None  # エラーを発生させるべきではありません。
         assert thread.service_thread_id is None
 
     def test_message_store_property_setter(self) -> None:
-        """Test message_store property setter."""
+        """message_store プロパティのセッターをテストします。"""
         thread = AgentThread()
         store = ChatMessageStore()
 
@@ -110,7 +110,7 @@ class TestAgentThread:
         assert thread.message_store is store
 
     def test_message_store_setter_with_existing_service_thread_id_raises_error(self) -> None:
-        """Test that setting message_store when service_thread_id exists raises AgentThreadException."""
+        """service_thread_id が存在する場合に message_store を設定すると AgentThreadException が発生することをテストします。"""
         service_thread_id = "test-conversation-999"
         thread = AgentThread(service_thread_id=service_thread_id)
         store = ChatMessageStore()
@@ -119,13 +119,13 @@ class TestAgentThread:
             thread.message_store = store
 
     def test_message_store_setter_with_none_values(self) -> None:
-        """Test message_store setter with None values does nothing."""
+        """None 値での message_store セッターは何もしないことをテストします。"""
         thread = AgentThread()
-        thread.message_store = None  # Should not raise error
+        thread.message_store = None  # エラーを発生させるべきではありません。
         assert thread.message_store is None
 
     async def test_get_messages_with_message_store(self, sample_messages: list[ChatMessage]) -> None:
-        """Test get_messages when message_store is set."""
+        """message_store が設定されている場合の get_messages をテストします。"""
         store = ChatMessageStore(sample_messages)
         thread = AgentThread(message_store=store)
 
@@ -140,22 +140,22 @@ class TestAgentThread:
         assert messages[2].text == "How are you?"
 
     async def test_get_messages_with_no_message_store(self) -> None:
-        """Test get_messages when no message_store is set."""
+        """message_store が設定されていない場合の get_messages をテストします。"""
         thread = AgentThread()
 
         assert thread.message_store is None
 
     async def test_on_new_messages_with_service_thread_id(self, sample_message: ChatMessage) -> None:
-        """Test _on_new_messages when service_thread_id is set (should do nothing)."""
+        """service_thread_id が設定されている場合の _on_new_messages は何もしないことをテストします。"""
         thread = AgentThread(service_thread_id="test-conv")
 
         await thread.on_new_messages(sample_message)
 
-        # Should not create a message store
+        # メッセージストアを作成すべきではありません。
         assert thread.message_store is None
 
     async def test_on_new_messages_single_message_creates_store(self, sample_message: ChatMessage) -> None:
-        """Test _on_new_messages with single message creates ChatMessageStore."""
+        """単一メッセージで _on_new_messages が ChatMessageStore を作成することをテストします。"""
         thread = AgentThread()
 
         await thread.on_new_messages(sample_message)
@@ -167,7 +167,7 @@ class TestAgentThread:
         assert messages[0].text == "Test message"
 
     async def test_on_new_messages_multiple_messages(self, sample_messages: list[ChatMessage]) -> None:
-        """Test _on_new_messages with multiple messages."""
+        """複数メッセージでの _on_new_messages をテストします。"""
         thread = AgentThread()
 
         await thread.on_new_messages(sample_messages)
@@ -177,7 +177,7 @@ class TestAgentThread:
         assert len(messages) == 3
 
     async def test_on_new_messages_with_existing_store(self, sample_message: ChatMessage) -> None:
-        """Test _on_new_messages adds to existing message store."""
+        """既存のメッセージストアに _on_new_messages が追加することをテストします。"""
         initial_messages = [ChatMessage(role=Role.USER, text="Initial", message_id="init1")]
         store = ChatMessageStore(initial_messages)
         thread = AgentThread(message_store=store)
@@ -191,7 +191,7 @@ class TestAgentThread:
         assert messages[1].text == "Test message"
 
     async def test_deserialize_with_service_thread_id(self) -> None:
-        """Test _deserialize with service_thread_id."""
+        """service_thread_id を用いた _deserialize をテストします。"""
         serialized_data = {"service_thread_id": "test-conv-123", "chat_message_store_state": None}
 
         thread = await AgentThread.deserialize(serialized_data)
@@ -200,7 +200,7 @@ class TestAgentThread:
         assert thread.message_store is None
 
     async def test_deserialize_with_store_state(self, sample_messages: list[ChatMessage]) -> None:
-        """Test _deserialize with chat_message_store_state."""
+        """chat_message_store_state を用いた _deserialize をテストします。"""
         store_state = {"messages": sample_messages}
         serialized_data = {"service_thread_id": None, "chat_message_store_state": store_state}
 
@@ -211,7 +211,7 @@ class TestAgentThread:
         assert isinstance(thread.message_store, ChatMessageStore)
 
     async def test_deserialize_with_no_state(self) -> None:
-        """Test _deserialize with no state."""
+        """状態なしでの _deserialize をテストします。"""
         thread = AgentThread()
         serialized_data = {"service_thread_id": None, "chat_message_store_state": None}
 
@@ -221,7 +221,7 @@ class TestAgentThread:
         assert thread.message_store is None
 
     async def test_deserialize_with_existing_store(self) -> None:
-        """Test _deserialize with existing message store."""
+        """既存のメッセージストアを用いた _deserialize をテストします。"""
         store = MockChatMessageStore()
         thread = AgentThread(message_store=store)
         serialized_data: dict[str, Any] = {
@@ -235,7 +235,7 @@ class TestAgentThread:
         assert store._messages[0].text == "test"
 
     async def test_serialize_with_service_thread_id(self) -> None:
-        """Test serialize with service_thread_id."""
+        """service_thread_id を用いたシリアライズをテストします。"""
         thread = AgentThread(service_thread_id="test-conv-456")
 
         result = await thread.serialize()
@@ -244,7 +244,7 @@ class TestAgentThread:
         assert result["chat_message_store_state"] is None
 
     async def test_serialize_with_message_store(self) -> None:
-        """Test serialize with message_store."""
+        """message_store を用いたシリアライズをテストします。"""
         store = MockChatMessageStore()
         thread = AgentThread(message_store=store)
 
@@ -255,7 +255,7 @@ class TestAgentThread:
         assert store._serialize_calls == 1  # pyright: ignore[reportPrivateUsage]
 
     async def test_serialize_with_no_state(self) -> None:
-        """Test serialize with no state."""
+        """状態なしでのシリアライズをテストします。"""
         thread = AgentThread()
 
         result = await thread.serialize()
@@ -264,7 +264,7 @@ class TestAgentThread:
         assert result["chat_message_store_state"] is None
 
     async def test_serialize_with_kwargs(self) -> None:
-        """Test serialize passes kwargs to message store."""
+        """シリアライズが kwargs を message store に渡すことをテストします。"""
         store = MockChatMessageStore()
         thread = AgentThread(message_store=store)
 
@@ -273,7 +273,7 @@ class TestAgentThread:
         assert store._serialize_calls == 1  # pyright: ignore[reportPrivateUsage]
 
     async def test_serialize_round_trip_messages(self, sample_messages: list[ChatMessage]) -> None:
-        """Test a roundtrip of the serialization."""
+        """シリアライズの往復をテストします。"""
         store = ChatMessageStore(sample_messages)
         thread = AgentThread(message_store=store)
         new_thread = await AgentThread.deserialize(await thread.serialize())
@@ -283,7 +283,7 @@ class TestAgentThread:
         assert {new.text for new in new_messages} == {orig.text for orig in sample_messages}
 
     async def test_serialize_round_trip_thread_id(self) -> None:
-        """Test a roundtrip of the serialization."""
+        """シリアライズの往復をテストします。"""
         thread = AgentThread(service_thread_id="test-1234")
         new_thread = await AgentThread.deserialize(await thread.serialize())
         assert new_thread.message_store is None
@@ -291,20 +291,20 @@ class TestAgentThread:
 
 
 class TestChatMessageList:
-    """Test cases for ChatMessageStore class."""
+    """ChatMessageStore クラスのテストケース。"""
 
     def test_init_empty(self) -> None:
-        """Test ChatMessageStore initialization with no messages."""
+        """メッセージなしでの ChatMessageStore 初期化をテストします。"""
         store = ChatMessageStore()
         assert len(store.messages) == 0
 
     def test_init_with_messages(self, sample_messages: list[ChatMessage]) -> None:
-        """Test ChatMessageStore initialization with messages."""
+        """メッセージありでの ChatMessageStore 初期化をテストします。"""
         store = ChatMessageStore(sample_messages)
         assert len(store.messages) == 3
 
     async def test_add_messages(self, sample_messages: list[ChatMessage]) -> None:
-        """Test adding messages to the store."""
+        """ストアへのメッセージ追加をテストします。"""
         store = ChatMessageStore()
 
         await store.add_messages(sample_messages)
@@ -314,7 +314,7 @@ class TestChatMessageList:
         assert messages[0].text == "Hello"
 
     async def test_get_messages(self, sample_messages: list[ChatMessage]) -> None:
-        """Test getting messages from the store."""
+        """ストアからのメッセージ取得をテストします。"""
         store = ChatMessageStore(sample_messages)
 
         messages = await store.list_messages()
@@ -323,7 +323,7 @@ class TestChatMessageList:
         assert messages[0].message_id == "msg1"
 
     async def test_serialize_state(self, sample_messages: list[ChatMessage]) -> None:
-        """Test serializing store state."""
+        """ストア状態のシリアライズをテストします。"""
         store = ChatMessageStore(sample_messages)
 
         result = await store.serialize()
@@ -332,7 +332,7 @@ class TestChatMessageList:
         assert len(result["messages"]) == 3
 
     async def test_serialize_state_empty(self) -> None:
-        """Test serializing empty store state."""
+        """空のストア状態のシリアライズをテストします。"""
         store = ChatMessageStore()
 
         result = await store.serialize()
@@ -341,7 +341,7 @@ class TestChatMessageList:
         assert len(result["messages"]) == 0
 
     async def test_deserialize_state(self, sample_messages: list[ChatMessage]) -> None:
-        """Test deserializing store state."""
+        """ストア状態のデシリアライズをテストします。"""
         store = ChatMessageStore()
         state_data = {"messages": sample_messages}
 
@@ -352,7 +352,7 @@ class TestChatMessageList:
         assert messages[0].text == "Hello"
 
     async def test_deserialize_state_none(self) -> None:
-        """Test deserializing None state."""
+        """None 状態のデシリアライズをテストします。"""
         store = ChatMessageStore()
 
         await store.update_from_state(None)
@@ -360,7 +360,7 @@ class TestChatMessageList:
         assert len(store.messages) == 0
 
     async def test_deserialize_state_empty(self) -> None:
-        """Test deserializing empty state."""
+        """空の状態のデシリアライズをテストします。"""
         store = ChatMessageStore()
 
         await store.update_from_state({})
@@ -369,34 +369,34 @@ class TestChatMessageList:
 
 
 class TestStoreState:
-    """Test cases for ChatMessageStoreState class."""
+    """ChatMessageStoreState クラスのテストケース。"""
 
     def test_init(self, sample_messages: list[ChatMessage]) -> None:
-        """Test ChatMessageStoreState initialization."""
+        """ChatMessageStoreState の初期化をテストします。"""
         state = ChatMessageStoreState(messages=sample_messages)
 
         assert len(state.messages) == 3
         assert state.messages[0].text == "Hello"
 
     def test_init_empty(self) -> None:
-        """Test ChatMessageStoreState initialization with empty messages."""
+        """空のメッセージでの ChatMessageStoreState 初期化をテストします。"""
         state = ChatMessageStoreState(messages=[])
 
         assert len(state.messages) == 0
 
 
 class TestThreadState:
-    """Test cases for AgentThreadState class."""
+    """AgentThreadState クラスのテストケース。"""
 
     def test_init_with_service_thread_id(self) -> None:
-        """Test AgentThreadState initialization with service_thread_id."""
+        """service_thread_id を用いた AgentThreadState 初期化をテストします。"""
         state = AgentThreadState(service_thread_id="test-conv-123")
 
         assert state.service_thread_id == "test-conv-123"
         assert state.chat_message_store_state is None
 
     def test_init_with_chat_message_store_state(self) -> None:
-        """Test AgentThreadState initialization with chat_message_store_state."""
+        """chat_message_store_state を用いた AgentThreadState 初期化をテストします。"""
         store_data: dict[str, Any] = {"messages": []}
         state = AgentThreadState.from_dict({"chat_message_store_state": store_data})
 
@@ -404,13 +404,13 @@ class TestThreadState:
         assert state.chat_message_store_state.messages == []
 
     def test_init_with_both(self) -> None:
-        """Test AgentThreadState initialization with both parameters."""
+        """両方のパラメータを用いた AgentThreadState 初期化をテストします。"""
         store_data: dict[str, Any] = {"messages": []}
         with pytest.raises(AgentThreadException):
             AgentThreadState(service_thread_id="test-conv-123", chat_message_store_state=store_data)
 
     def test_init_defaults(self) -> None:
-        """Test AgentThreadState initialization with defaults."""
+        """デフォルト値での AgentThreadState 初期化をテストします。"""
         state = AgentThreadState()
 
         assert state.service_thread_id is None

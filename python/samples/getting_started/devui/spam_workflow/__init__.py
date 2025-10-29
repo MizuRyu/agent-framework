@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Spam detection workflow sample for DevUI testing."""
+"""DevUIテスト用のスパム検出ワークフローサンプル。"""
 
 from .workflow import workflow
 

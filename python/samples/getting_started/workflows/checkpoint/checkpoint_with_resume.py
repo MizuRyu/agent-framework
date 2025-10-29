@@ -56,23 +56,21 @@ Prerequisites:
 - Filesystem access for writing JSON checkpoint files in a temp directory.
 """
 
-# Define the temporary directory for storing checkpoints.
-# These files allow the workflow to be resumed later.
+# チェックポイントを保存するための一時ディレクトリを定義します。 これらのファイルにより、ワークフローを後で再開できます。
 DIR = os.path.dirname(__file__)
 TEMP_DIR = os.path.join(DIR, "tmp", "checkpoints")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 
 class UpperCaseExecutor(Executor):
-    """Uppercases the input text and persists both local and shared state."""
+    """入力テキストを大文字に変換し、ローカルおよび共有状態の両方を永続化します。"""
 
     @handler
     async def to_upper_case(self, text: str, ctx: WorkflowContext[str]) -> None:
         result = text.upper()
         print(f"UpperCaseExecutor: '{text}' -> '{result}'")
 
-        # Persist executor-local state so it is captured in checkpoints
-        # and available after resume for observability or logic.
+        # executor ローカルの状態を永続化し、チェックポイントにキャプチャして再開後に観測性やロジックで利用可能にします。
         prev = await ctx.get_executor_state() or {}
         count = int(prev.get("count", 0)) + 1
         await ctx.set_executor_state({
@@ -81,16 +79,16 @@ class UpperCaseExecutor(Executor):
             "last_output": result,
         })
 
-        # Write to shared_state so downstream executors and any resumed runs can read it.
+        # shared_state に書き込み、下流の executor や再開された実行が読み取れるようにします。
         await ctx.set_shared_state("original_input", text)
         await ctx.set_shared_state("upper_output", result)
 
-        # Send transformed text to the next executor.
+        # 変換されたテキストを次の executor に送信します。
         await ctx.send_message(result)
 
 
 class SubmitToLowerAgent(Executor):
-    """Builds an AgentExecutorRequest to send to the lowercasing agent while keeping shared-state visibility."""
+    """shared-state の可視性を保ちながら、lowercasing agent に送信する AgentExecutorRequest を構築します。"""
 
     def __init__(self, id: str, agent_id: str):
         super().__init__(id=id)
@@ -98,16 +96,16 @@ class SubmitToLowerAgent(Executor):
 
     @handler
     async def submit(self, text: str, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-        # Demonstrate reading shared_state written by UpperCaseExecutor.
-        # Shared state survives across checkpoints and is visible to all executors.
+        # UpperCaseExecutor によって書き込まれた shared_state を読み取ることを示します。
+        # 共有状態はチェックポイントを越えて存続し、すべての executor に見えます。
         orig = await ctx.get_shared_state("original_input")
         upper = await ctx.get_shared_state("upper_output")
         print(f"LowerAgent (shared_state): original_input='{orig}', upper_output='{upper}'")
 
-        # Build a minimal, deterministic prompt for the AgentExecutor.
+        # AgentExecutor のための最小限で決定論的な prompt を構築します。
         prompt = f"Convert the following text to lowercase. Return ONLY the transformed text.\n\nText: {text}"
 
-        # Send to the AgentExecutor. should_respond=True instructs the agent to produce a reply.
+        # AgentExecutor に送信します。should_respond=True は agent に返信を生成するよう指示します。
         await ctx.send_message(
             AgentExecutorRequest(messages=[ChatMessage(Role.USER, text=prompt)], should_respond=True),
             target_id=self._agent_id,
@@ -115,13 +113,13 @@ class SubmitToLowerAgent(Executor):
 
 
 class FinalizeFromAgent(Executor):
-    """Consumes the AgentExecutorResponse and yields the final result."""
+    """AgentExecutorResponse を消費し、最終結果を yield します。"""
 
     @handler
     async def finalize(self, response: AgentExecutorResponse, ctx: WorkflowContext[Any, str]) -> None:
         result = response.agent_run_response.text or ""
 
-        # Persist executor-local state for auditability when inspecting checkpoints.
+        # チェックポイントを検査するときの監査可能性のために executor ローカルの状態を永続化します。
         prev = await ctx.get_executor_state() or {}
         count = int(prev.get("count", 0)) + 1
         await ctx.set_executor_state({
@@ -130,19 +128,19 @@ class FinalizeFromAgent(Executor):
             "final": True,
         })
 
-        # Yield the final result so external consumers see the final value.
+        # 最終結果を yield して外部の消費者が最終値を見られるようにします。
         await ctx.yield_output(result)
 
 
 class ReverseTextExecutor(Executor):
-    """Reverses the input text and persists local state."""
+    """入力テキストを逆順にし、ローカル状態を永続化します。"""
 
     @handler
     async def reverse_text(self, text: str, ctx: WorkflowContext[str]) -> None:
         result = text[::-1]
         print(f"ReverseTextExecutor: '{text}' -> '{result}'")
 
-        # Persist executor-local state so checkpoint inspection can reveal progress.
+        # チェックポイント検査で進捗を明らかにできるように executor ローカルの状態を永続化します。
         prev = await ctx.get_executor_state() or {}
         count = int(prev.get("count", 0)) + 1
         await ctx.set_executor_state({
@@ -151,16 +149,16 @@ class ReverseTextExecutor(Executor):
             "last_output": result,
         })
 
-        # Forward the reversed string to the next stage.
+        # 逆順にした文字列を次のステージに転送します。
         await ctx.send_message(result)
 
 
 def create_workflow(checkpoint_storage: FileCheckpointStorage) -> "Workflow":
-    # Instantiate the pipeline executors.
+    # パイプライン executor をインスタンス化します。
     upper_case_executor = UpperCaseExecutor(id="upper-case")
     reverse_text_executor = ReverseTextExecutor(id="reverse-text")
 
-    # Configure the agent stage that lowercases the text.
+    # テキストを小文字にする agent ステージを設定します。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     lower_agent = AgentExecutor(
         chat_client.create_agent(
@@ -169,11 +167,11 @@ def create_workflow(checkpoint_storage: FileCheckpointStorage) -> "Workflow":
         id="lower_agent",
     )
 
-    # Bridge to the agent and terminalization stage.
+    # agent と terminalization ステージへのブリッジです。
     submit_lower = SubmitToLowerAgent(id="submit_lower", agent_id=lower_agent.id)
     finalize = FinalizeFromAgent(id="finalize")
 
-    # Build the workflow with checkpointing enabled.
+    # チェックポイント有効化でワークフローを構築します。
     return (
         WorkflowBuilder(max_iterations=5)
         .add_edge(upper_case_executor, reverse_text_executor)  # Uppercase -> Reverse
@@ -187,7 +185,7 @@ def create_workflow(checkpoint_storage: FileCheckpointStorage) -> "Workflow":
 
 
 def _render_checkpoint_summary(checkpoints: list["WorkflowCheckpoint"]) -> None:
-    """Display human-friendly checkpoint metadata using framework summaries."""
+    """フレームワークの summary を使って人間に優しいチェックポイントのメタデータを表示します。"""
 
     if not checkpoints:
         return
@@ -210,33 +208,33 @@ def _render_checkpoint_summary(checkpoints: list["WorkflowCheckpoint"]) -> None:
 
 
 async def main():
-    # Clear existing checkpoints in this sample directory for a clean run.
+    # このサンプルディレクトリの既存のチェックポイントをクリアしてクリーンな実行にします。
     checkpoint_dir = Path(TEMP_DIR)
     for file in checkpoint_dir.glob("*.json"):  # noqa: ASYNC240
         file.unlink()
 
-    # Backing store for checkpoints written by with_checkpointing.
+    # with_checkpointing によって書き込まれたチェックポイントのバックアップストアです。
     checkpoint_storage = FileCheckpointStorage(storage_path=TEMP_DIR)
 
     workflow = create_workflow(checkpoint_storage=checkpoint_storage)
 
-    # Run the full workflow once and observe events as they stream.
+    # フルワークフローを一度実行し、イベントがストリームされる様子を観察します。
     print("Running workflow with initial message...")
     async for event in workflow.run_stream(message="hello world"):
         print(f"Event: {event}")
 
-    # Inspect checkpoints written during the run.
+    # 実行中に書き込まれたチェックポイントを検査します。
     all_checkpoints = await checkpoint_storage.list_checkpoints()
     if not all_checkpoints:
         print("No checkpoints found!")
         return
 
-    # All checkpoints created by this run share the same workflow_id.
+    # この実行で作成されたすべてのチェックポイントは同じ workflow_id を共有します。
     workflow_id = all_checkpoints[0].workflow_id
 
     _render_checkpoint_summary(all_checkpoints)
 
-    # Offer an interactive selection of checkpoints to resume from.
+    # 再開するチェックポイントを対話的に選択できるようにします。
     sorted_cps = sorted([cp for cp in all_checkpoints if cp.workflow_id == workflow_id], key=lambda c: c.timestamp)
 
     print("\nAvailable checkpoints to resume from:")
@@ -259,12 +257,12 @@ async def main():
 
     chosen_cp_id: str | None = None
 
-    # Try as index first
+    # まずは index として試みます。
     if user_input.isdigit():
         idx = int(user_input)
         if 0 <= idx < len(sorted_cps):
             chosen_cp_id = sorted_cps[idx].checkpoint_id
-    # Fall back to direct id match
+    # 直接 id マッチにフォールバックします。
     if chosen_cp_id is None:
         for cp in sorted_cps:
             if cp.checkpoint_id.startswith(user_input):  # allow prefix match for convenience
@@ -275,9 +273,8 @@ async def main():
         print("Input did not match any checkpoint. Exiting without resuming.")
         return
 
-    # You can reuse the same workflow graph definition and resume from a prior checkpoint.
-    # This second workflow instance does not enable checkpointing to show that resumption
-    # reads from stored state but need not write new checkpoints.
+    # 同じ workflow graph 定義を再利用し、以前のチェックポイントから再開できます。
+    # この2番目のワークフローインスタンスはチェックポイントを有効にせず、再開が保存された状態を読み取るが新しいチェックポイントを書き込む必要がないことを示します。
     new_workflow = create_workflow(checkpoint_storage=checkpoint_storage)
 
     print(f"\nResuming from checkpoint: {chosen_cp_id}")

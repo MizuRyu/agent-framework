@@ -13,13 +13,14 @@ __all__ = ["get_logger"]
 
 
 def get_logger(name: str = "agent_framework") -> logging.Logger:
-    """Get a logger with the specified name, defaulting to 'agent_framework'.
+    """指定された名前のロガーを取得します。デフォルトは 'agent_framework' です。
 
     Args:
-        name (str): The name of the logger. Defaults to 'agent_framework'.
+        name (str): ロガーの名前。デフォルトは 'agent_framework'。
 
     Returns:
-        logging.Logger: The configured logger instance.
+        logging.Logger: 設定されたロガーのインスタンス。
+
     """
     if not name.startswith("agent_framework"):
         raise AgentFrameworkException("Logger name must start with 'agent_framework'.")

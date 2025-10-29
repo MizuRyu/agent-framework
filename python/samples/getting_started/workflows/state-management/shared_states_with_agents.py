@@ -44,21 +44,21 @@ CURRENT_EMAIL_ID_KEY = "current_email_id"
 
 
 class DetectionResultAgent(BaseModel):
-    """Structured output returned by the spam detection agent."""
+    """spam検出Agentが返す構造化出力。"""
 
     is_spam: bool
     reason: str
 
 
 class EmailResponse(BaseModel):
-    """Structured output returned by the email assistant agent."""
+    """email assistant Agentが返す構造化出力。"""
 
     response: str
 
 
 @dataclass
 class DetectionResult:
-    """Internal detection result enriched with the shared state email_id for later lookups."""
+    """後で参照可能な共有Stateのemail_idで強化された内部検出結果。"""
 
     is_spam: bool
     reason: str
@@ -67,18 +67,19 @@ class DetectionResult:
 
 @dataclass
 class Email:
-    """In memory record stored in shared state to avoid re-sending large bodies on edges."""
+    """エッジ上で大きな本文を再送しないように共有Stateに保存されたメモリ内レコード。"""
 
     email_id: str
     email_content: str
 
 
 def get_condition(expected_result: bool):
-    """Create a condition predicate for DetectionResult.is_spam.
+    """DetectionResult.is_spamの条件述語を作成します。
 
-    Contract:
-    - If the message is not a DetectionResult, allow it to pass to avoid accidental dead ends.
-    - Otherwise, return True only when is_spam matches expected_result.
+    契約:
+    - メッセージがDetectionResultでない場合は誤ったデッドエンドを避けるために通過を許可します。
+    - それ以外の場合はis_spamがexpected_resultと一致するときのみTrueを返します。
+
     """
 
     def condition(message: Any) -> bool:
@@ -91,12 +92,13 @@ def get_condition(expected_result: bool):
 
 @executor(id="store_email")
 async def store_email(email_text: str, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-    """Persist the raw email content in shared state and trigger spam detection.
+    """生のemail内容を共有Stateに永続化し、spam検出をトリガーします。
 
-    Responsibilities:
-    - Generate a unique email_id (UUID) for downstream retrieval.
-    - Store the Email object under a namespaced key and set the current id pointer.
-    - Emit an AgentExecutorRequest asking the detector to respond.
+    責務:
+    - 下流での取得のために一意のemail_id（UUID）を生成します。
+    - Emailオブジェクトを名前空間付きキーで保存し、現在のidポインタを設定します。
+    - 検出器に応答を求めるAgentExecutorRequestを発行します。
+
     """
     new_email = Email(email_id=str(uuid4()), email_content=email_text)
     await ctx.set_shared_state(f"{EMAIL_STATE_PREFIX}{new_email.email_id}", new_email)
@@ -109,12 +111,13 @@ async def store_email(email_text: str, ctx: WorkflowContext[AgentExecutorRequest
 
 @executor(id="to_detection_result")
 async def to_detection_result(response: AgentExecutorResponse, ctx: WorkflowContext[DetectionResult]) -> None:
-    """Parse spam detection JSON into a structured model and enrich with email_id.
+    """spam検出JSONを構造化モデルに解析し、email_idで強化します。
 
-    Steps:
-    1) Validate the agent's JSON output into DetectionResultAgent.
-    2) Retrieve the current email_id from shared state.
-    3) Send a typed DetectionResult for conditional routing.
+    手順:
+    1) AgentのJSON出力をDetectionResultAgentに検証します。
+    2) 共有Stateから現在のemail_idを取得します。
+    3) 条件付きルーティングのために型付きDetectionResultを送信します。
+
     """
     parsed = DetectionResultAgent.model_validate_json(response.agent_run_response.text)
     email_id: str = await ctx.get_shared_state(CURRENT_EMAIL_ID_KEY)
@@ -123,15 +126,16 @@ async def to_detection_result(response: AgentExecutorResponse, ctx: WorkflowCont
 
 @executor(id="submit_to_email_assistant")
 async def submit_to_email_assistant(detection: DetectionResult, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-    """Forward non spam email content to the drafting agent.
+    """spamでないemail内容をドラフトAgentに転送します。
 
-    Guard:
-    - This path should only receive non spam. Raise if misrouted.
+    ガード:
+    - この経路はspamでないもののみ受け取るべきです。誤ったルーティングの場合は例外を発生させます。
+
     """
     if detection.is_spam:
         raise RuntimeError("This executor should only handle non-spam messages.")
 
-    # Load the original content by id from shared state and forward it to the assistant.
+    # 共有Stateからidで元の内容を読み込み、assistantに転送します。
     email: Email = await ctx.get_shared_state(f"{EMAIL_STATE_PREFIX}{detection.email_id}")
     await ctx.send_message(
         AgentExecutorRequest(messages=[ChatMessage(Role.USER, text=email.email_content)], should_respond=True)
@@ -140,14 +144,14 @@ async def submit_to_email_assistant(detection: DetectionResult, ctx: WorkflowCon
 
 @executor(id="finalize_and_send")
 async def finalize_and_send(response: AgentExecutorResponse, ctx: WorkflowContext[Never, str]) -> None:
-    """Validate the drafted reply and yield the final output."""
+    """ドラフトされた返信を検証し、最終出力を生成します。"""
     parsed = EmailResponse.model_validate_json(response.agent_run_response.text)
     await ctx.yield_output(f"Email sent: {parsed.response}")
 
 
 @executor(id="handle_spam")
 async def handle_spam(detection: DetectionResult, ctx: WorkflowContext[Never, str]) -> None:
-    """Yield output describing why the email was marked as spam."""
+    """emailがspamとマークされた理由を説明する出力を生成します。"""
     if detection.is_spam:
         await ctx.yield_output(f"Email marked as spam: {detection.reason}")
     else:
@@ -155,7 +159,7 @@ async def handle_spam(detection: DetectionResult, ctx: WorkflowContext[Never, st
 
 
 async def main() -> None:
-    # Create chat client and agents. response_format enforces structured JSON from each agent.
+    # chat ClientとAgentを作成します。response_formatは各Agentからの構造化JSONを強制します。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     spam_detection_agent = chat_client.create_agent(
@@ -176,11 +180,9 @@ async def main() -> None:
         name="email_assistant_agent",
     )
 
-    # Build the workflow graph with conditional edges.
-    # Flow:
-    #   store_email -> spam_detection_agent -> to_detection_result -> branch:
-    #     False -> submit_to_email_assistant -> email_assistant_agent -> finalize_and_send
-    #     True  -> handle_spam
+    # 条件付きエッジを持つワークフローグラフを構築します。 Flow: store_email -> spam_detection_agent ->
+    # to_detection_result -> branch: False -> submit_to_email_assistant ->
+    # email_assistant_agent -> finalize_and_send True  -> handle_spam
     workflow = (
         WorkflowBuilder()
         .set_start_executor(store_email)
@@ -193,7 +195,7 @@ async def main() -> None:
         .build()
     )
 
-    # Read an email from resources/spam.txt if available; otherwise use a default sample.
+    # resources/spam.txtからemailを読み込み、なければデフォルトのサンプルを使用します。
     resources_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
         "resources",
@@ -206,7 +208,7 @@ async def main() -> None:
         print("Unable to find resource file, using default text.")
         email = "You are a WINNER! Click here for a free lottery offer!!!"
 
-    # Run and print the final result. Streaming surfaces intermediate execution events as well.
+    # 実行して最終結果を表示します。ストリーミングは中間の実行イベントも表示します。
     events = await workflow.run(email)
     outputs = events.get_outputs()
 

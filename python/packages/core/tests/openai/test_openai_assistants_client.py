@@ -52,7 +52,7 @@ def create_test_openai_assistants_client(
     thread_id: str | None = None,
     should_delete_assistant: bool = False,
 ) -> OpenAIAssistantsClient:
-    """Helper function to create OpenAIAssistantsClient instances for testing."""
+    """テスト用にOpenAIAssistantsClientインスタンスを作成するヘルパー関数。"""
     client = OpenAIAssistantsClient(
         model_id=model_id or "gpt-4",
         assistant_id=assistant_id,
@@ -62,14 +62,14 @@ def create_test_openai_assistants_client(
         org_id="test-org-id",
         async_client=mock_async_openai,
     )
-    # Set the _should_delete_assistant flag directly if needed
+    # 必要に応じて_should_delete_assistantフラグを直接設定
     if should_delete_assistant:
         object.__setattr__(client, "_should_delete_assistant", True)
     return client
 
 
 async def create_vector_store(client: OpenAIAssistantsClient) -> tuple[str, HostedVectorStoreContent]:
-    """Create a vector store with sample documents for testing."""
+    """テスト用のサンプルドキュメントを持つベクターストアを作成。"""
     file = await client.client.files.create(
         file=("todays_weather.txt", b"The weather today is sunny with a high of 25C."), purpose="user_data"
     )
@@ -85,7 +85,7 @@ async def create_vector_store(client: OpenAIAssistantsClient) -> tuple[str, Host
 
 
 async def delete_vector_store(client: OpenAIAssistantsClient, file_id: str, vector_store_id: str) -> None:
-    """Delete the vector store after tests."""
+    """テスト後にベクターストアを削除。"""
 
     await client.client.vector_stores.delete(vector_store_id=vector_store_id)
     await client.client.files.delete(file_id=file_id)
@@ -93,18 +93,18 @@ async def delete_vector_store(client: OpenAIAssistantsClient, file_id: str, vect
 
 @pytest.fixture
 def mock_async_openai() -> MagicMock:
-    """Mock AsyncOpenAI client."""
+    """AsyncOpenAIクライアントのモック。"""
     mock_client = MagicMock()
 
-    # Mock beta.assistants
+    # beta.assistantsのモック
     mock_client.beta.assistants.create = AsyncMock(return_value=MagicMock(id="test-assistant-id"))
     mock_client.beta.assistants.delete = AsyncMock()
 
-    # Mock beta.threads
+    # beta.threadsのモック
     mock_client.beta.threads.create = AsyncMock(return_value=MagicMock(id="test-thread-id"))
     mock_client.beta.threads.delete = AsyncMock()
 
-    # Mock beta.threads.runs
+    # beta.threads.runsのモック
     mock_client.beta.threads.runs.create = AsyncMock(return_value=MagicMock(id="test-run-id"))
     mock_client.beta.threads.runs.retrieve = AsyncMock()
     mock_client.beta.threads.runs.submit_tool_outputs = AsyncMock()
@@ -118,7 +118,7 @@ def mock_async_openai() -> MagicMock:
 
 
 def test_openai_assistants_client_init_with_client(mock_async_openai: MagicMock) -> None:
-    """Test OpenAIAssistantsClient initialization with existing client."""
+    """既存のclientを使ったOpenAIAssistantsClientの初期化テスト。"""
     chat_client = create_test_openai_assistants_client(
         mock_async_openai, model_id="gpt-4", assistant_id="existing-assistant-id", thread_id="test-thread-id"
     )
@@ -135,7 +135,7 @@ def test_openai_assistants_client_init_auto_create_client(
     openai_unit_test_env: dict[str, str],
     mock_async_openai: MagicMock,
 ) -> None:
-    """Test OpenAIAssistantsClient initialization with auto-created client."""
+    """自動生成されたclientを使ったOpenAIAssistantsClientの初期化テスト。"""
     chat_client = OpenAIAssistantsClient(
         model_id=openai_unit_test_env["OPENAI_CHAT_MODEL_ID"],
         assistant_name="TestAssistant",
@@ -152,15 +152,15 @@ def test_openai_assistants_client_init_auto_create_client(
 
 
 def test_openai_assistants_client_init_validation_fail() -> None:
-    """Test OpenAIAssistantsClient initialization with validation failure."""
+    """バリデーション失敗時のOpenAIAssistantsClient初期化テスト。"""
     with pytest.raises(ServiceInitializationError):
-        # Force failure by providing invalid model ID type - this should cause validation to fail
+        # 無効なmodel IDタイプを提供して強制的に失敗させる - これによりバリデーションが失敗するはず。
         OpenAIAssistantsClient(model_id=123, api_key="valid-key")  # type: ignore
 
 
 @pytest.mark.parametrize("exclude_list", [["OPENAI_CHAT_MODEL_ID"]], indirect=True)
 def test_openai_assistants_client_init_missing_model_id(openai_unit_test_env: dict[str, str]) -> None:
-    """Test OpenAIAssistantsClient initialization with missing model ID."""
+    """model IDが欠落している場合のOpenAIAssistantsClient初期化テスト。"""
     with pytest.raises(ServiceInitializationError):
         OpenAIAssistantsClient(
             api_key=openai_unit_test_env.get("OPENAI_API_KEY", "test-key"), env_file_path="nonexistent.env"
@@ -169,13 +169,13 @@ def test_openai_assistants_client_init_missing_model_id(openai_unit_test_env: di
 
 @pytest.mark.parametrize("exclude_list", [["OPENAI_API_KEY"]], indirect=True)
 def test_openai_assistants_client_init_missing_api_key(openai_unit_test_env: dict[str, str]) -> None:
-    """Test OpenAIAssistantsClient initialization with missing API key."""
+    """APIキーが欠落している場合のOpenAIAssistantsClient初期化テスト。"""
     with pytest.raises(ServiceInitializationError):
         OpenAIAssistantsClient(model_id="gpt-4", env_file_path="nonexistent.env")
 
 
 def test_openai_assistants_client_init_with_default_headers(openai_unit_test_env: dict[str, str]) -> None:
-    """Test OpenAIAssistantsClient initialization with default headers."""
+    """デフォルトヘッダーを使ったOpenAIAssistantsClient初期化テスト。"""
     default_headers = {"X-Unit-Test": "test-guid"}
 
     chat_client = OpenAIAssistantsClient(
@@ -187,14 +187,14 @@ def test_openai_assistants_client_init_with_default_headers(openai_unit_test_env
     assert chat_client.model_id == "gpt-4"
     assert isinstance(chat_client, ChatClientProtocol)
 
-    # Assert that the default header we added is present in the client's default headers
+    # 追加したデフォルトヘッダーがclientのデフォルトヘッダーに存在することをアサート。
     for key, value in default_headers.items():
         assert key in chat_client.client.default_headers
         assert chat_client.client.default_headers[key] == value
 
 
 def test_openai_assistants_client_instructions_sent_once(mock_async_openai: MagicMock) -> None:
-    """Ensure instructions are only included once for OpenAI Assistants requests."""
+    """OpenAI AssistantsのRequestでinstructionsが一度だけ含まれることを保証。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
     instructions = "You are a helpful assistant."
     chat_options = ChatOptions(instructions=instructions)
@@ -208,7 +208,7 @@ def test_openai_assistants_client_instructions_sent_once(mock_async_openai: Magi
 async def test_openai_assistants_client_get_assistant_id_or_create_existing_assistant(
     mock_async_openai: MagicMock,
 ) -> None:
-    """Test _get_assistant_id_or_create when assistant_id is already provided."""
+    """assistant_idが既に提供されている場合の_get_assistant_id_or_createのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai, assistant_id="existing-assistant-id")
 
     assistant_id = await chat_client._get_assistant_id_or_create()  # type: ignore
@@ -221,7 +221,7 @@ async def test_openai_assistants_client_get_assistant_id_or_create_existing_assi
 async def test_openai_assistants_client_get_assistant_id_or_create_create_new(
     mock_async_openai: MagicMock,
 ) -> None:
-    """Test _get_assistant_id_or_create when creating a new assistant."""
+    """新しいassistantを作成する場合の_get_assistant_id_or_createのテスト。"""
     chat_client = create_test_openai_assistants_client(
         mock_async_openai, model_id="gpt-4", assistant_name="TestAssistant"
     )
@@ -236,50 +236,50 @@ async def test_openai_assistants_client_get_assistant_id_or_create_create_new(
 async def test_openai_assistants_client_aclose_should_not_delete(
     mock_async_openai: MagicMock,
 ) -> None:
-    """Test close when assistant should not be deleted."""
+    """assistantを削除しない場合のcloseのテスト。"""
     chat_client = create_test_openai_assistants_client(
         mock_async_openai, assistant_id="assistant-to-keep", should_delete_assistant=False
     )
 
     await chat_client.close()  # type: ignore
 
-    # Verify assistant deletion was not called
+    # assistantの削除が呼ばれていないことを検証。
     mock_async_openai.beta.assistants.delete.assert_not_called()
     assert not chat_client._should_delete_assistant  # type: ignore
 
 
 async def test_openai_assistants_client_aclose_should_delete(mock_async_openai: MagicMock) -> None:
-    """Test close method calls cleanup."""
+    """closeメソッドがcleanupを呼び出すことのテスト。"""
     chat_client = create_test_openai_assistants_client(
         mock_async_openai, assistant_id="assistant-to-delete", should_delete_assistant=True
     )
 
     await chat_client.close()
 
-    # Verify assistant deletion was called
+    # assistantの削除が呼ばれたことを検証。
     mock_async_openai.beta.assistants.delete.assert_called_once_with("assistant-to-delete")
     assert not chat_client._should_delete_assistant  # type: ignore
 
 
 async def test_openai_assistants_client_async_context_manager(mock_async_openai: MagicMock) -> None:
-    """Test async context manager functionality."""
+    """非同期コンテキストマネージャの機能テスト。"""
     chat_client = create_test_openai_assistants_client(
         mock_async_openai, assistant_id="assistant-to-delete", should_delete_assistant=True
     )
 
-    # Test context manager
+    # コンテキストマネージャのテスト。
     async with chat_client:
-        pass  # Just test that we can enter and exit
+        pass  # 入退出ができることだけをテスト。
 
-    # Verify cleanup was called on exit
+    # exit時にcleanupが呼ばれたことを検証。
     mock_async_openai.beta.assistants.delete.assert_called_once_with("assistant-to-delete")
 
 
 def test_openai_assistants_client_serialize(openai_unit_test_env: dict[str, str]) -> None:
-    """Test serialization of OpenAIAssistantsClient."""
+    """OpenAIAssistantsClientのシリアライズテスト。"""
     default_headers = {"X-Unit-Test": "test-guid"}
 
-    # Test basic initialization and to_dict
+    # 基本的な初期化とto_dictのテスト。
     chat_client = OpenAIAssistantsClient(
         model_id="gpt-4",
         assistant_id="test-assistant-id",
@@ -298,35 +298,35 @@ def test_openai_assistants_client_serialize(openai_unit_test_env: dict[str, str]
     assert dumped_settings["thread_id"] == "test-thread-id"
     assert dumped_settings["org_id"] == openai_unit_test_env["OPENAI_ORG_ID"]
 
-    # Assert that the default header we added is present in the dumped_settings default headers
+    # 追加したデフォルトヘッダーがdumped_settingsのデフォルトヘッダーに存在することをアサート。
     for key, value in default_headers.items():
         assert key in dumped_settings["default_headers"]
         assert dumped_settings["default_headers"][key] == value
-    # Assert that the 'User-Agent' header is not present in the dumped_settings default headers
+    # 'User-Agent'ヘッダーがdumped_settingsのデフォルトヘッダーに存在しないことをアサート。
     assert "User-Agent" not in dumped_settings["default_headers"]
 
 
 async def test_openai_assistants_client_get_active_thread_run_none_thread_id(mock_async_openai: MagicMock) -> None:
-    """Test _get_active_thread_run with None thread_id returns None."""
+    """thread_idがNoneの場合、_get_active_thread_runはNoneを返すことのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
     result = await chat_client._get_active_thread_run(None)  # type: ignore
 
     assert result is None
-    # Should not call the API when thread_id is None
+    # thread_idがNoneの場合、APIを呼び出さないこと。
     mock_async_openai.beta.threads.runs.list.assert_not_called()
 
 
 async def test_openai_assistants_client_get_active_thread_run_with_active_run(mock_async_openai: MagicMock) -> None:
-    """Test _get_active_thread_run finds an active run."""
+    """_get_active_thread_runがアクティブなrunを見つけるテスト。"""
 
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Mock an active run (status not in completed states)
+    # アクティブなrunをモック（ステータスが完了状態にない）。
     mock_run = MagicMock()
-    mock_run.status = "in_progress"  # Active status
+    mock_run.status = "in_progress"  # アクティブなステータス。
 
-    # Mock the async iterator for runs.list
+    # runs.listの非同期イテレータをモック。
     async def mock_runs_list(*args: Any, **kwargs: Any) -> Any:
         yield mock_run
 
@@ -339,15 +339,15 @@ async def test_openai_assistants_client_get_active_thread_run_with_active_run(mo
 
 
 async def test_openai_assistants_client_prepare_thread_create_new(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_thread creates new thread when thread_id is None."""
+    """thread_idがNoneの場合、新しいthreadを作成する_prepare_threadのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Mock thread creation
+    # thread作成のモック。
     mock_thread = MagicMock()
     mock_thread.id = "new-thread-123"
     mock_async_openai.beta.threads.create.return_value = mock_thread
 
-    # Prepare run options with additional messages
+    # 追加メッセージを含むrunオプションの準備。
     run_options: dict[str, Any] = {
         "additional_messages": [{"role": "user", "content": "Hello"}],
         "tool_resources": {"code_interpreter": {}},
@@ -357,7 +357,7 @@ async def test_openai_assistants_client_prepare_thread_create_new(mock_async_ope
     result = await chat_client._prepare_thread(None, None, run_options)  # type: ignore
 
     assert result == "new-thread-123"
-    assert run_options["additional_messages"] == []  # Should be cleared
+    assert run_options["additional_messages"] == []  # クリアされるべき。
     mock_async_openai.beta.threads.create.assert_called_once_with(
         messages=[{"role": "user", "content": "Hello"}],
         tool_resources={"code_interpreter": {}},
@@ -366,10 +366,10 @@ async def test_openai_assistants_client_prepare_thread_create_new(mock_async_ope
 
 
 async def test_openai_assistants_client_prepare_thread_cancel_existing_run(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_thread cancels existing run when provided."""
+    """既存のrunが提供された場合、_prepare_threadがキャンセルするテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Mock an existing thread run
+    # 既存のthread runをモック。
     mock_thread_run = MagicMock()
     mock_thread_run.id = "run-456"
 
@@ -382,7 +382,7 @@ async def test_openai_assistants_client_prepare_thread_cancel_existing_run(mock_
 
 
 async def test_openai_assistants_client_prepare_thread_existing_no_run(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_thread with existing thread_id but no active run."""
+    """既存のthread_idがあるがアクティブなrunがない場合の_prepare_threadのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
     run_options: dict[str, list[dict[str, str]]] = {"additional_messages": []}
@@ -390,24 +390,24 @@ async def test_openai_assistants_client_prepare_thread_existing_no_run(mock_asyn
     result = await chat_client._prepare_thread("thread-123", None, run_options)  # type: ignore
 
     assert result == "thread-123"
-    # Should not call cancel since no thread_run provided
+    # thread_runが提供されていないためcancelを呼ばないべき。
     mock_async_openai.beta.threads.runs.cancel.assert_not_called()
 
 
 async def test_openai_assistants_client_process_stream_events_thread_run_created(mock_async_openai: MagicMock) -> None:
-    """Test _process_stream_events with thread.run.created event."""
+    """thread.run.createdイベントでの_process_stream_eventsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a mock stream response for thread.run.created
+    # thread.run.createdのモックストリームレスポンスを作成。
     mock_response = MagicMock()
     mock_response.event = "thread.run.created"
     mock_response.data = MagicMock()
 
-    # Create a proper async iterator
+    # 適切な非同期イテレータを作成。
     async def async_iterator() -> Any:
         yield mock_response
 
-    # Create a mock stream that yields the response
+    # レスポンスをyieldするモックストリームを作成。
     mock_stream = MagicMock()
     mock_stream.__aenter__ = AsyncMock(return_value=async_iterator())
     mock_stream.__aexit__ = AsyncMock(return_value=None)
@@ -417,7 +417,7 @@ async def test_openai_assistants_client_process_stream_events_thread_run_created
     async for update in chat_client._process_stream_events(mock_stream, thread_id):  # type: ignore
         updates.append(update)
 
-    # Should yield one ChatResponseUpdate for thread.run.created
+    # thread.run.createdに対して1つのChatResponseUpdateをyieldすべき。
     assert len(updates) == 1
     update = updates[0]
     assert isinstance(update, ChatResponseUpdate)
@@ -428,10 +428,10 @@ async def test_openai_assistants_client_process_stream_events_thread_run_created
 
 
 async def test_openai_assistants_client_process_stream_events_message_delta_text(mock_async_openai: MagicMock) -> None:
-    """Test _process_stream_events with thread.message.delta event containing text."""
+    """thread.message.deltaイベントでテキストを含む_process_stream_eventsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a mock TextDeltaBlock with proper spec
+    # 適切な仕様のTextDeltaBlockをモック作成。
     mock_delta_block = MagicMock(spec=TextDeltaBlock)
     mock_delta_block.text = MagicMock()
     mock_delta_block.text.value = "Hello from assistant"
@@ -447,11 +447,11 @@ async def test_openai_assistants_client_process_stream_events_message_delta_text
     mock_response.event = "thread.message.delta"
     mock_response.data = mock_message_delta
 
-    # Create a proper async iterator
+    # 適切な非同期イテレータを作成。
     async def async_iterator() -> Any:
         yield mock_response
 
-    # Create a mock stream
+    # モックストリームを作成。
     mock_stream = MagicMock()
     mock_stream.__aenter__ = AsyncMock(return_value=async_iterator())
     mock_stream.__aexit__ = AsyncMock(return_value=None)
@@ -461,7 +461,7 @@ async def test_openai_assistants_client_process_stream_events_message_delta_text
     async for update in chat_client._process_stream_events(mock_stream, thread_id):  # type: ignore
         updates.append(update)
 
-    # Should yield one text update
+    # 1つのテキスト更新をyieldすべき。
     assert len(updates) == 1
     update = updates[0]
     assert isinstance(update, ChatResponseUpdate)
@@ -472,25 +472,25 @@ async def test_openai_assistants_client_process_stream_events_message_delta_text
 
 
 async def test_openai_assistants_client_process_stream_events_requires_action(mock_async_openai: MagicMock) -> None:
-    """Test _process_stream_events with thread.run.requires_action event."""
+    """thread.run.requires_actionイベントでの_process_stream_eventsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Mock the _create_function_call_contents method to return test content
+    # _test_create_function_call_contentsメソッドをモックしてテスト用コンテンツを返す。
     test_function_content = FunctionCallContent(call_id="call-123", name="test_func", arguments={"arg": "value"})
     chat_client._create_function_call_contents = MagicMock(return_value=[test_function_content])  # type: ignore
 
-    # Create a mock Run object
+    # モックRunオブジェクトを作成。
     mock_run = MagicMock(spec=Run)
 
     mock_response = MagicMock()
     mock_response.event = "thread.run.requires_action"
     mock_response.data = mock_run
 
-    # Create a proper async iterator
+    # 適切な非同期イテレータを作成。
     async def async_iterator() -> Any:
         yield mock_response
 
-    # Create a mock stream
+    # モックストリームを作成。
     mock_stream = MagicMock()
     mock_stream.__aenter__ = AsyncMock(return_value=async_iterator())
     mock_stream.__aexit__ = AsyncMock(return_value=None)
@@ -500,7 +500,7 @@ async def test_openai_assistants_client_process_stream_events_requires_action(mo
     async for update in chat_client._process_stream_events(mock_stream, thread_id):  # type: ignore
         updates.append(update)
 
-    # Should yield one function call update
+    # 1つのfunction call updateをyieldすべき。
     assert len(updates) == 1
     update = updates[0]
     assert isinstance(update, ChatResponseUpdate)
@@ -510,16 +510,16 @@ async def test_openai_assistants_client_process_stream_events_requires_action(mo
     assert update.contents[0] == test_function_content
     assert update.raw_representation == mock_run
 
-    # Verify _create_function_call_contents was called correctly
+    # _create_function_call_contentsが正しく呼ばれたことを検証。
     chat_client._create_function_call_contents.assert_called_once_with(mock_run, None)  # type: ignore
 
 
 async def test_openai_assistants_client_process_stream_events_run_step_created(mock_async_openai: MagicMock) -> None:
-    """Test _process_stream_events with thread.run.step.created event."""
+    """thread.run.step.createdイベントでの_process_stream_eventsのテスト。"""
 
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a mock RunStep object
+    # モックRunStepオブジェクトを作成。
     mock_run_step = MagicMock(spec=RunStep)
     mock_run_step.run_id = "run-456"
 
@@ -527,11 +527,11 @@ async def test_openai_assistants_client_process_stream_events_run_step_created(m
     mock_response.event = "thread.run.step.created"
     mock_response.data = mock_run_step
 
-    # Create a proper async iterator
+    # 適切な非同期イテレータを作成。
     async def async_iterator() -> Any:
         yield mock_response
 
-    # Create a mock stream
+    # モックストリームを作成。
     mock_stream = MagicMock()
     mock_stream.__aenter__ = AsyncMock(return_value=async_iterator())
     mock_stream.__aexit__ = AsyncMock(return_value=None)
@@ -541,19 +541,18 @@ async def test_openai_assistants_client_process_stream_events_run_step_created(m
     async for update in chat_client._process_stream_events(mock_stream, thread_id):  # type: ignore
         updates.append(update)
 
-    # The run step creation itself doesn't yield an update,
-    # but it should set the response_id for subsequent events
+    # run stepの作成自体は更新をyieldしないが、後続イベントのためにresponse_idを設定すべき。
     assert len(updates) == 0
 
 
 async def test_openai_assistants_client_process_stream_events_run_completed_with_usage(
     mock_async_openai: MagicMock,
 ) -> None:
-    """Test _process_stream_events with thread.run.completed event containing usage."""
+    """usageを含むthread.run.completedイベントでの_process_stream_eventsのテスト。"""
 
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a mock Run object with usage information
+    # usage情報を含むモックRunオブジェクトを作成。
     mock_usage = MagicMock()
     mock_usage.prompt_tokens = 100
     mock_usage.completion_tokens = 50
@@ -566,11 +565,11 @@ async def test_openai_assistants_client_process_stream_events_run_completed_with
     mock_response.event = "thread.run.completed"
     mock_response.data = mock_run
 
-    # Create a proper async iterator
+    # 適切な非同期イテレータを作成。
     async def async_iterator() -> Any:
         yield mock_response
 
-    # Create a mock stream
+    # モックストリームを作成。
     mock_stream = MagicMock()
     mock_stream.__aenter__ = AsyncMock(return_value=async_iterator())
     mock_stream.__aexit__ = AsyncMock(return_value=None)
@@ -580,7 +579,7 @@ async def test_openai_assistants_client_process_stream_events_run_completed_with
     async for update in chat_client._process_stream_events(mock_stream, thread_id):  # type: ignore
         updates.append(update)
 
-    # Should yield one usage update
+    # 1つのusage更新をyieldすべき。
     assert len(updates) == 1
     update = updates[0]
     assert isinstance(update, ChatResponseUpdate)
@@ -588,7 +587,7 @@ async def test_openai_assistants_client_process_stream_events_run_completed_with
     assert update.role == Role.ASSISTANT
     assert len(update.contents) == 1
 
-    # Check the usage content
+    # usage内容をチェック。
     usage_content = update.contents[0]
     assert isinstance(usage_content, UsageContent)
     assert usage_content.details.input_token_count == 100
@@ -598,16 +597,16 @@ async def test_openai_assistants_client_process_stream_events_run_completed_with
 
 
 def test_openai_assistants_client_create_function_call_contents_basic(mock_async_openai: MagicMock) -> None:
-    """Test _create_function_call_contents with a simple function call."""
+    """単純なfunction callでの_create_function_call_contentsのテスト。"""
 
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a mock Run event that requires action
+    # actionを必要とするモックRunイベントを作成。
     mock_run = MagicMock()
     mock_run.required_action = MagicMock()
     mock_run.required_action.submit_tool_outputs = MagicMock()
 
-    # Create a mock tool call
+    # モックツールコールを作成。
     mock_tool_call = MagicMock()
     mock_tool_call.id = "call_abc123"
     mock_tool_call.function.name = "get_weather"
@@ -615,11 +614,11 @@ def test_openai_assistants_client_create_function_call_contents_basic(mock_async
 
     mock_run.required_action.submit_tool_outputs.tool_calls = [mock_tool_call]
 
-    # Call the method
+    # メソッドを呼び出す。
     response_id = "response_456"
     contents = chat_client._create_function_call_contents(mock_run, response_id)  # type: ignore
 
-    # Test that one function call content was created
+    # 1つのfunction call contentが作成されたことをテスト。
     assert len(contents) == 1
     assert isinstance(contents[0], FunctionCallContent)
     assert contents[0].name == "get_weather"
@@ -627,10 +626,10 @@ def test_openai_assistants_client_create_function_call_contents_basic(mock_async
 
 
 def test_openai_assistants_client_prepare_options_basic(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with basic chat options."""
+    """基本的なchatオプションでの_prepare_optionsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create basic chat options
+    # 基本的なchatオプションを作成。
     chat_options = ChatOptions(
         max_tokens=100,
         model_id="gpt-4",
@@ -640,10 +639,10 @@ def test_openai_assistants_client_prepare_options_basic(mock_async_openai: Magic
 
     messages = [ChatMessage(role=Role.USER, text="Hello")]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, chat_options)  # type: ignore
 
-    # Check basic options were set
+    # 基本オプションが設定されたことをチェック。
     assert run_options["max_completion_tokens"] == 100
     assert run_options["model"] == "gpt-4"
     assert run_options["temperature"] == 0.7
@@ -652,14 +651,14 @@ def test_openai_assistants_client_prepare_options_basic(mock_async_openai: Magic
 
 
 def test_openai_assistants_client_prepare_options_with_ai_function_tool(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with AIFunction tool."""
+    """AIFunctionツールでの_prepare_optionsのテスト。"""
 
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a simple function for testing and decorate it
+    # テスト用の単純な関数を作成しデコレート。
     @ai_function
     def test_function(query: str) -> str:
-        """A test function."""
+        """テスト用の関数。"""
         return f"Result for {query}"
 
     chat_options = ChatOptions(
@@ -669,10 +668,10 @@ def test_openai_assistants_client_prepare_options_with_ai_function_tool(mock_asy
 
     messages = [ChatMessage(role=Role.USER, text="Hello")]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, chat_options)  # type: ignore
 
-    # Check tools were set correctly
+    # ツールが正しく設定されたことをチェック。
     assert "tools" in run_options
     assert len(run_options["tools"]) == 1
     assert run_options["tools"][0]["type"] == "function"
@@ -681,10 +680,10 @@ def test_openai_assistants_client_prepare_options_with_ai_function_tool(mock_asy
 
 
 def test_openai_assistants_client_prepare_options_with_code_interpreter(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with HostedCodeInterpreterTool."""
+    """HostedCodeInterpreterToolでの_prepare_optionsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a real HostedCodeInterpreterTool
+    # 実際のHostedCodeInterpreterToolを作成。
     code_tool = HostedCodeInterpreterTool()
 
     chat_options = ChatOptions(
@@ -694,10 +693,10 @@ def test_openai_assistants_client_prepare_options_with_code_interpreter(mock_asy
 
     messages = [ChatMessage(role=Role.USER, text="Calculate something")]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, chat_options)  # type: ignore
 
-    # Check code interpreter tool was set correctly
+    # コードインタプリタツールが正しく設定されたことをチェック。
     assert "tools" in run_options
     assert len(run_options["tools"]) == 1
     assert run_options["tools"][0] == {"type": "code_interpreter"}
@@ -705,7 +704,7 @@ def test_openai_assistants_client_prepare_options_with_code_interpreter(mock_asy
 
 
 def test_openai_assistants_client_prepare_options_tool_choice_none(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with tool_choice set to 'none'."""
+    """tool_choiceが'none'に設定された場合の_prepare_optionsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
     chat_options = ChatOptions(
@@ -714,19 +713,19 @@ def test_openai_assistants_client_prepare_options_tool_choice_none(mock_async_op
 
     messages = [ChatMessage(role=Role.USER, text="Hello")]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, chat_options)  # type: ignore
 
-    # Should set tool_choice to none and not include tools
+    # tool_choiceがnoneに設定され、toolsが含まれないこと。
     assert run_options["tool_choice"] == "none"
     assert "tools" not in run_options
 
 
 def test_openai_assistants_client_prepare_options_required_function(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with required function tool choice."""
+    """必須のfunction tool choiceでの_prepare_optionsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a required function tool choice
+    # 必須のfunction tool choiceを作成。
     tool_choice = ToolMode(mode="required", required_function_name="specific_function")
 
     chat_options = ChatOptions(
@@ -735,10 +734,10 @@ def test_openai_assistants_client_prepare_options_required_function(mock_async_o
 
     messages = [ChatMessage(role=Role.USER, text="Hello")]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, chat_options)  # type: ignore
 
-    # Check required function tool choice was set correctly
+    # 必須のfunction tool choiceが正しく設定されたことをチェック。
     expected_tool_choice = {
         "type": "function",
         "function": {"name": "specific_function"},
@@ -747,11 +746,11 @@ def test_openai_assistants_client_prepare_options_required_function(mock_async_o
 
 
 def test_openai_assistants_client_prepare_options_with_file_search_tool(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with HostedFileSearchTool."""
+    """HostedFileSearchToolでの_prepare_optionsのテスト。"""
 
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a HostedFileSearchTool with max_results
+    # max_results付きのHostedFileSearchToolを作成。
     file_search_tool = HostedFileSearchTool(max_results=10)
 
     chat_options = ChatOptions(
@@ -761,10 +760,10 @@ def test_openai_assistants_client_prepare_options_with_file_search_tool(mock_asy
 
     messages = [ChatMessage(role=Role.USER, text="Search for information")]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, chat_options)  # type: ignore
 
-    # Check file search tool was set correctly
+    # ファイル検索ツールが正しく設定されたことをチェック。
     assert "tools" in run_options
     assert len(run_options["tools"]) == 1
     expected_tool = {"type": "file_search", "max_num_results": 10}
@@ -773,10 +772,10 @@ def test_openai_assistants_client_prepare_options_with_file_search_tool(mock_asy
 
 
 def test_openai_assistants_client_prepare_options_with_mapping_tool(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with MutableMapping tool."""
+    """MutableMappingツールでの_prepare_optionsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create a tool as a MutableMapping (dict)
+    # MutableMapping（dict）としてのツールを作成。
     mapping_tool = {"type": "custom_tool", "parameters": {"setting": "value"}}
 
     chat_options = ChatOptions(
@@ -786,10 +785,10 @@ def test_openai_assistants_client_prepare_options_with_mapping_tool(mock_async_o
 
     messages = [ChatMessage(role=Role.USER, text="Use custom tool")]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, chat_options)  # type: ignore
 
-    # Check mapping tool was set correctly
+    # マッピングツールが正しく設定されたことをチェック。
     assert "tools" in run_options
     assert len(run_options["tools"]) == 1
     assert run_options["tools"][0] == mapping_tool
@@ -797,7 +796,7 @@ def test_openai_assistants_client_prepare_options_with_mapping_tool(mock_async_o
 
 
 def test_openai_assistants_client_prepare_options_with_system_message(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with system message converted to instructions."""
+    """system messageをinstructionsに変換した場合の_prepare_optionsのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
     messages = [
@@ -805,29 +804,29 @@ def test_openai_assistants_client_prepare_options_with_system_message(mock_async
         ChatMessage(role=Role.USER, text="Hello"),
     ]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, None)  # type: ignore
 
-    # Check that additional_messages only contains the user message
-    # System message should be converted to instructions (though this is handled internally)
+    # additional_messagesにはuser messageのみが含まれることをチェック system
+    # messageはinstructionsに変換される（これは内部で処理される）。
     assert "additional_messages" in run_options
     assert len(run_options["additional_messages"]) == 1
     assert run_options["additional_messages"][0]["role"] == "user"
 
 
 def test_openai_assistants_client_prepare_options_with_image_content(mock_async_openai: MagicMock) -> None:
-    """Test _prepare_options with image content."""
+    """画像コンテンツを含む_prepare_optionsのテスト。"""
 
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create message with image content
+    # 画像コンテンツを含むメッセージを作成。
     image_content = UriContent(uri="https://example.com/image.jpg", media_type="image/jpeg")
     messages = [ChatMessage(role=Role.USER, contents=[image_content])]
 
-    # Call the method
+    # メソッドを呼び出す。
     run_options, tool_results = chat_client._prepare_options(messages, None)  # type: ignore
 
-    # Check that image content was processed
+    # 画像コンテンツが処理されたことをチェック。
     assert "additional_messages" in run_options
     assert len(run_options["additional_messages"]) == 1
     message = run_options["additional_messages"][0]
@@ -838,7 +837,7 @@ def test_openai_assistants_client_prepare_options_with_image_content(mock_async_
 
 
 def test_openai_assistants_client_convert_function_results_to_tool_output_empty(mock_async_openai: MagicMock) -> None:
-    """Test _convert_function_results_to_tool_output with empty list."""
+    """空リストでの_convert_function_results_to_tool_outputのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
     run_id, tool_outputs = chat_client._convert_function_results_to_tool_output([])  # type: ignore
@@ -848,7 +847,7 @@ def test_openai_assistants_client_convert_function_results_to_tool_output_empty(
 
 
 def test_openai_assistants_client_convert_function_results_to_tool_output_valid(mock_async_openai: MagicMock) -> None:
-    """Test _convert_function_results_to_tool_output with valid function results."""
+    """有効なfunction resultsでの_convert_function_results_to_tool_outputのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
     call_id = json.dumps(["run-123", "call-456"])
@@ -866,18 +865,18 @@ def test_openai_assistants_client_convert_function_results_to_tool_output_valid(
 def test_openai_assistants_client_convert_function_results_to_tool_output_mismatched_run_ids(
     mock_async_openai: MagicMock,
 ) -> None:
-    """Test _convert_function_results_to_tool_output with mismatched run IDs."""
+    """run IDが不一致の場合の_convert_function_results_to_tool_outputのテスト。"""
     chat_client = create_test_openai_assistants_client(mock_async_openai)
 
-    # Create function results with different run IDs
+    # 異なるrun IDを持つfunction resultsを作成。
     call_id1 = json.dumps(["run-123", "call-456"])
-    call_id2 = json.dumps(["run-789", "call-xyz"])  # Different run ID
+    call_id2 = json.dumps(["run-789", "call-xyz"])  # 異なるrun ID。
     function_result1 = FunctionResultContent(call_id=call_id1, result="Result 1")
     function_result2 = FunctionResultContent(call_id=call_id2, result="Result 2")
 
     run_id, tool_outputs = chat_client._convert_function_results_to_tool_output([function_result1, function_result2])  # type: ignore
 
-    # Should only process the first one since run IDs don't match
+    # run IDが一致しないため最初の1つだけ処理されるべき。
     assert run_id == "run-123"
     assert tool_outputs is not None
     assert len(tool_outputs) == 1
@@ -885,51 +884,51 @@ def test_openai_assistants_client_convert_function_results_to_tool_output_mismat
 
 
 def test_openai_assistants_client_update_agent_name(mock_async_openai: MagicMock) -> None:
-    """Test _update_agent_name method updates assistant_name when not already set."""
-    # Test updating agent name when assistant_name is None
+    """assistant_nameが未設定の場合に_update_agent_nameメソッドが更新するテスト。"""
+    # assistant_nameがNoneの場合のagent name更新テスト。
     chat_client = create_test_openai_assistants_client(mock_async_openai, assistant_name=None)
 
-    # Call the private method to update agent name
+    # agent nameを更新するプライベートメソッドを呼び出す。
     chat_client._update_agent_name("New Assistant Name")  # type: ignore
 
     assert chat_client.assistant_name == "New Assistant Name"
 
 
 def test_openai_assistants_client_update_agent_name_existing(mock_async_openai: MagicMock) -> None:
-    """Test _update_agent_name method doesn't override existing assistant_name."""
-    # Test that existing assistant_name is not overridden
+    """既存のassistant_nameを上書きしない_update_agent_nameメソッドのテスト。"""
+    # 既存のassistant_nameが上書きされないことをテスト。
     chat_client = create_test_openai_assistants_client(mock_async_openai, assistant_name="Existing Assistant")
 
-    # Call the private method to update agent name
+    # agent nameを更新するプライベートメソッドを呼び出す。
     chat_client._update_agent_name("New Assistant Name")  # type: ignore
 
-    # Should keep the existing name
+    # 既存の名前を保持すべき。
     assert chat_client.assistant_name == "Existing Assistant"
 
 
 def test_openai_assistants_client_update_agent_name_none(mock_async_openai: MagicMock) -> None:
-    """Test _update_agent_name method with None agent_name parameter."""
-    # Test that None agent_name doesn't change anything
+    """Noneのagent_nameパラメータでの_update_agent_nameメソッドのテスト。"""
+    # Noneのagent_nameが何も変更しないことをテスト。
     chat_client = create_test_openai_assistants_client(mock_async_openai, assistant_name=None)
 
-    # Call the private method with None
+    # Noneを渡してプライベートメソッドを呼び出す。
     chat_client._update_agent_name(None)  # type: ignore
 
-    # Should remain None
+    # Noneのままであるべき。
     assert chat_client.assistant_name is None
 
 
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     return f"The weather in {location} is sunny with a high of 25°C."
 
 
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_client_get_response() -> None:
-    """Test OpenAI Assistants Client response."""
+    """OpenAI Assistants Clientのレスポンスをテストします。"""
     async with OpenAIAssistantsClient() as openai_assistants_client:
         assert isinstance(openai_assistants_client, ChatClientProtocol)
 
@@ -943,7 +942,7 @@ async def test_openai_assistants_client_get_response() -> None:
         )
         messages.append(ChatMessage(role="user", text="What's the weather like today?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンスを取得できることをテストします。
         response = await openai_assistants_client.get_response(messages=messages)
 
         assert response is not None
@@ -954,14 +953,14 @@ async def test_openai_assistants_client_get_response() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_client_get_response_tools() -> None:
-    """Test OpenAI Assistants Client response with tools."""
+    """ツールを使ったOpenAI Assistants Clientのレスポンスをテストします。"""
     async with OpenAIAssistantsClient() as openai_assistants_client:
         assert isinstance(openai_assistants_client, ChatClientProtocol)
 
         messages: list[ChatMessage] = []
         messages.append(ChatMessage(role="user", text="What's the weather like in Seattle?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンスを取得できることをテストします。
         response = await openai_assistants_client.get_response(
             messages=messages,
             tools=[get_weather],
@@ -976,7 +975,7 @@ async def test_openai_assistants_client_get_response_tools() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_client_streaming() -> None:
-    """Test OpenAI Assistants Client streaming response."""
+    """OpenAI Assistants Clientのストリーミングレスポンスをテストします。"""
     async with OpenAIAssistantsClient() as openai_assistants_client:
         assert isinstance(openai_assistants_client, ChatClientProtocol)
 
@@ -990,7 +989,7 @@ async def test_openai_assistants_client_streaming() -> None:
         )
         messages.append(ChatMessage(role="user", text="What's the weather like today?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンスを取得できることをテストします。
         response = openai_assistants_client.get_streaming_response(messages=messages)
 
         full_message: str = ""
@@ -1007,14 +1006,14 @@ async def test_openai_assistants_client_streaming() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_client_streaming_tools() -> None:
-    """Test OpenAI Assistants Client streaming response with tools."""
+    """ツールを使ったOpenAI Assistants Clientのストリーミングレスポンスをテストします。"""
     async with OpenAIAssistantsClient() as openai_assistants_client:
         assert isinstance(openai_assistants_client, ChatClientProtocol)
 
         messages: list[ChatMessage] = []
         messages.append(ChatMessage(role="user", text="What's the weather like in Seattle?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンスを取得できることをテストします。
         response = openai_assistants_client.get_streaming_response(
             messages=messages,
             tools=[get_weather],
@@ -1034,15 +1033,15 @@ async def test_openai_assistants_client_streaming_tools() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_client_with_existing_assistant() -> None:
-    """Test OpenAI Assistants Client with existing assistant ID."""
-    # First create an assistant to use in the test
+    """既存のassistant IDを使ったOpenAI Assistants Clientをテストします。"""
+    # テストで使用するために最初にassistantを作成します。
     async with OpenAIAssistantsClient() as temp_client:
-        # Get the assistant ID by triggering assistant creation
+        # assistant作成をトリガーしてassistant IDを取得します。
         messages = [ChatMessage(role="user", text="Hello")]
         await temp_client.get_response(messages=messages)
         assistant_id = temp_client.assistant_id
 
-        # Now test using the existing assistant
+        # 既存のassistantを使ってテストします。
         async with OpenAIAssistantsClient(
             model_id="gpt-4o-mini", assistant_id=assistant_id
         ) as openai_assistants_client:
@@ -1051,7 +1050,7 @@ async def test_openai_assistants_client_with_existing_assistant() -> None:
 
             messages = [ChatMessage(role="user", text="What can you do?")]
 
-            # Test that the client can be used to get a response
+            # クライアントがレスポンスを取得できることをテストします。
             response = await openai_assistants_client.get_response(messages=messages)
 
             assert response is not None
@@ -1063,7 +1062,7 @@ async def test_openai_assistants_client_with_existing_assistant() -> None:
 @skip_if_openai_integration_tests_disabled
 @pytest.mark.skip(reason="OpenAI file search functionality is currently broken - tracked in GitHub issue")
 async def test_openai_assistants_client_file_search() -> None:
-    """Test OpenAI Assistants Client response."""
+    """OpenAI Assistants Clientのレスポンスをテストします。"""
     async with OpenAIAssistantsClient() as openai_assistants_client:
         assert isinstance(openai_assistants_client, ChatClientProtocol)
 
@@ -1087,7 +1086,7 @@ async def test_openai_assistants_client_file_search() -> None:
 @skip_if_openai_integration_tests_disabled
 @pytest.mark.skip(reason="OpenAI file search functionality is currently broken - tracked in GitHub issue")
 async def test_openai_assistants_client_file_search_streaming() -> None:
-    """Test OpenAI Assistants Client response."""
+    """OpenAI Assistants Clientのレスポンスをテストします。"""
     async with OpenAIAssistantsClient() as openai_assistants_client:
         assert isinstance(openai_assistants_client, ChatClientProtocol)
 
@@ -1117,14 +1116,14 @@ async def test_openai_assistants_client_file_search_streaming() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_agent_basic_run():
-    """Test ChatAgent basic run functionality with OpenAIAssistantsClient."""
+    """OpenAIAssistantsClientを使ったChatAgentの基本的な実行機能をテストします。"""
     async with ChatAgent(
         chat_client=OpenAIAssistantsClient(),
     ) as agent:
-        # Run a simple query
+        # 簡単なクエリを実行します。
         response = await agent.run("Hello! Please respond with 'Hello World' exactly.")
 
-        # Validate response
+        # レスポンスを検証します。
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
         assert len(response.text) > 0
@@ -1134,11 +1133,11 @@ async def test_openai_assistants_agent_basic_run():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_agent_basic_run_streaming():
-    """Test ChatAgent basic streaming functionality with OpenAIAssistantsClient."""
+    """OpenAIAssistantsClientを使ったChatAgentの基本的なストリーミング機能をテストします。"""
     async with ChatAgent(
         chat_client=OpenAIAssistantsClient(),
     ) as agent:
-        # Run streaming query
+        # ストリーミングクエリを実行します。
         full_message: str = ""
         async for chunk in agent.run_stream("Please respond with exactly: 'This is a streaming response test.'"):
             assert chunk is not None
@@ -1146,7 +1145,7 @@ async def test_openai_assistants_agent_basic_run_streaming():
             if chunk.text:
                 full_message += chunk.text
 
-        # Validate streaming response
+        # ストリーミングレスポンスを検証します。
         assert len(full_message) > 0
         assert "streaming response test" in full_message.lower()
 
@@ -1154,37 +1153,37 @@ async def test_openai_assistants_agent_basic_run_streaming():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_agent_thread_persistence():
-    """Test ChatAgent thread persistence across runs with OpenAIAssistantsClient."""
+    """OpenAIAssistantsClientを使ったChatAgentの実行間のスレッド永続性をテストします。"""
     async with ChatAgent(
         chat_client=OpenAIAssistantsClient(),
         instructions="You are a helpful assistant with good memory.",
     ) as agent:
-        # Create a new thread that will be reused
+        # 再利用される新しいスレッドを作成します。
         thread = agent.get_new_thread()
 
-        # First message - establish context
+        # 最初のメッセージ - コンテキストを確立します。
         first_response = await agent.run(
             "Remember this number: 42. What number did I just tell you to remember?", thread=thread
         )
         assert isinstance(first_response, AgentRunResponse)
         assert "42" in first_response.text
 
-        # Second message - test conversation memory
+        # 2番目のメッセージ - 会話の記憶をテストします。
         second_response = await agent.run(
             "What number did I tell you to remember in my previous message?", thread=thread
         )
         assert isinstance(second_response, AgentRunResponse)
         assert "42" in second_response.text
 
-        # Verify thread has been populated with conversation ID
+        # スレッドに会話IDが設定されていることを確認します。
         assert thread.service_thread_id is not None
 
 
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_agent_existing_thread_id():
-    """Test ChatAgent with existing thread ID to continue conversations across agent instances."""
-    # First, create a conversation and capture the thread ID
+    """既存のスレッドIDを使ってエージェントインスタンス間で会話を継続するChatAgentをテストします。"""
+    # まず会話を作成し、スレッドIDを取得します。
     existing_thread_id = None
 
     async with ChatAgent(
@@ -1192,96 +1191,96 @@ async def test_openai_assistants_agent_existing_thread_id():
         instructions="You are a helpful weather agent.",
         tools=[get_weather],
     ) as agent:
-        # Start a conversation and get the thread ID
+        # 会話を開始してスレッドIDを取得します。
         thread = agent.get_new_thread()
         response1 = await agent.run("What's the weather in Paris?", thread=thread)
 
-        # Validate first response
+        # 最初のレスポンスを検証します。
         assert isinstance(response1, AgentRunResponse)
         assert response1.text is not None
         assert any(word in response1.text.lower() for word in ["weather", "paris"])
 
-        # The thread ID is set after the first response
+        # 最初のレスポンス後にスレッドIDが設定されます。
         existing_thread_id = thread.service_thread_id
         assert existing_thread_id is not None
 
-    # Now continue with the same thread ID in a new agent instance
+    # 同じスレッドIDを使って新しいエージェントインスタンスで続行します。
 
     async with ChatAgent(
         chat_client=OpenAIAssistantsClient(thread_id=existing_thread_id),
         instructions="You are a helpful weather agent.",
         tools=[get_weather],
     ) as agent:
-        # Create a thread with the existing ID
+        # 既存のIDでスレッドを作成します。
         thread = AgentThread(service_thread_id=existing_thread_id)
 
-        # Ask about the previous conversation
+        # 前回の会話について質問します。
         response2 = await agent.run("What was the last city I asked about?", thread=thread)
 
-        # Validate that the agent remembers the previous conversation
+        # エージェントが前回の会話を覚えていることを検証します。
         assert isinstance(response2, AgentRunResponse)
         assert response2.text is not None
-        # Should reference Paris from the previous conversation
+        # 前回の会話でのパリについて言及するはずです。
         assert "paris" in response2.text.lower()
 
 
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_agent_code_interpreter():
-    """Test ChatAgent with code interpreter through OpenAIAssistantsClient."""
+    """OpenAIAssistantsClientを通じてコードインタープリターを使うChatAgentをテストします。"""
 
     async with ChatAgent(
         chat_client=OpenAIAssistantsClient(),
         instructions="You are a helpful assistant that can write and execute Python code.",
         tools=[HostedCodeInterpreterTool()],
     ) as agent:
-        # Request code execution
+        # コード実行をリクエストします。
         response = await agent.run("Write Python code to calculate the factorial of 5 and show the result.")
 
-        # Validate response
+        # レスポンスを検証します。
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
-        # Factorial of 5 is 120
+        # 5の階乗は120です。
         assert "120" in response.text or "factorial" in response.text.lower()
 
 
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_assistants_client_agent_level_tool_persistence():
-    """Test that agent-level tools persist across multiple runs with OpenAI Assistants Client."""
+    """OpenAI Assistants Clientを使ってエージェントレベルのツールが複数回の実行で持続することをテストします。"""
 
     async with ChatAgent(
         chat_client=OpenAIAssistantsClient(),
         instructions="You are a helpful assistant that uses available tools.",
         tools=[get_weather],  # Agent-level tool
     ) as agent:
-        # First run - agent-level tool should be available
+        # 最初の実行 - エージェントレベルのツールが利用可能であるべきです。
         first_response = await agent.run("What's the weather like in Chicago?")
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
-        # Should use the agent-level weather tool
+        # エージェントレベルのweatherツールを使うはずです。
         assert any(term in first_response.text.lower() for term in ["chicago", "sunny", "72"])
 
-        # Second run - agent-level tool should still be available (persistence test)
+        # 2回目の実行 - エージェントレベルのツールは依然として利用可能であるべきです（持続性テスト）。
         second_response = await agent.run("What's the weather in Miami?")
 
         assert isinstance(second_response, AgentRunResponse)
         assert second_response.text is not None
-        # Should use the agent-level weather tool again
+        # 再びエージェントレベルのweatherツールを使うはずです。
         assert any(term in second_response.text.lower() for term in ["miami", "sunny", "72"])
 
 
-# Callable API Key Tests
+# 呼び出し可能なAPIキーのテスト。
 def test_openai_assistants_client_with_callable_api_key() -> None:
-    """Test OpenAIAssistantsClient initialization with callable API key."""
+    """呼び出し可能なAPIキーでOpenAIAssistantsClientの初期化をテストします。"""
 
     async def get_api_key() -> str:
         return "test-api-key-123"
 
     client = OpenAIAssistantsClient(model_id="gpt-4o", api_key=get_api_key)
 
-    # Verify client was created successfully
+    # クライアントが正常に作成されたことを検証します。
     assert client.model_id == "gpt-4o"
-    # OpenAI SDK now manages callable API keys internally
+    # OpenAI SDKは現在、呼び出し可能なAPIキーを内部で管理しています。
     assert client.client is not None

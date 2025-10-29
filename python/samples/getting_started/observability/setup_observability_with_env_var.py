@@ -27,39 +27,40 @@ If no OTLP endpoint or Application Insights connection string is configured, the
 output traces, logs, and metrics to the console.
 """
 
-# Define the scenarios that can be run to show the telemetry data collected by the SDK
+# SDKで収集されたテレメトリデータを表示するために実行可能なシナリオを定義します
 SCENARIOS = ["chat_client", "chat_client_stream", "ai_function", "all"]
 
 
 async def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
-    await asyncio.sleep(randint(0, 10) / 10.0)  # Simulate a network call
+    """指定された場所の天気を取得します。"""
+    await asyncio.sleep(randint(0, 10) / 10.0)  # ネットワークコールをシミュレートします
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 async def run_chat_client(client: "ChatClientProtocol", stream: bool = False) -> None:
-    """Run an AI service.
+    """AIサービスを実行します。
 
-    This function runs an AI service and prints the output.
-    Telemetry will be collected for the service execution behind the scenes,
-    and the traces will be sent to the configured telemetry backend.
+    この関数はAIサービスを実行し、出力を表示します。
+    バックグラウンドでサービス実行のテレメトリが収集され、
+    トレースは設定されたテレメトリバックエンドに送信されます。
 
-    The telemetry will include information about the AI service execution.
+    テレメトリにはAIサービス実行に関する情報が含まれます。
 
     Args:
-        client: The chat client to use.
-        stream: Whether to use streaming for the response
+        client: 使用するchat client。
+        stream: レスポンスにストリーミングを使用するかどうか
 
     Remarks:
-        For the scenario below, you should see the following:
-        1 Client span, with 4 children:
-            2 Internal span with gen_ai.operation.name=chat
-                The first has finish_reason "tool_calls"
-                The second has finish_reason "stop"
-            2 Internal span with gen_ai.operation.name=execute_tool
+        以下のシナリオでは、次の内容が確認できるはずです:
+        1つのClient spanに4つの子スパンが存在:
+            2つの内部スパンはgen_ai.operation.name=chat
+                1つ目はfinish_reasonが "tool_calls"
+                2つ目はfinish_reasonが "stop"
+            2つの内部スパンはgen_ai.operation.name=execute_tool
+
 
     """
     scenario_name = "Chat Client Stream" if stream else "Chat Client"
@@ -79,14 +80,14 @@ async def run_chat_client(client: "ChatClientProtocol", stream: bool = False) ->
 
 
 async def run_ai_function() -> None:
-    """Run a AI function.
+    """AI関数を実行します。
 
-    This function runs a AI function and prints the output.
-    Telemetry will be collected for the function execution behind the scenes,
-    and the traces will be sent to the configured telemetry backend.
+    この関数はAI関数を実行し、出力を表示します。
+    バックグラウンドで関数実行のテレメトリが収集され、
+    トレースは設定されたテレメトリバックエンドに送信されます。
 
-    The telemetry will include information about the AI function execution
-    and the AI service execution.
+    テレメトリにはAI関数実行およびAIサービス実行に関する情報が含まれます。
+
     """
     with get_tracer().start_as_current_span("Scenario: AI Function", kind=trace.SpanKind.CLIENT):
         print("Running scenario: AI Function")
@@ -96,10 +97,10 @@ async def run_ai_function() -> None:
 
 
 async def main(scenario: Literal["chat_client", "chat_client_stream", "ai_function", "all"] = "all"):
-    """Run the selected scenario(s)."""
+    """選択されたシナリオを実行します。"""
 
-    # This will enable tracing and create the necessary tracing, logging and metrics providers
-    # based on environment variables. See the .env.example file for the available configuration options.
+    # トレーシングを有効にし、環境変数に基づいて必要なトレーシング、ロギング、メトリクスプロバイダーを作成します。 利用可能な設定オプションは .env.example
+    # ファイルを参照してください。
     setup_observability()
 
     with get_tracer().start_as_current_span("Sample Scenario's", kind=trace.SpanKind.CLIENT) as current_span:
@@ -107,7 +108,7 @@ async def main(scenario: Literal["chat_client", "chat_client_stream", "ai_functi
 
         client = OpenAIResponsesClient()
 
-        # Scenarios where telemetry is collected in the SDK, from the most basic to the most complex.
+        # SDKでテレメトリが収集されるシナリオ、基本的なものから複雑なものまで。
         if scenario == "ai_function" or scenario == "all":
             with suppress(Exception):
                 await run_ai_function()

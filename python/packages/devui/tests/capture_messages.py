@@ -1,9 +1,8 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 """
-Message Capture Script - Debug message flow
-- This script is intended to provide a reference for the types of events
-  that are emitted by the server when agents and workflows are executed
+Message Capture Script - デバッグ用メッセージフロー
+- このスクリプトは、エージェントとワークフローが実行される際にサーバーから発行されるイベントの種類の参照を提供することを目的としています
 """
 
 import asyncio
@@ -25,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 def start_server() -> tuple[str, Any]:
-    """Start server with samples directory."""
-    # Get samples directory - updated path after samples were moved
+    """samplesディレクトリでサーバーを起動。"""
+    # samplesが移動された後の更新されたパスでsamplesディレクトリを取得
     current_dir = Path(__file__).parent
-    # Samples are now in python/samples/getting_started/devui
+    # samplesは現在python/samples/getting_started/devuiにあります
     samples_dir = current_dir.parent.parent.parent / "samples" / "getting_started" / "devui"
 
     if not samples_dir.exists():
@@ -36,7 +35,7 @@ def start_server() -> tuple[str, Any]:
 
     logger.info(f"Using samples directory: {samples_dir}")
 
-    # Create and start server with simplified parameters
+    # 簡略化されたパラメータでサーバーを作成して起動
     server = DevServer(
         entities_dir=str(samples_dir.resolve()),
         host="127.0.0.1",
@@ -50,7 +49,7 @@ def start_server() -> tuple[str, Any]:
         app=app,
         host="127.0.0.1",
         port=8085,
-        # log_level="info",  # More verbose to see tracing setup
+        # log_level="info"、  # トレース設定を確認するために詳細に
     )
     server_instance = uvicorn.Server(server_config)
 
@@ -60,10 +59,10 @@ def start_server() -> tuple[str, Any]:
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
 
-    # Wait for server to start
-    time.sleep(5)  # Increased wait time
+    # サーバーの起動を待機
+    time.sleep(5)  # 待機時間を延長
 
-    # Verify server is running with retries
+    # リトライでサーバーが稼働していることを確認
     max_retries = 10
     for attempt in range(max_retries):
         try:
@@ -85,7 +84,7 @@ def start_server() -> tuple[str, Any]:
 
 
 def capture_agent_stream_with_tracing(client: OpenAI, agent_id: str, scenario: str = "success") -> list[dict[str, Any]]:
-    """Capture agent streaming events."""
+    """エージェントのストリーミングイベントをキャプチャ。"""
 
     try:
         stream = client.responses.create(
@@ -96,23 +95,23 @@ def capture_agent_stream_with_tracing(client: OpenAI, agent_id: str, scenario: s
 
         events = []
         for event in stream:
-            # Serialize the entire event object
+            # イベントオブジェクト全体をシリアライズ
             try:
                 event_dict = json.loads(event.model_dump_json())
             except Exception:
-                # Fallback to dict conversion if model_dump_json fails
+                # model_dump_jsonが失敗した場合はdict変換にフォールバック
                 event_dict = event.__dict__ if hasattr(event, "__dict__") else str(event)
 
             events.append(event_dict)
 
-            # Just capture everything as-is
+            # そのまますべてをキャプチャ
             if len(events) >= 200:  # Increased limit
                 break
 
         return events
 
     except Exception as e:
-        # Return error information as events
+        # エラー情報をイベントとして返す
         error_event = {
             "type": "error",
             "scenario": scenario,
@@ -126,7 +125,7 @@ def capture_agent_stream_with_tracing(client: OpenAI, agent_id: str, scenario: s
 def capture_workflow_stream_with_tracing(
     client: OpenAI, workflow_id: str, scenario: str = "success"
 ) -> list[dict[str, Any]]:
-    """Capture workflow streaming events."""
+    """ワークフローのストリーミングイベントをキャプチャ。"""
 
     try:
         stream = client.responses.create(
@@ -140,23 +139,23 @@ def capture_workflow_stream_with_tracing(
 
         events = []
         for event in stream:
-            # Serialize the entire event object
+            # イベントオブジェクト全体をシリアライズ
             try:
                 event_dict = json.loads(event.model_dump_json())
             except Exception:
-                # Fallback to dict conversion if model_dump_json fails
+                # model_dump_jsonが失敗した場合はdict変換にフォールバック
                 event_dict = event.__dict__ if hasattr(event, "__dict__") else str(event)
 
             events.append(event_dict)
 
-            # Just capture everything as-is
+            # そのまますべてをキャプチャ
             if len(events) >= 200:  # Increased limit
                 break
 
         return events
 
     except Exception as e:
-        # Return error information as events
+        # エラー情報をイベントとして返す
         error_event = {
             "type": "error",
             "scenario": scenario,
@@ -169,20 +168,20 @@ def capture_workflow_stream_with_tracing(
 
 
 def main():
-    """Main capture script - testing both success and failure scenarios."""
+    """メインキャプチャスクリプト - 成功と失敗の両方のシナリオをテスト。"""
 
-    # Setup
+    # セットアップ
     output_dir = Path(__file__).parent / "captured_messages"
     output_dir.mkdir(exist_ok=True)
 
-    # Start server
+    # サーバーを起動
     base_url, server_instance = start_server()
 
     try:
-        # Create OpenAI client for success scenario
+        # 成功シナリオ用のOpenAIクライアントを作成
         client = OpenAI(base_url=f"{base_url}/v1", api_key="dummy-key")
 
-        # Discover entities
+        # エンティティを発見
         conn = http.client.HTTPConnection("127.0.0.1", 8085, timeout=10)
         try:
             conn.request("GET", "/v1/entities")
@@ -194,7 +193,7 @@ def main():
 
         all_results = {}
 
-        # Test each entity
+        # 各エンティティをテスト
         for entity in entities:
             entity_type = entity["type"]
             entity_id = entity["id"]
@@ -207,7 +206,7 @@ def main():
                 continue
 
             all_results[f"{entity_type}_{entity_id}"] = {"entity_info": entity, "events": events}
-        # Save results
+        # 結果を保存
         file_path = output_dir / "entities_stream_events.json"
         with open(file_path, "w") as f:
             json.dump(
@@ -218,7 +217,7 @@ def main():
             )
 
     finally:
-        # Cleanup server
+        # サーバーをクリーンアップ
         with contextlib.suppress(Exception):
             server_instance.should_exit = True
 

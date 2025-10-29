@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Sample weather agent for Agent Framework Debug UI."""
+"""Agent Framework Debug UI用の天気Agentサンプル。"""
 
 import os
 from collections.abc import Awaitable, Callable
@@ -23,8 +23,8 @@ async def security_filter_middleware(
     context: ChatContext,
     next: Callable[[ChatContext], Awaitable[None]],
 ) -> None:
-    """Chat middleware that blocks requests containing sensitive information."""
-    # Block requests with sensitive information
+    """機密情報を含むリクエストをブロックするChat middleware。"""
+    # 機密情報を含むリクエストをブロックします。
     blocked_terms = ["password", "secret", "api_key", "token"]
 
     for message in context.messages:
@@ -32,7 +32,7 @@ async def security_filter_middleware(
             message_lower = message.text.lower()
             for term in blocked_terms:
                 if term in message_lower:
-                    # Override the response without calling the LLM
+                    # LLMを呼び出さずにレスポンスを上書きします。
                     context.result = ChatResponse(
                         messages=[
                             ChatMessage(
@@ -55,8 +55,8 @@ async def atlantis_location_filter_middleware(
     context: FunctionInvocationContext,
     next: Callable[[FunctionInvocationContext], Awaitable[None]],
 ) -> None:
-    """Function middleware that blocks weather requests for Atlantis."""
-    # Check if location parameter is "atlantis"
+    """Atlantis向けの天気リクエストをブロックするFunction middleware。"""
+    # locationパラメータが"atlantis"かどうかをチェックします。
     location = getattr(context.arguments, "location", None)
     if location and location.lower() == "atlantis":
         context.result = (
@@ -72,7 +72,7 @@ async def atlantis_location_filter_middleware(
 def get_weather(
     location: Annotated[str, "The location to get the weather for."],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     temperature = 53
     return f"The weather in {location} is {conditions[0]} with a high of {temperature}°C."
@@ -82,7 +82,7 @@ def get_forecast(
     location: Annotated[str, "The location to get the forecast for."],
     days: Annotated[int, "Number of days for forecast"] = 3,
 ) -> str:
-    """Get weather forecast for multiple days."""
+    """複数日の天気予報を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     forecast: list[str] = []
 
@@ -94,7 +94,7 @@ def get_forecast(
     return f"Weather forecast for {location}:\n" + "\n".join(forecast)
 
 
-# Agent instance following Agent Framework conventions
+# Agent Frameworkの規約に従ったAgentインスタンス。
 agent = ChatAgent(
     name="AzureWeatherAgent",
     description="A helpful agent that provides weather information and forecasts",
@@ -112,12 +112,12 @@ agent = ChatAgent(
 
 
 def main():
-    """Launch the Azure weather agent in DevUI."""
+    """DevUIでAzure天気Agentを起動します。"""
     import logging
 
     from agent_framework.devui import serve
 
-    # Setup logging
+    # ログのセットアップ
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ def main():
     logger.info("Available at: http://localhost:8090")
     logger.info("Entity ID: agent_AzureWeatherAgent")
 
-    # Launch server with the agent
+    # Agentでサーバーを起動します。
     serve(entities=[agent], port=8090, auto_open=True)
 
 

@@ -22,8 +22,9 @@ Prerequisites:
 
 class Dispatcher(Executor):
     """
-    The sole purpose of this decorator is to dispatch the input of the workflow to
-    other executors.
+    このデコレータの唯一の目的は、ワークフローの入力を
+    他のexecutorにディスパッチすることです。
+
     """
 
     @handler
@@ -35,7 +36,7 @@ class Dispatcher(Executor):
 
 
 class Average(Executor):
-    """Calculate the average of a list of integers."""
+    """整数のリストの平均を計算します。"""
 
     @handler
     async def handle(self, numbers: list[int], ctx: WorkflowContext[float]):
@@ -44,7 +45,7 @@ class Average(Executor):
 
 
 class Sum(Executor):
-    """Calculate the sum of a list of integers."""
+    """整数のリストの合計を計算します。"""
 
     @handler
     async def handle(self, numbers: list[int], ctx: WorkflowContext[int]):
@@ -53,32 +54,31 @@ class Sum(Executor):
 
 
 class Aggregator(Executor):
-    """Aggregate the results from the different tasks and yield the final output."""
+    """異なるタスクからの結果を集約し、最終出力をyieldします。"""
 
     @handler
     async def handle(self, results: list[int | float], ctx: WorkflowContext[Never, list[int | float]]):
-        """Receive the results from the source executors.
+        """ソースexecutorから結果を受け取ります。
 
-        The framework will automatically collect messages from the source executors
-        and deliver them as a list.
+        フレームワークはソースexecutorからのメッセージを自動的に収集し、リストとして配信します。
 
         Args:
-            results (list[int | float]): execution results from upstream executors.
-                The type annotation must be a list of union types that the upstream
-                executors will produce.
-            ctx (WorkflowContext[Never, list[int | float]]): A workflow context that can yield the final output.
+            results (list[int | float]): 上流executorからの実行結果。
+                型注釈は上流executorが生成するユニオン型のリストでなければなりません。
+            ctx (WorkflowContext[Never, list[int | float]]): 最終出力をyieldできるワークフローコンテキスト。
+
         """
         await ctx.yield_output(results)
 
 
 async def main() -> None:
-    # 1) Create the executors
+    # 1) executorを作成します
     dispatcher = Dispatcher(id="dispatcher")
     average = Average(id="average")
     summation = Sum(id="summation")
     aggregator = Aggregator(id="aggregator")
 
-    # 2) Build a simple fan out and fan in workflow
+    # 2) シンプルなfan outとfan inワークフローを構築します
     workflow = (
         WorkflowBuilder()
         .set_start_executor(dispatcher)
@@ -87,7 +87,7 @@ async def main() -> None:
         .build()
     )
 
-    # 3) Run the workflow
+    # 3) ワークフローを実行します
     output: list[int | float] | None = None
     async for event in workflow.run_stream([random.randint(1, 100) for _ in range(10)]):
         if isinstance(event, WorkflowOutputEvent):

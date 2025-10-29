@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for conversation store implementation."""
+"""conversation store実装のテスト。"""
 
 from typing import cast
 
@@ -12,7 +12,7 @@ from agent_framework_devui._conversations import InMemoryConversationStore
 
 @pytest.mark.asyncio
 async def test_create_conversation():
-    """Test creating a conversation."""
+    """会話の作成をテスト。"""
     store = InMemoryConversationStore()
 
     conversation = store.create_conversation(metadata={"agent_id": "test_agent"})
@@ -24,13 +24,13 @@ async def test_create_conversation():
 
 @pytest.mark.asyncio
 async def test_get_conversation():
-    """Test retrieving a conversation."""
+    """会話の取得をテスト。"""
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     created = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Retrieve it
+    # それを取得
     retrieved = store.get_conversation(created.id)
 
     assert retrieved is not None
@@ -40,7 +40,7 @@ async def test_get_conversation():
 
 @pytest.mark.asyncio
 async def test_get_conversation_not_found():
-    """Test retrieving non-existent conversation."""
+    """存在しない会話の取得をテスト。"""
     store = InMemoryConversationStore()
 
     conversation = store.get_conversation("conv_nonexistent")
@@ -50,13 +50,13 @@ async def test_get_conversation_not_found():
 
 @pytest.mark.asyncio
 async def test_update_conversation():
-    """Test updating conversation metadata."""
+    """会話メタデータの更新をテスト。"""
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     created = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Update metadata
+    # メタデータを更新
     updated = store.update_conversation(created.id, metadata={"agent_id": "new_agent", "session_id": "sess_123"})
 
     assert updated.id == created.id
@@ -65,42 +65,42 @@ async def test_update_conversation():
 
 @pytest.mark.asyncio
 async def test_delete_conversation():
-    """Test deleting a conversation."""
+    """会話の削除をテスト。"""
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     created = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Delete it
+    # それを削除
     result = store.delete_conversation(created.id)
 
     assert result.id == created.id
     assert result.deleted is True
     assert result.object == "conversation.deleted"
 
-    # Verify it's gone
+    # 削除されたことを確認
     assert store.get_conversation(created.id) is None
 
 
 @pytest.mark.asyncio
 async def test_get_thread():
-    """Test getting underlying AgentThread."""
+    """基盤となるAgentThreadの取得をテスト。"""
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     conversation = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Get thread
+    # スレッドを取得
     thread = store.get_thread(conversation.id)
 
     assert thread is not None
-    # AgentThread should have message_store
+    # AgentThreadはmessage_storeを持つべき
     assert hasattr(thread, "message_store")
 
 
 @pytest.mark.asyncio
 async def test_get_thread_not_found():
-    """Test getting thread for non-existent conversation."""
+    """存在しない会話のスレッド取得をテスト。"""
     store = InMemoryConversationStore()
 
     thread = store.get_thread("conv_nonexistent")
@@ -110,21 +110,21 @@ async def test_get_thread_not_found():
 
 @pytest.mark.asyncio
 async def test_list_conversations_by_metadata():
-    """Test filtering conversations by metadata."""
+    """メタデータによる会話のフィルタリングをテスト。"""
     store = InMemoryConversationStore()
 
-    # Create multiple conversations
+    # 複数の会話を作成
     _conv1 = store.create_conversation(metadata={"agent_id": "agent1"})
     _conv2 = store.create_conversation(metadata={"agent_id": "agent2"})
     conv3 = store.create_conversation(metadata={"agent_id": "agent1", "session_id": "sess_1"})
 
-    # Filter by agent_id
+    # agent_idでフィルタリング
     results = store.list_conversations_by_metadata({"agent_id": "agent1"})
 
     assert len(results) == 2
     assert all(cast(dict[str, str], c.metadata).get("agent_id") == "agent1" for c in results if c.metadata)
 
-    # Filter by agent_id and session_id
+    # agent_idとsession_idでフィルタリング
     results = store.list_conversations_by_metadata({"agent_id": "agent1", "session_id": "sess_1"})
 
     assert len(results) == 1
@@ -133,19 +133,19 @@ async def test_list_conversations_by_metadata():
 
 @pytest.mark.asyncio
 async def test_add_items():
-    """Test adding items to conversation."""
+    """会話にアイテムを追加するテスト。"""
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     conversation = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Add items
+    # アイテムを追加
     items = [{"role": "user", "content": [{"type": "text", "text": "Hello"}]}]
 
     conv_items = await store.add_items(conversation.id, items=items)
 
     assert len(conv_items) == 1
-    # Message is a ConversationItem type - check standard OpenAI fields
+    # メッセージはConversationItemタイプ - 標準のOpenAIフィールドをチェック
     assert conv_items[0].type == "message"
     assert conv_items[0].role == "user"
     assert conv_items[0].status == "completed"
@@ -157,39 +157,39 @@ async def test_add_items():
 
 @pytest.mark.asyncio
 async def test_list_items():
-    """Test listing conversation items."""
+    """会話のアイテム一覧をテスト。"""
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     conversation = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Add items
+    # アイテムを追加
     items = [
         {"role": "user", "content": [{"type": "text", "text": "Hello"}]},
         {"role": "assistant", "content": [{"type": "text", "text": "Hi there"}]},
     ]
     await store.add_items(conversation.id, items=items)
 
-    # List items
+    # アイテムを一覧表示
     retrieved_items, has_more = await store.list_items(conversation.id)
 
-    assert len(retrieved_items) >= 2  # At least the items we added
+    assert len(retrieved_items) >= 2  # 少なくとも追加したアイテムが含まれていること
     assert has_more is False
 
 
 @pytest.mark.asyncio
 async def test_list_items_pagination():
-    """Test pagination when listing items."""
+    """アイテム一覧のページネーションをテスト。"""
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     conversation = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Add multiple items
+    # 複数のアイテムを追加
     items = [{"role": "user", "content": [{"type": "text", "text": f"Message {i}"}]} for i in range(5)]
     await store.add_items(conversation.id, items=items)
 
-    # List with limit
+    # limit付きで一覧表示
     retrieved_items, has_more = await store.list_items(conversation.id, limit=3)
 
     assert len(retrieved_items) == 3
@@ -198,23 +198,23 @@ async def test_list_items_pagination():
 
 @pytest.mark.asyncio
 async def test_list_items_converts_function_calls():
-    """Test that list_items properly converts function calls to ResponseFunctionToolCallItem."""
+    """list_itemsが関数呼び出しをResponseFunctionToolCallItemに正しく変換することをテスト。"""
     from agent_framework import ChatMessage, ChatMessageStore, Role
 
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     conversation = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Get the underlying thread and set up message store
+    # 基盤となるスレッドを取得し、message storeをセットアップ
     thread = store.get_thread(conversation.id)
     assert thread is not None
 
-    # Initialize message store if not present
+    # 存在しない場合はmessage storeを初期化
     if thread.message_store is None:
         thread.message_store = ChatMessageStore()
 
-    # Simulate messages from agent execution with function calls
+    # 関数呼び出しを伴うエージェント実行からのメッセージをシミュレート
     messages = [
         ChatMessage(role=Role.USER, contents=[{"type": "text", "text": "What's the weather in SF?"}]),
         ChatMessage(
@@ -241,17 +241,17 @@ async def test_list_items_converts_function_calls():
         ChatMessage(role=Role.ASSISTANT, contents=[{"type": "text", "text": "The weather is sunny, 65°F"}]),
     ]
 
-    # Add messages to thread
+    # スレッドにメッセージを追加
     await thread.on_new_messages(messages)
 
-    # List conversation items
+    # 会話のアイテムを一覧表示
     items, has_more = await store.list_items(conversation.id)
 
-    # Verify we got the right number and types of items
+    # 正しい数とタイプのアイテムが取得できたことを検証
     assert len(items) == 4, f"Expected 4 items, got {len(items)}"
     assert has_more is False
 
-    # Check item types
+    # アイテムタイプをチェック
     assert items[0].type == "message", "First item should be a message"
     assert items[0].role == "user"
     assert len(items[0].content) == 1
@@ -275,7 +275,7 @@ async def test_list_items_converts_function_calls():
     text_content_3 = cast(InputTextContent, items[3].content[0])
     assert text_content_3.text == "The weather is sunny, 65°F"
 
-    # CRITICAL: Ensure no empty message items
+    # CRITICAL: 空のメッセージアイテムがないことを保証
     for item in items:
         if item.type == "message":
             assert len(item.content) > 0, f"Message item {item.id} has empty content!"
@@ -283,22 +283,22 @@ async def test_list_items_converts_function_calls():
 
 @pytest.mark.asyncio
 async def test_list_items_handles_images_and_files():
-    """Test that list_items properly converts data content (images/files) to OpenAI types."""
+    """list_itemsがデータコンテンツ（画像/ファイル）をOpenAIタイプに正しく変換することをテスト。"""
     from agent_framework import ChatMessage, ChatMessageStore, Role
 
     store = InMemoryConversationStore()
 
-    # Create conversation
+    # 会話を作成
     conversation = store.create_conversation(metadata={"agent_id": "test_agent"})
 
-    # Get the underlying thread
+    # 基盤となるスレッドを取得
     thread = store.get_thread(conversation.id)
     assert thread is not None
 
     if thread.message_store is None:
         thread.message_store = ChatMessageStore()
 
-    # Simulate message with image and file
+    # 画像とファイルを含むメッセージをシミュレート
     messages = [
         ChatMessage(
             role=Role.USER,
@@ -312,7 +312,7 @@ async def test_list_items_handles_images_and_files():
 
     await thread.on_new_messages(messages)
 
-    # List items
+    # アイテムを一覧表示
     items, has_more = await store.list_items(conversation.id)
 
     assert len(items) == 1
@@ -320,7 +320,7 @@ async def test_list_items_handles_images_and_files():
     assert items[0].role == "user"
     assert len(items[0].content) == 3
 
-    # Check content types
+    # コンテンツタイプをチェック
     assert items[0].content[0].type == "text"
     text_content = cast(InputTextContent, items[0].content[0])
     assert text_content.text == "Check this image and PDF"

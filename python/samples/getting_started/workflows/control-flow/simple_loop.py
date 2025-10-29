@@ -34,54 +34,50 @@ Prerequisites:
 
 
 class NumberSignal(Enum):
-    """Enum to represent number signals for the workflow."""
+    """ワークフローの数値信号を表すEnum。"""
 
-    # The target number is above the guess.
+    # ターゲットの数は推測より大きい。
     ABOVE = "above"
-    # The target number is below the guess.
+    # ターゲットの数は推測より小さい。
     BELOW = "below"
-    # The guess matches the target number.
+    # 推測がターゲットの数と一致している。
     MATCHED = "matched"
-    # Initial signal to start the guessing process.
+    # 推測プロセスを開始するための初期信号。
     INIT = "init"
 
 
 class GuessNumberExecutor(Executor):
-    """An executor that guesses a number."""
+    """数値を推測するexecutor。"""
 
     def __init__(self, bound: tuple[int, int], id: str | None = None):
-        """Initialize the executor with a target number."""
+        """ターゲットの数でexecutorを初期化します。"""
         super().__init__(id=id or "guess_number")
         self._lower = bound[0]
         self._upper = bound[1]
 
     @handler
     async def guess_number(self, feedback: NumberSignal, ctx: WorkflowContext[int, str]) -> None:
-        """Execute the task by guessing a number."""
+        """数値を推測してタスクを実行します。"""
         if feedback == NumberSignal.INIT:
             self._guess = (self._lower + self._upper) // 2
             await ctx.send_message(self._guess)
         elif feedback == NumberSignal.MATCHED:
-            # The previous guess was correct.
+            # 前回の推測が正解でした。
             await ctx.yield_output(f"Guessed the number: {self._guess}")
         elif feedback == NumberSignal.ABOVE:
-            # The previous guess was too low.
-            # Update the lower bound to the previous guess.
-            # Generate a new number that is between the new bounds.
+            # 前回の推測が低すぎました。 下限を前回の推測に更新します。 新しい範囲内の数値を生成します。
             self._lower = self._guess + 1
             self._guess = (self._lower + self._upper) // 2
             await ctx.send_message(self._guess)
         else:
-            # The previous guess was too high.
-            # Update the upper bound to the previous guess.
-            # Generate a new number that is between the new bounds.
+            # 前回の推測が高すぎました。 上限を前回の推測に更新します。 新しい範囲内の数値を生成します。
             self._upper = self._guess - 1
             self._guess = (self._lower + self._upper) // 2
             await ctx.send_message(self._guess)
 
 
 class SubmitToJudgeAgent(Executor):
-    """Send the numeric guess to a judge agent which replies ABOVE/BELOW/MATCHED."""
+    """数値の推測をjudge agentに送り、ABOVE/BELOW/MATCHEDで応答を受け取ります。"""
 
     def __init__(self, judge_agent_id: str, target: int, id: str | None = None):
         super().__init__(id=id or "submit_to_judge")
@@ -103,7 +99,7 @@ class SubmitToJudgeAgent(Executor):
 
 
 class ParseJudgeResponse(Executor):
-    """Parse AgentExecutorResponse into NumberSignal for the loop."""
+    """AgentExecutorResponseをNumberSignalに解析してループに使用します。"""
 
     @handler
     async def parse(self, response: AgentExecutorResponse, ctx: WorkflowContext[NumberSignal]) -> None:
@@ -117,11 +113,11 @@ class ParseJudgeResponse(Executor):
 
 
 async def main():
-    """Main function to run the workflow."""
-    # Step 1: Create the executors.
+    """ワークフローを実行するメイン関数。"""
+    # ステップ1: executorを作成します。
     guess_number_executor = GuessNumberExecutor((1, 100))
 
-    # Agent judge setup
+    # Agent judgeのセットアップ。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     judge_agent = AgentExecutor(
         chat_client.create_agent(
@@ -134,8 +130,7 @@ async def main():
     submit_to_judge = SubmitToJudgeAgent(judge_agent_id=judge_agent.id, target=30, id="submit_judge")
     parse_judge = ParseJudgeResponse(id="parse_judge")
 
-    # Step 2: Build the workflow with the defined edges.
-    # This time we are creating a loop in the workflow.
+    # ステップ2: 定義したエッジでワークフローを構築します。 今回はワークフローにループを作成します。
     workflow = (
         WorkflowBuilder()
         .add_edge(guess_number_executor, submit_to_judge)
@@ -146,7 +141,7 @@ async def main():
         .build()
     )
 
-    # Step 3: Run the workflow and print the events.
+    # ステップ3: ワークフローを実行し、イベントを出力します。
     iterations = 0
     async for event in workflow.run_stream(NumberSignal.INIT):
         if isinstance(event, ExecutorCompletedEvent) and event.executor_id == guess_number_executor.id:
@@ -155,9 +150,8 @@ async def main():
             print(f"Final result: {event.data}")
         print(f"Event: {event}")
 
-    # This is essentially a binary search, so the number of iterations should be logarithmic.
-    # The maximum number of iterations is [log2(range size)]. For a range of 1 to 100, this is log2(100) which is 7.
-    # Subtract because the last round is the MATCHED event.
+    # これは本質的に二分探索なので、反復回数は対数的です。 最大反復回数は[log2(範囲サイズ)]です。範囲が1から100の場合、これはlog2(100)で7です。
+    # 最後のラウンドはMATCHEDイベントなので差し引きます。
     print(f"Guessed {iterations - 1} times.")
 
 

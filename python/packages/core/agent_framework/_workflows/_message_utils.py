@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Shared helpers for normalizing workflow message inputs."""
+"""ワークフローメッセージ入力の正規化のための共有ヘルパー。"""
 
 from collections.abc import Sequence
 
@@ -10,13 +10,14 @@ from agent_framework import ChatMessage, Role
 def normalize_messages_input(
     messages: str | ChatMessage | Sequence[str | ChatMessage] | None = None,
 ) -> list[ChatMessage]:
-    """Normalize heterogeneous message inputs to a list of ChatMessage objects.
+    """異種のメッセージ入力をChatMessageオブジェクトのリストに正規化します。
 
     Args:
-        messages: String, ChatMessage, or sequence of either. None yields empty list.
+        messages: 文字列、ChatMessage、またはそのいずれかのシーケンス。Noneの場合は空リストを返します。
 
     Returns:
-        List of ChatMessage instances suitable for workflow consumption.
+        ワークフローで使用可能なChatMessageインスタンスのリスト。
+
     """
     if messages is None:
         return []

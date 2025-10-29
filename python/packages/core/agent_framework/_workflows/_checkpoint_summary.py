@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WorkflowCheckpointSummary:
-    """Human-readable summary of a workflow checkpoint."""
+    """ワークフローチェックポイントの人間が読める要約。"""
 
     checkpoint_id: str
     iteration_count: int

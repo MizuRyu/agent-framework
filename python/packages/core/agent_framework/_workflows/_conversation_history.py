@@ -1,9 +1,8 @@
-# Copyright (c) Microsoft. All rights reserved.
+# Microsoftの著作権表示。すべての権利を保有します。
 
-"""Helpers for managing chat conversation history.
+"""チャット会話履歴を管理するためのヘルパー。
 
-These utilities operate on standard `list[ChatMessage]` collections and simple
-dictionary snapshots so orchestrators can share logic without new mixins.
+これらのユーティリティは標準の`list[ChatMessage]`コレクションと単純な辞書スナップショット上で動作し、オーケストレーターが新しいmixinなしでロジックを共有できるようにします。
 """
 
 import json
@@ -14,7 +13,7 @@ from .._types import ChatMessage
 
 
 def latest_user_message(conversation: Sequence[ChatMessage]) -> ChatMessage:
-    """Return the most recent user-authored message from `conversation`."""
+    """`conversation`から最新のユーザー作成メッセージを返します。"""
     for message in reversed(conversation):
         role_value = getattr(message.role, "value", message.role)
         if str(role_value).lower() == "user":
@@ -23,13 +22,13 @@ def latest_user_message(conversation: Sequence[ChatMessage]) -> ChatMessage:
 
 
 def ensure_author(message: ChatMessage, fallback: str) -> ChatMessage:
-    """Attach `fallback` author if message is missing `author_name`."""
+    """メッセージに`author_name`がない場合、`fallback`の著者を付加します。"""
     message.author_name = message.author_name or fallback
     return message
 
 
 def snapshot_state(conversation: Sequence[ChatMessage]) -> dict[str, Any]:
-    """Build an immutable snapshot for checkpoint storage."""
+    """チェックポイント保存用の不変スナップショットを構築します。"""
     if hasattr(conversation, "to_dict"):
         result = conversation.to_dict()  # type: ignore[attr-defined]
         if isinstance(result, dict):

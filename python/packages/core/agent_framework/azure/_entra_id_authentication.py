@@ -19,20 +19,20 @@ def get_entra_auth_token(
     token_endpoint: str,
     **kwargs: Any,
 ) -> str | None:
-    """Retrieve a Microsoft Entra Auth Token for a given token endpoint.
+    """指定されたトークンエンドポイントの Microsoft Entra 認証トークンを取得します。
 
-    The token endpoint may be specified as an environment variable, via the .env
-    file or as an argument. If the token endpoint is not provided, the default is None.
+    トークンエンドポイントは環境変数、.env ファイル、または引数で指定可能です。指定がない場合は None がデフォルトです。
 
     Args:
-        credential: The Azure credential to use for authentication.
-        token_endpoint: The token endpoint to use to retrieve the authentication token.
+        credential: 認証に使用する Azure 資格情報。
+        token_endpoint: 認証トークンを取得するためのトークンエンドポイント。
 
     Keyword Args:
-        **kwargs: Additional keyword arguments to pass to the token retrieval method.
+        **kwargs: トークン取得メソッドに渡す追加のキーワード引数。
 
     Returns:
-        The Azure token or None if the token could not be retrieved.
+        Azure トークン、または取得できなかった場合は None。
+
     """
     if not token_endpoint:
         raise ServiceInvalidAuthError(
@@ -51,20 +51,20 @@ def get_entra_auth_token(
 async def get_entra_auth_token_async(
     credential: "AsyncTokenCredential", token_endpoint: str, **kwargs: Any
 ) -> str | None:
-    """Retrieve a async Microsoft Entra Auth Token for a given token endpoint.
+    """指定されたトークンエンドポイントの非同期 Microsoft Entra 認証トークンを取得します。
 
-    The token endpoint may be specified as an environment variable, via the .env
-    file or as an argument. If the token endpoint is not provided, the default is None.
+    トークンエンドポイントは環境変数、.env ファイル、または引数で指定可能です。指定がない場合は None がデフォルトです。
 
     Args:
-        credential: The async Azure credential to use for authentication.
-        token_endpoint: The token endpoint to use to retrieve the authentication token.
+        credential: 認証に使用する非同期 Azure 資格情報。
+        token_endpoint: 認証トークンを取得するためのトークンエンドポイント。
 
     Keyword Args:
-        **kwargs: Additional keyword arguments to pass to the token retrieval method.
+        **kwargs: トークン取得メソッドに渡す追加のキーワード引数。
 
     Returns:
-        The Azure token or None if the token could not be retrieved.
+        Azure トークン、または取得できなかった場合は None。
+
     """
     if not token_endpoint:
         raise ServiceInvalidAuthError(

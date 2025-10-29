@@ -38,7 +38,7 @@ Prerequisites:
 - Authentication via azure-identity. Run `az login` before executing.
 """
 
-# Simulated external content keyed by a simple topic hint.
+# 単純なトピックヒントでキー付けされた外部コンテンツのシミュレーション。
 EXTERNAL_REFERENCES: Final[dict[str, str]] = {
     "workspace": (
         "From Workspace Weekly: Adjustable monitor arms and sit-stand desks can reduce "
@@ -56,7 +56,7 @@ EXTERNAL_REFERENCES: Final[dict[str, str]] = {
 
 
 def _lookup_external_note(prompt: str) -> str | None:
-    """Return the first matching external note based on a keyword search."""
+    """キーワード検索に基づいて最初に一致する外部ノートを返します。"""
     lowered = prompt.lower()
     for keyword, note in EXTERNAL_REFERENCES.items():
         if keyword in lowered:
@@ -69,7 +69,7 @@ async def enrich_with_references(
     draft: AgentExecutorResponse,
     ctx: WorkflowContext[AgentExecutorRequest],
 ) -> None:
-    """Inject a follow-up user instruction that adds an external note for the next agent."""
+    """次のAgentのために外部ノートを追加するフォローアップユーザー指示を注入します。"""
     conversation = list(draft.full_conversation or draft.agent_run_response.messages)
     original_prompt = next((message.text for message in conversation if message.role == Role.USER), "")
     external_note = _lookup_external_note(original_prompt) or (
@@ -87,7 +87,7 @@ async def enrich_with_references(
 
 
 async def main() -> None:
-    """Run the workflow and stream combined updates from both agents."""
+    """ワークフローを実行し、両Agentからの結合更新をストリームします。"""
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     research_agent = chat_client.create_agent(

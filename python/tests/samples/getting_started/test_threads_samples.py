@@ -11,10 +11,10 @@ from pytest import MonkeyPatch, mark, param
 from samples.getting_started.threads.custom_chat_message_store_thread import main as threads_custom_store
 from samples.getting_started.threads.suspend_resume_thread import main as threads_suspend_resume
 
-# Environment variable for controlling sample tests
+# サンプルテストを制御するための環境変数。
 RUN_SAMPLES_TESTS = "RUN_SAMPLES_TESTS"
 
-# All thread samples
+# すべてのThreadサンプル。
 thread_samples = [
     param(
         threads_custom_store,
@@ -39,7 +39,7 @@ thread_samples = [
 
 @mark.parametrize("sample, responses", thread_samples)
 async def test_thread_samples(sample: Callable[..., Awaitable[Any]], responses: list[str], monkeypatch: MonkeyPatch):
-    """Test thread samples with input mocking and retry logic."""
+    """入力のモックとリトライロジックを用いたテストThreadのサンプル。"""
     saved_responses = copy.deepcopy(responses)
 
     def reset():

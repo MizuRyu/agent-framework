@@ -19,33 +19,33 @@ T = TypeVar("T")
 
 @dataclass
 class Message:
-    """A class representing a message in the workflow."""
+    """workflow内のメッセージを表すClass。"""
 
     data: Any
     source_id: str
     target_id: str | None = None
 
-    # OpenTelemetry trace context fields for message propagation
-    # These are plural to support fan-in scenarios where multiple messages are aggregated
-    trace_contexts: list[dict[str, str]] | None = None  # W3C Trace Context headers from multiple sources
-    source_span_ids: list[str] | None = None  # Publishing span IDs for linking from multiple sources
+    # メッセージ伝搬のためのOpenTelemetryトレースコンテキストフィールド 複数メッセージが集約されるファンインシナリオをサポートするため複数形です
+    trace_contexts: list[dict[str, str]] | None = None  # 複数ソースからのW3C Trace Contextヘッダー
+    source_span_ids: list[str] | None = None  # 複数ソースからリンクするためのPublishing span ID
 
-    # Backward compatibility properties
+    # 後方互換性のためのプロパティ
     @property
     def trace_context(self) -> dict[str, str] | None:
-        """Get the first trace context for backward compatibility."""
+        """後方互換性のため最初のトレースコンテキストを取得します。"""
         return self.trace_contexts[0] if self.trace_contexts else None
 
     @property
     def source_span_id(self) -> str | None:
-        """Get the first source span ID for backward compatibility."""
+        """後方互換性のため最初のソースspan IDを取得します。"""
         return self.source_span_ids[0] if self.source_span_ids else None
 
 
 class _WorkflowState(TypedDict):
-    """TypedDict representing the serializable state of a workflow execution.
+    """workflow実行のシリアライズ可能なStateを表すTypedDict。
 
-    This includes all state data needed for checkpointing and restoration.
+    これにはチェックポイントと復元に必要なすべてのStateデータが含まれます。
+
     """
 
     messages: dict[str, list[dict[str, Any]]]
@@ -55,95 +55,105 @@ class _WorkflowState(TypedDict):
 
 @runtime_checkable
 class RunnerContext(Protocol):
-    """Protocol for the execution context used by the runner.
+    """ランナーが使用する実行ContextのProtocol。
 
-    A single context that supports messaging, events, and optional checkpointing.
-    If checkpoint storage is not configured, checkpoint methods may raise.
+    メッセージング、イベント、およびオプションのチェックポイントをサポートする単一のContext。
+    チェックポイントストレージが設定されていない場合、チェックポイントメソッドは例外を発生させる可能性があります。
+
     """
 
     async def send_message(self, message: Message) -> None:
-        """Send a message from the executor to the context.
+        """ExecutorからContextへメッセージを送信します。
 
         Args:
-            message: The message to be sent.
+            message: 送信するメッセージ。
+
         """
         ...
 
     async def drain_messages(self) -> dict[str, list[Message]]:
-        """Drain all messages from the context.
+        """Contextからすべてのメッセージを排出します。
 
         Returns:
-            A dictionary mapping executor IDs to lists of messages.
+            Executor IDをキー、メッセージのリストを値とする辞書。
+
         """
         ...
 
     async def has_messages(self) -> bool:
-        """Check if there are any messages in the context.
+        """Contextにメッセージが存在するかどうかを確認します。
 
         Returns:
-            True if there are messages, False otherwise.
+            メッセージがあればTrue、なければFalse。
+
         """
         ...
 
     async def add_event(self, event: WorkflowEvent) -> None:
-        """Add an event to the execution context.
+        """実行Contextにイベントを追加します。
 
         Args:
-            event: The event to be added.
+            event: 追加するイベント。
+
         """
         ...
 
     async def drain_events(self) -> list[WorkflowEvent]:
-        """Drain all events from the context.
+        """Contextからすべてのイベントを排出します。
 
         Returns:
-            A list of events that were added to the context.
+            Contextに追加されたイベントのリスト。
+
         """
         ...
 
     async def has_events(self) -> bool:
-        """Check if there are any events in the context.
+        """Contextにイベントが存在するかどうかを確認します。
 
         Returns:
-            True if there are events, False otherwise.
+            イベントがあればTrue、なければFalse。
+
         """
         ...
 
     async def next_event(self) -> WorkflowEvent:  # pragma: no cover - interface only
-        """Wait for and return the next event emitted by the workflow run."""
+        """workflow実行から発行された次のイベントを待機して返します。"""
         ...
 
-    # Checkpointing capability
+    # チェックポイント機能
     def has_checkpointing(self) -> bool:
-        """Check if the context supports checkpointing.
+        """Contextがチェックポイントをサポートしているかどうかを確認します。
 
         Returns:
-            True if checkpointing is supported, False otherwise.
+            チェックポイントがサポートされていればTrue、そうでなければFalse。
+
         """
         ...
 
-    # Checkpointing APIs (optional, enabled by storage)
+    # チェックポイントAPI（オプション、ストレージによって有効化）
     def set_workflow_id(self, workflow_id: str) -> None:
-        """Set the workflow ID for the context."""
+        """Contextのworkflow IDを設定します。"""
         ...
 
     def reset_for_new_run(self) -> None:
-        """Reset the context for a new workflow run."""
+        """新しいworkflow実行のためにContextをリセットします。"""
         ...
 
     def set_streaming(self, streaming: bool) -> None:
-        """Set whether agents should stream incremental updates.
+        """Agentが増分更新をストリームすべきかどうかを設定します。
 
         Args:
-            streaming: True for streaming mode (run_stream), False for non-streaming (run).
+            streaming: ストリーミングモード(run_stream)ならTrue、非ストリーミング(run)ならFalse。
+
         """
         ...
 
     def is_streaming(self) -> bool:
-        """Check if the workflow is in streaming mode.
+        """workflowがストリーミングモードかどうかを確認します。
 
         Returns:
-            True if streaming mode is enabled, False otherwise.
+            ストリーミングモードが有効ならTrue、そうでなければFalse。
+
         """
         ...
 
@@ -153,58 +163,60 @@ class RunnerContext(Protocol):
         iteration_count: int,
         metadata: dict[str, Any] | None = None,
     ) -> str:
-        """Create a checkpoint of the current workflow state.
+        """現在のworkflow Stateのチェックポイントを作成します。
 
         Args:
-            shared_state: The shared state to include in the checkpoint.
-                          This is needed to capture the full state of the workflow.
-                          The shared state is not managed by the context itself.
-            iteration_count: The current iteration count of the workflow.
-            metadata: Optional metadata to associate with the checkpoint.
+            shared_state: チェックポイントに含める共有State。
+                          workflowの完全なStateをキャプチャするために必要です。
+                          共有StateはContext自身によって管理されません。
+            iteration_count: workflowの現在のイテレーション数。
+            metadata: チェックポイントに関連付けるOptionalなメタデータ。
 
         Returns:
-            The ID of the created checkpoint.
+            作成されたチェックポイントのID。
+
         """
         ...
 
     async def load_checkpoint(self, checkpoint_id: str) -> WorkflowCheckpoint | None:
-        """Load a checkpoint without mutating the current context state.
+        """現在のContext Stateを変更せずにチェックポイントをロードします。
 
         Args:
-            checkpoint_id: The ID of the checkpoint to load.
+            checkpoint_id: ロードするチェックポイントのID。
 
         Returns:
-            The loaded checkpoint, or None if it does not exist.
+            ロードしたチェックポイント、存在しなければNone。
+
         """
         ...
 
     async def apply_checkpoint(self, checkpoint: WorkflowCheckpoint) -> None:
-        """Apply a checkpoint to the current context, mutating its state.
+        """現在のコンテキストにチェックポイントを適用し、その状態を変更します。
 
         Args:
-            checkpoint: The checkpoint whose state is to be applied.
+            checkpoint: 適用する状態を持つチェックポイント。
         """
         ...
 
 
 class InProcRunnerContext:
-    """In-process execution context for local execution and optional checkpointing."""
+    """ローカル実行およびオプションのチェックポイント機能を持つインプロセス実行コンテキスト。"""
 
     def __init__(self, checkpoint_storage: CheckpointStorage | None = None):
-        """Initialize the in-process execution context.
+        """インプロセス実行コンテキストを初期化します。
 
         Args:
-            checkpoint_storage: Optional storage to enable checkpointing.
+            checkpoint_storage: チェックポイント機能を有効にするためのオプションのストレージ。
         """
         self._messages: dict[str, list[Message]] = {}
-        # Event queue for immediate streaming of events (e.g., AgentRunUpdateEvent)
+        # イベントの即時ストリーミング用のイベントキュー（例：AgentRunUpdateEvent）。
         self._event_queue: asyncio.Queue[WorkflowEvent] = asyncio.Queue()
 
-        # Checkpointing configuration/state
+        # チェックポイントの設定/状態。
         self._checkpoint_storage = checkpoint_storage
         self._workflow_id: str | None = None
 
-        # Streaming flag - set by workflow's run_stream() vs run()
+        # ストリーミングフラグ - workflowのrun_stream()とrun()によって設定される。
         self._streaming: bool = False
 
     # region Messaging and Events
@@ -221,15 +233,15 @@ class InProcRunnerContext:
         return bool(self._messages)
 
     async def add_event(self, event: WorkflowEvent) -> None:
-        """Add an event to the context immediately.
+        """イベントをコンテキストに即座に追加します。
 
-        Events are enqueued so runners can stream them in real time instead of
-        waiting for superstep boundaries.
+        イベントはキューに入れられ、ランナーがスーパーステップの境界を待つことなくリアルタイムでストリームできます。
+
         """
         await self._event_queue.put(event)
 
     async def drain_events(self) -> list[WorkflowEvent]:
-        """Drain all currently queued events without blocking for new ones."""
+        """新しいイベントを待たずに、現在キューにあるすべてのイベントを排出します。"""
         events: list[WorkflowEvent] = []
         while True:
             try:
@@ -242,15 +254,14 @@ class InProcRunnerContext:
         return not self._event_queue.empty()
 
     async def next_event(self) -> WorkflowEvent:
-        """Wait for and return the next event.
+        """次のイベントを待機して返します。
 
-        Used by the runner to interleave event emission with ongoing iteration work.
+        ランナーがイベントの発行と継続的な反復作業を交互に行うために使用されます。
+
         """
         return await self._event_queue.get()
 
-    # endregion Messaging and Events
-
-    # region Checkpointing
+    # endregion Messaging and Events region Checkpointing
 
     def has_checkpointing(self) -> bool:
         return self._checkpoint_storage is not None
@@ -284,14 +295,15 @@ class InProcRunnerContext:
         return await self._checkpoint_storage.load_checkpoint(checkpoint_id)
 
     def reset_for_new_run(self) -> None:
-        """Reset the context for a new workflow run.
+        """新しいworkflow実行のためにコンテキストをリセットします。
 
-        This clears messages, events, and resets streaming flag.
+        これによりメッセージ、イベントがクリアされ、ストリーミングフラグがリセットされます。
+
         """
         self._messages.clear()
-        # Clear any pending events (best-effort) by recreating the queue
+        # 保留中のイベントを（ベストエフォートで）クリアするためにキューを再作成します。
         self._event_queue = asyncio.Queue()
-        self._streaming = False  # Reset streaming flag
+        self._streaming = False  # ストリーミングフラグをリセットします。
 
     async def apply_checkpoint(self, checkpoint: WorkflowCheckpoint) -> None:
         self._messages.clear()
@@ -316,18 +328,20 @@ class InProcRunnerContext:
         self._workflow_id = workflow_id
 
     def set_streaming(self, streaming: bool) -> None:
-        """Set whether agents should stream incremental updates.
+        """Agentが増分アップデートをストリーミングするかどうかを設定します。
 
         Args:
-            streaming: True for streaming mode (run_stream), False for non-streaming (run).
+            streaming: ストリーミングモード(run_stream)ならTrue、非ストリーミング(run)ならFalse。
+
         """
         self._streaming = streaming
 
     def is_streaming(self) -> bool:
-        """Check if the workflow is in streaming mode.
+        """workflowがストリーミングモードかどうかをチェックします。
 
         Returns:
-            True if streaming mode is enabled, False otherwise.
+            ストリーミングモードが有効ならTrue、そうでなければFalse。
+
         """
         return self._streaming
 

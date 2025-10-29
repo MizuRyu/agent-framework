@@ -28,75 +28,75 @@ resource = Resource.create({SERVICE_NAME: "ManualSetup"})
 
 
 def setup_logging():
-    # Create and set a global logger provider for the application.
+    # アプリケーション用のグローバルロガープロバイダーを作成して設定する。
     logger_provider = LoggerProvider(resource=resource)
-    # Log processors are initialized with an exporter which is responsible
+    # ログプロセッサはエクスポーターで初期化されます。エクスポーターは責任を持ちます
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(ConsoleLogExporter()))
-    # Sets the global default logger provider
+    # グローバルデフォルトのロガープロバイダーを設定する
     set_logger_provider(logger_provider)
-    # Create a logging handler to write logging records, in OTLP format, to the exporter.
+    # エクスポーターにOTLP形式でログレコードを書き込むためのロギングハンドラーを作成する。
     handler = LoggingHandler()
-    # Attach the handler to the root logger. `getLogger()` with no arguments returns the root logger.
-    # Events from all child loggers will be processed by this handler.
+    # ハンドラーをルートロガーにアタッチします。引数なしの`getLogger()`はルートロガーを返します。
+    # すべての子ロガーからのイベントはこのハンドラーで処理されます。
     logger = logging.getLogger()
     logger.addHandler(handler)
-    # Set the logging level to NOTSET to allow all records to be processed by the handler.
+    # ハンドラーで処理されるすべてのレコードを許可するためにログレベルをNOTSETに設定する。
     logger.setLevel(logging.NOTSET)
 
 
 def setup_tracing():
-    # Initialize a trace provider for the application. This is a factory for creating tracers.
+    # アプリケーション用のトレースプロバイダーを初期化する。これはトレーサーを作成するためのファクトリーです。
     tracer_provider = TracerProvider(resource=resource)
-    # Span processors are initialized with an exporter which is responsible
-    # for sending the telemetry data to a particular backend.
+    # スパンプロセッサはエクスポーターで初期化されます。 エクスポーターはテレメトリデータを特定のバックエンドに送信する責任があります。
     tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-    # Sets the global default tracer provider
+    # グローバルデフォルトのトレースプロバイダーを設定する
     set_tracer_provider(tracer_provider)
 
 
 def setup_metrics():
-    # Initialize a metric provider for the application. This is a factory for creating meters.
+    # アプリケーション用のメトリックプロバイダーを初期化する。これはメーターを作成するためのファクトリーです。
     meter_provider = MeterProvider(
         metric_readers=[PeriodicExportingMetricReader(ConsoleMetricExporter(), export_interval_millis=5000)],
         resource=resource,
     )
-    # Sets the global default meter provider
+    # グローバルデフォルトのメータープロバイダーを設定する
     set_meter_provider(meter_provider)
 
 
 async def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
-    await asyncio.sleep(randint(0, 10) / 10.0)  # Simulate a network call
+    """指定された場所の天気を取得します。"""
+    await asyncio.sleep(randint(0, 10) / 10.0)  # ネットワークコールをシミュレートする
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 async def run_chat_client() -> None:
-    """Run an AI service.
+    """AIサービスを実行します。
 
-    This function runs an AI service and prints the output.
-    Telemetry will be collected for the service execution behind the scenes,
-    and the traces will be sent to the configured telemetry backend.
+    この関数はAIサービスを実行し、出力を表示します。
+    サービス実行のテレメトリは裏で収集され、
+    トレースは設定されたテレメトリバックエンドに送信されます。
 
-    The telemetry will include information about the AI service execution.
+    テレメトリにはAIサービス実行に関する情報が含まれます。
 
     Args:
-        stream: Whether to use streaming for the plugin
+        stream: プラグインでストリーミングを使用するかどうか
 
     Remarks:
-        When function calling is outside the open telemetry loop
-        each of the call to the model is handled as a seperate span,
-        while when the open telemetry is put last, a single span
-        is shown, which might include one or more rounds of function calling.
+        関数呼び出しがOpenTelemetryループの外にある場合、
+        モデルへの各呼び出しは別々のスパンとして処理されます。
+        一方、OpenTelemetryが最後に配置される場合、
+        1つのスパンが表示され、1回以上の関数呼び出しラウンドを含むことがあります。
 
-        So for the scenario below, you should see the following:
+        以下のシナリオでは、次のように表示されるはずです：
 
-        2 spans with gen_ai.operation.name=chat
-            The first has finish_reason "tool_calls"
-            The second has finish_reason "stop"
-        2 spans with gen_ai.operation.name=execute_tool
+        gen_ai.operation.name=chat の2つのスパン
+            1つ目は finish_reason が "tool_calls"
+            2つ目は finish_reason が "stop"
+        gen_ai.operation.name=execute_tool の2つのスパン
+
 
     """
     client = OpenAIChatClient()
@@ -110,7 +110,7 @@ async def run_chat_client() -> None:
 
 
 async def main():
-    """Run the selected scenario(s)."""
+    """選択したシナリオを実行します。"""
     setup_logging()
     setup_tracing()
     setup_metrics()

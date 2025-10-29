@@ -1,9 +1,9 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Create an Azure AI agent using both Semantic Kernel and Agent Framework.
+"""Semantic KernelとAgent Frameworkの両方を使用してAzure AI Agentを作成します。
 
-Prerequisites:
-- Azure AI agent resource with a deployed model.
-- Logged-in Azure CLI or other credential supported by AzureCliCredential.
+前提条件:
+- 展開済みモデルを持つAzure AI Agentリソース。
+- AzureCliCredentialがサポートするログイン済みのAzure CLIまたはその他の認証情報。
 """
 
 import asyncio
@@ -15,8 +15,8 @@ async def run_semantic_kernel() -> None:
 
     async with AzureCliCredential() as credential:
         async with AzureAIAgent.create_client(credential=credential) as client:
-            settings = AzureAIAgentSettings()  # Reads env vars for region/deployment.
-            # SK builds the remote agent definition then wraps it with AzureAIAgent.
+            settings = AzureAIAgentSettings()  # リージョン/デプロイメントのための環境変数を読み取ります。
+            # SKはリモートAgentの定義を構築し、それをAzureAIAgentでラップします。
             definition = await client.agents.create_agent(
                 model=settings.model_deployment_name,
                 name="Support",
@@ -36,7 +36,7 @@ async def run_agent_framework() -> None:
             name="Support",
             instructions="Answer customer questions in one paragraph.",
         ) as agent:
-            # AF client returns an asynchronous context manager for remote agents.
+            # AFクライアントはリモートAgent用の非同期コンテキストマネージャを返します。
             reply = await agent.run("How do I upgrade my plan?")
             print("[AF]", reply.text)
 

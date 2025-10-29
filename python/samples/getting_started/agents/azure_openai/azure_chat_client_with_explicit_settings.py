@@ -20,7 +20,7 @@ settings rather than relying on environment variable defaults.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -28,8 +28,7 @@ def get_weather(
 async def main() -> None:
     print("=== Azure Chat Client with Explicit Settings ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証のために、ターミナルで `az login` コマンドを実行するか、AzureCliCredential を好みの認証オプションに置き換えてください。
     agent = AzureOpenAIChatClient(
         deployment_name=os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
         endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],

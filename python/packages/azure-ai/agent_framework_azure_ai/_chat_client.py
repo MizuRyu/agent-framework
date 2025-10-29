@@ -103,38 +103,38 @@ logger = get_logger("agent_framework.azure")
 
 
 class AzureAISettings(AFBaseSettings):
-    """Azure AI Project settings.
+    """Azure AI Project の設定。
 
-    The settings are first loaded from environment variables with the prefix 'AZURE_AI_'.
-    If the environment variables are not found, the settings can be loaded from a .env file
-    with the encoding 'utf-8'. If the settings are not found in the .env file, the settings
-    are ignored; however, validation will fail alerting that the settings are missing.
+    設定はまず 'AZURE_AI_' プレフィックスの環境変数から読み込まれます。
+    環境変数が見つからない場合、設定は utf-8 エンコーディングの .env ファイルから読み込まれます。
+    .env ファイルにも設定が見つからない場合は無視されますが、検証は失敗し設定が不足していることを通知します。
 
     Keyword Args:
-        project_endpoint: The Azure AI Project endpoint URL.
-            Can be set via environment variable AZURE_AI_PROJECT_ENDPOINT.
-        model_deployment_name: The name of the model deployment to use.
-            Can be set via environment variable AZURE_AI_MODEL_DEPLOYMENT_NAME.
-        env_file_path: If provided, the .env settings are read from this file path location.
-        env_file_encoding: The encoding of the .env file, defaults to 'utf-8'.
+        project_endpoint: Azure AI Project のエンドポイント URL。
+            環境変数 AZURE_AI_PROJECT_ENDPOINT で設定可能。
+        model_deployment_name: 使用するモデルデプロイメントの名前。
+            環境変数 AZURE_AI_MODEL_DEPLOYMENT_NAME で設定可能。
+        env_file_path: 指定すると、.env 設定はこのファイルパスから読み込まれます。
+        env_file_encoding: .env ファイルのエンコーディング。デフォルトは 'utf-8'。
 
     Examples:
         .. code-block:: python
 
             from agent_framework_azure_ai import AzureAISettings
 
-            # Using environment variables
-            # Set AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com
-            # Set AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
+            # 環境変数を使用する場合
+            # AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com を設定
+            # AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4 を設定
             settings = AzureAISettings()
 
-            # Or passing parameters directly
+            # またはパラメータを直接渡す場合
             settings = AzureAISettings(
                 project_endpoint="https://your-project.cognitiveservices.azure.com", model_deployment_name="gpt-4"
             )
 
-            # Or loading from a .env file
+            # または .env ファイルから読み込む場合
             settings = AzureAISettings(env_file_path="path/to/.env")
+
     """
 
     env_prefix: ClassVar[str] = "AZURE_AI_"
@@ -150,7 +150,7 @@ TAzureAIAgentClient = TypeVar("TAzureAIAgentClient", bound="AzureAIAgentClient")
 @use_observability
 @use_chat_middleware
 class AzureAIAgentClient(BaseChatClient):
-    """Azure AI Agent Chat client."""
+    """Azure AI Agent Chat クライアント。"""
 
     OTEL_PROVIDER_NAME: ClassVar[str] = "azure.ai"  # type: ignore[reportIncompatibleVariableOverride, misc]
 
@@ -168,25 +168,23 @@ class AzureAIAgentClient(BaseChatClient):
         env_file_encoding: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize an Azure AI Agent client.
+        """Azure AI Agent クライアントを初期化する。
 
         Keyword Args:
-            project_client: An existing AIProjectClient to use. If not provided, one will be created.
-            agent_id: The ID of an existing agent to use. If not provided and project_client is provided,
-                a new agent will be created (and deleted after the request). If neither project_client
-                nor agent_id is provided, both will be created and managed automatically.
-            agent_name: The name to use when creating new agents.
-            thread_id: Default thread ID to use for conversations. Can be overridden by
-                conversation_id property when making a request.
-            project_endpoint: The Azure AI Project endpoint URL.
-                Can also be set via environment variable AZURE_AI_PROJECT_ENDPOINT.
-                Ignored when a project_client is passed.
-            model_deployment_name: The model deployment name to use for agent creation.
-                Can also be set via environment variable AZURE_AI_MODEL_DEPLOYMENT_NAME.
-            async_credential: Azure async credential to use for authentication.
-            env_file_path: Path to environment file for loading settings.
-            env_file_encoding: Encoding of the environment file.
-            kwargs: Additional keyword arguments passed to the parent class.
+            project_client: 既存の AIProjectClient を使用する。指定しない場合は新規作成される。
+            agent_id: 使用する既存のエージェントの ID。指定せず project_client がある場合は新規エージェントを作成（リクエスト後に削除）。
+                project_client も agent_id も指定しない場合は両方自動作成・管理される。
+            agent_name: 新規エージェント作成時に使用する名前。
+            thread_id: 会話で使用するデフォルトのスレッド ID。リクエスト時の conversation_id プロパティで上書き可能。
+            project_endpoint: Azure AI Project のエンドポイント URL。
+                環境変数 AZURE_AI_PROJECT_ENDPOINT でも設定可能。
+                project_client が渡された場合は無視される。
+            model_deployment_name: エージェント作成に使用するモデルデプロイメント名。
+                環境変数 AZURE_AI_MODEL_DEPLOYMENT_NAME でも設定可能。
+            async_credential: 認証に使用する Azure の非同期クレデンシャル。
+            env_file_path: 設定読み込み用の環境ファイルパス。
+            env_file_encoding: 環境ファイルのエンコーディング。
+            kwargs: 親クラスに渡す追加のキーワード引数。
 
         Examples:
             .. code-block:: python
@@ -194,21 +192,22 @@ class AzureAIAgentClient(BaseChatClient):
                 from agent_framework_azure_ai import AzureAIAgentClient
                 from azure.identity.aio import DefaultAzureCredential
 
-                # Using environment variables
-                # Set AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com
-                # Set AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
+                # 環境変数を使用する場合
+                # AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com を設定
+                # AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4 を設定
                 credential = DefaultAzureCredential()
                 client = AzureAIAgentClient(async_credential=credential)
 
-                # Or passing parameters directly
+                # またはパラメータを直接渡す場合
                 client = AzureAIAgentClient(
                     project_endpoint="https://your-project.cognitiveservices.azure.com",
                     model_deployment_name="gpt-4",
                     async_credential=credential,
                 )
 
-                # Or loading from a .env file
+                # または .env ファイルから読み込む場合
                 client = AzureAIAgentClient(async_credential=credential, env_file_path="path/to/.env")
+
         """
         try:
             azure_ai_settings = AzureAISettings(
@@ -220,7 +219,7 @@ class AzureAIAgentClient(BaseChatClient):
         except ValidationError as ex:
             raise ServiceInitializationError("Failed to create Azure AI settings.", ex) from ex
 
-        # If no project_client is provided, create one
+        # project_client が提供されていなければ、新規作成する
         should_close_client = False
         if project_client is None:
             if not azure_ai_settings.project_endpoint:
@@ -235,7 +234,7 @@ class AzureAIAgentClient(BaseChatClient):
                     "or 'AZURE_AI_MODEL_DEPLOYMENT_NAME' environment variable."
                 )
 
-            # Use provided credential
+            # 提供された credential を使用する
             if not async_credential:
                 raise ServiceInitializationError("Azure credential is required when project_client is not provided.")
             project_client = AIProjectClient(
@@ -245,26 +244,27 @@ class AzureAIAgentClient(BaseChatClient):
             )
             should_close_client = True
 
-        # Initialize parent
+        # 親クラスを初期化する
         super().__init__(**kwargs)
 
-        # Initialize instance variables
+        # インスタンス変数を初期化する
         self.project_client = project_client
         self.credential = async_credential
         self.agent_id = agent_id
         self.agent_name = agent_name
         self.model_id = azure_ai_settings.model_deployment_name
         self.thread_id = thread_id
-        self._should_delete_agent = False  # Track whether we should delete the agent
-        self._should_close_client = should_close_client  # Track whether we should close client connection
-        self._agent_definition: Agent | None = None  # Cached definition for existing agent
+        self._should_delete_agent = False  # エージェントを削除すべきか追跡する
+        self._should_close_client = should_close_client  # クライアント接続を閉じるべきか追跡する
+        self._agent_definition: Agent | None = None  # 既存エージェントのキャッシュされた定義
 
     async def setup_azure_ai_observability(self, enable_sensitive_data: bool | None = None) -> None:
-        """Use this method to setup tracing in your Azure AI Project.
+        """Azure AI Project でトレーシングを設定するためにこのメソッドを使用してください。
 
-        This will take the connection string from the project project_client.
-        It will override any connection string that is set in the environment variables.
-        It will disable any OTLP endpoint that might have been set.
+        これは project_client から接続文字列を取得します。
+        環境変数に設定された接続文字列を上書きします。
+        設定されている可能性のある OTLP エンドポイントを無効にします。
+
         """
         try:
             conn_string = await self.project_client.telemetry.get_application_insights_connection_string()
@@ -281,24 +281,25 @@ class AzureAIAgentClient(BaseChatClient):
         )
 
     async def __aenter__(self) -> "Self":
-        """Async context manager entry."""
+        """非同期コンテキストマネージャのエントリー。"""
         return self
 
     async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
-        """Async context manager exit - clean up any agents we created."""
+        """非同期コンテキストマネージャの終了 - 作成したエージェントをクリーンアップする。"""
         await self.close()
 
     async def close(self) -> None:
-        """Close the project_client and clean up any agents we created."""
+        """project_client を閉じ、作成したエージェントをクリーンアップする。"""
         await self._cleanup_agent_if_needed()
         await self._close_client_if_needed()
 
     @classmethod
     def from_settings(cls: type[TAzureAIAgentClient], settings: dict[str, Any]) -> TAzureAIAgentClient:
-        """Initialize a AzureAIAgentClient from a dictionary of settings.
+        """設定の辞書から AzureAIAgentClient を初期化する。
 
         Args:
-            settings: A dictionary of settings for the service.
+            settings: サービスの設定辞書。
+
         """
         return cls(
             project_client=settings.get("project_client"),
@@ -330,10 +331,10 @@ class AzureAIAgentClient(BaseChatClient):
         chat_options: ChatOptions,
         **kwargs: Any,
     ) -> AsyncIterable[ChatResponseUpdate]:
-        # Extract necessary state from messages and options
+        # メッセージとオプションから必要な状態を抽出する
         run_options, required_action_results = await self._create_run_options(messages, chat_options, **kwargs)
 
-        # Get the thread ID
+        # スレッド ID を取得する
         thread_id: str | None = (
             chat_options.conversation_id
             if chat_options.conversation_id is not None
@@ -343,23 +344,24 @@ class AzureAIAgentClient(BaseChatClient):
         if thread_id is None and required_action_results is not None:
             raise ValueError("No thread ID was provided, but chat messages includes tool results.")
 
-        # Determine which agent to use and create if needed
+        # 使用するエージェントを決定し、必要なら作成する
         agent_id = await self._get_agent_id_or_create(run_options)
 
-        # Process and yield each update from the stream
+        # ストリームからの各更新を処理して yield する
         async for update in self._process_stream(
             *(await self._create_agent_stream(thread_id, agent_id, run_options, required_action_results))
         ):
             yield update
 
     async def _get_agent_id_or_create(self, run_options: dict[str, Any] | None = None) -> str:
-        """Determine which agent to use and create if needed.
+        """使用するエージェントを決定し、必要なら作成する。
 
         Returns:
-            str: The agent_id to use
+            str: 使用する agent_id
+
         """
         run_options = run_options or {}
-        # If no agent_id is provided, create a temporary agent
+        # agent_id が提供されていなければ、一時的なエージェントを作成する
         if self.agent_id is None:
             if "model" not in run_options or not run_options["model"]:
                 raise ServiceInitializationError(
@@ -394,12 +396,13 @@ class AzureAIAgentClient(BaseChatClient):
         run_options: dict[str, Any],
         required_action_results: list[FunctionResultContent | FunctionApprovalResponseContent] | None,
     ) -> tuple[AsyncAgentRunStream[AsyncAgentEventHandler[Any]] | AsyncAgentEventHandler[Any], str]:
-        """Create the agent stream for processing.
+        """処理用のエージェントストリームを作成する。
 
         Returns:
             tuple: (stream, final_thread_id)
+
         """
-        # Get any active run for this thread
+        # このスレッドのアクティブな run を取得する
         thread_run = await self._get_active_thread_run(thread_id)
 
         stream: AsyncAgentRunStream[AsyncAgentEventHandler[Any]] | AsyncAgentEventHandler[Any]
@@ -414,7 +417,7 @@ class AzureAIAgentClient(BaseChatClient):
             and tool_run_id == thread_run.id
             and (tool_outputs or tool_approvals)
         ):  # type: ignore[reportUnknownMemberType]
-            # There's an active run and we have tool results to submit, so submit the results.
+            # アクティブな run があり、ツール結果を送信する必要があるので結果を送信する。
             args: dict[str, Any] = {
                 "thread_id": thread_run.thread_id,
                 "run_id": tool_run_id,
@@ -425,14 +428,14 @@ class AzureAIAgentClient(BaseChatClient):
             if tool_approvals:
                 args["tool_approvals"] = tool_approvals
             await self.project_client.agents.runs.submit_tool_outputs_stream(**args)  # type: ignore[reportUnknownMemberType]
-            # Pass the handler to the stream to continue processing
+            # 処理を続行するためにハンドラをストリームに渡す
             stream = handler  # type: ignore
             final_thread_id = thread_run.thread_id
         else:
-            # Handle thread creation or cancellation
+            # スレッドの作成またはキャンセルを処理する
             final_thread_id = await self._prepare_thread(thread_id, thread_run, run_options)
 
-            # Now create a new run and stream the results.
+            # 新しい run を作成し、結果をストリームする。
             run_options.pop("conversation_id", None)
             stream = await self.project_client.agents.runs.stream(  # type: ignore[reportUnknownMemberType]
                 final_thread_id, agent_id=agent_id, **run_options
@@ -441,7 +444,7 @@ class AzureAIAgentClient(BaseChatClient):
         return stream, final_thread_id
 
     async def _get_active_thread_run(self, thread_id: str | None) -> ThreadRun | None:
-        """Get any active run for the given thread."""
+        """指定されたスレッドのアクティブな run を取得する。"""
         if thread_id is None:
             return None
 
@@ -460,40 +463,39 @@ class AzureAIAgentClient(BaseChatClient):
     async def _prepare_thread(
         self, thread_id: str | None, thread_run: ThreadRun | None, run_options: dict[str, Any]
     ) -> str:
-        """Prepare the thread for a new run, creating or cleaning up as needed."""
+        """新しい run のためにスレッドを準備し、必要に応じて作成またはクリーンアップする。"""
         if thread_id is not None:
             if thread_run is not None:
-                # There was an active run; we need to cancel it before starting a new run.
+                # アクティブな run があったので、新しい run を開始する前にキャンセルする必要がある。
                 await self.project_client.agents.runs.cancel(thread_id, thread_run.id)
 
             return thread_id
 
-        # No thread ID was provided, so create a new thread.
+        # スレッド ID が提供されなかったので、新しいスレッドを作成する。
         thread = await self.project_client.agents.threads.create(
             tool_resources=run_options.get("tool_resources"), metadata=run_options.get("metadata")
         )
         thread_id = thread.id
-        # workaround for: https://github.com/Azure/azure-sdk-for-python/issues/42805
-        # this occurs when otel is enabled
-        # once fixed, in the function above, readd:
+        # 回避策: https://github.com/Azure/azure-sdk-for-python/issues/42805 これは otel
+        # が有効な場合に発生します 修正されたら、上記の関数で以下を再追加してください:
         # `messages=run_options.pop("additional_messages")`
         for msg in run_options.pop("additional_messages", []):
             await self.project_client.agents.messages.create(
                 thread_id=thread_id, role=msg.role, content=msg.content, metadata=msg.metadata
             )
-        # and remove until here.
+        # ここまで削除してください。
         return thread_id
 
     def _extract_url_citations(self, message_delta_chunk: MessageDeltaChunk) -> list[CitationAnnotation]:
-        """Extract URL citations from MessageDeltaChunk."""
+        """MessageDeltaChunk から URL の引用を抽出する。"""
         url_citations: list[CitationAnnotation] = []
 
-        # Process each content item in the delta to find citations
+        # デルタ内の各コンテンツアイテムを処理して引用を見つける
         for content in message_delta_chunk.delta.content:
             if isinstance(content, MessageDeltaTextContent) and content.text and content.text.annotations:
                 for annotation in content.text.annotations:
                     if isinstance(annotation, MessageDeltaTextUrlCitationAnnotation):
-                        # Create annotated regions only if both start and end indices are available
+                        # 開始と終了のインデックスが両方ある場合のみ注釈付き領域を作成する
                         annotated_regions = []
                         if annotation.start_index and annotation.end_index:
                             annotated_regions = [
@@ -503,7 +505,7 @@ class AzureAIAgentClient(BaseChatClient):
                                 )
                             ]
 
-                        # Create CitationAnnotation from AzureAI annotation
+                        # AzureAI の注釈から CitationAnnotation を作成する
                         citation = CitationAnnotation(
                             title=getattr(annotation.url_citation, "title", None),
                             url=annotation.url_citation.url,
@@ -518,20 +520,20 @@ class AzureAIAgentClient(BaseChatClient):
     async def _process_stream(
         self, stream: AsyncAgentRunStream[AsyncAgentEventHandler[Any]] | AsyncAgentEventHandler[Any], thread_id: str
     ) -> AsyncIterable[ChatResponseUpdate]:
-        """Process events from the stream iterator and yield ChatResponseUpdate objects."""
+        """ストリームイテレータからのイベントを処理し、ChatResponseUpdate オブジェクトを yield する。"""
         response_id: str | None = None
         response_stream = await stream.__aenter__() if isinstance(stream, AsyncAgentRunStream) else stream  # type: ignore[no-untyped-call]
         try:
             async for event_type, event_data, _ in response_stream:  # type: ignore
                 match event_data:
                     case MessageDeltaChunk():
-                        # only one event_type: AgentStreamEvent.THREAD_MESSAGE_DELTA
+                        # イベントタイプは AgentStreamEvent.THREAD_MESSAGE_DELTA のみ
                         role = Role.USER if event_data.delta.role == MessageRole.USER else Role.ASSISTANT
 
-                        # Extract URL citations from the delta chunk
+                        # デルタチャンクから URL の引用を抽出する
                         url_citations = self._extract_url_citations(event_data)
 
-                        # Create contents with citations if any exist
+                        # 引用があれば引用付きのコンテンツを作成する
                         citation_content: list[Contents] = []
                         if event_data.text or url_citations:
                             text_content_obj = TextContent(text=event_data.text or "")
@@ -548,8 +550,7 @@ class AzureAIAgentClient(BaseChatClient):
                             response_id=response_id,
                         )
                     case ThreadRun():
-                        # possible event_types:
-                        # AgentStreamEvent.THREAD_RUN_CREATED
+                        # 可能な event_types: AgentStreamEvent.THREAD_RUN_CREATED
                         # AgentStreamEvent.THREAD_RUN_QUEUED
                         # AgentStreamEvent.THREAD_RUN_INCOMPLETE
                         # AgentStreamEvent.THREAD_RUN_IN_PROGRESS
@@ -591,8 +592,7 @@ class AzureAIAgentClient(BaseChatClient):
                                 )
 
                     case RunStep():
-                        # possible event_types:
-                        # AgentStreamEvent.THREAD_RUN_STEP_CREATED,
+                        # 可能な event_types: AgentStreamEvent.THREAD_RUN_STEP_CREATED,
                         # AgentStreamEvent.THREAD_RUN_STEP_IN_PROGRESS,
                         # AgentStreamEvent.THREAD_RUN_STEP_COMPLETED,
                         # AgentStreamEvent.THREAD_RUN_STEP_FAILED,
@@ -660,7 +660,7 @@ class AzureAIAgentClient(BaseChatClient):
                                         response_id=response_id,
                                     )
                     case _:  # ThreadMessage or string
-                        # possible event_types for ThreadMessage:
+                        # ThreadMessage の可能な event_types:
                         # AgentStreamEvent.THREAD_MESSAGE_CREATED
                         # AgentStreamEvent.THREAD_MESSAGE_IN_PROGRESS
                         # AgentStreamEvent.THREAD_MESSAGE_COMPLETED
@@ -681,7 +681,7 @@ class AzureAIAgentClient(BaseChatClient):
                 await stream.__aexit__(None, None, None)  # type: ignore[no-untyped-call]
 
     def _create_function_call_contents(self, event_data: ThreadRun, response_id: str | None) -> list[Contents]:
-        """Create function call contents from a tool action event."""
+        """ツールアクションイベントから関数呼び出し内容を作成します。"""
         if isinstance(event_data, ThreadRun) and event_data.required_action is not None:
             if isinstance(event_data.required_action, SubmitToolOutputsAction):
                 return [
@@ -711,28 +711,29 @@ class AzureAIAgentClient(BaseChatClient):
         return []
 
     async def _close_client_if_needed(self) -> None:
-        """Close project_client session if we created it."""
+        """作成した場合、project_client セッションを閉じます。"""
         if self._should_close_client:
             await self.project_client.close()
 
     async def _cleanup_agent_if_needed(self) -> None:
-        """Clean up the agent if we created it."""
+        """作成した場合、agent をクリーンアップします。"""
         if self._should_delete_agent and self.agent_id is not None:
             await self.project_client.agents.delete_agent(self.agent_id)
             self.agent_id = None
             self._should_delete_agent = False
 
     async def _load_agent_definition_if_needed(self) -> Agent | None:
-        """Load and cache agent details if not already loaded."""
+        """まだ読み込まれていない場合、agent の詳細を読み込みキャッシュします。"""
         if self._agent_definition is None and self.agent_id is not None:
             self._agent_definition = await self.project_client.agents.get_agent(self.agent_id)
         return self._agent_definition
 
     def _prepare_tool_choice(self, chat_options: ChatOptions) -> None:
-        """Prepare the tools and tool choice for the chat options.
+        """チャットオプションのためにツールとツール選択を準備します。
 
         Args:
-            chat_options: The chat options to prepare.
+            chat_options: 準備するチャットオプション。
+
         """
         chat_tool_mode = chat_options.tool_choice
         if chat_tool_mode is None or chat_tool_mode == ToolMode.NONE or chat_tool_mode == "none":
@@ -764,9 +765,9 @@ class AzureAIAgentClient(BaseChatClient):
 
             tool_definitions: list[ToolDefinition | dict[str, Any]] = []
 
-            # Add tools from existing agent
+            # 既存の agent からツールを追加します。
             if agent_definition is not None:
-                # Don't include function tools, since they will be passed through chat_options.tools
+                # function tools は含めません。これらは chat_options.tools を通じて渡されるためです。
                 agent_tools = [tool for tool in agent_definition.tools if not isinstance(tool, FunctionToolDefinition)]
                 if agent_tools:
                     tool_definitions.extend(agent_tools)
@@ -775,10 +776,10 @@ class AzureAIAgentClient(BaseChatClient):
 
             if chat_options.tool_choice is not None:
                 if chat_options.tool_choice != "none" and chat_options.tools:
-                    # Add run tools
+                    # run tools を追加します。
                     tool_definitions.extend(await self._prep_tools(chat_options.tools, run_options))
 
-                    # Handle MCP tool resources for approval mode
+                    # 承認モードのために MCP ツールリソースを処理します。
                     mcp_tools = [tool for tool in chat_options.tools if isinstance(tool, HostedMCPTool)]
                     if mcp_tools:
                         mcp_resources = []
@@ -786,14 +787,14 @@ class AzureAIAgentClient(BaseChatClient):
                             server_label = mcp_tool.name.replace(" ", "_")
                             mcp_resource: dict[str, Any] = {"server_label": server_label}
 
-                            # Add headers if they exist
+                            # 存在する場合、ヘッダーを追加します。
                             if mcp_tool.headers:
                                 mcp_resource["headers"] = mcp_tool.headers
 
                             if mcp_tool.approval_mode is not None:
                                 match mcp_tool.approval_mode:
                                     case str():
-                                        # Map agent framework approval modes to Azure AI approval modes
+                                        # agent フレームワークの承認モードを Azure AI の承認モードにマッピングします。
                                         approval_mode = (
                                             "always" if mcp_tool.approval_mode == "always_require" else "never"
                                         )
@@ -810,7 +811,7 @@ class AzureAIAgentClient(BaseChatClient):
 
                             mcp_resources.append(mcp_resource)
 
-                        # Add MCP resources to tool_resources
+                        # tool_resources に MCP リソースを追加します。
                         if "tool_resources" not in run_options:
                             run_options["tool_resources"] = {}
                         run_options["tool_resources"]["mcp"] = mcp_resources
@@ -845,9 +846,8 @@ class AzureAIAgentClient(BaseChatClient):
 
         additional_messages: list[ThreadMessageOptions] | None = None
 
-        # System/developer messages are turned into instructions, since there is no such message roles in Azure AI.
-        # All other messages are added 1:1, treating assistant messages as agent messages
-        # and everything else as user messages.
+        # System/developer メッセージは Azure AI にそのようなメッセージロールがないため指示に変換されます。 その他のメッセージは 1:1
+        # で追加され、assistant メッセージは agent メッセージとして扱い、その他は user メッセージとして扱います。
         for chat_message in messages:
             if chat_message.role.value in ["system", "developer"]:
                 for text_content in [content for content in chat_message.contents if isinstance(content, TextContent)]:
@@ -882,7 +882,7 @@ class AzureAIAgentClient(BaseChatClient):
         if additional_messages is not None:
             run_options["additional_messages"] = additional_messages
 
-        # Add instruction from existing agent at the beginning
+        # 既存の agent からの指示を先頭に追加します。
         if (
             agent_definition is not None
             and agent_definition.instructions
@@ -898,7 +898,7 @@ class AzureAIAgentClient(BaseChatClient):
     async def _prep_tools(
         self, tools: Sequence["ToolProtocol | MutableMapping[str, Any]"], run_options: dict[str, Any] | None = None
     ) -> list[ToolDefinition | dict[str, Any]]:
-        """Prepare tool definitions for the run options."""
+        """run オプションのためにツール定義を準備します。"""
         tool_definitions: list[ToolDefinition | dict[str, Any]] = []
         for tool in tools:
             match tool:
@@ -915,10 +915,10 @@ class AzureAIAgentClient(BaseChatClient):
                         config_args["market"] = market
                     if set_lang := additional_props.get("set_lang"):
                         config_args["set_lang"] = set_lang
-                    # Bing Grounding (support both connection_id and connection_name)
+                    # Bing Grounding（connection_id と connection_name の両方をサポート）
                     connection_id = additional_props.get("connection_id") or os.getenv("BING_CONNECTION_ID")
                     connection_name = additional_props.get("connection_name") or os.getenv("BING_CONNECTION_NAME")
-                    # Custom Bing Search
+                    # カスタム Bing Search
                     custom_connection_name = additional_props.get("custom_connection_name") or os.getenv(
                         "BING_CUSTOM_CONNECTION_NAME"
                     )
@@ -985,7 +985,7 @@ class AzureAIAgentClient(BaseChatClient):
                     if vector_stores:
                         file_search = FileSearchTool(vector_store_ids=[vs.vector_store_id for vs in vector_stores])
                         tool_definitions.extend(file_search.definitions)
-                        # Set tool_resources for file search to work properly with Azure AI
+                        # Azure AI でファイル検索が正しく動作するように tool_resources を設定します。
                         if run_options is not None and "tool_resources" not in run_options:
                             run_options["tool_resources"] = file_search.resources
                     else:
@@ -1027,7 +1027,7 @@ class AzureAIAgentClient(BaseChatClient):
                                 filter=additional_props.get("filter", ""),
                             )
                             tool_definitions.extend(ai_search.definitions)
-                            # Add tool resources for Azure AI Search
+                            # Azure AI Search 用のツールリソースを追加します。
                             if run_options is not None:
                                 run_options.setdefault("tool_resources", {})
                                 run_options["tool_resources"].update(ai_search.resources)
@@ -1049,10 +1049,9 @@ class AzureAIAgentClient(BaseChatClient):
 
         if required_action_results:
             for content in required_action_results:
-                # When creating the FunctionCallContent/ApprovalRequestContent,
-                # we created it with a CallId == [runId, callId].
-                # We need to extract the run ID and ensure that the Output/Approval we send back to Azure
-                # is only the call ID.
+                # FunctionCallContent/ApprovalRequestContent を作成するとき、 CallId == [runId,
+                # callId] で作成しました。 run ID を抽出し、Azure に返す Output/Approval は call ID
+                # のみであることを保証する必要があります。
                 run_and_call_ids: list[str] = (
                     json.loads(content.call_id)
                     if isinstance(content, FunctionResultContent)
@@ -1085,20 +1084,21 @@ class AzureAIAgentClient(BaseChatClient):
         return run_id, tool_outputs, tool_approvals
 
     def _update_agent_name(self, agent_name: str | None) -> None:
-        """Update the agent name in the chat client.
+        """チャットクライアント内の agent 名を更新します。
 
         Args:
-            agent_name: The new name for the agent.
+            agent_name: agent の新しい名前。
+
         """
-        # This is a no-op in the base class, but can be overridden by subclasses
-        # to update the agent name in the client.
+        # これはベースクラスでは no-op ですが、サブクラスでクライアント内の agent 名を更新するためにオーバーライド可能です。
         if agent_name and not self.agent_name:
             self.agent_name = agent_name
 
     def service_url(self) -> str:
-        """Get the service URL for the chat client.
+        """チャットクライアントのサービス URL を取得します。
 
         Returns:
-            The service URL for the chat client, or None if not set.
+            チャットクライアントのサービス URL。設定されていない場合は None。
+
         """
         return self.project_client._config.endpoint

@@ -39,16 +39,16 @@ The example covers:
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 class InputObserverMiddleware(ChatMiddleware):
-    """Class-based middleware that observes and modifies input messages."""
+    """入力メッセージを観察し修正するクラスベースのMiddleware。"""
 
     def __init__(self, replacement: str | None = None):
-        """Initialize with a replacement for user messages."""
+        """ユーザーメッセージの置き換えで初期化する。"""
         self.replacement = replacement
 
     async def process(
@@ -56,7 +56,7 @@ class InputObserverMiddleware(ChatMiddleware):
         context: ChatContext,
         next: Callable[[ChatContext], Awaitable[None]],
     ) -> None:
-        """Observe and modify input messages before they are sent to AI."""
+        """AIに送信される前の入力メッセージを観察し修正する。"""
         print("[InputObserverMiddleware] Observing input messages:")
 
         for i, message in enumerate(context.messages):
@@ -65,7 +65,7 @@ class InputObserverMiddleware(ChatMiddleware):
 
         print(f"[InputObserverMiddleware] Total messages: {len(context.messages)}")
 
-        # Modify user messages by creating new messages with enhanced text
+        # 強化されたテキストで新しいメッセージを作成してユーザーメッセージを修正する
         modified_messages: list[ChatMessage] = []
         modified_count = 0
 
@@ -84,13 +84,13 @@ class InputObserverMiddleware(ChatMiddleware):
             else:
                 modified_messages.append(message)
 
-        # Replace messages in context
+        # コンテキスト内のメッセージを置き換える
         context.messages[:] = modified_messages
 
-        # Continue to next middleware or AI execution
+        # 次のMiddlewareまたはAI実行に進む
         await next(context)
 
-        # Observe that processing is complete
+        # 処理が完了したことを観察する
         print("[InputObserverMiddleware] Processing completed")
 
 
@@ -99,10 +99,10 @@ async def security_and_override_middleware(
     context: ChatContext,
     next: Callable[[ChatContext], Awaitable[None]],
 ) -> None:
-    """Function-based middleware that implements security filtering and response override."""
+    """セキュリティフィルタリングとレスポンス上書きを実装する関数ベースのMiddleware。"""
     print("[SecurityMiddleware] Processing input...")
 
-    # Security check - block sensitive information
+    # セキュリティチェック - 機密情報をブロックする
     blocked_terms = ["password", "secret", "api_key", "token"]
 
     for message in context.messages:
@@ -112,7 +112,7 @@ async def security_and_override_middleware(
                 if term in message_lower:
                     print(f"[SecurityMiddleware] BLOCKED: Found '{term}' in message")
 
-                    # Override the response instead of calling AI
+                    # AIを呼び出す代わりにレスポンスを上書きする
                     context.result = ChatResponse(
                         messages=[
                             ChatMessage(
@@ -124,28 +124,27 @@ async def security_and_override_middleware(
                         ]
                     )
 
-                    # Set terminate flag to stop execution
+                    # 実行停止のためにterminateフラグを設定する
                     context.terminate = True
                     return
 
-    # Continue to next middleware or AI execution
+    # 次のMiddlewareまたはAI実行に進む
     await next(context)
 
 
 async def class_based_chat_middleware() -> None:
-    """Demonstrate class-based middleware at agent level."""
+    """AgentレベルでのクラスベースMiddlewareのデモ。"""
     print("\n" + "=" * 60)
     print("Class-based Chat Middleware (Agent Level)")
     print("=" * 60)
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
             name="EnhancedChatAgent",
             instructions="You are a helpful AI assistant.",
-            # Register class-based middleware at agent level (applies to all runs)
+            # AgentレベルでクラスベースMiddlewareを登録（すべての実行に適用）
             middleware=InputObserverMiddleware(),
             tools=get_weather,
         ) as agent,
@@ -157,7 +156,7 @@ async def class_based_chat_middleware() -> None:
 
 
 async def function_based_chat_middleware() -> None:
-    """Demonstrate function-based middleware at agent level."""
+    """Agentレベルでの関数ベースMiddlewareのデモ。"""
     print("\n" + "=" * 60)
     print("Function-based Chat Middleware (Agent Level)")
     print("=" * 60)
@@ -167,18 +166,18 @@ async def function_based_chat_middleware() -> None:
         AzureAIAgentClient(async_credential=credential).create_agent(
             name="FunctionMiddlewareAgent",
             instructions="You are a helpful AI assistant.",
-            # Register function-based middleware at agent level
+            # Agentレベルで関数ベースMiddlewareを登録する
             middleware=security_and_override_middleware,
         ) as agent,
     ):
-        # Scenario with normal query
+        # 通常クエリのシナリオ
         print("\n--- Scenario 1: Normal Query ---")
         query = "Hello, how are you?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Final Response: {result.text if result.text else 'No response'}")
 
-        # Scenario with security violation
+        # セキュリティ違反のシナリオ
         print("\n--- Scenario 2: Security Violation ---")
         query = "What is my password for this account?"
         print(f"User: {query}")
@@ -187,7 +186,7 @@ async def function_based_chat_middleware() -> None:
 
 
 async def run_level_middleware() -> None:
-    """Demonstrate middleware registration at run level."""
+    """RunレベルでのMiddleware登録のデモ。"""
     print("\n" + "=" * 60)
     print("Run-level Chat Middleware")
     print("=" * 60)
@@ -198,17 +197,17 @@ async def run_level_middleware() -> None:
             name="RunLevelAgent",
             instructions="You are a helpful AI assistant.",
             tools=get_weather,
-            # No middleware at agent level
+            # AgentレベルにMiddlewareなし
         ) as agent,
     ):
-        # Scenario 1: Run without any middleware
+        # シナリオ1: Middlewareなしで実行
         print("\n--- Scenario 1: No Middleware ---")
         query = "What's the weather in Tokyo?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Response: {result.text if result.text else 'No response'}")
 
-        # Scenario 2: Run with specific middleware for this call only (both enhancement and security)
+        # シナリオ2: この呼び出しのみに特定Middlewareを適用（強化とセキュリティの両方）
         print("\n--- Scenario 2: With Run-level Middleware ---")
         print(f"User: {query}")
         result = await agent.run(
@@ -220,7 +219,7 @@ async def run_level_middleware() -> None:
         )
         print(f"Response: {result.text if result.text else 'No response'}")
 
-        # Scenario 3: Security test with run-level middleware
+        # シナリオ3: RunレベルMiddlewareによるセキュリティテスト
         print("\n--- Scenario 3: Security Test with Run-level Middleware ---")
         query = "Can you help me with my secret API key?"
         print(f"User: {query}")
@@ -232,7 +231,7 @@ async def run_level_middleware() -> None:
 
 
 async def main() -> None:
-    """Run all chat middleware examples."""
+    """すべてのChat Middleware例を実行する。"""
     print("Chat Middleware Examples")
     print("========================")
 

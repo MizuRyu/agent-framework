@@ -14,12 +14,13 @@ Shows asyncio task cancellation and resource cleanup techniques.
 
 async def main() -> None:
     """
-    Demonstrates cancelling a chat request after 1 second.
-    Creates a task for the chat request, waits briefly, then cancels it to show proper cleanup.
+    1秒後にチャットリクエストをキャンセルすることを示します。
+    チャットリクエストのタスクを作成し、少し待ってからキャンセルして適切なクリーンアップを示します。
 
-    Configuration:
-    - OpenAI model ID: Use "model_id" parameter or "OPENAI_CHAT_MODEL_ID" environment variable
-    - OpenAI API key: Use "api_key" parameter or "OPENAI_API_KEY" environment variable
+    設定:
+    - OpenAIモデルID: "model_id"パラメータまたは"OPENAI_CHAT_MODEL_ID"環境変数を使用
+    - OpenAI APIキー: "api_key"パラメータまたは"OPENAI_API_KEY"環境変数を使用
+
     """
     chat_client = OpenAIChatClient()
 

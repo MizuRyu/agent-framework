@@ -40,7 +40,7 @@ from agent_framework.observability import (
 
 
 def test_role_event_map():
-    """Test that ROLE_EVENT_MAP contains expected mappings."""
+    """ROLE_EVENT_MAPに期待されるマッピングが含まれていることをテストする。"""
     assert ROLE_EVENT_MAP["system"] == OtelAttr.SYSTEM_MESSAGE
     assert ROLE_EVENT_MAP["user"] == OtelAttr.USER_MESSAGE
     assert ROLE_EVENT_MAP["assistant"] == OtelAttr.ASSISTANT_MESSAGE
@@ -48,7 +48,7 @@ def test_role_event_map():
 
 
 def test_enum_values():
-    """Test that OtelAttr enum has expected values."""
+    """OtelAttr列挙が期待される値を持つことをテストする。"""
     assert OtelAttr.OPERATION == "gen_ai.operation.name"
     assert SpanAttributes.LLM_SYSTEM == "gen_ai.system"
     assert SpanAttributes.LLM_REQUEST_MODEL == "gen_ai.request.model"
@@ -61,7 +61,7 @@ def test_enum_values():
 
 
 def test_filter_without_index_key():
-    """Test filter method when record doesn't have INDEX_KEY."""
+    """レコードにINDEX_KEYがない場合のfilterメソッドをテストする。"""
     log_filter = ChatMessageListTimestampFilter()
     record = logging.LogRecord(
         name="test", level=logging.INFO, pathname="", lineno=0, msg="test message", args=(), exc_info=None
@@ -75,25 +75,25 @@ def test_filter_without_index_key():
 
 
 def test_filter_with_index_key():
-    """Test filter method when record has INDEX_KEY."""
+    """レコードにINDEX_KEYがある場合のfilterメソッドをテストする。"""
     log_filter = ChatMessageListTimestampFilter()
     record = logging.LogRecord(
         name="test", level=logging.INFO, pathname="", lineno=0, msg="test message", args=(), exc_info=None
     )
     original_created = record.created
 
-    # Add the index key
+    # インデックスキーを追加する
     setattr(record, ChatMessageListTimestampFilter.INDEX_KEY, 5)
 
     result = log_filter.filter(record)
 
     assert result is True
-    # Should increment by 5 microseconds (5 * 1e-6)
+    # 5マイクロ秒（5 * 1e-6）だけ増加するはず
     assert record.created == original_created + 5 * 1e-6
 
 
 def test_index_key_constant():
-    """Test that INDEX_KEY constant is correctly defined."""
+    """INDEX_KEY定数が正しく定義されていることをテストする。"""
     assert ChatMessageListTimestampFilter.INDEX_KEY == "chat_message_index"
 
 
@@ -101,8 +101,8 @@ def test_index_key_constant():
 
 
 def test_start_span_basic(span_exporter: InMemorySpanExporter):
-    """Test starting a span with basic function info."""
-    # Create a mock function
+    """基本的な関数情報でスパンを開始するテスト。"""
+    # モック関数を作成する
     mock_function = Mock()
     mock_function.name = "test_function"
     mock_function.description = "Test function description"
@@ -128,7 +128,7 @@ def test_start_span_basic(span_exporter: InMemorySpanExporter):
 
 
 def test_start_span_with_tool_call_id(span_exporter: InMemorySpanExporter):
-    """Test starting a span with tool_call_id."""
+    """tool_call_idを使ってスパンを開始するテスト。"""
 
     tool_call_id = "test_call_123"
     attributes = {
@@ -149,7 +149,7 @@ def test_start_span_with_tool_call_id(span_exporter: InMemorySpanExporter):
     assert span.name == "execute_tool test_function"
     assert span.attributes["test_attr"] == "test_value"
     assert span.attributes[OtelAttr.TOOL_CALL_ID] == tool_call_id
-    # Verify all attributes
+    # すべての属性を検証する
     assert span.attributes[OtelAttr.OPERATION.value] == OtelAttr.TOOL_EXECUTION_OPERATION
     assert span.attributes[OtelAttr.TOOL_NAME] == "test_function"
     assert span.attributes[OtelAttr.TOOL_DESCRIPTION] == "Test function"
@@ -160,9 +160,9 @@ def test_start_span_with_tool_call_id(span_exporter: InMemorySpanExporter):
 
 
 def test_decorator_with_valid_class():
-    """Test that decorator works with a valid BaseChatClient-like class."""
+    """デコレータが有効なBaseChatClientライクなクラスで動作することをテストする。"""
 
-    # Create a mock class with the required methods
+    # 必要なメソッドを持つモッククラスを作成する
     class MockChatClient:
         async def get_response(self, messages, **kwargs):
             return Mock()
@@ -173,24 +173,24 @@ def test_decorator_with_valid_class():
 
             return gen()
 
-    # Apply the decorator
+    # デコレータを適用する
     decorated_class = use_observability(MockChatClient)
     assert hasattr(decorated_class, OPEN_TELEMETRY_CHAT_CLIENT_MARKER)
 
 
 def test_decorator_with_missing_methods():
-    """Test that decorator handles classes missing required methods gracefully."""
+    """必要なメソッドが欠けているクラスでもデコレータが正常に処理することをテストする。"""
 
     class MockChatClient:
         OTEL_PROVIDER_NAME = "test_provider"
 
-    # Apply the decorator - should not raise an error
+    # デコレータを適用する - エラーは発生しないはず
     with pytest.raises(ChatClientInitializationError):
         use_observability(MockChatClient)
 
 
 def test_decorator_with_partial_methods():
-    """Test decorator when only one method is present."""
+    """メソッドが1つだけ存在する場合のデコレータのテスト。"""
 
     class MockChatClient:
         OTEL_PROVIDER_NAME = "test_provider"
@@ -207,7 +207,7 @@ def test_decorator_with_partial_methods():
 
 @pytest.fixture
 def mock_chat_client():
-    """Create a mock chat client for testing."""
+    """テスト用のモックチャットクライアントを作成する。"""
 
     class MockChatClient(BaseChatClient):
         def service_url(self):
@@ -233,7 +233,7 @@ def mock_chat_client():
 
 @pytest.mark.parametrize("enable_sensitive_data", [True, False], indirect=True)
 async def test_chat_client_observability(mock_chat_client, span_exporter: InMemorySpanExporter, enable_sensitive_data):
-    """Test that when diagnostics are enabled, telemetry is applied."""
+    """診断が有効な場合にテレメトリが適用されることをテストする。"""
     client = use_observability(mock_chat_client)()
 
     messages = [ChatMessage(role=Role.USER, text="Test message")]
@@ -257,16 +257,16 @@ async def test_chat_client_observability(mock_chat_client, span_exporter: InMemo
 async def test_chat_client_streaming_observability(
     mock_chat_client, span_exporter: InMemorySpanExporter, enable_sensitive_data
 ):
-    """Test streaming telemetry through the use_observability decorator."""
+    """use_observabilityデコレータを通じたストリーミングテレメトリのテスト。"""
     client = use_observability(mock_chat_client)()
     messages = [ChatMessage(role=Role.USER, text="Test")]
     span_exporter.clear()
-    # Collect all yielded updates
+    # すべてのyieldされた更新を収集する
     updates = []
     async for update in client.get_streaming_response(messages=messages, model_id="Test"):
         updates.append(update)
 
-    # Verify we got the expected updates, this shouldn't be dependent on otel
+    # 期待される更新を受け取ったことを検証する。これはotelに依存しないはず。
     assert len(updates) == 2
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
@@ -280,11 +280,11 @@ async def test_chat_client_streaming_observability(
 
 
 def test_prepend_user_agent_with_none_value():
-    """Test prepend user agent with None value in headers."""
+    """ヘッダーにNone値がある場合のユーザーエージェントのプレフィックステスト。"""
     headers = {"User-Agent": None}
     result = prepend_agent_framework_to_user_agent(headers)
 
-    # Should handle None gracefully
+    # Noneを正常に処理するはずである
     assert "User-Agent" in result
     assert AGENT_FRAMEWORK_USER_AGENT in str(result["User-Agent"])
 
@@ -293,9 +293,9 @@ def test_prepend_user_agent_with_none_value():
 
 
 def test_agent_decorator_with_valid_class():
-    """Test that agent decorator works with a valid ChatAgent-like class."""
+    """有効なChatAgentライクなクラスでagentデコレータが動作することをテストする。"""
 
-    # Create a mock class with the required methods
+    # 必要なメソッドを持つモッククラスを作成する
     class MockChatClientAgent:
         AGENT_SYSTEM_NAME = "test_agent_system"
 
@@ -317,25 +317,25 @@ def test_agent_decorator_with_valid_class():
         def get_new_thread(self) -> AgentThread:
             return AgentThread()
 
-    # Apply the decorator
+    # デコレータを適用する
     decorated_class = use_agent_observability(MockChatClientAgent)
 
     assert hasattr(decorated_class, OPEN_TELEMETRY_AGENT_MARKER)
 
 
 def test_agent_decorator_with_missing_methods():
-    """Test that agent decorator handles classes missing required methods gracefully."""
+    """必要なメソッドが欠けているクラスでもagentデコレータが正常に処理することをテストする。"""
 
     class MockAgent:
         AGENT_SYSTEM_NAME = "test_agent_system"
 
-    # Apply the decorator - should not raise an error
+    # デコレータを適用する - エラーは発生しないはず
     with pytest.raises(AgentInitializationError):
         use_agent_observability(MockAgent)
 
 
 def test_agent_decorator_with_partial_methods():
-    """Test agent decorator when only one method is present."""
+    """メソッドが1つだけ存在する場合のagentデコレータのテスト。"""
     from agent_framework.observability import use_agent_observability
 
     class MockAgent:
@@ -358,7 +358,7 @@ def test_agent_decorator_with_partial_methods():
 
 @pytest.fixture
 def mock_chat_agent():
-    """Create a mock chat client agent for testing."""
+    """テスト用のモックチャットクライアントエージェントを作成する。"""
 
     class MockChatClientAgent:
         AGENT_SYSTEM_NAME = "test_agent_system"
@@ -390,7 +390,7 @@ def mock_chat_agent():
 async def test_agent_instrumentation_enabled(
     mock_chat_agent: AgentProtocol, span_exporter: InMemorySpanExporter, enable_sensitive_data
 ):
-    """Test that when agent diagnostics are enabled, telemetry is applied."""
+    """エージェント診断が有効な場合にテレメトリが適用されることをテストする。"""
 
     agent = use_agent_observability(mock_chat_agent)()
 
@@ -416,14 +416,14 @@ async def test_agent_instrumentation_enabled(
 async def test_agent_streaming_response_with_diagnostics_enabled_via_decorator(
     mock_chat_agent: AgentProtocol, span_exporter: InMemorySpanExporter, enable_sensitive_data
 ):
-    """Test agent streaming telemetry through the use_agent_observability decorator."""
+    """use_agent_observabilityデコレータを通じたエージェントのストリーミングテレメトリのテスト。"""
     agent = use_agent_observability(mock_chat_agent)()
     span_exporter.clear()
     updates = []
     async for update in agent.run_stream("Test message"):
         updates.append(update)
 
-    # Verify we got the expected updates
+    # 期待される更新を受け取ったことを検証する
     assert len(updates) == 2
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
@@ -435,11 +435,11 @@ async def test_agent_streaming_response_with_diagnostics_enabled_via_decorator(
     assert span.attributes[OtelAttr.AGENT_DESCRIPTION] == "Test agent description"
     assert span.attributes[SpanAttributes.LLM_REQUEST_MODEL] == "unknown"
     if enable_sensitive_data:
-        assert span.attributes.get(OtelAttr.OUTPUT_MESSAGES) is not None  # Streaming, so no usage yet
+        assert span.attributes.get(OtelAttr.OUTPUT_MESSAGES) is not None  # ストリーミングなのでまだ使用はなし
 
 
 async def test_agent_run_with_exception_handling(mock_chat_agent: AgentProtocol):
-    """Test agent run with exception handling."""
+    """例外処理付きのエージェント実行をテストする。"""
 
     async def run_with_error(self, messages=None, *, thread=None, **kwargs):
         raise RuntimeError("Agent run error")
@@ -454,14 +454,13 @@ async def test_agent_run_with_exception_handling(mock_chat_agent: AgentProtocol)
         patch("agent_framework.observability._get_span") as mock_get_span,
     ):
         mock_span = MagicMock(spec=Span)
-        # Ensure the patched context manager returns mock_span when entered
+        # パッチされたコンテキストマネージャがenter時にmock_spanを返すことを保証する
         mock_get_span.return_value.__enter__.return_value = mock_span
-        # Should raise the exception and call error handler
+        # 例外を発生させエラーハンドラを呼び出すはずである
         with pytest.raises(RuntimeError, match="Agent run error"):
             await agent.run("Test message")
 
-        # Verify error was recorded
-        # Check that both error attributes were set on the span
+        # エラーが記録されたことを検証する スパンに両方のエラー属性が設定されたことを確認する
         mock_span.set_attribute.assert_called_with(OtelAttr.ERROR_TYPE, "RuntimeError")
         mock_span.record_exception.assert_called_once()
         mock_span.set_status.assert_called_once_with(

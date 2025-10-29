@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Nested process comparison between Semantic Kernel Process Framework and Agent Framework sub-workflows."""
+"""Semantic Kernel Process FrameworkとAgent Frameworkのサブワークフロー間のネストされたプロセス比較。"""
 
 import asyncio
 import logging
@@ -9,9 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import ClassVar, cast
 
-######################################################################
-# region Agent Framework imports
-######################################################################
+#  region Agent Frameworkのインポート
 from agent_framework import (
     Executor,
     WorkflowBuilder,
@@ -22,9 +20,7 @@ from agent_framework import (
 )
 from pydantic import BaseModel, Field
 
-######################################################################
-# region Semantic Kernel imports
-######################################################################
+#  region Semantic Kernelのインポート
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.functions import kernel_function
@@ -37,9 +33,7 @@ from semantic_kernel.processes.local_runtime.local_kernel_process import start
 from semantic_kernel.processes.process_builder import ProcessBuilder
 from typing_extensions import Never
 
-######################################################################
-# endregion
-######################################################################
+#  endregion
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -51,9 +45,7 @@ class ProcessEvents(Enum):
     OUTPUT_READY_INTERNAL = "OutputReadyInternal"
 
 
-######################################################################
-# region Semantic Kernel nested process path
-######################################################################
+#  region Semantic Kernelのネストされたプロセスパス
 
 
 class StepState(BaseModel):
@@ -154,9 +146,7 @@ async def run_semantic_kernel_nested_process() -> None:
     assert repeat_state.state.last_message == "Test Test Test Test"  # nosec
 
 
-######################################################################
-# region Agent Framework nested workflow path
-######################################################################
+#  region Agent Frameworkのネストされたワークフローパス
 
 
 @dataclass
@@ -263,9 +253,7 @@ async def run_agent_framework_nested_workflow(initial_message: str) -> Sequence[
     return results
 
 
-######################################################################
-# endregion
-######################################################################
+#  endregion
 
 
 async def main() -> None:

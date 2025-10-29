@@ -42,7 +42,7 @@ def extract_poe_tasks(file: Path) -> set[str]:
 
     tasks = set(data.get("tool", {}).get("poe", {}).get("tasks", {}).keys())
 
-    # Check if there is an include too
+    # include があるかどうかもチェックします
     include: str | None = data.get("tool", {}).get("poe", {}).get("include", None)
     if include:
         include_file = file.parent / include

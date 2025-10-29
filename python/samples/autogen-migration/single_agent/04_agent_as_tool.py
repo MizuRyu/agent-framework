@@ -1,21 +1,20 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""AutoGen vs Agent Framework: Agent-as-a-Tool pattern.
+"""AutoGen と Agent Framework: Agent-as-a-Tool パターン。
 
-Demonstrates hierarchical agent architectures where one agent delegates
-work to specialized sub-agents wrapped as tools.
+一つのエージェントが専門化されたサブエージェントをツールとしてラップし、作業を委任する階層的エージェントアーキテクチャを示します。
 """
 
 import asyncio
 
 
 async def run_autogen() -> None:
-    """AutoGen's AgentTool for hierarchical agents with streaming."""
+    """ストリーミングを持つ階層的エージェントのための AutoGen の AgentTool。"""
     from autogen_agentchat.agents import AssistantAgent
     from autogen_agentchat.tools import AgentTool
     from autogen_agentchat.ui import Console
     from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-    # Create a specialized writer agent
+    # 専門化されたライターエージェントを作成する
     writer_client = OpenAIChatCompletionClient(model="gpt-4.1-mini")
     writer = AssistantAgent(
         name="writer",
@@ -24,11 +23,10 @@ async def run_autogen() -> None:
         model_client_stream=True,
     )
 
-    # Wrap writer agent as a tool (description is taken from agent.description)
+    # ライターエージェントをツールとしてラップする（説明は agent.description から取得）
     writer_tool = AgentTool(agent=writer)
 
-    # Create coordinator agent with writer as a tool
-    # IMPORTANT: Disable parallel_tool_calls when using AgentTool
+    # ライターをツールとして持つコーディネーターエージェントを作成する 重要: AgentTool 使用時は parallel_tool_calls を無効にしてください
     coordinator_client = OpenAIChatCompletionClient(
         model="gpt-4.1-mini",
         parallel_tool_calls=False,
@@ -41,25 +39,25 @@ async def run_autogen() -> None:
         model_client_stream=True,
     )
 
-    # Run coordinator with streaming - it will delegate to writer
+    # ストリーミングでコーディネーターを実行する - ライターに委任します
     print("[AutoGen]")
     await Console(coordinator.run_stream(task="Create a tagline for a coffee shop"))
 
 
 async def run_agent_framework() -> None:
-    """Agent Framework's as_tool() for hierarchical agents with streaming."""
+    """ストリーミングを持つ階層的エージェントのための Agent Framework の as_tool()。"""
     from agent_framework import FunctionCallContent, FunctionResultContent
     from agent_framework.openai import OpenAIChatClient
 
     client = OpenAIChatClient(model_id="gpt-4.1-mini")
 
-    # Create specialized writer agent
+    # 専門化されたライターエージェントを作成する
     writer = client.create_agent(
         name="writer",
         instructions="You are a creative writer. Write short, engaging content.",
     )
 
-    # Convert writer to a tool using as_tool()
+    # as_tool() を使ってライターをツールに変換する
     writer_tool = writer.as_tool(
         name="creative_writer",
         description="Generate creative content",
@@ -67,46 +65,46 @@ async def run_agent_framework() -> None:
         arg_description="What to write",
     )
 
-    # Create coordinator agent with writer tool
+    # ライターツールを持つコーディネーターエージェントを作成する
     coordinator = client.create_agent(
         name="coordinator",
         instructions="You coordinate with specialized agents. Delegate writing tasks to the writer agent.",
         tools=[writer_tool],
     )
 
-    # Run coordinator with streaming - it will delegate to writer
+    # ストリーミングでコーディネーターを実行する - ライターに委任します
     print("[Agent Framework]")
 
-    # Track accumulated function calls (they stream in incrementally)
+    # 蓄積された関数呼び出しを追跡する（インクリメンタルにストリームされます）
     accumulated_calls: dict[str, FunctionCallContent] = {}
 
     async for chunk in coordinator.run_stream("Create a tagline for a coffee shop"):
-        # Stream text tokens
+        # テキストトークンをストリームする
         if chunk.text:
             print(chunk.text, end="", flush=True)
 
-        # Process streaming function calls and results
+        # ストリーミングされる関数呼び出しと結果を処理する
         if chunk.contents:
             for content in chunk.contents:
                 if isinstance(content, FunctionCallContent):
-                    # Accumulate function call content as it streams in
+                    # ストリームされる関数呼び出しの内容を蓄積する
                     call_id = content.call_id
                     if call_id in accumulated_calls:
-                        # Add to existing call (arguments stream in gradually)
+                        # 既存の呼び出しに追加する（引数は徐々にストリームされる）
                         accumulated_calls[call_id] = accumulated_calls[call_id] + content
                     else:
-                        # First chunk of this function call
+                        # この関数呼び出しの最初のチャンク
                         accumulated_calls[call_id] = content
                         print("\n[Function Call - streaming]", flush=True)
                         print(f"  Call ID: {call_id}", flush=True)
                         print(f"  Name: {content.name}", flush=True)
 
-                    # Show accumulated arguments so far
+                    # これまでの蓄積された引数を表示する
                     current_args = accumulated_calls[call_id].arguments
                     print(f"  Arguments: {current_args}", flush=True)
 
                 elif isinstance(content, FunctionResultContent):
-                    # Tool result - shows writer's response
+                    # ツールの結果 - ライターのレスポンスを表示する
                     result_text = content.result if isinstance(content.result, str) else str(content.result)
                     if result_text.strip():
                         print("\n[Function Result]", flush=True)

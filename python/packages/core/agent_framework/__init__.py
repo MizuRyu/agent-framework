@@ -6,7 +6,7 @@ from typing import Final
 try:
     _version = importlib.metadata.version(__name__)
 except importlib.metadata.PackageNotFoundError:
-    _version = "0.0.0"  # Fallback for development mode
+    _version = "0.0.0"  # 開発モード用のフォールバック。
 __version__: Final[str] = _version
 
 from ._agents import *  # noqa: F403

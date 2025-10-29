@@ -34,12 +34,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ExecutionContext:
-    """Context for tracking a single sub-workflow execution."""
+    """単一のサブワークフロー実行を追跡するためのコンテキスト。"""
 
     execution_id: str
     collected_responses: dict[str, Any]  # request_id -> response_data
     expected_response_count: int
-    pending_requests: dict[str, Any]  # request_id -> original request data
+    pending_requests: dict[str, Any]  # request_id -> 元のリクエストデータ
 
 
 class WorkflowExecutor(Executor):
@@ -411,13 +411,13 @@ class WorkflowExecutor(Executor):
             )
             self._active_executions -= 1
         elif final_state == WorkflowRunState.IN_PROGRESS_PENDING_REQUESTS:
-            # Sub-workflow is still running with pending requests
+            # サブワークフローは保留中のリクエストがあり、まだ実行中です
             logger.debug(
                 f"Sub-workflow {self.workflow.id} is still in progress with {len(request_info_events)} "
                 f"pending requests with {self._active_executions} active executions"
             )
         elif final_state == WorkflowRunState.IDLE_WITH_PENDING_REQUESTS:
-            # Sub-workflow is idle but has pending requests
+            # サブワークフローはアイドル状態ですが、保留中のリクエストがあります
             logger.debug(
                 f"Sub-workflow {self.workflow.id} is idle with pending requests: "
                 f"{len(request_info_events)} with {self._active_executions} active executions"
@@ -433,18 +433,18 @@ class WorkflowExecutor(Executor):
         response: RequestResponse[RequestInfoMessage, Any],
         ctx: WorkflowContext[Any],
     ) -> None:
-        """Handle response from parent for a forwarded request.
+        """親からの転送リクエストに対するレスポンスを処理します。
 
-        This handler accumulates responses and only resumes the sub-workflow
-        when all expected responses have been received for that execution.
+        このハンドラーはレスポンスを蓄積し、すべての期待されるレスポンスがその実行に対して受信されたときにのみサブワークフローを再開します。
 
         Args:
-            response: The response to a previous request.
-            ctx: The workflow context.
+            response: 以前のリクエストに対するレスポンス。
+            ctx: ワークフローのコンテキスト。
+
         """
         await self._ensure_state_loaded(ctx)
 
-        # Find the execution context for this request
+        # このリクエストの実行コンテキストを見つける
         execution_id = self._request_to_execution.get(response.request_id)
         if not execution_id or execution_id not in self._execution_contexts:
             logger.warning(
@@ -454,7 +454,7 @@ class WorkflowExecutor(Executor):
 
         execution_context = self._execution_contexts[execution_id]
 
-        # Check if we have this pending request in the execution context
+        # 実行コンテキストにこの保留中のリクエストがあるか確認する
         if response.request_id not in execution_context.pending_requests:
             logger.warning(
                 f"WorkflowExecutor {self.id} received response for unknown request_id: "
@@ -462,35 +462,35 @@ class WorkflowExecutor(Executor):
             )
             return
 
-        # Remove the request from pending list and request mapping
+        # 保留リストとリクエストマッピングからリクエストを削除する
         execution_context.pending_requests.pop(response.request_id, None)
         self._request_to_execution.pop(response.request_id, None)
 
-        # Accumulate the response in this execution's context
+        # この実行のコンテキストにレスポンスを蓄積する
         execution_context.collected_responses[response.request_id] = response.data
 
         await self._persist_execution_state(ctx)
 
-        # Check if we have all expected responses for this execution
+        # この実行に対してすべての期待されるレスポンスがあるか確認する
         if len(execution_context.collected_responses) < execution_context.expected_response_count:
             logger.debug(
                 f"WorkflowExecutor {self.id} execution {execution_id} waiting for more responses: "
                 f"{len(execution_context.collected_responses)}/{execution_context.expected_response_count} received"
             )
-            return  # Wait for more responses
+            return  # さらにレスポンスを待つ
 
-        # Send all collected responses to the sub-workflow
+        # 収集したすべてのレスポンスをサブワークフローに送信する
         responses_to_send = dict(execution_context.collected_responses)
-        execution_context.collected_responses.clear()  # Clear for next batch
+        execution_context.collected_responses.clear()  # 次のバッチのためにクリアする
 
         try:
-            # Resume the sub-workflow with all collected responses
+            # 収集したすべてのレスポンスでサブワークフローを再開する
             result = await self.workflow.send_responses(responses_to_send)
 
-            # Process the workflow result using shared logic
+            # 共有ロジックを使用してワークフロー結果を処理する
             await self._process_workflow_result(result, execution_context, ctx)
         finally:
-            # Clean up execution context if it's completed (no pending requests)
+            # 完了している場合（保留中のリクエストがない）に実行コンテキストをクリーンアップする
             if not execution_context.pending_requests:
                 del self._execution_contexts[execution_id]
                 self._active_executions -= 1
@@ -513,7 +513,7 @@ class WorkflowExecutor(Executor):
             self._state_loaded = True
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        """Restore pending request bookkeeping from a checkpoint snapshot."""
+        """チェックポイントスナップショットから保留中のリクエストの管理を復元する。"""
         self._execution_contexts = {}
         self._request_to_execution = {}
 

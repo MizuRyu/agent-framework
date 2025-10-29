@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Weather agent sample for DevUI testing."""
+"""DevUIテスト用のWeather Agentサンプル。"""
 
 from .agent import agent
 

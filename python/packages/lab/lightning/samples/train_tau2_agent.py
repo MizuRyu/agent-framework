@@ -1,15 +1,15 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Advanced example showing multi-agent RL training using Tau2 benchmark.
+"""Tau2ベンチマークを使ったマルチエージェントRLトレーニングの高度な例。
 
-This demonstrates:
-- LitAgent class-based approach (vs @rollout decorator)
-- Multi-agent scenarios with agent filtering
-- Resource management for complex setups
-- Integration with external benchmarks
+これにより以下を示す：
+- LitAgentクラスベースのアプローチ（@rolloutデコレータとの比較）
+- エージェントフィルタリングを伴うマルチエージェントシナリオ
+- 複雑なセットアップのためのリソース管理
+- 外部ベンチマークとの統合
 
-Builds on concepts from train_math_agent.py with additional complexity.
-Requires one GPU of at least 80GB of memory.
+train_math_agent.pyの概念に基づき、さらに複雑さを追加。
+少なくとも80GBのメモリを持つGPUが1台必要。
 """
 
 import argparse
@@ -31,18 +31,19 @@ from agentlightning.algorithm.verl import VERL
 from tau2.data_model.tasks import Task as Tau2Task  # type: ignore[import-untyped]
 
 
-# Tau2 tasks are complex objects that need special handling during distributed training
+# Tau2タスクは複雑なオブジェクトで、分散トレーニング中に特別な処理が必要。
 class SerializedTask(TypedDict):
-    """Tau2 task object type."""
+    """Tau2タスクオブジェクトのタイプ。"""
 
     id: str
-    data: str  # JSON-serialized task data to prevent HuggingFace conversion issues
+    data: str  # HuggingFaceの変換問題を防ぐためのJSONシリアライズされたタスクデータ
 
 
 def _load_dataset() -> tuple[Dataset[SerializedTask], Dataset[SerializedTask]]:
-    """Load and prepare Tau2 dataset with proper serialization.
+    """適切なシリアライズでTau2データセットをロードおよび準備する。
 
-    It takes external data dependency (TAU2_DATA_DIR) and uses deterministic train/val split for reproducibility.
+    外部データ依存（TAU2_DATA_DIR）を取り、再現性のために決定論的なtrain/val分割を使用。
+
     """
     data_dir = os.getenv("TAU2_DATA_DIR")
     if data_dir is None:
@@ -51,10 +52,10 @@ def _load_dataset() -> tuple[Dataset[SerializedTask], Dataset[SerializedTask]]:
     with tasks_path.open("r") as f:
         dataset = json.load(f)
 
-    # Serialize complex task objects to prevent HuggingFace tokenizer issues
+    # HuggingFaceトークナイザーの問題を防ぐために複雑なタスクオブジェクトをシリアライズする
     dataset = [{"id": task["id"], "data": json.dumps(task)} for task in dataset]
 
-    # Deterministic train/val split (25/25) for reproducible experiments
+    # 再現可能な実験のための決定論的なtrain/val分割（25/25）
     random_state = random.Random(42)  # noqa: S311
     indices = list(range(len(dataset)))
     random_state.shuffle(indices)
@@ -68,16 +69,14 @@ def _load_dataset() -> tuple[Dataset[SerializedTask], Dataset[SerializedTask]]:
     return cast(Dataset[SerializedTask], train_dataset), cast(Dataset[SerializedTask], val_dataset)
 
 
-# Alternative to @rollout: LitAgent class for advanced scenarios
-# Use this approach when you need:
-# - Agent filtering (training only specific agents in multi-agent setup)
-# - Resource management (multiple LLMs, databases, etc.)
-# - Complex initialization logic
+# @rolloutの代替：高度なシナリオ向けLitAgentクラス 以下が必要な場合にこのアプローチを使用： -
+# エージェントフィルタリング（マルチエージェントセットアップで特定のエージェントのみをトレーニング） - リソース管理（複数のLLM、データベースなど） -
+# 複雑な初期化ロジック
 class Tau2Agent(LitAgent):
-    """Class-based agent with advanced resource management and agent filtering."""
+    """高度なリソース管理とエージェントフィルタリングを備えたクラスベースのAgent。"""
 
     async def rollout_async(self, task: SerializedTask, resources: NamedResources, rollout: Rollout) -> float:
-        """The main rollout method. Similar to @rollout but with more control."""
+        """メインのrolloutメソッド。@rolloutに似ているがより多くの制御が可能。"""
         llm = resources.get("main_llm")
         if not isinstance(llm, LLM):
             raise ValueError("main_llm must be an instance of LLM")
@@ -89,25 +88,25 @@ class Tau2Agent(LitAgent):
         if openai_api_key is None:
             raise ValueError("OPENAI_API_KEY must be set")
 
-        # Deserialize the complex task object
+        # 複雑なタスクオブジェクトをデシリアライズする
         task_data = json.loads(task["data"])
         task_obj = Tau2Task(**task_data)
 
-        # Multi-agent setup: assistant (trainable) + user simulator (fixed)
+        # マルチエージェントセットアップ：assistant（トレーニング可能）＋user simulator（固定）
         runner = Tau2TaskRunner(
             max_steps=100,
             assistant_window_size=4000,
             assistant_sampling_temperature=llm.sampling_parameters.get("temperature", 0.0),
         )
 
-        # Assistant agent: uses the model being trained
+        # Assistantエージェント：トレーニング中のモデルを使用
         assistant_chat_client = OpenAIChatClient(
             base_url=llm.endpoint,  # vLLM endpoint for the model being trained
             api_key=openai_api_key,
             model_id=llm.model,  # Model ID being trained
         )
 
-        # User simulator: uses a fixed, capable model for consistent simulation
+        # User simulator：一貫したシミュレーションのために固定された有能なモデルを使用
         user_simulator_chat_client = OpenAIChatClient(
             base_url=openai_base_url,  # External API endpoint
             api_key=openai_api_key,
@@ -115,24 +114,23 @@ class Tau2Agent(LitAgent):
         )
 
         try:
-            # Run the multi-agent conversation
+            # マルチエージェント会話を実行する
             conversation = await runner.run(task_obj, assistant_chat_client, user_simulator_chat_client)
         except Exception:
-            # Handle failures gracefully - assign low reward to discourage problematic behavior
-            # Common issues: tool calling errors, timeout, invalid responses
+            # 失敗を適切に処理 - 問題のある行動を抑制するために低報酬を割り当てる 一般的な問題：ツール呼び出しエラー、タイムアウト、無効なレスポンス
             traceback.print_exc()
             return 0.0
 
-        # Use Tau2's built-in evaluation metrics
+        # Tau2の組み込み評価指標を使用する
         evaluation = runner.evaluate(task_obj, conversation, runner.termination_reason)
 
-        # Return the evaluation score
+        # 評価スコアを返す
         return evaluation  # noqa: RET504
 
 
 def main():
-    """Main entrypoint."""
-    # RL config with higher resource requirements and W&B logging
+    """メインのエントリポイント。"""
+    # より高いリソース要件とW&Bログを備えたRL設定
     rl_training_config = {
         "algorithm": {"adv_estimator": "grpo"},
         "data": {
@@ -161,12 +159,12 @@ def main():
                     "optimizer_offload": True,
                 },
             },
-            # Reference model config
+            # Referenceモデルの設定
             "ref": {
                 "log_prob_micro_batch_size_per_gpu": 8,
                 "fsdp_config": {"param_offload": True},
             },
-            # Common configs for the model
+            # モデルの共通設定
             "model": {
                 "path": "Qwen/Qwen2.5-1.5B-Instruct",
                 "use_remove_padding": True,
@@ -185,12 +183,12 @@ def main():
         },
     }
 
-    patch_env_set_state()  # Tau2-specific environment setup
+    patch_env_set_state()  # Tau2固有の環境セットアップ
 
     train_dataset, val_dataset = _load_dataset()
 
-    # Key difference with math_agent: trained_agents parameter specifies which agents to train
-    # Only the assistant agent is trained; user simulator remains fixed
+    # math_agentとの主な違い：trained_agentsパラメータはトレーニングするエージェントを指定
+    # assistantエージェントのみがトレーニングされ、user simulatorは固定のまま
     tau2_agent = Tau2Agent(trained_agents=ASSISTANT_AGENT_ID)
 
     tracer = AgentFrameworkTracer()
@@ -199,7 +197,7 @@ def main():
 
 
 def debug():
-    """Debug mode for testing multi-agent setup and Tau2 integration."""
+    """マルチエージェントセットアップとTau2統合のテスト用デバッグモード。"""
     train_dataset, _ = _load_dataset()
     tau2_agent = Tau2Agent(trained_agents=ASSISTANT_AGENT_ID)
 
@@ -207,9 +205,9 @@ def debug():
     if openai_base_url is None:
         raise ValueError("OPENAI_BASE_URL must be set")
 
-    patch_env_set_state()  # Required for Tau2 environment
+    patch_env_set_state()  # Tau2環境に必要
 
-    # Test with resources dict (different from @rollout LLM parameter)
+    # resources辞書でテスト（@rolloutのLLMパラメータとは異なる）
     asyncio.run(
         tau2_agent.rollout_async(
             train_dataset[0],

@@ -32,7 +32,7 @@ class DummyAgent(BaseAgent):
         return AgentRunResponse(messages=norm)
 
     async def run_stream(self, messages=None, *, thread: AgentThread | None = None, **kwargs):  # type: ignore[override]
-        # Minimal async generator
+        # 最小限のasync generator
         yield AgentRunResponseUpdate()
 
 
@@ -42,38 +42,38 @@ def test_builder_accepts_agents_directly():
 
     wf = WorkflowBuilder().set_start_executor(agent1).add_edge(agent1, agent2).build()
 
-    # Confirm auto-wrapped executors use agent names as IDs
+    # 自動ラップされたexecutorsがagent名をIDとして使用することを確認する
     assert wf.start_executor_id == "writer"
     assert any(isinstance(e, AgentExecutor) and e.id in {"writer", "reviewer"} for e in wf.executors.values())
 
 
 @dataclass
 class MockMessage:
-    """A mock message for testing purposes."""
+    """テスト用のモックメッセージ。"""
 
     data: Any
 
 
 class MockExecutor(Executor):
-    """A mock executor for testing purposes."""
+    """テスト用のモックexecutor。"""
 
     @handler
     async def mock_handler(self, message: MockMessage, ctx: WorkflowContext[MockMessage]) -> None:
-        """A mock handler that does nothing."""
+        """何もしないモックハンドラ。"""
         pass
 
 
 class MockAggregator(Executor):
-    """A mock executor that aggregates results from multiple executors."""
+    """複数のexecutorsの結果を集約するモックexecutor。"""
 
     @handler
     async def mock_handler(self, messages: list[MockMessage], ctx: WorkflowContext[MockMessage]) -> None:
-        # This mock simply returns the data incremented by 1
+        # このモックは単にデータを1増やして返す
         pass
 
 
 def test_workflow_builder_without_start_executor_throws():
-    """Test creating a workflow builder without a start executor."""
+    """start executorなしでworkflow builderを作成するテスト。"""
 
     builder = WorkflowBuilder()
     with pytest.raises(ValueError):
@@ -81,7 +81,7 @@ def test_workflow_builder_without_start_executor_throws():
 
 
 def test_workflow_builder_fluent_api():
-    """Test the fluent API of the workflow builder."""
+    """workflow builderのフルーエントAPIをテストする。"""
     executor_a = MockExecutor(id="executor_a")
     executor_b = MockExecutor(id="executor_b")
     executor_c = MockExecutor(id="executor_c")
@@ -106,21 +106,21 @@ def test_workflow_builder_fluent_api():
 
 
 def test_add_agent_with_custom_parameters():
-    """Test adding an agent with custom parameters."""
+    """カスタムパラメータでagentを追加するテスト。"""
     agent = DummyAgent(id="agent_custom", name="custom_agent")
     builder = WorkflowBuilder()
 
-    # Add agent with custom parameters
+    # カスタムパラメータでagentを追加する
     result = builder.add_agent(agent, output_response=True, id="my_custom_id")
 
-    # Verify that add_agent returns the builder for chaining
+    # add_agentがチェーン用にbuilderを返すことを検証する
     assert result is builder
 
-    # Build workflow and verify executor is present
+    # workflowをビルドしexecutorが存在することを検証する
     workflow = builder.set_start_executor(agent).build()
     assert "my_custom_id" in workflow.executors
 
-    # Verify the executor was created with correct parameters
+    # executorが正しいパラメータで作成されたことを検証する
     executor = workflow.executors["my_custom_id"]
     assert isinstance(executor, AgentExecutor)
     assert executor.id == "my_custom_id"
@@ -128,43 +128,43 @@ def test_add_agent_with_custom_parameters():
 
 
 def test_add_agent_reuses_same_wrapper():
-    """Test that using the same agent instance multiple times reuses the same wrapper."""
+    """同じagentインスタンスを複数回使うと同じラッパーを再利用することをテストする。"""
     agent = DummyAgent(id="agent_reuse", name="reuse_agent")
     builder = WorkflowBuilder()
 
-    # Add agent with specific parameters
+    # 特定のパラメータでagentを追加する
     builder.add_agent(agent, output_response=True, id="agent_exec")
 
-    # Use the same agent instance in add_edge - should reuse the same wrapper
+    # add_edgeで同じagentインスタンスを使う - 同じラッパーを再利用すべき
     builder.set_start_executor(agent)
 
     workflow = builder.build()
 
-    # Verify only one executor exists for this agent
+    # このagentに対してexecutorが1つだけ存在することを検証する
     assert workflow.start_executor_id == "agent_exec"
     assert "agent_exec" in workflow.executors
     assert len([e for e in workflow.executors.values() if isinstance(e, AgentExecutor)]) == 1
 
-    # Verify the executor has the parameters from add_agent
+    # executorがadd_agentのパラメータを持っていることを検証する
     start_executor = workflow.get_start_executor()
     assert isinstance(start_executor, AgentExecutor)
     assert getattr(start_executor, "_output_response", False) is True
 
 
 def test_add_agent_then_use_in_edges():
-    """Test that an agent added via add_agent can be used in edge definitions."""
+    """add_agentで追加したagentがedge定義で使えることをテストする。"""
     agent1 = DummyAgent(id="agent1", name="first")
     agent2 = DummyAgent(id="agent2", name="second")
     builder = WorkflowBuilder()
 
-    # Add agents with specific settings
+    # 特定の設定でagentを追加する
     builder.add_agent(agent1, output_response=False, id="exec1")
     builder.add_agent(agent2, output_response=True, id="exec2")
 
-    # Use the same agent instances to create edges
+    # 同じagentインスタンスを使ってエッジを作成する
     workflow = builder.set_start_executor(agent1).add_edge(agent1, agent2).build()
 
-    # Verify the executors maintain their settings
+    # executorが設定を維持していることを検証する
     assert workflow.start_executor_id == "exec1"
     assert "exec1" in workflow.executors
     assert "exec2" in workflow.executors
@@ -179,32 +179,32 @@ def test_add_agent_then_use_in_edges():
 
 
 def test_add_agent_without_explicit_id_uses_agent_name():
-    """Test that add_agent uses agent name as id when no explicit id is provided."""
+    """明示的なidがない場合、add_agentがagent名をidとして使うことをテストする。"""
     agent = DummyAgent(id="agent_x", name="named_agent")
     builder = WorkflowBuilder()
 
     result = builder.add_agent(agent)
 
-    # Verify that add_agent returns the builder for chaining
+    # add_agentがチェーン用にbuilderを返すことを検証する
     assert result is builder
 
     workflow = builder.set_start_executor(agent).build()
     assert "named_agent" in workflow.executors
 
-    # Verify the executor id matches the agent name
+    # executorのidがagent名と一致することを検証する
     executor = workflow.executors["named_agent"]
     assert executor.id == "named_agent"
 
 
 def test_add_agent_duplicate_id_raises_error():
-    """Test that adding agents with duplicate IDs raises an error."""
+    """重複IDのagent追加がエラーを発生させることをテストする。"""
     agent1 = DummyAgent(id="agent1", name="first")
-    agent2 = DummyAgent(id="agent2", name="first")  # Same name as agent1
+    agent2 = DummyAgent(id="agent2", name="first")  # agent1と同じ名前
     builder = WorkflowBuilder()
 
-    # Add first agent
+    # 最初のagentを追加する
     builder.add_agent(agent1)
 
-    # Adding second agent with same name should raise ValueError
+    # 同じ名前の2番目のagent追加はValueErrorを発生させるべき
     with pytest.raises(ValueError, match="Duplicate executor ID"):
         builder.add_agent(agent2)

@@ -103,17 +103,18 @@ _NOOP_HISTOGRAM = _NoOpHistogram()
 def _parse_inputs(
     inputs: "Contents | dict[str, Any] | str | list[Contents | dict[str, Any] | str] | None",
 ) -> list["Contents"]:
-    """Parse the inputs for a tool, ensuring they are of type Contents.
+    """ツールの入力を解析し、Contents型であることを保証します。
 
     Args:
-        inputs: The inputs to parse. Can be a single item or list of Contents, dicts, or strings.
+        inputs: 解析する入力。単一のContentsまたはContentsのリスト、辞書、文字列のいずれか。
 
     Returns:
-        A list of Contents objects.
+        Contentsオブジェクトのリスト。
 
     Raises:
-        ValueError: If an unsupported input type is encountered.
-        TypeError: If the input type is not supported.
+        ValueError: サポートされていない入力タイプが検出された場合。
+        TypeError: 入力タイプがサポートされていない場合。
+
     """
     if inputs is None:
         return []
@@ -125,15 +126,12 @@ def _parse_inputs(
         inputs = [inputs]
     for input_item in inputs:
         if isinstance(input_item, str):
-            # If it's a string, we assume it's a URI or similar identifier.
-            # Convert it to a UriContent or similar type as needed.
+            # 文字列の場合、それがURIまたは類似の識別子であると仮定します。 必要に応じてUriContentまたは類似の型に変換します。
             parsed_inputs.append(UriContent(uri=input_item, media_type="text/plain"))
         elif isinstance(input_item, dict):
-            # If it's a dict, we assume it contains properties for a specific content type.
-            # we check if the required keys are present to determine the type.
-            # for instance, if it has "uri" and "media_type", we treat it as UriContent.
-            # if is only has uri, then we treat it as DataContent.
-            # etc.
+            # 辞書の場合、特定のコンテンツタイプのプロパティを含むと仮定します。 必要なキーが存在するかをチェックしてタイプを判定します。
+            # 例えば、"uri"と"media_type"があればUriContentとして扱います。 uriのみの場合はDataContentとして扱います。
+            # など。
             if "uri" in input_item:
                 parsed_inputs.append(
                     UriContent(**input_item) if "media_type" in input_item else DataContent(**input_item)
@@ -156,34 +154,31 @@ def _parse_inputs(
 # region Tools
 @runtime_checkable
 class ToolProtocol(Protocol):
-    """Represents a generic tool that can be specified to an AI service.
+    """AIサービスに指定できる汎用ツールを表します。
 
-    This protocol defines the interface that all tools must implement to be compatible
-    with the agent framework.
+    このプロトコルは、すべてのツールがエージェントフレームワークと互換性を持つために実装しなければならないインターフェースを定義します。
 
-    Attributes:
-        name: The name of the tool.
-        description: A description of the tool, suitable for use in describing the purpose to a model.
-        additional_properties: Additional properties associated with the tool.
+    属性:
+    name: ツールの名前。
+    description: モデルに目的を説明するのに適したツールの説明。
+    additional_properties: ツールに関連付けられた追加のプロパティ。
 
     Examples:
-        .. code-block:: python
+    .. code-block:: python
 
-            from agent_framework import ToolProtocol
+        from agent_framework import ToolProtocol
 
+        class CustomTool:
+            def __init__(self, name: str, description: str) -> None:
+                self.name = name
+                self.description = description
+                self.additional_properties = None
 
-            class CustomTool:
-                def __init__(self, name: str, description: str) -> None:
-                    self.name = name
-                    self.description = description
-                    self.additional_properties = None
+            def __str__(self) -> str:
+                return f"CustomTool(name={self.name})"
 
-                def __str__(self) -> str:
-                    return f"CustomTool(name={self.name})"
-
-
-            # Tool now implements ToolProtocol
-            tool: ToolProtocol = CustomTool("my_tool", "Does something useful")
+        # Tool now implements ToolProtocol
+        tool: ToolProtocol = CustomTool("my_tool", "Does something useful")
     """
 
     name: str
@@ -194,29 +189,27 @@ class ToolProtocol(Protocol):
     """Additional properties associated with the tool."""
 
     def __str__(self) -> str:
-        """Return a string representation of the tool."""
+        """ツールの文字列表現を返します。"""
         ...
 
 
 class BaseTool(SerializationMixin):
-    """Base class for AI tools, providing common attributes and methods.
+    """AIツールの基底クラスで、共通の属性とメソッドを提供します。
 
-    This class provides the foundation for creating custom tools with serialization support.
+    このクラスは、シリアライズ対応のカスタムツールを作成するための基盤を提供します。
 
     Examples:
-        .. code-block:: python
+    .. code-block:: python
 
-            from agent_framework import BaseTool
+        from agent_framework import BaseTool
 
+        class MyCustomTool(BaseTool):
+            def __init__(self, name: str, custom_param: str) -> None:
+                super().__init__(name=name, description="My custom tool")
+                self.custom_param = custom_param
 
-            class MyCustomTool(BaseTool):
-                def __init__(self, name: str, custom_param: str) -> None:
-                    super().__init__(name=name, description="My custom tool")
-                    self.custom_param = custom_param
-
-
-            tool = MyCustomTool(name="custom", custom_param="value")
-            print(tool)  # MyCustomTool(name=custom, description=My custom tool)
+        tool = MyCustomTool(name="custom", custom_param="value")
+        print(tool)  # MyCustomTool(name=custom, description=My custom tool)
     """
 
     DEFAULT_EXCLUDE: ClassVar[set[str]] = {"additional_properties"}
@@ -229,13 +222,13 @@ class BaseTool(SerializationMixin):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the BaseTool.
+        """BaseToolを初期化します。
 
         Keyword Args:
-            name: The name of the tool.
-            description: A description of the tool.
-            additional_properties: Additional properties associated with the tool.
-            **kwargs: Additional keyword arguments.
+        name: ツールの名前。
+        description: ツールの説明。
+        additional_properties: ツールに関連付けられた追加のプロパティ。
+        **kwargs: 追加のキーワード引数。
         """
         self.name = name
         self.description = description
@@ -244,28 +237,27 @@ class BaseTool(SerializationMixin):
             setattr(self, key, value)
 
     def __str__(self) -> str:
-        """Return a string representation of the tool."""
+        """ツールの文字列表現を返します。"""
         if self.description:
             return f"{self.__class__.__name__}(name={self.name}, description={self.description})"
         return f"{self.__class__.__name__}(name={self.name})"
 
 
 class HostedCodeInterpreterTool(BaseTool):
-    """Represents a hosted tool that can be specified to an AI service to enable it to execute generated code.
+    """生成されたコードを実行できるようにAIサービスに指定できるホスト型ツールを表します。
 
-    This tool does not implement code interpretation itself. It serves as a marker to inform a service
-    that it is allowed to execute generated code if the service is capable of doing so.
+    このツール自体はコードの解釈を実装しません。サービスが生成されたコードを実行可能な場合に実行を許可するためのマーカーとして機能します。
 
     Examples:
-        .. code-block:: python
+    .. code-block:: python
 
-            from agent_framework import HostedCodeInterpreterTool
+        from agent_framework import HostedCodeInterpreterTool
 
-            # Create a code interpreter tool
-            code_tool = HostedCodeInterpreterTool()
+        # コードインタプリターツールを作成
+        code_tool = HostedCodeInterpreterTool()
 
-            # With file inputs
-            code_tool_with_files = HostedCodeInterpreterTool(inputs=[{"file_id": "file-123"}, {"file_id": "file-456"}])
+        # ファイル入力付き
+        code_tool_with_files = HostedCodeInterpreterTool(inputs=[{"file_id": "file-123"}, {"file_id": "file-456"}])
     """
 
     def __init__(
@@ -276,20 +268,20 @@ class HostedCodeInterpreterTool(BaseTool):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the HostedCodeInterpreterTool.
+        """HostedCodeInterpreterToolを初期化します。
 
         Keyword Args:
-            inputs: A list of contents that the tool can accept as input. Defaults to None.
-                This should mostly be HostedFileContent or HostedVectorStoreContent.
-                Can also be DataContent, depending on the service used.
-                When supplying a list, it can contain:
-                - Contents instances
-                - dicts with properties for Contents (e.g., {"uri": "http://example.com", "media_type": "text/html"})
-                - strings (which will be converted to UriContent with media_type "text/plain").
-                If None, defaults to an empty list.
-            description: A description of the tool.
-            additional_properties: Additional properties associated with the tool.
-            **kwargs: Additional keyword arguments to pass to the base class.
+        inputs: ツールが入力として受け入れ可能なコンテンツのリスト。デフォルトはNone。
+        これは主にHostedFileContentまたはHostedVectorStoreContentであるべきです。
+        使用するサービスによってはDataContentも可能です。
+        リストを指定する場合、以下を含むことができます:
+        - Contentsのインスタンス
+        - Contentsのプロパティを持つdict（例: {"uri": "http://example.com", "media_type": "text/html"}）
+        - 文字列（media_type "text/plain"のUriContentに変換されます）。
+        Noneの場合は空リストがデフォルトです。
+        description: ツールの説明。
+        additional_properties: ツールに関連付けられた追加のプロパティ。
+        **kwargs: 基底クラスに渡す追加のキーワード引数。
         """
         if "name" in kwargs:
             raise ValueError("The 'name' argument is reserved for the HostedCodeInterpreterTool and cannot be set.")
@@ -305,21 +297,21 @@ class HostedCodeInterpreterTool(BaseTool):
 
 
 class HostedWebSearchTool(BaseTool):
-    """Represents a web search tool that can be specified to an AI service to enable it to perform web searches.
+    """AIサービスに指定できるウェブ検索ツールを表します。
 
     Examples:
-        .. code-block:: python
+    .. code-block:: python
 
-            from agent_framework import HostedWebSearchTool
+        from agent_framework import HostedWebSearchTool
 
-            # Create a basic web search tool
-            search_tool = HostedWebSearchTool()
+        # 基本的なウェブ検索ツールを作成
+        search_tool = HostedWebSearchTool()
 
-            # With location context
-            search_tool_with_location = HostedWebSearchTool(
-                description="Search the web for information",
-                additional_properties={"user_location": {"city": "Seattle", "country": "US"}},
-            )
+        # ロケーションコンテキスト付き
+        search_tool_with_location = HostedWebSearchTool(
+            description="Search the web for information",
+            additional_properties={"user_location": {"city": "Seattle", "country": "US"}},
+        )
     """
 
     def __init__(
@@ -328,14 +320,14 @@ class HostedWebSearchTool(BaseTool):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ):
-        """Initialize a HostedWebSearchTool.
+        """HostedWebSearchToolを初期化します。
 
         Keyword Args:
-            description: A description of the tool.
-            additional_properties: Additional properties associated with the tool
-                (e.g., {"user_location": {"city": "Seattle", "country": "US"}}).
-            **kwargs: Additional keyword arguments to pass to the base class.
-                if additional_properties is not provided, any kwargs will be added to additional_properties.
+        description: ツールの説明。
+        additional_properties: ツールに関連付けられた追加のプロパティ
+        （例: {"user_location": {"city": "Seattle", "country": "US"}}）。
+        **kwargs: 基底クラスに渡す追加のキーワード引数。
+        additional_propertiesが提供されていない場合、kwargsはadditional_propertiesに追加されます。
         """
         args: dict[str, Any] = {
             "name": "web_search",
@@ -350,14 +342,14 @@ class HostedWebSearchTool(BaseTool):
 
 
 class HostedMCPSpecificApproval(TypedDict, total=False):
-    """Represents the specific mode for a hosted tool.
+    """ホスト型ツールの特定のモードを表します。
 
-    When using this mode, the user must specify which tools always or never require approval.
-    This is represented as a dictionary with two optional keys:
+    このモードを使用する場合、ユーザーは常に承認が必要なツールと決して承認が不要なツールを指定する必要があります。
+    これは2つのオプショナルキーを持つ辞書として表されます。
 
-    Attributes:
-        always_require_approval: A sequence of tool names that always require approval.
-        never_require_approval: A sequence of tool names that never require approval.
+    属性:
+    always_require_approval: 常に承認が必要なツール名のシーケンス。
+    never_require_approval: 決して承認が不要なツール名のシーケンス。
     """
 
     always_require_approval: Collection[str] | None
@@ -365,38 +357,38 @@ class HostedMCPSpecificApproval(TypedDict, total=False):
 
 
 class HostedMCPTool(BaseTool):
-    """Represents a MCP tool that is managed and executed by the service.
+    """サービスによって管理および実行されるMCPツールを表します。
 
     Examples:
-        .. code-block:: python
+    .. code-block:: python
 
-            from agent_framework import HostedMCPTool
+        from agent_framework import HostedMCPTool
 
-            # Create a basic MCP tool
-            mcp_tool = HostedMCPTool(
-                name="my_mcp_tool",
-                url="https://example.com/mcp",
-            )
+        # 基本的なMCPツールを作成
+        mcp_tool = HostedMCPTool(
+            name="my_mcp_tool",
+            url="https://example.com/mcp",
+        )
 
-            # With approval mode and allowed tools
-            mcp_tool_with_approval = HostedMCPTool(
-                name="my_mcp_tool",
-                description="My MCP tool",
-                url="https://example.com/mcp",
-                approval_mode="always_require",
-                allowed_tools=["tool1", "tool2"],
-                headers={"Authorization": "Bearer token"},
-            )
+        # 承認モードと許可されたツール付き
+        mcp_tool_with_approval = HostedMCPTool(
+            name="my_mcp_tool",
+            description="My MCP tool",
+            url="https://example.com/mcp",
+            approval_mode="always_require",
+            allowed_tools=["tool1", "tool2"],
+            headers={"Authorization": "Bearer token"},
+        )
 
-            # With specific approval mode
-            mcp_tool_specific = HostedMCPTool(
-                name="my_mcp_tool",
-                url="https://example.com/mcp",
-                approval_mode={
-                    "always_require_approval": ["dangerous_tool"],
-                    "never_require_approval": ["safe_tool"],
-                },
-            )
+        # 特定の承認モード付き
+        mcp_tool_specific = HostedMCPTool(
+            name="my_mcp_tool",
+            url="https://example.com/mcp",
+            approval_mode={
+                "always_require_approval": ["dangerous_tool"],
+                "never_require_approval": ["safe_tool"],
+            },
+        )
     """
 
     def __init__(
@@ -411,24 +403,24 @@ class HostedMCPTool(BaseTool):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Create a hosted MCP tool.
+        """ホスト型MCPツールを作成します。
 
         Keyword Args:
-            name: The name of the tool.
-            description: A description of the tool.
-            url: The URL of the tool.
-            approval_mode: The approval mode for the tool. This can be:
-                - "always_require": The tool always requires approval before use.
-                - "never_require": The tool never requires approval before use.
-                - A dict with keys `always_require_approval` or `never_require_approval`,
-                  followed by a sequence of strings with the names of the relevant tools.
-            allowed_tools: A list of tools that are allowed to use this tool.
-            headers: Headers to include in requests to the tool.
-            additional_properties: Additional properties to include in the tool definition.
-            **kwargs: Additional keyword arguments to pass to the base class.
+        name: ツールの名前。
+        description: ツールの説明。
+        url: ツールのURL。
+        approval_mode: ツールの承認モード。以下のいずれかです:
+        - "always_require": ツールは使用前に常に承認が必要。
+        - "never_require": ツールは使用前に承認が不要。
+        - `always_require_approval`または`never_require_approval`キーを持つ辞書で、
+          関連するツール名のシーケンスを指定。
+        allowed_tools: このツールの使用を許可されたツールのリスト。
+        headers: ツールへのリクエストに含めるヘッダー。
+        additional_properties: ツール定義に含める追加のプロパティ。
+        **kwargs: 基底クラスに渡す追加のキーワード引数。
         """
         try:
-            # Validate approval_mode
+            # approval_modeを検証します
             if approval_mode is not None:
                 if isinstance(approval_mode, str):
                     if approval_mode not in ("always_require", "never_require"):
@@ -438,12 +430,12 @@ class HostedMCPTool(BaseTool):
                             "or 'never_require_approval' keys."
                         )
                 elif isinstance(approval_mode, dict):
-                    # Validate that the dict has sets
+                    # 辞書がセットを持つことを検証します
                     for key, value in approval_mode.items():
                         if not isinstance(value, set):
                             approval_mode[key] = set(value)  # type: ignore
 
-            # Validate allowed_tools
+            # allowed_toolsを検証します
             if allowed_tools is not None and isinstance(allowed_tools, dict):
                 raise TypeError(
                     f"allowed_tools must be a sequence of strings, not a dict. Got: {type(allowed_tools).__name__}"
@@ -464,22 +456,22 @@ class HostedMCPTool(BaseTool):
 
 
 class HostedFileSearchTool(BaseTool):
-    """Represents a file search tool that can be specified to an AI service to enable it to perform file searches.
+    """AIサービスに指定できるファイル検索ツールを表します。
 
     Examples:
-        .. code-block:: python
+    .. code-block:: python
 
-            from agent_framework import HostedFileSearchTool
+        from agent_framework import HostedFileSearchTool
 
-            # Create a basic file search tool
-            file_search = HostedFileSearchTool()
+        # 基本的なファイル検索ツールを作成
+        file_search = HostedFileSearchTool()
 
-            # With vector store inputs and max results
-            file_search_with_inputs = HostedFileSearchTool(
-                inputs=[{"vector_store_id": "vs_123"}],
-                max_results=10,
-                description="Search files in vector store",
-            )
+        # ベクターストア入力と最大結果数付き
+        file_search_with_inputs = HostedFileSearchTool(
+            inputs=[{"vector_store_id": "vs_123"}],
+            max_results=10,
+            description="Search files in vector store",
+        )
     """
 
     def __init__(
@@ -491,21 +483,21 @@ class HostedFileSearchTool(BaseTool):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ):
-        """Initialize a FileSearchTool.
+        """FileSearchToolを初期化します。
 
         Keyword Args:
-            inputs: A list of contents that the tool can accept as input. Defaults to None.
-                This should be one or more HostedVectorStoreContents.
-                When supplying a list, it can contain:
-                - Contents instances
-                - dicts with properties for Contents (e.g., {"uri": "http://example.com", "media_type": "text/html"})
-                - strings (which will be converted to UriContent with media_type "text/plain").
-                If None, defaults to an empty list.
-            max_results: The maximum number of results to return from the file search.
-                If None, max limit is applied.
-            description: A description of the tool.
-            additional_properties: Additional properties associated with the tool.
-            **kwargs: Additional keyword arguments to pass to the base class.
+        inputs: ツールが入力として受け入れ可能なコンテンツのリスト。デフォルトはNone。
+        これは1つ以上のHostedVectorStoreContentsであるべきです。
+        リストを指定する場合、以下を含むことができます:
+        - Contentsのインスタンス
+        - Contentsのプロパティを持つdict（例: {"uri": "http://example.com", "media_type": "text/html"}）
+        - 文字列（media_type "text/plain"のUriContentに変換されます）。
+        Noneの場合は空リストがデフォルトです。
+        max_results: ファイル検索で返す最大結果数。
+        Noneの場合は最大制限が適用されます。
+        description: ツールの説明。
+        additional_properties: ツールに関連付けられた追加のプロパティ。
+        **kwargs: 基底クラスに渡す追加のキーワード引数。
         """
         if "name" in kwargs:
             raise ValueError("The 'name' argument is reserved for the HostedFileSearchTool and cannot be set.")
@@ -522,13 +514,13 @@ class HostedFileSearchTool(BaseTool):
 
 
 def _default_histogram() -> Histogram:
-    """Get the default histogram for function invocation duration.
+    """関数呼び出しの継続時間のデフォルトヒストグラムを取得します。
 
     Returns:
-        A Histogram instance for recording function invocation duration,
-        or a no-op histogram if observability is disabled.
+    関数呼び出しの継続時間を記録するHistogramインスタンス、
+    または観測性が無効な場合はno-opヒストグラム。
     """
-    from .observability import OBSERVABILITY_SETTINGS  # local import to avoid circulars
+    from .observability import OBSERVABILITY_SETTINGS  # 循環参照を避けるためのローカルインポート
 
     if not OBSERVABILITY_SETTINGS.ENABLED:  # type: ignore[name-defined]
         return _NOOP_HISTOGRAM  # type: ignore[return-value]
@@ -552,45 +544,41 @@ TClass = TypeVar("TClass", bound="SerializationMixin")
 
 
 class AIFunction(BaseTool, Generic[ArgsT, ReturnT]):
-    """A tool that wraps a Python function to make it callable by AI models.
+    """Python関数をラップしてAIモデルから呼び出し可能にするツールです。
 
-    This class wraps a Python function to make it callable by AI models with automatic
-    parameter validation and JSON schema generation.
+    このクラスはPython関数をラップし、パラメータの自動検証とJSONスキーマ生成を行い、AIモデルから呼び出し可能にします。
 
     Examples:
-        .. code-block:: python
+    .. code-block:: python
 
-            from typing import Annotated
-            from pydantic import BaseModel, Field
-            from agent_framework import AIFunction, ai_function
+        from typing import Annotated
+        from pydantic import BaseModel, Field
+        from agent_framework import AIFunction, ai_function
 
+        # 文字列アノテーションを使ったデコレータの使用例
+        @ai_function
+        def get_weather(
+            location: Annotated[str, "The city name"],
+            unit: Annotated[str, "Temperature unit"] = "celsius",
+        ) -> str:
+            '''Get the weather for a location.'''
+            return f"Weather in {location}: 22°{unit[0].upper()}"
 
-            # Using the decorator with string annotations
-            @ai_function
-            def get_weather(
-                location: Annotated[str, "The city name"],
-                unit: Annotated[str, "Temperature unit"] = "celsius",
-            ) -> str:
-                '''Get the weather for a location.'''
-                return f"Weather in {location}: 22°{unit[0].upper()}"
+        # Fieldを使った直接インスタンス化の例
+        class WeatherArgs(BaseModel):
+            location: Annotated[str, Field(description="The city name")]
+            unit: Annotated[str, Field(description="Temperature unit")] = "celsius"
 
+        weather_func = AIFunction(
+            name="get_weather",
+            description="Get the weather for a location",
+            func=lambda location, unit="celsius": f"Weather in {location}: 22°{unit[0].upper()}",
+            approval_mode="never_require",
+            input_model=WeatherArgs,
+        )
 
-            # Using direct instantiation with Field
-            class WeatherArgs(BaseModel):
-                location: Annotated[str, Field(description="The city name")]
-                unit: Annotated[str, Field(description="Temperature unit")] = "celsius"
-
-
-            weather_func = AIFunction(
-                name="get_weather",
-                description="Get the weather for a location",
-                func=lambda location, unit="celsius": f"Weather in {location}: 22°{unit[0].upper()}",
-                approval_mode="never_require",
-                input_model=WeatherArgs,
-            )
-
-            # Invoke the function
-            result = await weather_func.invoke(arguments=WeatherArgs(location="Seattle"))
+        # 関数を呼び出す
+        result = await weather_func.invoke(arguments=WeatherArgs(location="Seattle"))
     """
 
     INJECTABLE: ClassVar[set[str]] = {"func"}
@@ -607,19 +595,20 @@ class AIFunction(BaseTool, Generic[ArgsT, ReturnT]):
         input_model: type[ArgsT] | Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the AIFunction.
+        """AIFunctionを初期化します。
 
-        Keyword Args:
-            name: The name of the function.
-            description: A description of the function.
-            approval_mode: Whether or not approval is required to run this tool.
-                Default is that approval is not needed.
-            additional_properties: Additional properties to set on the function.
-            func: The function to wrap.
-            input_model: The Pydantic model that defines the input parameters for the function.
-                This can also be a JSON schema dictionary.
-                If not provided, it will be inferred from the function signature.
-            **kwargs: Additional keyword arguments.
+        キーワード引数:
+            name: 関数の名前。
+            description: 関数の説明。
+            approval_mode: このツールを実行するために承認が必要かどうか。
+                デフォルトは承認不要です。
+            additional_properties: 関数に設定する追加のプロパティ。
+            func: ラップする関数。
+            input_model: 関数の入力パラメータを定義するPydanticモデル。
+                これはJSONスキーマの辞書でも構いません。
+                指定しない場合は関数のシグネチャから推論されます。
+            **kwargs: 追加のキーワード引数。
+
         """
         super().__init__(
             name=name,
@@ -643,7 +632,7 @@ class AIFunction(BaseTool, Generic[ArgsT, ReturnT]):
         return cast(type[ArgsT], _create_input_model_from_func(self.func, self.name))
 
     def __call__(self, *args: Any, **kwargs: Any) -> ReturnT | Awaitable[ReturnT]:
-        """Call the wrapped function with the provided arguments."""
+        """提供された引数でラップされた関数を呼び出します。"""
         return self.func(*args, **kwargs)
 
     async def invoke(
@@ -652,17 +641,18 @@ class AIFunction(BaseTool, Generic[ArgsT, ReturnT]):
         arguments: ArgsT | None = None,
         **kwargs: Any,
     ) -> ReturnT:
-        """Run the AI function with the provided arguments as a Pydantic model.
+        """提供された引数をPydanticモデルとして使用してAI関数を実行します。
 
-        Keyword Args:
-            arguments: A Pydantic model instance containing the arguments for the function.
-            kwargs: Keyword arguments to pass to the function, will not be used if ``arguments`` is provided.
+        キーワード引数:
+            arguments: 関数の引数を含むPydanticモデルのインスタンス。
+            kwargs: 関数に渡すキーワード引数。``arguments``が提供されている場合は使用されません。
 
-        Returns:
-            The result of the function execution.
+        戻り値:
+            関数実行の結果。
 
-        Raises:
-            TypeError: If arguments is not an instance of the expected input model.
+        例外:
+            TypeError: argumentsが期待される入力モデルのインスタンスでない場合。
+
         """
         global OBSERVABILITY_SETTINGS
         from .observability import OBSERVABILITY_SETTINGS
@@ -726,18 +716,20 @@ class AIFunction(BaseTool, Generic[ArgsT, ReturnT]):
                 logger.info("Function duration: %fs", duration)
 
     def parameters(self) -> dict[str, Any]:
-        """Create the JSON schema of the parameters.
+        """パラメータのJSONスキーマを作成します。
 
-        Returns:
-            A dictionary containing the JSON schema for the function's parameters.
+        戻り値:
+            関数のパラメータのJSONスキーマを含む辞書。
+
         """
         return self.input_model.model_json_schema()
 
     def to_json_schema_spec(self) -> dict[str, Any]:
-        """Convert a AIFunction to the JSON Schema function specification format.
+        """AIFunctionをJSON Schemaの関数仕様フォーマットに変換します。
 
-        Returns:
-            A dictionary containing the function specification in JSON Schema format.
+        戻り値:
+            JSON Schema形式の関数仕様を含む辞書。
+
         """
         return {
             "type": "function",
@@ -766,13 +758,14 @@ def _tools_to_dict(
         | None
     ),
 ) -> list[str | dict[str, Any]] | None:
-    """Parse the tools to a dict.
+    """ツールを辞書に解析します。
 
-    Args:
-        tools: The tools to parse. Can be a single tool or a sequence of tools.
+    引数:
+        tools: 解析するツール。単一のツールまたはツールのシーケンス。
 
-    Returns:
-        A list of tool specifications as dictionaries, or None if no tools provided.
+    戻り値:
+        辞書形式のツール仕様のリスト、またはツールが提供されていない場合はNone。
+
     """
     if not tools:
         return None
@@ -809,23 +802,24 @@ def _tools_to_dict(
 
 
 def _parse_annotation(annotation: Any) -> Any:
-    """Parse a type annotation and return the corresponding type.
+    """型注釈を解析し、対応する型を返します。
 
-    If the second annotation (after the type) is a string, then we convert that to a Pydantic Field description.
-    The rest are returned as-is, allowing for multiple annotations.
+    2番目の注釈（型の後）が文字列の場合、それをPydanticのFieldの説明に変換します。
+    残りはそのまま返し、複数の注釈を許容します。
 
-    Args:
-        annotation: The type annotation to parse.
+    引数:
+        annotation: 解析する型注釈。
 
-    Returns:
-        The parsed annotation, potentially wrapped in Annotated with a Field.
+    戻り値:
+        FieldでラップされたAnnotatedの可能性がある解析済み注釈。
+
     """
     origin = get_origin(annotation)
     if origin is not None:
         args = get_args(annotation)
-        # For other generics, return the origin type (e.g., list for List[int])
+        # 他のジェネリック型の場合は、元の型を返します（例: List[int]ならlist）。
         if len(args) > 1 and isinstance(args[1], str):
-            # Create a new Annotated type with the updated Field
+            # 更新されたFieldで新しいAnnotated型を作成します。
             args_list = list(args)
             if len(args_list) == 2:
                 return Annotated[args_list[0], Field(description=args_list[1])]
@@ -834,7 +828,7 @@ def _parse_annotation(annotation: Any) -> Any:
 
 
 def _create_input_model_from_func(func: Callable[..., Any], tool_name: str) -> type[BaseModel]:
-    """Create a Pydantic model from a function's signature."""
+    """関数のシグネチャからPydanticモデルを作成します。"""
     sig = inspect.signature(func)
     fields = {
         pname: (
@@ -847,7 +841,7 @@ def _create_input_model_from_func(func: Callable[..., Any], tool_name: str) -> t
     return create_model(f"{tool_name}_input", **fields)  # type: ignore[call-overload, no-any-return]
 
 
-# Map JSON Schema types to Pydantic types
+# JSON Schemaの型をPydanticの型にマッピングします。
 TYPE_MAPPING = {
     "string": str,
     "integer": int,
@@ -860,22 +854,23 @@ TYPE_MAPPING = {
 
 
 def _create_model_from_json_schema(tool_name: str, schema_json: Mapping[str, Any]) -> type[BaseModel]:
-    """Creates a Pydantic model from a given JSON Schema.
+    """指定されたJSON SchemaからPydanticモデルを作成します。
 
-    Args:
-      tool_name: The name of the model to be created.
-      schema_json: The JSON Schema definition.
+    引数:
+      tool_name: 作成するモデルの名前。
+      schema_json: JSON Schemaの定義。
 
-    Returns:
-      The dynamically created Pydantic model class.
+    戻り値:
+      動的に作成されたPydanticモデルのクラス。
+
     """
-    # Validate that 'properties' exists and is a dict
+    # 'properties'が存在し辞書であることを検証します。
     if "properties" not in schema_json or not isinstance(schema_json["properties"], dict):
         raise ValueError(
             f"JSON schema for tool '{tool_name}' must contain a 'properties' key of type dict. "
             f"Got: {schema_json.get('properties', None)}"
         )
-    # Extract field definitions with type annotations
+    # 型注釈付きのフィールド定義を抽出します。
     field_definitions: dict[str, tuple[type, FieldInfo]] = {}
     for field_name, field_schema in schema_json["properties"].items():
         field_args: dict[str, Any] = {}
@@ -930,21 +925,20 @@ def ai_function(
     approval_mode: Literal["always_require", "never_require"] | None = None,
     additional_properties: dict[str, Any] | None = None,
 ) -> AIFunction[Any, ReturnT] | Callable[[Callable[..., ReturnT | Awaitable[ReturnT]]], AIFunction[Any, ReturnT]]:
-    """Decorate a function to turn it into a AIFunction that can be passed to models and executed automatically.
+    """関数をデコレートして、モデルに渡して自動実行可能なAIFunctionに変換します。
 
-    This decorator creates a Pydantic model from the function's signature,
-    which will be used to validate the arguments passed to the function
-    and to generate the JSON schema for the function's parameters.
+    このデコレータは関数のシグネチャからPydanticモデルを作成し、
+    関数に渡される引数の検証と関数パラメータのJSONスキーマ生成に使用されます。
 
-    To add descriptions to parameters, use the ``Annotated`` type from ``typing``
-    with a string description as the second argument. You can also use Pydantic's
-    ``Field`` class for more advanced configuration.
+    パラメータに説明を追加するには、``typing``の``Annotated``型を使用し、
+    2番目の引数に文字列の説明を指定します。より高度な設定にはPydanticの
+    ``Field``クラスも使用可能です。
 
-    Note:
-        When approval_mode is set to "always_require", the function will not be executed
-        until explicit approval is given, this only applies to the auto-invocation flow.
-        It is also important to note that if the model returns multiple function calls, some that require approval
-        and others that do not, it will ask approval for all of them.
+    注意:
+        approval_modeが"always_require"に設定されている場合、明示的な承認があるまで関数は実行されません。
+        これは自動呼び出しのフローにのみ適用されます。
+        また、モデルが複数の関数呼び出しを返し、その中に承認が必要なものと不要なものが混在する場合、
+        すべてに対して承認を求めることに注意してください。
 
     Example:
 
@@ -959,32 +953,33 @@ def ai_function(
                 arg1: Annotated[str, "The first argument"],
                 arg2: Annotated[int, "The second argument"],
             ) -> str:
-                # An example function that takes two arguments and returns a string.
+                # 2つの引数を受け取り文字列を返す例関数。
                 return f"arg1: {arg1}, arg2: {arg2}"
 
 
-            # the same function but with approval required to run
+            # 実行に承認が必要な同じ関数
             @ai_function(approval_mode="always_require")
             def ai_function_example(
                 arg1: Annotated[str, "The first argument"],
                 arg2: Annotated[int, "The second argument"],
             ) -> str:
-                # An example function that takes two arguments and returns a string.
+                # 2つの引数を受け取り文字列を返す例関数。
                 return f"arg1: {arg1}, arg2: {arg2}"
 
 
-            # With custom name and description
+            # カスタム名と説明付き
             @ai_function(name="custom_weather", description="Custom weather function")
             def another_weather_func(location: str) -> str:
                 return f"Weather in {location}"
 
 
-            # Async functions are also supported
+            # 非同期関数もサポート
             @ai_function
             async def async_get_weather(location: str) -> str:
-                '''Get weather asynchronously.'''
-                # Simulate async operation
+                '''非同期で天気を取得します。'''
+                # 非同期処理のシミュレーション
                 return f"Weather in {location}"
+
 
     """
 
@@ -1018,23 +1013,24 @@ async def _auto_invoke_function(
     request_index: int | None = None,
     middleware_pipeline: Any = None,  # Optional MiddlewarePipeline
 ) -> "Contents":
-    """Invoke a function call requested by the agent, applying middleware that is defined.
+    """Agentから要求された関数呼び出しを実行し、定義されたmiddlewareを適用します。
 
-    Args:
-        function_call_content: The function call content from the model.
-        custom_args: Additional custom arguments to merge with parsed arguments.
+    引数:
+        function_call_content: モデルからの関数呼び出し内容。
+        custom_args: 解析済み引数とマージする追加のカスタム引数。
 
-    Keyword Args:
-        tool_map: A mapping of tool names to AIFunction instances.
-        sequence_index: The index of the function call in the sequence.
-        request_index: The index of the request iteration.
-        middleware_pipeline: Optional middleware pipeline to apply during execution.
+    キーワード引数:
+        tool_map: ツール名とAIFunctionインスタンスのマッピング。
+        sequence_index: シーケンス内の関数呼び出しのインデックス。
+        request_index: リクエストの反復インデックス。
+        middleware_pipeline: 実行時に適用するオプションのmiddlewareパイプライン。
 
-    Returns:
-        A FunctionResultContent containing the result or exception.
+    戻り値:
+        実行結果または例外を含むFunctionResultContent。
 
-    Raises:
-        KeyError: If the requested function is not found in the tool map.
+    例外:
+        KeyError: 要求された関数がtool_mapに存在しない場合。
+
     """
     from ._types import (
         FunctionApprovalRequestContent,
@@ -1055,7 +1051,7 @@ async def _auto_invoke_function(
             if function_call_content.approved:
                 tool = tool_map.get(function_call_content.function_call.name)
                 if tool is None:
-                    # we assume it is a hosted tool
+                    # ホストされたツールであると仮定します。
                     return function_call_content
                 function_call_content = function_call_content.function_call
             else:
@@ -1063,7 +1059,7 @@ async def _auto_invoke_function(
 
     parsed_args: dict[str, Any] = dict(function_call_content.parse_arguments() or {})
 
-    # Merge with user-supplied args; right-hand side dominates, so parsed args win on conflicts.
+    # ユーザー提供の引数とマージします。右側が優先され、競合時は解析済み引数が勝ちます。
     merged_args: dict[str, Any] = (custom_args or {}) | parsed_args
     try:
         args = tool.input_model.model_validate(merged_args)
@@ -1075,7 +1071,7 @@ async def _auto_invoke_function(
     if not middleware_pipeline or (
         not hasattr(middleware_pipeline, "has_middlewares") and not middleware_pipeline.has_middlewares
     ):
-        # No middleware - execute directly
+        # middlewareなし - 直接実行します。
         try:
             function_result = await tool.invoke(
                 arguments=args,
@@ -1090,7 +1086,7 @@ async def _auto_invoke_function(
                 call_id=function_call_content.call_id,
                 exception=exc,
             )
-    # Execute through middleware pipeline if available
+    # middlewareパイプラインがあればそれを通して実行します。
     from ._middleware import FunctionInvocationContext
 
     middleware_context = FunctionInvocationContext(
@@ -1135,7 +1131,7 @@ def _get_tool_map(
             ai_function_list[tool.name] = tool
             continue
         if callable(tool):
-            # Convert to AITool if it's a function or callable
+            # 関数または呼び出し可能ならAIToolに変換します。
             ai_tool = ai_function(tool)
             ai_function_list[ai_tool.name] = ai_tool
     return ai_function_list
@@ -1151,38 +1147,38 @@ async def _execute_function_calls(
     | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]",
     middleware_pipeline: Any = None,  # Optional MiddlewarePipeline to avoid circular imports
 ) -> Sequence["Contents"]:
-    """Execute multiple function calls concurrently.
+    """複数の関数呼び出しを同時に実行します。
 
-    Args:
-        custom_args: Custom arguments to pass to each function.
-        attempt_idx: The index of the current attempt iteration.
-        function_calls: A sequence of FunctionCallContent to execute.
-        tools: The tools available for execution.
-        middleware_pipeline: Optional middleware pipeline to apply during execution.
+    引数:
+        custom_args: 各関数に渡すカスタム引数。
+        attempt_idx: 現在の試行のインデックス。
+        function_calls: 実行するFunctionCallContentのシーケンス。
+        tools: 実行可能なツール。
+        middleware_pipeline: 実行時に適用するオプションのmiddlewareパイプライン。
 
-    Returns:
-        A list of Contents containing the results of each function call.
+    戻り値:
+        各関数呼び出しの結果を含むContentsのリスト。
+
     """
     from ._types import FunctionApprovalRequestContent, FunctionCallContent
 
     tool_map = _get_tool_map(tools)
     approval_tools = [tool_name for tool_name, tool in tool_map.items() if tool.approval_mode == "always_require"]
-    # check if any are calling functions that need approval
-    # if so, we return approval request for all
+    # 承認が必要な関数呼び出しがあるか確認し、あればすべてに対して承認要求を返します。
     approval_needed = False
     for fcc in function_calls:
         if isinstance(fcc, FunctionCallContent) and fcc.name in approval_tools:
             approval_needed = True
             break
     if approval_needed:
-        # approval can only be needed for Function Call Contents, not Approval Responses.
+        # 承認はFunction Call Contentsにのみ必要で、Approval Responsesには不要です。
         return [
             FunctionApprovalRequestContent(id=fcc.call_id, function_call=fcc)
             for fcc in function_calls
             if isinstance(fcc, FunctionCallContent)
         ]
 
-    # Run all function calls concurrently
+    # すべての関数呼び出しを同時に実行します。
     return await asyncio.gather(*[
         _auto_invoke_function(
             function_call_content=function_call,  # type: ignore[arg-type]
@@ -1197,11 +1193,12 @@ async def _execute_function_calls(
 
 
 def _update_conversation_id(kwargs: dict[str, Any], conversation_id: str | None) -> None:
-    """Update kwargs with conversation id.
+    """kwargsにconversation idを更新します。
 
-    Args:
-        kwargs: The keyword arguments dictionary to update.
-        conversation_id: The conversation ID to set, or None to skip.
+    引数:
+        kwargs: 更新するキーワード引数の辞書。
+        conversation_id: 設定する会話ID、またはスキップする場合はNone。
+
     """
     if conversation_id is None:
         return
@@ -1212,11 +1209,12 @@ def _update_conversation_id(kwargs: dict[str, Any], conversation_id: str | None)
 
 
 def _extract_tools(kwargs: dict[str, Any]) -> Any:
-    """Extract tools from kwargs or chat_options.
+    """kwargsまたはchat_optionsからツールを抽出します。
 
-    Returns:
+    戻り値:
         ToolProtocol | Callable[..., Any] | MutableMapping[str, Any] |
         Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]] | None
+
     """
     from ._types import ChatOptions
 
@@ -1229,13 +1227,13 @@ def _extract_tools(kwargs: dict[str, Any]) -> Any:
 def _collect_approval_responses(
     messages: "list[ChatMessage]",
 ) -> dict[str, "FunctionApprovalResponseContent"]:
-    """Collect approval responses (both approved and rejected) from messages."""
+    """メッセージから承認されたものと拒否されたものの両方の承認レスポンスを収集します。"""
     from ._types import ChatMessage, FunctionApprovalResponseContent
 
     fcc_todo: dict[str, FunctionApprovalResponseContent] = {}
     for msg in messages:
         for content in msg.contents if isinstance(msg, ChatMessage) else []:
-            # Collect BOTH approved and rejected responses
+            # 承認されたものと拒否されたものの両方を収集します。
             if isinstance(content, FunctionApprovalResponseContent):
                 fcc_todo[content.id] = content
     return fcc_todo
@@ -1246,7 +1244,7 @@ def _replace_approval_contents_with_results(
     fcc_todo: dict[str, "FunctionApprovalResponseContent"],
     approved_function_results: "list[Contents]",
 ) -> None:
-    """Replace approval request/response contents with function call/result contents in-place."""
+    """承認要求/応答の内容を関数呼び出し/結果の内容でその場で置き換えます。"""
     from ._types import (
         FunctionApprovalRequestContent,
         FunctionApprovalResponseContent,
@@ -1257,40 +1255,40 @@ def _replace_approval_contents_with_results(
 
     result_idx = 0
     for msg in messages:
-        # First pass - collect existing function call IDs to avoid duplicates
+        # 最初のパス - 重複を避けるため既存の関数呼び出しIDを収集します。
         existing_call_ids = {
             content.call_id for content in msg.contents if isinstance(content, FunctionCallContent) and content.call_id
         }
 
-        # Track approval requests that should be removed (duplicates)
+        # 削除すべき承認要求（重複）を追跡します。
         contents_to_remove = []
 
         for content_idx, content in enumerate(msg.contents):
             if isinstance(content, FunctionApprovalRequestContent):
-                # Don't add the function call if it already exists (would create duplicate)
+                # 既に存在する場合は関数呼び出しを追加しません（重複を作成するため）。
                 if content.function_call.call_id in existing_call_ids:
-                    # Just mark for removal - the function call already exists
+                    # 削除のためにマークするだけ - 関数呼び出しは既に存在します。
                     contents_to_remove.append(content_idx)
                 else:
-                    # Put back the function call content only if it doesn't exist
+                    # 存在しない場合のみ関数呼び出し内容を戻します。
                     msg.contents[content_idx] = content.function_call
             elif isinstance(content, FunctionApprovalResponseContent):
                 if content.approved and content.id in fcc_todo:
-                    # Replace with the corresponding result
+                    # 対応する結果に置き換えます。
                     if result_idx < len(approved_function_results):
                         msg.contents[content_idx] = approved_function_results[result_idx]
                         result_idx += 1
                         msg.role = Role.TOOL
                 else:
-                    # Create a "not approved" result for rejected calls
-                    # Use function_call.call_id (the function's ID), not content.id (approval's ID)
+                    # 拒否された呼び出しに対して「承認されていない」結果を作成します。
+                    # function_call.call_id（関数のID）を使用し、content.id（承認のID）は使用しません。
                     msg.contents[content_idx] = FunctionResultContent(
                         call_id=content.function_call.call_id,
                         result="Error: Tool call invocation was rejected by user.",
                     )
                     msg.role = Role.TOOL
 
-        # Remove approval requests that were duplicates (in reverse order to preserve indices)
+        # 重複した承認要求を削除します（インデックスを保持するため逆順で）。
         for idx in reversed(contents_to_remove):
             msg.contents.pop(idx)
 
@@ -1298,19 +1296,20 @@ def _replace_approval_contents_with_results(
 def _handle_function_calls_response(
     func: Callable[..., Awaitable["ChatResponse"]],
 ) -> Callable[..., Awaitable["ChatResponse"]]:
-    """Decorate the get_response method to enable function calls.
+    """get_responseメソッドをデコレートして関数呼び出しを有効にします。
 
-    Args:
-        func: The get_response method to decorate.
+    引数:
+        func: デコレートするget_responseメソッド。
 
-    Returns:
-        A decorated function that handles function calls automatically.
+    戻り値:
+        関数呼び出しを自動的に処理するデコレート済み関数。
+
     """
 
     def decorator(
         func: Callable[..., Awaitable["ChatResponse"]],
     ) -> Callable[..., Awaitable["ChatResponse"]]:
-        """Inner decorator."""
+        """内部デコレータ。"""
 
         @wraps(func)
         async def function_invocation_wrapper(
@@ -1327,14 +1326,13 @@ def _handle_function_calls_response(
                 FunctionResultContent,
             )
 
-            # Extract and merge function middleware from chat client with kwargs pipeline
+            # chat clientから関数middlewareを抽出し、kwargsのパイプラインとマージします。
             extract_and_merge_function_middleware(self, **kwargs)
 
-            # Extract the middleware pipeline before calling the underlying function
-            # because the underlying function may not preserve it in kwargs
+            # 基底関数を呼び出す前にmiddlewareパイプラインを抽出します。 基底関数はkwargs内でそれを保持しない可能性があるためです。
             stored_middleware_pipeline = kwargs.get("_function_middleware_pipeline")
 
-            # Get max_iterations from instance additional_properties or class attribute
+            # インスタンスのadditional_propertiesまたはクラス属性からmax_iterationsを取得します。
             instance_max_iterations: int = DEFAULT_MAX_ITERATIONS
             if hasattr(self, "additional_properties") and self.additional_properties:
                 instance_max_iterations = self.additional_properties.get("max_iterations", DEFAULT_MAX_ITERATIONS)
@@ -1348,7 +1346,7 @@ def _handle_function_calls_response(
                 fcc_todo = _collect_approval_responses(prepped_messages)
                 if fcc_todo:
                     tools = _extract_tools(kwargs)
-                    # Only execute APPROVED function calls, not rejected ones
+                    # 拒否されたものではなく、承認された関数呼び出しのみを実行します。
                     approved_responses = [resp for resp in fcc_todo.values() if resp.approved]
                     approved_function_results: list[Contents] = []
                     if approved_responses:
@@ -1362,7 +1360,7 @@ def _handle_function_calls_response(
                     _replace_approval_contents_with_results(prepped_messages, fcc_todo, approved_function_results)
 
                 response = await func(self, messages=prepped_messages, **kwargs)
-                # if there are function calls, we will handle them first
+                # 関数呼び出しがある場合は最初に処理します。
                 function_results = {
                     it.call_id for it in response.messages[0].contents if isinstance(it, FunctionResultContent)
                 }
@@ -1376,11 +1374,11 @@ def _handle_function_calls_response(
                     _update_conversation_id(kwargs, response.conversation_id)
                     prepped_messages = []
 
-                # we load the tools here, since middleware might have changed them compared to before calling func.
+                # middlewareがfunc呼び出し前と異なる可能性があるため、ここでツールをロードします。
                 tools = _extract_tools(kwargs)
                 if function_calls and tools:
-                    # Use the stored middleware pipeline instead of extracting from kwargs
-                    # because kwargs may have been modified by the underlying function
+                    # kwargsから抽出する代わりに保存されたmiddlewareパイプラインを使用します。
+                    # kwargsは基底関数によって変更されている可能性があるためです。
                     function_call_results: list[Contents] = await _execute_function_calls(
                         custom_args=kwargs,
                         attempt_idx=attempt_idx,
@@ -1389,29 +1387,26 @@ def _handle_function_calls_response(
                         middleware_pipeline=stored_middleware_pipeline,
                     )
 
-                    # Check if we have approval requests in the results
+                    # 結果に承認要求があるか確認します。
                     if any(isinstance(fccr, FunctionApprovalRequestContent) for fccr in function_call_results):
-                        # Add approval requests to the existing assistant message (with tool_calls)
-                        # instead of creating a separate tool message
+                        # 承認要求を既存のassistantメッセージ（tool_calls付き）に追加します。
+                        # 別のtoolメッセージを作成する代わりに。
                         from ._types import Role
 
                         if response.messages and response.messages[0].role == Role.ASSISTANT:
                             response.messages[0].contents.extend(function_call_results)
                         else:
-                            # Fallback: create new assistant message (shouldn't normally happen)
+                            # フォールバック: 新しいassistantメッセージを作成します（通常は発生しません）。
                             result_message = ChatMessage(role="assistant", contents=function_call_results)
                             response.messages.append(result_message)
                         return response
 
-                    # add a single ChatMessage to the response with the results
+                    # 結果を含む単一のChatMessageをレスポンスに追加します。
                     result_message = ChatMessage(role="tool", contents=function_call_results)
                     response.messages.append(result_message)
-                    # response should contain 2 messages after this,
-                    # one with function call contents
-                    # and one with function result contents
-                    # the amount and call_id's should match
-                    # this runs in every but the first run
-                    # we need to keep track of all function call messages
+                    # この後のresponseには2つのメッセージが含まれている必要があります。 1つはfunction callの内容を含み、
+                    # もう1つはfunctionの結果の内容を含みます。 数とcall_idは一致している必要があります。
+                    # これは最初の実行を除くすべての実行で行われます。 すべてのfunction callメッセージを追跡する必要があります。
                     fcc_messages.extend(response.messages)
                     if getattr(kwargs.get("chat_options"), "store", False):
                         prepped_messages.clear()
@@ -1419,16 +1414,15 @@ def _handle_function_calls_response(
                     else:
                         prepped_messages.extend(response.messages)
                     continue
-                # If we reach this point, it means there were no function calls to handle,
-                # we'll add the previous function call and responses
-                # to the front of the list, so that the final response is the last one
-                # TODO (eavanvalkenburg): control this behavior?
+                # このポイントに到達した場合、処理すべきfunction callがなかったことを意味します。 前のfunction
+                # callとレスポンスをリストの先頭に追加し、最終的なレスポンスが最後になるようにします。 TODO (eavanvalkenburg):
+                # この動作を制御する？
                 if fcc_messages:
                     for msg in reversed(fcc_messages):
                         response.messages.insert(0, msg)
                 return response
 
-            # Failsafe: give up on tools, ask model for plain answer
+            # フェイルセーフ：ツールを諦め、モデルにプレーンな回答を求める
             kwargs["tool_choice"] = "none"
             response = await func(self, messages=prepped_messages, **kwargs)
             if fcc_messages:
@@ -1444,19 +1438,20 @@ def _handle_function_calls_response(
 def _handle_function_calls_streaming_response(
     func: Callable[..., AsyncIterable["ChatResponseUpdate"]],
 ) -> Callable[..., AsyncIterable["ChatResponseUpdate"]]:
-    """Decorate the get_streaming_response method to handle function calls.
+    """get_streaming_responseメソッドをデコレートしてfunction callを処理します。
 
     Args:
-        func: The get_streaming_response method to decorate.
+        func: デコレートするget_streaming_responseメソッド。
 
     Returns:
-        A decorated function that handles function calls in streaming mode.
+        ストリーミングモードでfunction callを処理するデコレートされた関数。
+
     """
 
     def decorator(
         func: Callable[..., AsyncIterable["ChatResponseUpdate"]],
     ) -> Callable[..., AsyncIterable["ChatResponseUpdate"]]:
-        """Inner decorator."""
+        """内部デコレータ。"""
 
         @wraps(func)
         async def streaming_function_invocation_wrapper(
@@ -1464,7 +1459,7 @@ def _handle_function_calls_streaming_response(
             messages: "str | ChatMessage | list[str] | list[ChatMessage]",
             **kwargs: Any,
         ) -> AsyncIterable["ChatResponseUpdate"]:
-            """Wrap the inner get streaming response method to handle tool calls."""
+            """内部のget streaming responseメソッドをラップしてツール呼び出しを処理します。"""
             from ._clients import prepare_messages
             from ._middleware import extract_and_merge_function_middleware
             from ._types import (
@@ -1475,14 +1470,13 @@ def _handle_function_calls_streaming_response(
                 FunctionResultContent,
             )
 
-            # Extract and merge function middleware from chat client with kwargs pipeline
+            # chat clientからfunction middlewareを抽出し、kwargsのpipelineとマージします。
             extract_and_merge_function_middleware(self, **kwargs)
 
-            # Extract the middleware pipeline before calling the underlying function
-            # because the underlying function may not preserve it in kwargs
+            # 基底関数を呼び出す前にmiddleware pipelineを抽出します。 基底関数はkwargs内でそれを保持しない可能性があるためです。
             stored_middleware_pipeline = kwargs.get("_function_middleware_pipeline")
 
-            # Get max_iterations from instance additional_properties or class attribute
+            # インスタンスのadditional_propertiesまたはクラス属性からmax_iterationsを取得します。
             instance_max_iterations: int = DEFAULT_MAX_ITERATIONS
             if hasattr(self, "additional_properties") and self.additional_properties:
                 instance_max_iterations = self.additional_properties.get("max_iterations", DEFAULT_MAX_ITERATIONS)
@@ -1495,7 +1489,7 @@ def _handle_function_calls_streaming_response(
                 fcc_todo = _collect_approval_responses(prepped_messages)
                 if fcc_todo:
                     tools = _extract_tools(kwargs)
-                    # Only execute APPROVED function calls, not rejected ones
+                    # 拒否されたものではなく、承認されたfunction callのみを実行します。
                     approved_responses = [resp for resp in fcc_todo.values() if resp.approved]
                     approved_function_results: list[Contents] = []
                     if approved_responses:
@@ -1513,9 +1507,8 @@ def _handle_function_calls_streaming_response(
                     all_updates.append(update)
                     yield update
 
-                # efficient check for FunctionCallContent in the updates
-                # if there is at least one, this stops and continuous
-                # if there are no FCC's then it returns
+                # updates内のFunctionCallContentを効率的にチェックします。 少なくとも1つあれば停止して継続します。
+                # FCCがなければ戻ります。
                 from ._types import FunctionApprovalRequestContent
 
                 if not any(
@@ -1525,12 +1518,11 @@ def _handle_function_calls_streaming_response(
                 ):
                     return
 
-                # Now combining the updates to create the full response.
-                # Depending on the prompt, the message may contain both function call
-                # content and others
+                # 更新を組み合わせて完全なレスポンスを作成しています。 プロンプトによっては、メッセージにfunction
+                # callの内容とその他の内容が含まれる場合があります。
 
                 response: "ChatResponse" = ChatResponse.from_chat_response_updates(all_updates)
-                # get the function calls (excluding ones that already have results)
+                # function callを取得します（すでに結果があるものは除く）。
                 function_results = {
                     it.call_id for it in response.messages[0].contents if isinstance(it, FunctionResultContent)
                 }
@@ -1540,17 +1532,17 @@ def _handle_function_calls_streaming_response(
                     if isinstance(it, FunctionCallContent) and it.call_id not in function_results
                 ]
 
-                # When conversation id is present, it means that messages are hosted on the server.
-                # In this case, we need to update kwargs with conversation id and also clear messages
+                # conversation idが存在する場合、それはメッセージがサーバー上にホストされていることを意味します。
+                # この場合、kwargsをconversation idで更新し、メッセージをクリアする必要があります。
                 if response.conversation_id is not None:
                     _update_conversation_id(kwargs, response.conversation_id)
                     prepped_messages = []
 
-                # we load the tools here, since middleware might have changed them compared to before calling func.
+                # ここでツールをロードします。middlewareがfunc呼び出し前と比較して変更している可能性があるためです。
                 tools = _extract_tools(kwargs)
                 if function_calls and tools:
-                    # Use the stored middleware pipeline instead of extracting from kwargs
-                    # because kwargs may have been modified by the underlying function
+                    # kwargsから抽出する代わりに保存されたmiddleware pipelineを使用します。
+                    # kwargsは基底関数によって変更されている可能性があるためです。
                     function_call_results: list[Contents] = await _execute_function_calls(
                         custom_args=kwargs,
                         attempt_idx=attempt_idx,
@@ -1559,33 +1551,30 @@ def _handle_function_calls_streaming_response(
                         middleware_pipeline=stored_middleware_pipeline,
                     )
 
-                    # Check if we have approval requests in the results
+                    # 結果に承認リクエストがあるかどうかをチェックします。
                     if any(isinstance(fccr, FunctionApprovalRequestContent) for fccr in function_call_results):
-                        # Add approval requests to the existing assistant message (with tool_calls)
-                        # instead of creating a separate tool message
+                        # 承認リクエストを既存のassistantメッセージ（tool_calls付き）に追加します。
+                        # 別のtoolメッセージを作成するのではなく。
                         from ._types import Role
 
                         if response.messages and response.messages[0].role == Role.ASSISTANT:
                             response.messages[0].contents.extend(function_call_results)
-                            # Yield the approval requests as part of the assistant message
+                            # 承認リクエストをassistantメッセージの一部としてyieldします。
                             yield ChatResponseUpdate(contents=function_call_results, role="assistant")
                         else:
-                            # Fallback: create new assistant message (shouldn't normally happen)
+                            # フォールバック：新しいassistantメッセージを作成します（通常は発生しません）。
                             result_message = ChatMessage(role="assistant", contents=function_call_results)
                             yield ChatResponseUpdate(contents=function_call_results, role="assistant")
                             response.messages.append(result_message)
                         return
 
-                    # add a single ChatMessage to the response with the results
+                    # 結果を含む単一のChatMessageをレスポンスに追加します。
                     result_message = ChatMessage(role="tool", contents=function_call_results)
                     yield ChatResponseUpdate(contents=function_call_results, role="tool")
                     response.messages.append(result_message)
-                    # response should contain 2 messages after this,
-                    # one with function call contents
-                    # and one with function result contents
-                    # the amount and call_id's should match
-                    # this runs in every but the first run
-                    # we need to keep track of all function call messages
+                    # この後のresponseには2つのメッセージが含まれている必要があります。 1つはfunction callの内容を含み、
+                    # もう1つはfunctionの結果の内容を含みます。 数とcall_idは一致している必要があります。
+                    # これは最初の実行を除くすべての実行で行われます。 すべてのfunction callメッセージを追跡する必要があります。
                     fcc_messages.extend(response.messages)
                     if getattr(kwargs.get("chat_options"), "store", False):
                         prepped_messages.clear()
@@ -1593,11 +1582,10 @@ def _handle_function_calls_streaming_response(
                     else:
                         prepped_messages.extend(response.messages)
                     continue
-                # If we reach this point, it means there were no function calls to handle,
-                # so we're done
+                # このポイントに到達した場合、処理すべきfunction callがなかったことを意味します。 これで完了です。
                 return
 
-            # Failsafe: give up on tools, ask model for plain answer
+            # フェイルセーフ：ツールを諦め、モデルにプレーンな回答を求める
             kwargs["tool_choice"] = "none"
             async for update in func(self, messages=prepped_messages, **kwargs):
                 yield update
@@ -1610,20 +1598,20 @@ def _handle_function_calls_streaming_response(
 def use_function_invocation(
     chat_client: type[TChatClient],
 ) -> type[TChatClient]:
-    """Class decorator that enables tool calling for a chat client.
+    """チャットクライアントのためのツール呼び出しを有効にするクラスデコレータ。
 
-    This decorator wraps the ``get_response`` and ``get_streaming_response`` methods
-    to automatically handle function calls from the model, execute them, and return
-    the results back to the model for further processing.
+    このデコレータは``get_response``と``get_streaming_response``メソッドをラップし、
+    モデルからのfunction callを自動的に処理し、実行し、
+    結果をモデルに返してさらなる処理を可能にします。
 
     Args:
-        chat_client: The chat client class to decorate.
+        chat_client: デコレートするチャットクライアントクラス。
 
     Returns:
-        The decorated chat client class with function invocation enabled.
+        function invocationが有効になったデコレート済みチャットクライアントクラス。
 
     Raises:
-        ChatClientInitializationError: If the chat client does not have the required methods.
+        ChatClientInitializationError: チャットクライアントに必要なメソッドがない場合。
 
     Examples:
         .. code-block:: python
@@ -1634,21 +1622,22 @@ def use_function_invocation(
             @use_function_invocation
             class MyCustomClient(BaseChatClient):
                 async def get_response(self, messages, **kwargs):
-                    # Implementation here
+                    # ここに実装
                     pass
 
                 async def get_streaming_response(self, messages, **kwargs):
-                    # Implementation here
+                    # ここに実装
                     pass
 
 
-            # The client now automatically handles function calls
+            # クライアントは自動的にfunction callを処理します
             client = MyCustomClient()
+
     """
     if getattr(chat_client, FUNCTION_INVOKING_CHAT_CLIENT_MARKER, False):
         return chat_client
 
-    # Set MAX_ITERATIONS as a class variable if not already set
+    # MAX_ITERATIONSをクラス変数として設定（未設定の場合）。
     if not hasattr(chat_client, "MAX_ITERATIONS"):
         chat_client.MAX_ITERATIONS = DEFAULT_MAX_ITERATIONS  # type: ignore
 

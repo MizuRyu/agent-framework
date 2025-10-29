@@ -25,7 +25,7 @@ Prerequisites:
 
 
 async def main() -> None:
-    # 1) Create three domain agents using AzureOpenAIChatClient
+    # 1) AzureOpenAIChatClientを使って3つのドメインAgentを作成します
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     researcher = chat_client.create_agent(
@@ -52,10 +52,10 @@ async def main() -> None:
         name="legal",
     )
 
-    # 2) Build a concurrent workflow
+    # 2) 並行ワークフローを構築します
     workflow = ConcurrentBuilder().participants([researcher, marketer, legal]).build()
 
-    # 3) Expose the concurrent workflow as an agent for easy reuse
+    # 3) 並行ワークフローをAgentとして公開し再利用を容易にします
     agent = workflow.as_agent(name="ConcurrentWorkflowAgent")
     prompt = "We are launching a new budget-friendly electric bike for urban commuters."
     agent_response = await agent.run(prompt)

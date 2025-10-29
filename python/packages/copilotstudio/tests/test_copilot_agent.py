@@ -19,7 +19,7 @@ from agent_framework_copilotstudio import CopilotStudioAgent
 
 
 def create_async_generator(items: list[Any]) -> Any:
-    """Helper to create async generator mock."""
+    """非同期ジェネレータモックを作成するヘルパー。"""
 
     async def async_gen() -> Any:
         for item in items:
@@ -29,7 +29,7 @@ def create_async_generator(items: list[Any]) -> Any:
 
 
 class TestCopilotStudioAgent:
-    """Test cases for CopilotStudioAgent."""
+    """CopilotStudioAgentのテストケース。"""
 
     @pytest.fixture
     def mock_activity(self) -> MagicMock:
@@ -122,7 +122,7 @@ class TestCopilotStudioAgent:
                 CopilotStudioAgent()
 
     async def test_run_with_string_message(self, mock_copilot_client: MagicMock, mock_activity: MagicMock) -> None:
-        """Test run method with string message."""
+        """文字列メッセージでのrunメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         conversation_activity = MagicMock()
@@ -141,7 +141,7 @@ class TestCopilotStudioAgent:
         assert response.messages[0].role == Role.ASSISTANT
 
     async def test_run_with_chat_message(self, mock_copilot_client: MagicMock, mock_activity: MagicMock) -> None:
-        """Test run method with ChatMessage."""
+        """ChatMessageでのrunメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         conversation_activity = MagicMock()
@@ -161,7 +161,7 @@ class TestCopilotStudioAgent:
         assert response.messages[0].role == Role.ASSISTANT
 
     async def test_run_with_thread(self, mock_copilot_client: MagicMock, mock_activity: MagicMock) -> None:
-        """Test run method with existing thread."""
+        """既存のスレッドでのrunメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
         thread = AgentThread()
 
@@ -178,7 +178,7 @@ class TestCopilotStudioAgent:
         assert thread.service_thread_id == "test-conversation-id"
 
     async def test_run_start_conversation_failure(self, mock_copilot_client: MagicMock) -> None:
-        """Test run method when conversation start fails."""
+        """会話開始に失敗した場合のrunメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         mock_copilot_client.start_conversation.return_value = create_async_generator([])
@@ -187,7 +187,7 @@ class TestCopilotStudioAgent:
             await agent.run("test message")
 
     async def test_run_stream_with_string_message(self, mock_copilot_client: MagicMock) -> None:
-        """Test run_stream method with string message."""
+        """文字列メッセージでのrun_streamメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         conversation_activity = MagicMock()
@@ -213,7 +213,7 @@ class TestCopilotStudioAgent:
         assert response_count == 1
 
     async def test_run_stream_with_thread(self, mock_copilot_client: MagicMock) -> None:
-        """Test run_stream method with existing thread."""
+        """既存のスレッドでのrun_streamメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
         thread = AgentThread()
 
@@ -241,7 +241,7 @@ class TestCopilotStudioAgent:
         assert thread.service_thread_id == "test-conversation-id"
 
     async def test_run_stream_no_typing_activity(self, mock_copilot_client: MagicMock) -> None:
-        """Test run_stream method with non-typing activity."""
+        """typing以外のアクティビティでのrun_streamメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         conversation_activity = MagicMock()
@@ -262,7 +262,7 @@ class TestCopilotStudioAgent:
         assert response_count == 0
 
     async def test_run_multiple_activities(self, mock_copilot_client: MagicMock) -> None:
-        """Test run method with multiple message activities."""
+        """複数のメッセージアクティビティでのrunメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         conversation_activity = MagicMock()
@@ -289,7 +289,7 @@ class TestCopilotStudioAgent:
         assert len(response.messages) == 2
 
     async def test_run_list_of_messages(self, mock_copilot_client: MagicMock, mock_activity: MagicMock) -> None:
-        """Test run method with list of messages."""
+        """メッセージのリストでのrunメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         conversation_activity = MagicMock()
@@ -305,7 +305,7 @@ class TestCopilotStudioAgent:
         assert len(response.messages) == 1
 
     async def test_run_stream_start_conversation_failure(self, mock_copilot_client: MagicMock) -> None:
-        """Test run_stream method when conversation start fails."""
+        """会話開始に失敗した場合のrun_streamメソッドのテスト。"""
         agent = CopilotStudioAgent(client=mock_copilot_client)
 
         mock_copilot_client.start_conversation.return_value = create_async_generator([])

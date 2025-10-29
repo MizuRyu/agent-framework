@@ -53,9 +53,9 @@ async def main() -> None:
         instructions=(
             "You are a Researcher. You find information without additional computation or quantitative analysis."
         ),
-        # This agent requires the gpt-4o-search-preview model to perform web searches.
-        # Feel free to explore with other agents that support web search, for example,
-        # the `OpenAIResponseAgent` or `AzureAgentProtocol` with bing grounding.
+        # このAgentはweb検索を行うためにgpt-4o-search-previewモデルを必要とします。
+        # web検索をサポートする他のAgentも自由に試してください。例えば、 `OpenAIResponseAgent`やbing
+        # groundingを使った`AzureAgentProtocol`などです。
         chat_client=OpenAIChatClient(model_id="gpt-4o-search-preview"),
     )
 
@@ -67,7 +67,7 @@ async def main() -> None:
         tools=HostedCodeInterpreterTool(),
     )
 
-    # Callbacks
+    # コールバック
     def on_exception(exception: Exception) -> None:
         print(f"Exception occurred: {exception}")
         logger.exception("Workflow exception", exc_info=exception)
@@ -109,13 +109,13 @@ async def main() -> None:
         workflow_output: str | None = None
 
         while not completed:
-            # Use streaming for both initial run and response sending
+            # 初期実行とレスポンス送信の両方でストリーミングを使用します
             if pending_responses is not None:
                 stream = workflow.send_responses_streaming(pending_responses)
             else:
                 stream = workflow.run_stream(task)
 
-            # Collect events from the stream
+            # ストリームからイベントを収集します
             async for event in stream:
                 if isinstance(event, MagenticOrchestratorMessageEvent):
                     print(f"\n[ORCH:{event.kind}]\n\n{getattr(event.message, 'text', '')}\n{'-' * 26}")
@@ -150,7 +150,7 @@ async def main() -> None:
                     if review_req.plan_text:
                         print(f"\n=== PLAN REVIEW REQUEST ===\n{review_req.plan_text}\n")
                 elif isinstance(event, WorkflowOutputEvent):
-                    # Capture workflow output during streaming
+                    # ストリーミング中にワークフロー出力をキャプチャします
                     workflow_output = str(event.data) if event.data else None
                     completed = True
 
@@ -159,9 +159,9 @@ async def main() -> None:
                 stream_line_open = False
             pending_responses = None
 
-            # Handle pending plan review request
+            # 保留中のプランレビューリクエストを処理します
             if pending_request is not None:
-                # Get human input for plan review decision
+                # プランレビュー決定のための人間の入力を取得します
                 print("Plan review options:")
                 print("1. approve - Approve the plan as-is")
                 print("2. revise - Request revision of the plan")
@@ -183,7 +183,7 @@ async def main() -> None:
                 pending_responses = {pending_request.request_id: reply}
                 pending_request = None
 
-        # Show final result from captured workflow output
+        # キャプチャされたワークフロー出力から最終結果を表示します
         if workflow_output:
             print(f"Workflow completed with result:\n\n{workflow_output}")
 

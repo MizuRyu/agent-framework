@@ -40,23 +40,23 @@ Visit the README.md for more details on setting up and running A2A agents.
 
 
 async def main():
-    """Demonstrates connecting to and communicating with an A2A-compliant agent."""
-    # Get A2A agent host from environment
+    """A2A 準拠エージェントへの接続と通信を示すデモ。"""
+    # 環境から A2A エージェントホストを取得する
     a2a_agent_host = os.getenv("A2A_AGENT_HOST")
     if not a2a_agent_host:
         raise ValueError("A2A_AGENT_HOST environment variable is not set")
 
     print(f"Connecting to A2A agent at: {a2a_agent_host}")
 
-    # Initialize A2ACardResolver
+    # A2ACardResolver を初期化する
     async with httpx.AsyncClient(timeout=60.0) as http_client:
         resolver = A2ACardResolver(httpx_client=http_client, base_url=a2a_agent_host)
 
-        # Get agent card
+        # エージェントカードを取得する
         agent_card = await resolver.get_agent_card(relative_card_path="/.well-known/agent.json")
         print(f"Found agent: {agent_card.name} - {agent_card.description}")
 
-        # Create A2A agent instance
+        # A2A エージェントインスタンスを作成する
         agent = A2AAgent(
             name=agent_card.name,
             description=agent_card.description,
@@ -64,11 +64,11 @@ async def main():
             url=a2a_agent_host,
         )
 
-        # Invoke the agent and output the result
+        # エージェントを呼び出して結果を出力する
         print("\nSending message to A2A agent...")
         response = await agent.run("Tell me a joke about a pirate.")
 
-        # Print the response
+        # レスポンスを出力する
         print("\nAgent Response:")
         for message in response.messages:
             print(message.text)

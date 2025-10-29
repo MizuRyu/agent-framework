@@ -17,13 +17,13 @@ interactions, showing both streaming and non-streaming responses.
 def get_weather(
     location: Annotated[str, "The location to get the weather for."],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 async def non_streaming_example() -> None:
-    """Example of non-streaming response (get the complete result at once)."""
+    """非ストリーミングレスポンスの例（一度に完全な結果を取得）。"""
     print("=== Non-streaming Response Example ===")
 
     agent = OpenAIChatClient().create_agent(
@@ -39,7 +39,7 @@ async def non_streaming_example() -> None:
 
 
 async def streaming_example() -> None:
-    """Example of streaming response (get results as they are generated)."""
+    """ストリーミングレスポンスの例（生成されるごとに結果を取得）。"""
     print("=== Streaming Response Example ===")
 
     agent = OpenAIChatClient().create_agent(

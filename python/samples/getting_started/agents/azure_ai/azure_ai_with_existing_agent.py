@@ -19,15 +19,14 @@ agent IDs, showing agent reuse patterns for production scenarios.
 async def main() -> None:
     print("=== Azure AI Chat Client with Existing Agent ===")
 
-    # Create the client
+    # クライアントを作成する
     async with (
         AzureCliCredential() as credential,
         AIProjectClient(endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"], credential=credential) as client,
     ):
         azure_ai_agent = await client.agents.create_agent(
             model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
-            # Create remote agent with default instructions
-            # These instructions will persist on created agent for every run.
+            # デフォルトの指示でリモートエージェントを作成する これらの指示は作成されたエージェントに対して毎回保持されます。
             instructions="End each response with [END].",
         )
 
@@ -36,20 +35,18 @@ async def main() -> None:
         try:
             async with ChatAgent(
                 chat_client=chat_client,
-                # Instructions here are applicable only to this ChatAgent instance
-                # These instructions will be combined with instructions on existing remote agent.
-                # The final instructions during the execution will look like:
-                # "'End each response with [END]. Respond with 'Hello World' only'"
+                # ここでの指示はこの ChatAgent インスタンスにのみ適用されます これらの指示は既存のリモートエージェントの指示と組み合わされます。
+                # 実行時の最終的な指示は次のようになります: "'End each response with [END]. Respond with
+                # 'Hello World' only'"
                 instructions="Respond with 'Hello World' only",
             ) as agent:
                 query = "How are you?"
                 print(f"User: {query}")
                 result = await agent.run(query)
-                # Based on local and remote instructions, the result will be
-                # 'Hello World [END]'.
+                # ローカルとリモートの指示に基づき、結果は 'Hello World [END]' になります。
                 print(f"Agent: {result}\n")
         finally:
-            # Clean up the agent manually
+            # エージェントを手動でクリーンアップする
             await client.agents.delete_agent(azure_ai_agent.id)
 
 

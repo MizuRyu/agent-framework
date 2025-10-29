@@ -21,17 +21,16 @@ def retrieve_company_report(company_code: str, detailed: bool) -> str:
 
 
 async def main() -> None:
-    """Example of memory usage with local Mem0 OSS context provider."""
+    """ローカルMem0 OSS context providerを使ったメモリ使用例。"""
     print("=== Mem0 Context Provider Example ===")
 
-    # Each record in Mem0 should be associated with agent_id or user_id or application_id or thread_id.
-    # In this example, we associate Mem0 records with user_id.
+    # Mem0の各レコードはagent_id、user_id、application_id、またはthread_idに関連付けられている必要があります。
+    # この例では、Mem0レコードをuser_idに関連付けています。
     user_id = str(uuid.uuid4())
 
-    # For Azure authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
-    # By default, local Mem0 authenticates to your OpenAI using the OPENAI_API_KEY environment variable.
-    # See the Mem0 documentation for other LLM providers and authentication options.
+    # Azure認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを希望の認証オプションに置き換えてください。
+    # デフォルトでは、ローカルMem0はOPENAI_API_KEY環境変数を使用してOpenAIに認証します。
+    # 他のLLMプロバイダーや認証オプションについてはMem0のドキュメントを参照してください。
     local_mem0_client = AsyncMemory()
     async with (
         AzureCliCredential() as credential,
@@ -42,16 +41,14 @@ async def main() -> None:
             context_providers=Mem0Provider(user_id=user_id, mem0_client=local_mem0_client),
         ) as agent,
     ):
-        # First ask the agent to retrieve a company report with no previous context.
-        # The agent will not be able to invoke the tool, since it doesn't know
-        # the company code or the report format, so it should ask for clarification.
+        # 最初にエージェントに前のコンテキストなしで会社レポートの取得を依頼します。
+        # エージェントは会社コードやレポート形式を知らないためツールを呼び出せず、明確化を求めるはずです。
         query = "Please retrieve my company report"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result}\n")
 
-        # Now tell the agent the company code and the report format that you want to use
-        # and it should be able to invoke the tool and return the report.
+        # 次に、エージェントに会社コードと使用したいレポート形式を伝えると ツールを呼び出してレポートを返すことができるはずです。
         query = "I always work with CNTS and I always want a detailed report format. Please remember and retrieve it."
         print(f"User: {query}")
         result = await agent.run(query)
@@ -59,13 +56,11 @@ async def main() -> None:
 
         print("\nRequest within a new thread:")
 
-        # Create a new thread for the agent.
-        # The new thread has no context of the previous conversation.
+        # エージェント用に新しいスレッドを作成します。 新しいスレッドは前の会話のコンテキストを持ちません。
         thread = agent.get_new_thread()
 
-        # Since we have the mem0 component in the thread, the agent should be able to
-        # retrieve the company report without asking for clarification, as it will
-        # be able to remember the user preferences from Mem0 component.
+        # スレッドにmem0コンポーネントがあるため、エージェントは
+        # Mem0コンポーネントからユーザーの好みを記憶できるので、明確化を求めずに会社レポートを取得できるはずです。
         query = "Please retrieve my company report"
         print(f"User: {query}")
         result = await agent.run(query, thread=thread)

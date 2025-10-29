@@ -41,7 +41,7 @@ def create_test_azure_assistants_client(
     thread_id: str | None = None,
     should_delete_assistant: bool = False,
 ) -> AzureOpenAIAssistantsClient:
-    """Helper function to create AzureOpenAIAssistantsClient instances for testing."""
+    """テスト用にAzureOpenAIAssistantsClientインスタンスを作成するヘルパー関数です。"""
     client = AzureOpenAIAssistantsClient(
         deployment_name=deployment_name or "test_chat_deployment",
         assistant_id=assistant_id,
@@ -51,7 +51,7 @@ def create_test_azure_assistants_client(
         endpoint="https://test-endpoint.com",
         async_client=mock_async_azure_openai,
     )
-    # Set the _should_delete_assistant flag directly if needed
+    # 必要に応じて _should_delete_assistant フラグを直接設定します
     if should_delete_assistant:
         object.__setattr__(client, "_should_delete_assistant", True)
     return client
@@ -59,23 +59,23 @@ def create_test_azure_assistants_client(
 
 @pytest.fixture
 def mock_async_azure_openai() -> MagicMock:
-    """Mock AsyncAzureOpenAI client."""
+    """AsyncAzureOpenAIクライアントのモックです。"""
     mock_client = MagicMock()
 
-    # Mock beta.assistants
+    # beta.assistants のモックです。
     mock_client.beta.assistants.create = AsyncMock(return_value=MagicMock(id="test-assistant-id"))
     mock_client.beta.assistants.delete = AsyncMock()
 
-    # Mock beta.threads
+    # beta.threads のモックです。
     mock_client.beta.threads.create = AsyncMock(return_value=MagicMock(id="test-thread-id"))
     mock_client.beta.threads.delete = AsyncMock()
 
-    # Mock beta.threads.runs
+    # beta.threads.runs のモックです。
     mock_client.beta.threads.runs.create = AsyncMock(return_value=MagicMock(id="test-run-id"))
     mock_client.beta.threads.runs.retrieve = AsyncMock()
     mock_client.beta.threads.runs.submit_tool_outputs = AsyncMock()
 
-    # Mock beta.threads.messages
+    # beta.threads.messages のモックです。
     mock_client.beta.threads.messages.create = AsyncMock()
     mock_client.beta.threads.messages.list = AsyncMock(return_value=MagicMock(data=[]))
 
@@ -83,7 +83,7 @@ def mock_async_azure_openai() -> MagicMock:
 
 
 def test_azure_assistants_client_init_with_client(mock_async_azure_openai: MagicMock) -> None:
-    """Test AzureOpenAIAssistantsClient initialization with existing client."""
+    """既存のクライアントを使った AzureOpenAIAssistantsClient の初期化テストです。"""
     chat_client = create_test_azure_assistants_client(
         mock_async_azure_openai,
         deployment_name="test_chat_deployment",
@@ -103,7 +103,7 @@ def test_azure_assistants_client_init_auto_create_client(
     azure_openai_unit_test_env: dict[str, str],
     mock_async_azure_openai: MagicMock,
 ) -> None:
-    """Test AzureOpenAIAssistantsClient initialization with auto-created client."""
+    """自動生成されたクライアントを使った AzureOpenAIAssistantsClient の初期化テストです。"""
     chat_client = AzureOpenAIAssistantsClient(
         deployment_name=azure_openai_unit_test_env["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
         assistant_name="TestAssistant",
@@ -120,15 +120,15 @@ def test_azure_assistants_client_init_auto_create_client(
 
 
 def test_azure_assistants_client_init_validation_fail() -> None:
-    """Test AzureOpenAIAssistantsClient initialization with validation failure."""
+    """検証失敗時の AzureOpenAIAssistantsClient 初期化テストです。"""
     with pytest.raises(ServiceInitializationError):
-        # Force failure by providing invalid deployment name type - this should cause validation to fail
+        # 無効なデプロイメント名タイプを提供して強制的に失敗させます - これにより検証が失敗するはずです
         AzureOpenAIAssistantsClient(deployment_name=123, api_key="valid-key")  # type: ignore
 
 
 @pytest.mark.parametrize("exclude_list", [["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"]], indirect=True)
 def test_azure_assistants_client_init_missing_deployment_name(azure_openai_unit_test_env: dict[str, str]) -> None:
-    """Test AzureOpenAIAssistantsClient initialization with missing deployment name."""
+    """デプロイメント名が欠落している場合の AzureOpenAIAssistantsClient 初期化テストです。"""
     with pytest.raises(ServiceInitializationError):
         AzureOpenAIAssistantsClient(
             api_key=azure_openai_unit_test_env.get("AZURE_OPENAI_API_KEY", "test-key"), env_file_path="nonexistent.env"
@@ -136,7 +136,7 @@ def test_azure_assistants_client_init_missing_deployment_name(azure_openai_unit_
 
 
 def test_azure_assistants_client_init_with_default_headers(azure_openai_unit_test_env: dict[str, str]) -> None:
-    """Test AzureOpenAIAssistantsClient initialization with default headers."""
+    """デフォルトヘッダーを使った AzureOpenAIAssistantsClient の初期化テストです。"""
     default_headers = {"X-Unit-Test": "test-guid"}
 
     chat_client = AzureOpenAIAssistantsClient(
@@ -149,14 +149,14 @@ def test_azure_assistants_client_init_with_default_headers(azure_openai_unit_tes
     assert chat_client.model_id == "test_chat_deployment"
     assert isinstance(chat_client, ChatClientProtocol)
 
-    # Assert that the default header we added is present in the client's default headers
+    # 追加したデフォルトヘッダーがクライアントのデフォルトヘッダーに存在することをアサートします。
     for key, value in default_headers.items():
         assert key in chat_client.client.default_headers
         assert chat_client.client.default_headers[key] == value
 
 
 def test_azure_assistants_client_instructions_sent_once(mock_async_azure_openai: MagicMock) -> None:
-    """Ensure instructions are only included once for Azure OpenAI Assistants requests."""
+    """Azure OpenAI Assistantsのリクエストで指示が一度だけ含まれることを保証します。"""
     chat_client = create_test_azure_assistants_client(mock_async_azure_openai)
     instructions = "You are a helpful assistant."
     chat_options = ChatOptions(instructions=instructions)
@@ -170,7 +170,7 @@ def test_azure_assistants_client_instructions_sent_once(mock_async_azure_openai:
 async def test_azure_assistants_client_get_assistant_id_or_create_existing_assistant(
     mock_async_azure_openai: MagicMock,
 ) -> None:
-    """Test _get_assistant_id_or_create when assistant_id is already provided."""
+    """assistant_id が既に提供されている場合の _get_assistant_id_or_create のテストです。"""
     chat_client = create_test_azure_assistants_client(mock_async_azure_openai, assistant_id="existing-assistant-id")
 
     assistant_id = await chat_client._get_assistant_id_or_create()  # type: ignore
@@ -183,7 +183,7 @@ async def test_azure_assistants_client_get_assistant_id_or_create_existing_assis
 async def test_azure_assistants_client_get_assistant_id_or_create_create_new(
     mock_async_azure_openai: MagicMock,
 ) -> None:
-    """Test _get_assistant_id_or_create when creating a new assistant."""
+    """新しいアシスタントを作成する場合の _get_assistant_id_or_create のテストです。"""
     chat_client = create_test_azure_assistants_client(
         mock_async_azure_openai, deployment_name="test_chat_deployment", assistant_name="TestAssistant"
     )
@@ -198,50 +198,50 @@ async def test_azure_assistants_client_get_assistant_id_or_create_create_new(
 async def test_azure_assistants_client_aclose_should_not_delete(
     mock_async_azure_openai: MagicMock,
 ) -> None:
-    """Test close when assistant should not be deleted."""
+    """アシスタントを削除しない場合の close のテストです。"""
     chat_client = create_test_azure_assistants_client(
         mock_async_azure_openai, assistant_id="assistant-to-keep", should_delete_assistant=False
     )
 
     await chat_client.close()  # type: ignore
 
-    # Verify assistant deletion was not called
+    # アシスタントの削除が呼ばれていないことを検証します。
     mock_async_azure_openai.beta.assistants.delete.assert_not_called()
     assert not chat_client._should_delete_assistant  # type: ignore
 
 
 async def test_azure_assistants_client_aclose_should_delete(mock_async_azure_openai: MagicMock) -> None:
-    """Test close method calls cleanup."""
+    """close メソッドがクリーンアップを呼び出すことをテストします。"""
     chat_client = create_test_azure_assistants_client(
         mock_async_azure_openai, assistant_id="assistant-to-delete", should_delete_assistant=True
     )
 
     await chat_client.close()
 
-    # Verify assistant deletion was called
+    # アシスタントの削除が呼ばれたことを検証します。
     mock_async_azure_openai.beta.assistants.delete.assert_called_once_with("assistant-to-delete")
     assert not chat_client._should_delete_assistant  # type: ignore
 
 
 async def test_azure_assistants_client_async_context_manager(mock_async_azure_openai: MagicMock) -> None:
-    """Test async context manager functionality."""
+    """非同期コンテキストマネージャの機能をテストします。"""
     chat_client = create_test_azure_assistants_client(
         mock_async_azure_openai, assistant_id="assistant-to-delete", should_delete_assistant=True
     )
 
-    # Test context manager
+    # コンテキストマネージャのテストです。
     async with chat_client:
-        pass  # Just test that we can enter and exit
+        pass  # 単に入出力ができることをテストします。
 
-    # Verify cleanup was called on exit
+    # 終了時にクリーンアップが呼ばれたことを検証します。
     mock_async_azure_openai.beta.assistants.delete.assert_called_once_with("assistant-to-delete")
 
 
 def test_azure_assistants_client_serialize(azure_openai_unit_test_env: dict[str, str]) -> None:
-    """Test serialization of AzureOpenAIAssistantsClient."""
+    """AzureOpenAIAssistantsClientのシリアライズのテスト。"""
     default_headers = {"X-Unit-Test": "test-guid"}
 
-    # Test basic initialization and to_dict
+    # 基本的な初期化とto_dictのテスト
     chat_client = AzureOpenAIAssistantsClient(
         deployment_name="test_chat_deployment",
         assistant_id="test-assistant-id",
@@ -259,25 +259,25 @@ def test_azure_assistants_client_serialize(azure_openai_unit_test_env: dict[str,
     assert dumped_settings["assistant_name"] == "TestAssistant"
     assert dumped_settings["thread_id"] == "test-thread-id"
 
-    # Assert that the default header we added is present in the dumped_settings default headers
+    # 追加したデフォルトヘッダーがdumped_settingsのデフォルトヘッダーに存在することをアサートする
     for key, value in default_headers.items():
         assert key in dumped_settings["default_headers"]
         assert dumped_settings["default_headers"][key] == value
-    # Assert that the 'User-Agent' header is not present in the dumped_settings default headers
+    # 'User-Agent'ヘッダーがdumped_settingsのデフォルトヘッダーに存在しないことをアサートする
     assert "User-Agent" not in dumped_settings["default_headers"]
 
 
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     return f"The weather in {location} is sunny with a high of 25°C."
 
 
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_client_get_response() -> None:
-    """Test Azure Assistants Client response."""
+    """Azure Assistants Clientのレスポンスのテスト。"""
     async with AzureOpenAIAssistantsClient(credential=AzureCliCredential()) as azure_assistants_client:
         assert isinstance(azure_assistants_client, ChatClientProtocol)
 
@@ -291,7 +291,7 @@ async def test_azure_assistants_client_get_response() -> None:
         )
         messages.append(ChatMessage(role="user", text="What's the weather like today?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンス取得に使用できることをテストする
         response = await azure_assistants_client.get_response(messages=messages)
 
         assert response is not None
@@ -302,14 +302,14 @@ async def test_azure_assistants_client_get_response() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_client_get_response_tools() -> None:
-    """Test Azure Assistants Client response with tools."""
+    """ツールを使ったAzure Assistants Clientのレスポンスのテスト。"""
     async with AzureOpenAIAssistantsClient(credential=AzureCliCredential()) as azure_assistants_client:
         assert isinstance(azure_assistants_client, ChatClientProtocol)
 
         messages: list[ChatMessage] = []
         messages.append(ChatMessage(role="user", text="What's the weather like in Seattle?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンス取得に使用できることをテストする
         response = await azure_assistants_client.get_response(
             messages=messages,
             tools=[get_weather],
@@ -324,7 +324,7 @@ async def test_azure_assistants_client_get_response_tools() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_client_streaming() -> None:
-    """Test Azure Assistants Client streaming response."""
+    """Azure Assistants Clientのストリーミングレスポンスのテスト。"""
     async with AzureOpenAIAssistantsClient(credential=AzureCliCredential()) as azure_assistants_client:
         assert isinstance(azure_assistants_client, ChatClientProtocol)
 
@@ -338,7 +338,7 @@ async def test_azure_assistants_client_streaming() -> None:
         )
         messages.append(ChatMessage(role="user", text="What's the weather like today?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンス取得に使用できることをテストする
         response = azure_assistants_client.get_streaming_response(messages=messages)
 
         full_message: str = ""
@@ -355,14 +355,14 @@ async def test_azure_assistants_client_streaming() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_client_streaming_tools() -> None:
-    """Test Azure Assistants Client streaming response with tools."""
+    """ツールを使ったAzure Assistants Clientのストリーミングレスポンスのテスト。"""
     async with AzureOpenAIAssistantsClient(credential=AzureCliCredential()) as azure_assistants_client:
         assert isinstance(azure_assistants_client, ChatClientProtocol)
 
         messages: list[ChatMessage] = []
         messages.append(ChatMessage(role="user", text="What's the weather like in Seattle?"))
 
-        # Test that the client can be used to get a response
+        # クライアントがレスポンス取得に使用できることをテストする
         response = azure_assistants_client.get_streaming_response(
             messages=messages,
             tools=[get_weather],
@@ -382,15 +382,15 @@ async def test_azure_assistants_client_streaming_tools() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_client_with_existing_assistant() -> None:
-    """Test Azure Assistants Client with existing assistant ID."""
-    # First create an assistant to use in the test
+    """既存のassistant IDを使ったAzure Assistants Clientのテスト。"""
+    # テストで使用するアシスタントを最初に作成する
     async with AzureOpenAIAssistantsClient(credential=AzureCliCredential()) as temp_client:
-        # Get the assistant ID by triggering assistant creation
+        # アシスタント作成をトリガーしてassistant IDを取得する
         messages = [ChatMessage(role="user", text="Hello")]
         await temp_client.get_response(messages=messages)
         assistant_id = temp_client.assistant_id
 
-        # Now test using the existing assistant
+        # 既存のアシスタントを使ったテストを行う
         async with AzureOpenAIAssistantsClient(
             assistant_id=assistant_id, credential=AzureCliCredential()
         ) as azure_assistants_client:
@@ -399,7 +399,7 @@ async def test_azure_assistants_client_with_existing_assistant() -> None:
 
             messages = [ChatMessage(role="user", text="What can you do?")]
 
-            # Test that the client can be used to get a response
+            # クライアントがレスポンス取得に使用できることをテストする
             response = await azure_assistants_client.get_response(messages=messages)
 
             assert response is not None
@@ -410,14 +410,14 @@ async def test_azure_assistants_client_with_existing_assistant() -> None:
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_agent_basic_run():
-    """Test ChatAgent basic run functionality with AzureOpenAIAssistantsClient."""
+    """AzureOpenAIAssistantsClientを使ったChatAgentの基本的な実行機能のテスト。"""
     async with ChatAgent(
         chat_client=AzureOpenAIAssistantsClient(credential=AzureCliCredential()),
     ) as agent:
-        # Run a simple query
+        # 簡単なクエリを実行する
         response = await agent.run("Hello! Please respond with 'Hello World' exactly.")
 
-        # Validate response
+        # レスポンスを検証する
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
         assert len(response.text) > 0
@@ -427,11 +427,11 @@ async def test_azure_assistants_agent_basic_run():
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_agent_basic_run_streaming():
-    """Test ChatAgent basic streaming functionality with AzureOpenAIAssistantsClient."""
+    """AzureOpenAIAssistantsClientを使ったChatAgentの基本的なストリーミング機能のテスト。"""
     async with ChatAgent(
         chat_client=AzureOpenAIAssistantsClient(credential=AzureCliCredential()),
     ) as agent:
-        # Run streaming query
+        # ストリーミングクエリを実行する
         full_message: str = ""
         async for chunk in agent.run_stream("Please respond with exactly: 'This is a streaming response test.'"):
             assert chunk is not None
@@ -439,7 +439,7 @@ async def test_azure_assistants_agent_basic_run_streaming():
             if chunk.text:
                 full_message += chunk.text
 
-        # Validate streaming response
+        # ストリーミングレスポンスを検証する
         assert len(full_message) > 0
         assert "streaming response test" in full_message.lower()
 
@@ -447,37 +447,37 @@ async def test_azure_assistants_agent_basic_run_streaming():
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_agent_thread_persistence():
-    """Test ChatAgent thread persistence across runs with AzureOpenAIAssistantsClient."""
+    """AzureOpenAIAssistantsClientを使ったChatAgentの実行間でのスレッド永続性のテスト。"""
     async with ChatAgent(
         chat_client=AzureOpenAIAssistantsClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant with good memory.",
     ) as agent:
-        # Create a new thread that will be reused
+        # 再利用される新しいスレッドを作成する
         thread = agent.get_new_thread()
 
-        # First message - establish context
+        # 最初のメッセージ - コンテキストを確立する
         first_response = await agent.run(
             "Remember this number: 42. What number did I just tell you to remember?", thread=thread
         )
         assert isinstance(first_response, AgentRunResponse)
         assert "42" in first_response.text
 
-        # Second message - test conversation memory
+        # 2番目のメッセージ - 会話メモリをテストする
         second_response = await agent.run(
             "What number did I tell you to remember in my previous message?", thread=thread
         )
         assert isinstance(second_response, AgentRunResponse)
         assert "42" in second_response.text
 
-        # Verify thread has been populated with conversation ID
+        # スレッドに会話IDが設定されていることを検証する
         assert thread.service_thread_id is not None
 
 
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_agent_existing_thread_id():
-    """Test ChatAgent with existing thread ID to continue conversations across agent instances."""
-    # First, create a conversation and capture the thread ID
+    """既存のスレッドIDを使ってChatAgentがエージェントインスタンス間で会話を継続できるかテストする。"""
+    # まず会話を作成しスレッドIDを取得する
     existing_thread_id = None
 
     async with ChatAgent(
@@ -485,88 +485,88 @@ async def test_azure_assistants_agent_existing_thread_id():
         instructions="You are a helpful weather agent.",
         tools=[get_weather],
     ) as agent:
-        # Start a conversation and get the thread ID
+        # 会話を開始してスレッドIDを取得する
         thread = agent.get_new_thread()
         response1 = await agent.run("What's the weather in Paris?", thread=thread)
 
-        # Validate first response
+        # 最初のレスポンスを検証する
         assert isinstance(response1, AgentRunResponse)
         assert response1.text is not None
         assert any(word in response1.text.lower() for word in ["weather", "paris"])
 
-        # The thread ID is set after the first response
+        # 最初のレスポンス後にスレッドIDが設定される
         existing_thread_id = thread.service_thread_id
         assert existing_thread_id is not None
 
-    # Now continue with the same thread ID in a new agent instance
+    # 同じスレッドIDを使って新しいエージェントインスタンスで続行する
 
     async with ChatAgent(
         chat_client=AzureOpenAIAssistantsClient(thread_id=existing_thread_id, credential=AzureCliCredential()),
         instructions="You are a helpful weather agent.",
         tools=[get_weather],
     ) as agent:
-        # Create a thread with the existing ID
+        # 既存のIDでスレッドを作成する
         thread = AgentThread(service_thread_id=existing_thread_id)
 
-        # Ask about the previous conversation
+        # 前の会話について質問する
         response2 = await agent.run("What was the last city I asked about?", thread=thread)
 
-        # Validate that the agent remembers the previous conversation
+        # エージェントが前の会話を覚えていることを検証する
         assert isinstance(response2, AgentRunResponse)
         assert response2.text is not None
-        # Should reference Paris from the previous conversation
+        # 前の会話のパリを参照しているはずである
         assert "paris" in response2.text.lower()
 
 
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_agent_code_interpreter():
-    """Test ChatAgent with code interpreter through AzureOpenAIAssistantsClient."""
+    """AzureOpenAIAssistantsClientを通じたコードインタープリターを使ったChatAgentのテスト。"""
 
     async with ChatAgent(
         chat_client=AzureOpenAIAssistantsClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant that can write and execute Python code.",
         tools=[HostedCodeInterpreterTool()],
     ) as agent:
-        # Request code execution
+        # コード実行をリクエストする
         response = await agent.run("Write Python code to calculate the factorial of 5 and show the result.")
 
-        # Validate response
+        # レスポンスを検証する
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
-        # Factorial of 5 is 120
+        # 5の階乗は120である
         assert "120" in response.text or "factorial" in response.text.lower()
 
 
 @pytest.mark.flaky
 @skip_if_azure_integration_tests_disabled
 async def test_azure_assistants_client_agent_level_tool_persistence():
-    """Test that agent-level tools persist across multiple runs with Azure Assistants Client."""
+    """Azure Assistants Clientでエージェントレベルのツールが複数回の実行で持続することをテストする。"""
 
     async with ChatAgent(
         chat_client=AzureOpenAIAssistantsClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant that uses available tools.",
         tools=[get_weather],  # Agent-level tool
     ) as agent:
-        # First run - agent-level tool should be available
+        # 最初の実行 - エージェントレベルのツールが利用可能であるべき
         first_response = await agent.run("What's the weather like in Chicago?")
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
-        # Should use the agent-level weather tool
+        # エージェントレベルの天気ツールを使用するはずである
         assert any(term in first_response.text.lower() for term in ["chicago", "sunny", "72"])
 
-        # Second run - agent-level tool should still be available (persistence test)
+        # 2回目の実行 - エージェントレベルのツールがまだ利用可能であるべき（持続性テスト）
         second_response = await agent.run("What's the weather in Miami?")
 
         assert isinstance(second_response, AgentRunResponse)
         assert second_response.text is not None
-        # Should use the agent-level weather tool again
+        # 再びエージェントレベルの天気ツールを使用するはずである
         assert any(term in second_response.text.lower() for term in ["miami", "sunny", "72"])
 
 
 def test_azure_assistants_client_entra_id_authentication() -> None:
-    """Test Entra ID authentication path with credential."""
+    """Credentialを使ったEntra ID認証パスのテスト。"""
     mock_credential = MagicMock()
 
     with (
@@ -576,7 +576,7 @@ def test_azure_assistants_client_entra_id_authentication() -> None:
     ):
         mock_settings = MagicMock()
         mock_settings.chat_deployment_name = "test-deployment"
-        mock_settings.api_key = None  # No API key to trigger Entra ID path
+        mock_settings.api_key = None  # APIキーなしでEntra IDパスをトリガーする
         mock_settings.token_endpoint = "https://login.microsoftonline.com/test"
         mock_settings.get_azure_auth_token.return_value = "entra-token-12345"
         mock_settings.api_version = "2024-05-01-preview"
@@ -592,10 +592,10 @@ def test_azure_assistants_client_entra_id_authentication() -> None:
             token_endpoint="https://login.microsoftonline.com/test",
         )
 
-        # Verify Entra ID token was requested
+        # Entra IDトークンが要求されたことを検証する
         mock_settings.get_azure_auth_token.assert_called_once_with(mock_credential)
 
-        # Verify client was created with the token
+        # トークンでクライアントが作成されたことを検証する
         mock_azure_client.assert_called_once()
         call_args = mock_azure_client.call_args[1]
         assert call_args["azure_ad_token"] == "entra-token-12345"
@@ -605,25 +605,25 @@ def test_azure_assistants_client_entra_id_authentication() -> None:
 
 
 def test_azure_assistants_client_no_authentication_error() -> None:
-    """Test authentication validation error when no auth provided."""
+    """認証が提供されていない場合の認証検証エラーのテスト。"""
     with patch("agent_framework.azure._assistants_client.AzureOpenAISettings") as mock_settings_class:
         mock_settings = MagicMock()
         mock_settings.chat_deployment_name = "test-deployment"
-        mock_settings.api_key = None  # No API key
-        mock_settings.token_endpoint = None  # No token endpoint
+        mock_settings.api_key = None  # APIキーなし
+        mock_settings.token_endpoint = None  # トークンエンドポイントなし
         mock_settings_class.return_value = mock_settings
 
-        # Test missing authentication raises error
+        # 認証が欠如している場合にエラーが発生することをテストする
         with pytest.raises(ServiceInitializationError, match="API key, ad_token, or ad_token_provider is required"):
             AzureOpenAIAssistantsClient(
                 deployment_name="test-deployment",
                 endpoint="https://test-endpoint.openai.azure.com",
-                # No authentication provided at all
+                # 認証が全く提供されていない
             )
 
 
 def test_azure_assistants_client_ad_token_authentication() -> None:
-    """Test ad_token authentication client parameter path."""
+    """ad_token認証クライアントパラメータパスのテスト。"""
     with (
         patch("agent_framework.azure._assistants_client.AzureOpenAISettings") as mock_settings_class,
         patch("agent_framework.azure._assistants_client.AsyncAzureOpenAI") as mock_azure_client,
@@ -631,7 +631,7 @@ def test_azure_assistants_client_ad_token_authentication() -> None:
     ):
         mock_settings = MagicMock()
         mock_settings.chat_deployment_name = "test-deployment"
-        mock_settings.api_key = None  # No API key
+        mock_settings.api_key = None  # APIキーなし
         mock_settings.api_version = "2024-05-01-preview"
         mock_settings.endpoint = "https://test-endpoint.openai.azure.com"
         mock_settings.base_url = None
@@ -643,7 +643,7 @@ def test_azure_assistants_client_ad_token_authentication() -> None:
             ad_token="test-ad-token-12345",
         )
 
-        # ad_token path
+        # ad_tokenパス
         mock_azure_client.assert_called_once()
         call_args = mock_azure_client.call_args[1]
         assert call_args["azure_ad_token"] == "test-ad-token-12345"
@@ -653,7 +653,7 @@ def test_azure_assistants_client_ad_token_authentication() -> None:
 
 
 def test_azure_assistants_client_ad_token_provider_authentication() -> None:
-    """Test ad_token_provider authentication client parameter path."""
+    """ad_token_provider認証クライアントパラメータパスのテスト。"""
     from openai.lib.azure import AsyncAzureADTokenProvider
 
     mock_token_provider = MagicMock(spec=AsyncAzureADTokenProvider)
@@ -665,7 +665,7 @@ def test_azure_assistants_client_ad_token_provider_authentication() -> None:
     ):
         mock_settings = MagicMock()
         mock_settings.chat_deployment_name = "test-deployment"
-        mock_settings.api_key = None  # No API key
+        mock_settings.api_key = None  # APIキーなし
         mock_settings.api_version = "2024-05-01-preview"
         mock_settings.endpoint = "https://test-endpoint.openai.azure.com"
         mock_settings.base_url = None
@@ -677,7 +677,7 @@ def test_azure_assistants_client_ad_token_provider_authentication() -> None:
             ad_token_provider=mock_token_provider,
         )
 
-        # ad_token_provider path
+        # ad_token_providerパス
         mock_azure_client.assert_called_once()
         call_args = mock_azure_client.call_args[1]
         assert call_args["azure_ad_token_provider"] is mock_token_provider
@@ -687,7 +687,7 @@ def test_azure_assistants_client_ad_token_provider_authentication() -> None:
 
 
 def test_azure_assistants_client_base_url_configuration() -> None:
-    """Test base_url client parameter path."""
+    """base_urlクライアントパラメータパスのテスト。"""
     with (
         patch("agent_framework.azure._assistants_client.AzureOpenAISettings") as mock_settings_class,
         patch("agent_framework.azure._assistants_client.AsyncAzureOpenAI") as mock_azure_client,
@@ -697,7 +697,7 @@ def test_azure_assistants_client_base_url_configuration() -> None:
         mock_settings.chat_deployment_name = "test-deployment"
         mock_settings.api_key.get_secret_value.return_value = "test-api-key"
         mock_settings.base_url = "https://custom-base-url.com"
-        mock_settings.endpoint = None  # No endpoint, should use base_url
+        mock_settings.endpoint = None  # エンドポイントなし、base_urlを使用すべき
         mock_settings.api_version = "2024-05-01-preview"
         mock_settings_class.return_value = mock_settings
 
@@ -705,7 +705,7 @@ def test_azure_assistants_client_base_url_configuration() -> None:
             deployment_name="test-deployment", api_key="test-api-key", base_url="https://custom-base-url.com"
         )
 
-        # base_url path
+        # base_urlパス
         mock_azure_client.assert_called_once()
         call_args = mock_azure_client.call_args[1]
         assert call_args["base_url"] == "https://custom-base-url.com"
@@ -716,7 +716,7 @@ def test_azure_assistants_client_base_url_configuration() -> None:
 
 
 def test_azure_assistants_client_azure_endpoint_configuration() -> None:
-    """Test azure_endpoint client parameter path."""
+    """azure_endpointクライアントパラメータパスのテスト。"""
     with (
         patch("agent_framework.azure._assistants_client.AzureOpenAISettings") as mock_settings_class,
         patch("agent_framework.azure._assistants_client.AsyncAzureOpenAI") as mock_azure_client,
@@ -725,7 +725,7 @@ def test_azure_assistants_client_azure_endpoint_configuration() -> None:
         mock_settings = MagicMock()
         mock_settings.chat_deployment_name = "test-deployment"
         mock_settings.api_key.get_secret_value.return_value = "test-api-key"
-        mock_settings.base_url = None  # No base_url
+        mock_settings.base_url = None  # base_urlなし
         mock_settings.endpoint = "https://test-endpoint.openai.azure.com"
         mock_settings.api_version = "2024-05-01-preview"
         mock_settings_class.return_value = mock_settings
@@ -736,7 +736,7 @@ def test_azure_assistants_client_azure_endpoint_configuration() -> None:
             endpoint="https://test-endpoint.openai.azure.com",
         )
 
-        # azure_endpoint path
+        # azure_endpointパス
         mock_azure_client.assert_called_once()
         call_args = mock_azure_client.call_args[1]
         assert call_args["azure_endpoint"] == "https://test-endpoint.openai.azure.com"

@@ -12,20 +12,20 @@ ASSETS_DIR = Path(__file__).resolve().parent.parent / "sample_assets"
 
 
 def load_sample_pdf() -> bytes:
-    """Read the bundled sample PDF for tests."""
+    """テスト用にバンドルされたサンプルPDFを読み込む。"""
     pdf_path = ASSETS_DIR / "sample.pdf"
     return pdf_path.read_bytes()
 
 
 def create_sample_image() -> str:
-    """Create a simple 1x1 pixel PNG image for testing."""
-    # This is a tiny red pixel in PNG format
+    """テスト用のシンプルな1x1ピクセルPNG画像を作成する。"""
+    # これはPNG形式の小さな赤いピクセルです。
     png_data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
     return f"data:image/png;base64,{png_data}"
 
 
 def create_sample_audio() -> str:
-    """Create a minimal WAV file for testing (0.1 seconds of silence)."""
+    """テスト用の最小限のWAVファイルを作成する（0.1秒の無音）。"""
     wav_header = (
         b"RIFF"
         + struct.pack("<I", 44)  # file size
@@ -41,7 +41,7 @@ def create_sample_audio() -> str:
 
 
 async def test_image() -> None:
-    """Test image analysis with OpenAI."""
+    """OpenAIを使った画像解析のテスト。"""
     client = OpenAIChatClient(model_id="gpt-4o")
 
     image_uri = create_sample_image()
@@ -55,7 +55,7 @@ async def test_image() -> None:
 
 
 async def test_audio() -> None:
-    """Test audio analysis with OpenAI."""
+    """OpenAIを使った音声解析のテスト。"""
     client = OpenAIChatClient(model_id="gpt-4o-audio-preview")
 
     audio_uri = create_sample_audio()
@@ -72,7 +72,7 @@ async def test_audio() -> None:
 
 
 async def test_pdf() -> None:
-    """Test PDF document analysis with OpenAI."""
+    """OpenAIを使ったPDFドキュメント解析のテスト。"""
     client = OpenAIChatClient(model_id="gpt-4o")
 
     pdf_bytes = load_sample_pdf()

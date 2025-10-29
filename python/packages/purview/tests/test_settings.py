@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for Purview settings."""
+"""Purview 設定のテスト。"""
 
 import pytest
 
@@ -8,10 +8,10 @@ from agent_framework_purview import PurviewAppLocation, PurviewLocationType, Pur
 
 
 class TestPurviewSettings:
-    """Test PurviewSettings configuration."""
+    """PurviewSettingsの設定をテストします。"""
 
     def test_settings_defaults(self) -> None:
-        """Test PurviewSettings with default values."""
+        """デフォルト値でPurviewSettingsをテストします。"""
         settings = PurviewSettings(app_name="Test App")
 
         assert settings.app_name == "Test App"
@@ -21,7 +21,7 @@ class TestPurviewSettings:
         assert settings.process_inline is False
 
     def test_settings_with_custom_values(self) -> None:
-        """Test PurviewSettings with custom values."""
+        """カスタム値でPurviewSettingsをテストします。"""
         app_location = PurviewAppLocation(location_type=PurviewLocationType.APPLICATION, location_value="app-123")
 
         settings = PurviewSettings(
@@ -45,7 +45,7 @@ class TestPurviewSettings:
         ],
     )
     def test_get_scopes(self, graph_uri: str, expected_scope: str) -> None:
-        """Test get_scopes returns correct scope for different URIs."""
+        """異なるURIに対してget_scopesが正しいスコープを返すかテストします。"""
         settings = PurviewSettings(app_name="Test App", graph_base_uri=graph_uri)
         scopes = settings.get_scopes()
 
@@ -54,7 +54,7 @@ class TestPurviewSettings:
 
 
 class TestPurviewAppLocation:
-    """Test PurviewAppLocation configuration."""
+    """PurviewAppLocationの設定をテストします。"""
 
     @pytest.mark.parametrize(
         "location_type,location_value,expected_odata_type",
@@ -67,7 +67,7 @@ class TestPurviewAppLocation:
     def test_get_policy_location(
         self, location_type: PurviewLocationType, location_value: str, expected_odata_type: str
     ) -> None:
-        """Test get_policy_location returns correct structure for all location types."""
+        """すべてのロケーションタイプに対してget_policy_locationが正しい構造を返すかテストします。"""
         location = PurviewAppLocation(location_type=location_type, location_value=location_value)
         policy_location = location.get_policy_location()
 
@@ -76,10 +76,10 @@ class TestPurviewAppLocation:
 
 
 class TestPurviewLocationType:
-    """Test PurviewLocationType enum."""
+    """PurviewLocationType enumをテストします。"""
 
     def test_location_type_values(self) -> None:
-        """Test PurviewLocationType enum has expected values."""
+        """PurviewLocationType enumが期待される値を持つかテストします。"""
         assert PurviewLocationType.APPLICATION == "application"
         assert PurviewLocationType.URI == "uri"
         assert PurviewLocationType.DOMAIN == "domain"

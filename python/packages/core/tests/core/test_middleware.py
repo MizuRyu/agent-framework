@@ -33,10 +33,10 @@ from agent_framework._types import ChatOptions
 
 
 class TestAgentRunContext:
-    """Test cases for AgentRunContext."""
+    """AgentRunContextのテストケース。"""
 
     def test_init_with_defaults(self, mock_agent: AgentProtocol) -> None:
-        """Test AgentRunContext initialization with default values."""
+        """AgentRunContextのデフォルト値による初期化テスト。"""
         messages = [ChatMessage(role=Role.USER, text="test")]
         context = AgentRunContext(agent=mock_agent, messages=messages)
 
@@ -46,7 +46,7 @@ class TestAgentRunContext:
         assert context.metadata == {}
 
     def test_init_with_custom_values(self, mock_agent: AgentProtocol) -> None:
-        """Test AgentRunContext initialization with custom values."""
+        """AgentRunContextのカスタム値による初期化テスト。"""
         messages = [ChatMessage(role=Role.USER, text="test")]
         metadata = {"key": "value"}
         context = AgentRunContext(agent=mock_agent, messages=messages, is_streaming=True, metadata=metadata)
@@ -57,7 +57,7 @@ class TestAgentRunContext:
         assert context.metadata == metadata
 
     def test_init_with_thread(self, mock_agent: AgentProtocol) -> None:
-        """Test AgentRunContext initialization with thread parameter."""
+        """threadパラメーターを使ったAgentRunContextの初期化テスト。"""
         from agent_framework import AgentThread
 
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -72,10 +72,10 @@ class TestAgentRunContext:
 
 
 class TestFunctionInvocationContext:
-    """Test cases for FunctionInvocationContext."""
+    """FunctionInvocationContextのテストケース。"""
 
     def test_init_with_defaults(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test FunctionInvocationContext initialization with default values."""
+        """FunctionInvocationContextのデフォルト値による初期化テスト。"""
         arguments = FunctionTestArgs(name="test")
         context = FunctionInvocationContext(function=mock_function, arguments=arguments)
 
@@ -84,7 +84,7 @@ class TestFunctionInvocationContext:
         assert context.metadata == {}
 
     def test_init_with_custom_metadata(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test FunctionInvocationContext initialization with custom metadata."""
+        """カスタムメタデータを使ったFunctionInvocationContextの初期化テスト。"""
         arguments = FunctionTestArgs(name="test")
         metadata = {"key": "value"}
         context = FunctionInvocationContext(function=mock_function, arguments=arguments, metadata=metadata)
@@ -95,10 +95,10 @@ class TestFunctionInvocationContext:
 
 
 class TestChatContext:
-    """Test cases for ChatContext."""
+    """ChatContextのテストケース。"""
 
     def test_init_with_defaults(self, mock_chat_client: Any) -> None:
-        """Test ChatContext initialization with default values."""
+        """ChatContextのデフォルト値による初期化テスト。"""
         messages = [ChatMessage(role=Role.USER, text="test")]
         chat_options = ChatOptions()
         context = ChatContext(chat_client=mock_chat_client, messages=messages, chat_options=chat_options)
@@ -112,7 +112,7 @@ class TestChatContext:
         assert context.terminate is False
 
     def test_init_with_custom_values(self, mock_chat_client: Any) -> None:
-        """Test ChatContext initialization with custom values."""
+        """ChatContextのカスタム値による初期化テスト。"""
         messages = [ChatMessage(role=Role.USER, text="test")]
         chat_options = ChatOptions(temperature=0.5)
         metadata = {"key": "value"}
@@ -135,7 +135,7 @@ class TestChatContext:
 
 
 class TestAgentMiddlewarePipeline:
-    """Test cases for AgentMiddlewarePipeline."""
+    """AgentMiddlewarePipelineのテストケース。"""
 
     class PreNextTerminateMiddleware(AgentMiddleware):
         async def process(self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]) -> None:
@@ -148,18 +148,18 @@ class TestAgentMiddlewarePipeline:
             context.terminate = True
 
     def test_init_empty(self) -> None:
-        """Test AgentMiddlewarePipeline initialization with no middlewares."""
+        """ミドルウェアなしでのAgentMiddlewarePipeline初期化テスト。"""
         pipeline = AgentMiddlewarePipeline()
         assert not pipeline.has_middlewares
 
     def test_init_with_class_middleware(self) -> None:
-        """Test AgentMiddlewarePipeline initialization with class-based middleware."""
+        """クラスベースのミドルウェアでのAgentMiddlewarePipeline初期化テスト。"""
         middleware = TestAgentMiddleware()
         pipeline = AgentMiddlewarePipeline([middleware])
         assert pipeline.has_middlewares
 
     def test_init_with_function_middleware(self) -> None:
-        """Test AgentMiddlewarePipeline initialization with function-based middleware."""
+        """関数ベースのミドルウェアでのAgentMiddlewarePipeline初期化テスト。"""
 
         async def test_middleware(context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]) -> None:
             await next(context)
@@ -168,7 +168,7 @@ class TestAgentMiddlewarePipeline:
         assert pipeline.has_middlewares
 
     async def test_execute_no_middleware(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline execution with no middleware."""
+        """ミドルウェアなしでのパイプライン実行テスト。"""
         pipeline = AgentMiddlewarePipeline()
         messages = [ChatMessage(role=Role.USER, text="test")]
         context = AgentRunContext(agent=mock_agent, messages=messages)
@@ -182,7 +182,7 @@ class TestAgentMiddlewarePipeline:
         assert result == expected_response
 
     async def test_execute_with_middleware(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline execution with middleware."""
+        """ミドルウェアありでのパイプライン実行テスト。"""
         execution_order: list[str] = []
 
         class OrderTrackingMiddleware(AgentMiddleware):
@@ -212,7 +212,7 @@ class TestAgentMiddlewarePipeline:
         assert execution_order == ["test_before", "handler", "test_after"]
 
     async def test_execute_stream_no_middleware(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline streaming execution with no middleware."""
+        """ミドルウェアなしでのパイプラインストリーミング実行テスト。"""
         pipeline = AgentMiddlewarePipeline()
         messages = [ChatMessage(role=Role.USER, text="test")]
         context = AgentRunContext(agent=mock_agent, messages=messages)
@@ -230,7 +230,7 @@ class TestAgentMiddlewarePipeline:
         assert updates[1].text == "chunk2"
 
     async def test_execute_stream_with_middleware(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline streaming execution with middleware."""
+        """ミドルウェアありでのパイプラインストリーミング実行テスト。"""
         execution_order: list[str] = []
 
         class StreamOrderTrackingMiddleware(AgentMiddleware):
@@ -265,7 +265,7 @@ class TestAgentMiddlewarePipeline:
         assert execution_order == ["test_before", "test_after", "handler_start", "handler_end"]
 
     async def test_execute_with_pre_next_termination(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline execution with termination before next()."""
+        """next()前に終了した場合のパイプライン実行テスト。"""
         middleware = self.PreNextTerminateMiddleware()
         pipeline = AgentMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -273,19 +273,19 @@ class TestAgentMiddlewarePipeline:
         execution_order: list[str] = []
 
         async def final_handler(ctx: AgentRunContext) -> AgentRunResponse:
-            # Handler should not be executed when terminated before next()
+            # next()前に終了した場合、ハンドラーは実行されてはいけません
             execution_order.append("handler")
             return AgentRunResponse(messages=[ChatMessage(role=Role.ASSISTANT, text="response")])
 
         response = await pipeline.execute(mock_agent, messages, context, final_handler)
         assert response is not None
         assert context.terminate
-        # Handler should not be called when terminated before next()
+        # next()前に終了した場合、ハンドラーは呼び出されてはいけません
         assert execution_order == []
         assert not response.messages
 
     async def test_execute_with_post_next_termination(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline execution with termination after next()."""
+        """next()後に終了した場合のパイプライン実行テスト。"""
         middleware = self.PostNextTerminateMiddleware()
         pipeline = AgentMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -304,7 +304,7 @@ class TestAgentMiddlewarePipeline:
         assert execution_order == ["handler"]
 
     async def test_execute_stream_with_pre_next_termination(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline streaming execution with termination before next()."""
+        """next()前に終了した場合のパイプラインストリーミング実行テスト。"""
         middleware = self.PreNextTerminateMiddleware()
         pipeline = AgentMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -312,7 +312,7 @@ class TestAgentMiddlewarePipeline:
         execution_order: list[str] = []
 
         async def final_handler(ctx: AgentRunContext) -> AsyncIterable[AgentRunResponseUpdate]:
-            # Handler should not be executed when terminated before next()
+            # next()前に終了した場合、ハンドラーは実行されてはいけません
             execution_order.append("handler_start")
             yield AgentRunResponseUpdate(contents=[TextContent(text="chunk1")])
             yield AgentRunResponseUpdate(contents=[TextContent(text="chunk2")])
@@ -323,12 +323,12 @@ class TestAgentMiddlewarePipeline:
             updates.append(update)
 
         assert context.terminate
-        # Handler should not be called when terminated before next()
+        # next()前に終了した場合、ハンドラーは呼び出されてはいけません
         assert execution_order == []
         assert not updates
 
     async def test_execute_stream_with_post_next_termination(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline streaming execution with termination after next()."""
+        """next()後に終了した場合のパイプラインストリーミング実行テスト。"""
         middleware = self.PostNextTerminateMiddleware()
         pipeline = AgentMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -352,7 +352,7 @@ class TestAgentMiddlewarePipeline:
         assert execution_order == ["handler_start", "handler_end"]
 
     async def test_execute_with_thread_in_context(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline execution properly passes thread to middleware."""
+        """パイプライン実行がスレッドをミドルウェアに正しく渡すことをテスト。"""
         from agent_framework import AgentThread
 
         captured_thread = None
@@ -381,8 +381,8 @@ class TestAgentMiddlewarePipeline:
         assert captured_thread is thread
 
     async def test_execute_with_no_thread_in_context(self, mock_agent: AgentProtocol) -> None:
-        """Test pipeline execution when no thread is provided."""
-        captured_thread = "not_none"  # Use string to distinguish from None
+        """スレッドが提供されなかった場合のパイプライン実行テスト。"""
+        captured_thread = "not_none"  # Noneと区別するために文字列を使用する
 
         class ThreadCapturingMiddleware(AgentMiddleware):
             async def process(
@@ -408,7 +408,7 @@ class TestAgentMiddlewarePipeline:
 
 
 class TestFunctionMiddlewarePipeline:
-    """Test cases for FunctionMiddlewarePipeline."""
+    """FunctionMiddlewarePipelineのテストケース。"""
 
     class PreNextTerminateFunctionMiddleware(FunctionMiddleware):
         async def process(self, context: FunctionInvocationContext, next: Any) -> None:
@@ -421,7 +421,7 @@ class TestFunctionMiddlewarePipeline:
             context.terminate = True
 
     async def test_execute_with_pre_next_termination(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test pipeline execution with termination before next()."""
+        """next()前に終了した場合のパイプライン実行テスト。"""
         middleware = self.PreNextTerminateFunctionMiddleware()
         pipeline = FunctionMiddlewarePipeline([middleware])
         arguments = FunctionTestArgs(name="test")
@@ -429,18 +429,18 @@ class TestFunctionMiddlewarePipeline:
         execution_order: list[str] = []
 
         async def final_handler(ctx: FunctionInvocationContext) -> str:
-            # Handler should not be executed when terminated before next()
+            # next()前に終了した場合、ハンドラーは実行されてはいけません
             execution_order.append("handler")
             return "test result"
 
         result = await pipeline.execute(mock_function, arguments, context, final_handler)
         assert result is None
         assert context.terminate
-        # Handler should not be called when terminated before next()
+        # next()前に終了した場合、ハンドラーは呼び出されてはいけません
         assert execution_order == []
 
     async def test_execute_with_post_next_termination(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test pipeline execution with termination after next()."""
+        """next()後に終了した場合のパイプライン実行テスト。"""
         middleware = self.PostNextTerminateFunctionMiddleware()
         pipeline = FunctionMiddlewarePipeline([middleware])
         arguments = FunctionTestArgs(name="test")
@@ -457,18 +457,18 @@ class TestFunctionMiddlewarePipeline:
         assert execution_order == ["handler"]
 
     def test_init_empty(self) -> None:
-        """Test FunctionMiddlewarePipeline initialization with no middlewares."""
+        """ミドルウェアなしでのFunctionMiddlewarePipeline初期化テスト。"""
         pipeline = FunctionMiddlewarePipeline()
         assert not pipeline.has_middlewares
 
     def test_init_with_class_middleware(self) -> None:
-        """Test FunctionMiddlewarePipeline initialization with class-based middleware."""
+        """クラスベースのミドルウェアでのFunctionMiddlewarePipeline初期化テスト。"""
         middleware = TestFunctionMiddleware()
         pipeline = FunctionMiddlewarePipeline([middleware])
         assert pipeline.has_middlewares
 
     def test_init_with_function_middleware(self) -> None:
-        """Test FunctionMiddlewarePipeline initialization with function-based middleware."""
+        """関数ベースのミドルウェアでのFunctionMiddlewarePipeline初期化テスト。"""
 
         async def test_middleware(
             context: FunctionInvocationContext, next: Callable[[FunctionInvocationContext], Awaitable[None]]
@@ -479,7 +479,7 @@ class TestFunctionMiddlewarePipeline:
         assert pipeline.has_middlewares
 
     async def test_execute_no_middleware(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test pipeline execution with no middleware."""
+        """ミドルウェアなしでのパイプライン実行テスト。"""
         pipeline = FunctionMiddlewarePipeline()
         arguments = FunctionTestArgs(name="test")
         context = FunctionInvocationContext(function=mock_function, arguments=arguments)
@@ -493,7 +493,7 @@ class TestFunctionMiddlewarePipeline:
         assert result == expected_result
 
     async def test_execute_with_middleware(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test pipeline execution with middleware."""
+        """ミドルウェアありでのパイプライン実行テスト。"""
         execution_order: list[str] = []
 
         class OrderTrackingFunctionMiddleware(FunctionMiddleware):
@@ -526,7 +526,7 @@ class TestFunctionMiddlewarePipeline:
 
 
 class TestChatMiddlewarePipeline:
-    """Test cases for ChatMiddlewarePipeline."""
+    """ChatMiddlewarePipelineのテストケース。"""
 
     class PreNextTerminateChatMiddleware(ChatMiddleware):
         async def process(self, context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
@@ -539,18 +539,18 @@ class TestChatMiddlewarePipeline:
             context.terminate = True
 
     def test_init_empty(self) -> None:
-        """Test ChatMiddlewarePipeline initialization with no middlewares."""
+        """ミドルウェアなしでのChatMiddlewarePipeline初期化テスト。"""
         pipeline = ChatMiddlewarePipeline()
         assert not pipeline.has_middlewares
 
     def test_init_with_class_middleware(self) -> None:
-        """Test ChatMiddlewarePipeline initialization with class-based middleware."""
+        """クラスベースのミドルウェアでのChatMiddlewarePipeline初期化テスト。"""
         middleware = TestChatMiddleware()
         pipeline = ChatMiddlewarePipeline([middleware])
         assert pipeline.has_middlewares
 
     def test_init_with_function_middleware(self) -> None:
-        """Test ChatMiddlewarePipeline initialization with function-based middleware."""
+        """関数ベースのミドルウェアでのChatMiddlewarePipeline初期化テスト。"""
 
         async def test_middleware(context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
             await next(context)
@@ -559,7 +559,7 @@ class TestChatMiddlewarePipeline:
         assert pipeline.has_middlewares
 
     async def test_execute_no_middleware(self, mock_chat_client: Any) -> None:
-        """Test pipeline execution with no middleware."""
+        """ミドルウェアなしでのパイプライン実行テスト。"""
         pipeline = ChatMiddlewarePipeline()
         messages = [ChatMessage(role=Role.USER, text="test")]
         chat_options = ChatOptions()
@@ -574,7 +574,7 @@ class TestChatMiddlewarePipeline:
         assert result == expected_response
 
     async def test_execute_with_middleware(self, mock_chat_client: Any) -> None:
-        """Test pipeline execution with middleware."""
+        """ミドルウェアありでのパイプライン実行テスト。"""
         execution_order: list[str] = []
 
         class OrderTrackingChatMiddleware(ChatMiddleware):
@@ -603,7 +603,7 @@ class TestChatMiddlewarePipeline:
         assert execution_order == ["test_before", "handler", "test_after"]
 
     async def test_execute_stream_no_middleware(self, mock_chat_client: Any) -> None:
-        """Test pipeline streaming execution with no middleware."""
+        """ミドルウェアなしでのパイプラインストリーミング実行テスト。"""
         pipeline = ChatMiddlewarePipeline()
         messages = [ChatMessage(role=Role.USER, text="test")]
         chat_options = ChatOptions()
@@ -622,7 +622,7 @@ class TestChatMiddlewarePipeline:
         assert updates[1].text == "chunk2"
 
     async def test_execute_stream_with_middleware(self, mock_chat_client: Any) -> None:
-        """Test pipeline streaming execution with middleware."""
+        """ミドルウェアありでのパイプラインストリーミング実行テスト。"""
         execution_order: list[str] = []
 
         class StreamOrderTrackingChatMiddleware(ChatMiddleware):
@@ -658,7 +658,7 @@ class TestChatMiddlewarePipeline:
         assert execution_order == ["test_before", "test_after", "handler_start", "handler_end"]
 
     async def test_execute_with_pre_next_termination(self, mock_chat_client: Any) -> None:
-        """Test pipeline execution with termination before next()."""
+        """next()前に終了した場合のパイプライン実行テスト。"""
         middleware = self.PreNextTerminateChatMiddleware()
         pipeline = ChatMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -667,18 +667,18 @@ class TestChatMiddlewarePipeline:
         execution_order: list[str] = []
 
         async def final_handler(ctx: ChatContext) -> ChatResponse:
-            # Handler should not be executed when terminated before next()
+            # next()前に終了した場合、ハンドラーは実行されてはいけません
             execution_order.append("handler")
             return ChatResponse(messages=[ChatMessage(role=Role.ASSISTANT, text="response")])
 
         response = await pipeline.execute(mock_chat_client, messages, chat_options, context, final_handler)
         assert response is None
         assert context.terminate
-        # Handler should not be called when terminated before next()
+        # next()前に終了した場合、ハンドラーは呼び出されてはいけません
         assert execution_order == []
 
     async def test_execute_with_post_next_termination(self, mock_chat_client: Any) -> None:
-        """Test pipeline execution with termination after next()."""
+        """next()後に終了した場合のパイプライン実行テスト。"""
         middleware = self.PostNextTerminateChatMiddleware()
         pipeline = ChatMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -698,7 +698,7 @@ class TestChatMiddlewarePipeline:
         assert execution_order == ["handler"]
 
     async def test_execute_stream_with_pre_next_termination(self, mock_chat_client: Any) -> None:
-        """Test pipeline streaming execution with termination before next()."""
+        """next()前に終了した場合のパイプラインストリーミング実行テスト。"""
         middleware = self.PreNextTerminateChatMiddleware()
         pipeline = ChatMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -709,7 +709,7 @@ class TestChatMiddlewarePipeline:
         execution_order: list[str] = []
 
         async def final_handler(ctx: ChatContext) -> AsyncIterable[ChatResponseUpdate]:
-            # Handler should not be executed when terminated before next()
+            # next()前に終了した場合、ハンドラーは実行されてはいけません
             execution_order.append("handler_start")
             yield ChatResponseUpdate(contents=[TextContent(text="chunk1")])
             yield ChatResponseUpdate(contents=[TextContent(text="chunk2")])
@@ -720,12 +720,12 @@ class TestChatMiddlewarePipeline:
             updates.append(update)
 
         assert context.terminate
-        # Handler should not be called when terminated before next()
+        # next()前に終了した場合、ハンドラーは呼び出されてはいけません
         assert execution_order == []
         assert not updates
 
     async def test_execute_stream_with_post_next_termination(self, mock_chat_client: Any) -> None:
-        """Test pipeline streaming execution with termination after next()."""
+        """next()後に終了した場合のパイプラインストリーミング実行テスト。"""
         middleware = self.PostNextTerminateChatMiddleware()
         pipeline = ChatMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
@@ -753,10 +753,10 @@ class TestChatMiddlewarePipeline:
 
 
 class TestClassBasedMiddleware:
-    """Test cases for class-based middleware implementations."""
+    """クラスベースのミドルウェア実装のテストケース。"""
 
     async def test_agent_middleware_execution(self, mock_agent: AgentProtocol) -> None:
-        """Test class-based agent middleware execution."""
+        """クラスベースのAgentミドルウェア実行テスト。"""
         metadata_updates: list[str] = []
 
         class MetadataAgentMiddleware(AgentMiddleware):
@@ -786,7 +786,7 @@ class TestClassBasedMiddleware:
         assert metadata_updates == ["before", "handler", "after"]
 
     async def test_function_middleware_execution(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test class-based function middleware execution."""
+        """クラスベースのFunctionミドルウェア実行テスト。"""
         metadata_updates: list[str] = []
 
         class MetadataFunctionMiddleware(FunctionMiddleware):
@@ -819,10 +819,10 @@ class TestClassBasedMiddleware:
 
 
 class TestFunctionBasedMiddleware:
-    """Test cases for function-based middleware implementations."""
+    """関数ベースのミドルウェア実装のテストケース。"""
 
     async def test_agent_function_middleware(self, mock_agent: AgentProtocol) -> None:
-        """Test function-based agent middleware."""
+        """関数ベースのAgentミドルウェアテスト。"""
         execution_order: list[str] = []
 
         async def test_agent_middleware(
@@ -848,7 +848,7 @@ class TestFunctionBasedMiddleware:
         assert execution_order == ["function_before", "handler", "function_after"]
 
     async def test_function_function_middleware(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test function-based function middleware."""
+        """関数ベースのFunctionミドルウェアテスト。"""
         execution_order: list[str] = []
 
         async def test_function_middleware(
@@ -875,10 +875,10 @@ class TestFunctionBasedMiddleware:
 
 
 class TestMixedMiddleware:
-    """Test cases for mixed class and function-based middleware."""
+    """クラスと関数ベースのミドルウェア混合のテストケース。"""
 
     async def test_mixed_agent_middleware(self, mock_agent: AgentProtocol) -> None:
-        """Test mixed class and function-based agent middleware."""
+        """クラスと関数ベースのAgentミドルウェア混合テスト。"""
         execution_order: list[str] = []
 
         class ClassMiddleware(AgentMiddleware):
@@ -910,7 +910,7 @@ class TestMixedMiddleware:
         assert execution_order == ["class_before", "function_before", "handler", "function_after", "class_after"]
 
     async def test_mixed_function_middleware(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test mixed class and function-based function middleware."""
+        """クラスと関数ベースのFunctionミドルウェア混合テスト。"""
         execution_order: list[str] = []
 
         class ClassMiddleware(FunctionMiddleware):
@@ -944,7 +944,7 @@ class TestMixedMiddleware:
         assert execution_order == ["class_before", "function_before", "handler", "function_after", "class_after"]
 
     async def test_mixed_chat_middleware(self, mock_chat_client: Any) -> None:
-        """Test mixed class and function-based chat middleware."""
+        """クラスと関数ベースのChatミドルウェア混合テスト。"""
         execution_order: list[str] = []
 
         class ClassChatMiddleware(ChatMiddleware):
@@ -976,10 +976,10 @@ class TestMixedMiddleware:
 
 
 class TestMultipleMiddlewareOrdering:
-    """Test cases for multiple middleware execution order."""
+    """複数ミドルウェアの実行順序のテストケース。"""
 
     async def test_agent_middleware_execution_order(self, mock_agent: AgentProtocol) -> None:
-        """Test that multiple agent middlewares execute in registration order."""
+        """複数のAgentミドルウェアが登録順に実行されることをテスト。"""
         execution_order: list[str] = []
 
         class FirstMiddleware(AgentMiddleware):
@@ -1030,7 +1030,7 @@ class TestMultipleMiddlewareOrdering:
         assert execution_order == expected_order
 
     async def test_function_middleware_execution_order(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test that multiple function middlewares execute in registration order."""
+        """複数のFunctionミドルウェアが登録順に実行されることをテスト。"""
         execution_order: list[str] = []
 
         class FirstMiddleware(FunctionMiddleware):
@@ -1069,7 +1069,7 @@ class TestMultipleMiddlewareOrdering:
         assert execution_order == expected_order
 
     async def test_chat_middleware_execution_order(self, mock_chat_client: Any) -> None:
-        """Test that multiple chat middlewares execute in registration order."""
+        """複数のChatミドルウェアが登録順に実行されることをテスト。"""
         execution_order: list[str] = []
 
         class FirstChatMiddleware(ChatMiddleware):
@@ -1116,22 +1116,22 @@ class TestMultipleMiddlewareOrdering:
 
 
 class TestContextContentValidation:
-    """Test cases for validating middleware context content."""
+    """ミドルウェアコンテキストの内容検証のテストケース。"""
 
     async def test_agent_context_validation(self, mock_agent: AgentProtocol) -> None:
-        """Test that agent context contains expected data."""
+        """Agentコンテキストに期待されるデータが含まれていることをテスト。"""
 
         class ContextValidationMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Verify context has all expected attributes
+                # コンテキストがすべての期待される属性を持つことを検証。
                 assert hasattr(context, "agent")
                 assert hasattr(context, "messages")
                 assert hasattr(context, "is_streaming")
                 assert hasattr(context, "metadata")
 
-                # Verify context content
+                # コンテキスト内容を検証。
                 assert context.agent is mock_agent
                 assert len(context.messages) == 1
                 assert context.messages[0].role == Role.USER
@@ -1139,7 +1139,7 @@ class TestContextContentValidation:
                 assert context.is_streaming is False
                 assert isinstance(context.metadata, dict)
 
-                # Add custom metadata
+                # カスタムメタデータを追加。
                 context.metadata["validated"] = True
 
                 await next(context)
@@ -1150,7 +1150,7 @@ class TestContextContentValidation:
         context = AgentRunContext(agent=mock_agent, messages=messages)
 
         async def final_handler(ctx: AgentRunContext) -> AgentRunResponse:
-            # Verify metadata was set by middleware
+            # メタデータがミドルウェアによって設定されたことを検証。
             assert ctx.metadata.get("validated") is True
             return AgentRunResponse(messages=[ChatMessage(role=Role.ASSISTANT, text="response")])
 
@@ -1158,7 +1158,7 @@ class TestContextContentValidation:
         assert result is not None
 
     async def test_function_context_validation(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test that function context contains expected data."""
+        """Functionコンテキストに期待されるデータが含まれていることをテスト。"""
 
         class ContextValidationMiddleware(FunctionMiddleware):
             async def process(
@@ -1166,18 +1166,18 @@ class TestContextContentValidation:
                 context: FunctionInvocationContext,
                 next: Callable[[FunctionInvocationContext], Awaitable[None]],
             ) -> None:
-                # Verify context has all expected attributes
+                # コンテキストがすべての期待される属性を持つことを検証。
                 assert hasattr(context, "function")
                 assert hasattr(context, "arguments")
                 assert hasattr(context, "metadata")
 
-                # Verify context content
+                # コンテキスト内容を検証。
                 assert context.function is mock_function
                 assert isinstance(context.arguments, FunctionTestArgs)
                 assert context.arguments.name == "test"
                 assert isinstance(context.metadata, dict)
 
-                # Add custom metadata
+                # カスタムメタデータを追加。
                 context.metadata["validated"] = True
 
                 await next(context)
@@ -1188,7 +1188,7 @@ class TestContextContentValidation:
         context = FunctionInvocationContext(function=mock_function, arguments=arguments)
 
         async def final_handler(ctx: FunctionInvocationContext) -> str:
-            # Verify metadata was set by middleware
+            # メタデータがミドルウェアによって設定されたことを検証。
             assert ctx.metadata.get("validated") is True
             return "result"
 
@@ -1196,11 +1196,11 @@ class TestContextContentValidation:
         assert result == "result"
 
     async def test_chat_context_validation(self, mock_chat_client: Any) -> None:
-        """Test that chat context contains expected data."""
+        """Chatコンテキストに期待されるデータが含まれていることをテスト。"""
 
         class ChatContextValidationMiddleware(ChatMiddleware):
             async def process(self, context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
-                # Verify context has all expected attributes
+                # コンテキストがすべての期待される属性を持つことを検証。
                 assert hasattr(context, "chat_client")
                 assert hasattr(context, "messages")
                 assert hasattr(context, "chat_options")
@@ -1209,7 +1209,7 @@ class TestContextContentValidation:
                 assert hasattr(context, "result")
                 assert hasattr(context, "terminate")
 
-                # Verify context content
+                # コンテキスト内容を検証。
                 assert context.chat_client is mock_chat_client
                 assert len(context.messages) == 1
                 assert context.messages[0].role == Role.USER
@@ -1219,7 +1219,7 @@ class TestContextContentValidation:
                 assert isinstance(context.chat_options, ChatOptions)
                 assert context.chat_options.temperature == 0.5
 
-                # Add custom metadata
+                # カスタムメタデータを追加。
                 context.metadata["validated"] = True
 
                 await next(context)
@@ -1231,7 +1231,7 @@ class TestContextContentValidation:
         context = ChatContext(chat_client=mock_chat_client, messages=messages, chat_options=chat_options)
 
         async def final_handler(ctx: ChatContext) -> ChatResponse:
-            # Verify metadata was set by middleware
+            # メタデータがミドルウェアによって設定されたことを検証。
             assert ctx.metadata.get("validated") is True
             return ChatResponse(messages=[ChatMessage(role=Role.ASSISTANT, text="response")])
 
@@ -1240,10 +1240,10 @@ class TestContextContentValidation:
 
 
 class TestStreamingScenarios:
-    """Test cases for streaming and non-streaming scenarios."""
+    """ストリーミングおよび非ストリーミングシナリオのテストケース。"""
 
     async def test_streaming_flag_validation(self, mock_agent: AgentProtocol) -> None:
-        """Test that is_streaming flag is correctly set for streaming calls."""
+        """ストリーミング呼び出しでis_streamingフラグが正しく設定されることをテスト。"""
         streaming_flags: list[bool] = []
 
         class StreamingFlagMiddleware(AgentMiddleware):
@@ -1257,7 +1257,7 @@ class TestStreamingScenarios:
         pipeline = AgentMiddlewarePipeline([middleware])
         messages = [ChatMessage(role=Role.USER, text="test")]
 
-        # Test non-streaming
+        # 非ストリーミングのテスト。
         context = AgentRunContext(agent=mock_agent, messages=messages)
 
         async def final_handler(ctx: AgentRunContext) -> AgentRunResponse:
@@ -1266,7 +1266,7 @@ class TestStreamingScenarios:
 
         await pipeline.execute(mock_agent, messages, context, final_handler)
 
-        # Test streaming
+        # ストリーミングのテスト。
         context_stream = AgentRunContext(agent=mock_agent, messages=messages)
 
         async def final_stream_handler(ctx: AgentRunContext) -> AsyncIterable[AgentRunResponseUpdate]:
@@ -1277,11 +1277,11 @@ class TestStreamingScenarios:
         async for update in pipeline.execute_stream(mock_agent, messages, context_stream, final_stream_handler):
             updates.append(update)
 
-        # Verify flags: [non-streaming middleware, non-streaming handler, streaming middleware, streaming handler]
+        # フラグを検証: [非ストリーミングミドルウェア、非ストリーミングハンドラー、ストリーミングミドルウェア、ストリーミングハンドラー]
         assert streaming_flags == [False, False, True, True]
 
     async def test_streaming_middleware_behavior(self, mock_agent: AgentProtocol) -> None:
-        """Test middleware behavior with streaming responses."""
+        """ストリーミングレスポンスでのミドルウェアの動作をテスト。"""
         chunks_processed: list[str] = []
 
         class StreamProcessingMiddleware(AgentMiddleware):
@@ -1320,7 +1320,7 @@ class TestStreamingScenarios:
         ]
 
     async def test_chat_streaming_flag_validation(self, mock_chat_client: Any) -> None:
-        """Test that is_streaming flag is correctly set for chat streaming calls."""
+        """チャットストリーミング呼び出しでis_streamingフラグが正しく設定されることをテスト。"""
         streaming_flags: list[bool] = []
 
         class ChatStreamingFlagMiddleware(ChatMiddleware):
@@ -1333,7 +1333,7 @@ class TestStreamingScenarios:
         messages = [ChatMessage(role=Role.USER, text="test")]
         chat_options = ChatOptions()
 
-        # Test non-streaming
+        # 非ストリーミングのテスト。
         context = ChatContext(chat_client=mock_chat_client, messages=messages, chat_options=chat_options)
 
         async def final_handler(ctx: ChatContext) -> ChatResponse:
@@ -1342,7 +1342,7 @@ class TestStreamingScenarios:
 
         await pipeline.execute(mock_chat_client, messages, chat_options, context, final_handler)
 
-        # Test streaming
+        # ストリーミングのテスト。
         context_stream = ChatContext(
             chat_client=mock_chat_client, messages=messages, chat_options=chat_options, is_streaming=True
         )
@@ -1357,11 +1357,11 @@ class TestStreamingScenarios:
         ):
             updates.append(update)
 
-        # Verify flags: [non-streaming middleware, non-streaming handler, streaming middleware, streaming handler]
+        # フラグを検証: [非ストリーミングミドルウェア、非ストリーミングハンドラー、ストリーミングミドルウェア、ストリーミングハンドラー]
         assert streaming_flags == [False, False, True, True]
 
     async def test_chat_streaming_middleware_behavior(self, mock_chat_client: Any) -> None:
-        """Test chat middleware behavior with streaming responses."""
+        """ストリーミングレスポンスでのチャットミドルウェアの動作をテスト。"""
         chunks_processed: list[str] = []
 
         class ChatStreamProcessingMiddleware(ChatMiddleware):
@@ -1403,24 +1403,24 @@ class TestStreamingScenarios:
         ]
 
 
-# region Helper classes and fixtures
+# ヘルパークラスとフィクスチャの領域
 
 
 class FunctionTestArgs(BaseModel):
-    """Test arguments for function middleware tests."""
+    """関数ミドルウェアテストの引数。"""
 
     name: str = Field(description="Test name parameter")
 
 
 class TestAgentMiddleware(AgentMiddleware):
-    """Test implementation of AgentMiddleware."""
+    """AgentMiddlewareの実装テスト。"""
 
     async def process(self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]) -> None:
         await next(context)
 
 
 class TestFunctionMiddleware(FunctionMiddleware):
-    """Test implementation of FunctionMiddleware."""
+    """FunctionMiddlewareの実装テスト。"""
 
     async def process(
         self, context: FunctionInvocationContext, next: Callable[[FunctionInvocationContext], Awaitable[None]]
@@ -1429,29 +1429,29 @@ class TestFunctionMiddleware(FunctionMiddleware):
 
 
 class TestChatMiddleware(ChatMiddleware):
-    """Test implementation of ChatMiddleware."""
+    """ChatMiddlewareの実装テスト。"""
 
     async def process(self, context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
         await next(context)
 
 
 class MockFunctionArgs(BaseModel):
-    """Test arguments for function middleware tests."""
+    """関数ミドルウェアテストの引数。"""
 
     name: str = Field(description="Test name parameter")
 
 
 class TestMiddlewareExecutionControl:
-    """Test cases for middleware execution control (when next() is called vs not called)."""
+    """ミドルウェア実行制御のテストケース（next()が呼ばれた場合と呼ばれなかった場合）。"""
 
     async def test_agent_middleware_no_next_no_execution(self, mock_agent: AgentProtocol) -> None:
-        """Test that when agent middleware doesn't call next(), no execution happens."""
+        """Agentミドルウェアがnext()を呼ばない場合、実行が起こらないことをテスト。"""
 
         class NoNextMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Don't call next() - this should prevent any execution
+                # next()を呼ばない - これにより実行が防止されるはず。
                 pass
 
         middleware = NoNextMiddleware()
@@ -1468,21 +1468,21 @@ class TestMiddlewareExecutionControl:
 
         result = await pipeline.execute(mock_agent, messages, context, final_handler)
 
-        # Verify no execution happened - should return empty AgentRunResponse
+        # 実行が起こらなかったことを検証 - 空のAgentRunResponseを返すべき。
         assert result is not None
         assert isinstance(result, AgentRunResponse)
-        assert result.messages == []  # Empty response
+        assert result.messages == []  # 空のレスポンス。
         assert not handler_called
         assert context.result is None
 
     async def test_agent_middleware_no_next_no_streaming_execution(self, mock_agent: AgentProtocol) -> None:
-        """Test that when agent middleware doesn't call next(), no streaming execution happens."""
+        """Agentミドルウェアがnext()を呼ばない場合、ストリーミング実行が起こらないことをテスト。"""
 
         class NoNextStreamingMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Don't call next() - this should prevent any execution
+                # next()を呼ばない - これにより実行が防止されるはず。
                 pass
 
         middleware = NoNextStreamingMiddleware()
@@ -1497,18 +1497,18 @@ class TestMiddlewareExecutionControl:
             handler_called = True
             yield AgentRunResponseUpdate(contents=[TextContent(text="should not execute")])
 
-        # When middleware doesn't call next(), streaming should yield no updates
+        # middlewareがnext()を呼び出さない場合、ストリーミングは更新を生成しないはずです
         updates: list[AgentRunResponseUpdate] = []
         async for update in pipeline.execute_stream(mock_agent, messages, context, final_handler):
             updates.append(update)
 
-        # Verify no execution happened and no updates were yielded
+        # 実行が行われず、更新が生成されなかったことを検証します
         assert len(updates) == 0
         assert not handler_called
         assert context.result is None
 
     async def test_function_middleware_no_next_no_execution(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test that when function middleware doesn't call next(), no execution happens."""
+        """function middlewareがnext()を呼び出さない場合、実行が行われないことをテストします。"""
 
         class FunctionTestArgs(BaseModel):
             name: str = Field(description="Test name parameter")
@@ -1519,7 +1519,7 @@ class TestMiddlewareExecutionControl:
                 context: FunctionInvocationContext,
                 next: Callable[[FunctionInvocationContext], Awaitable[None]],
             ) -> None:
-                # Don't call next() - this should prevent any execution
+                # next()を呼び出さない - これにより実行が防止されるはずです
                 pass
 
         middleware = NoNextFunctionMiddleware()
@@ -1536,13 +1536,13 @@ class TestMiddlewareExecutionControl:
 
         result = await pipeline.execute(mock_function, arguments, context, final_handler)
 
-        # Verify no execution happened
+        # 実行が行われなかったことを検証します
         assert result is None
         assert not handler_called
         assert context.result is None
 
     async def test_multiple_middlewares_early_stop(self, mock_agent: AgentProtocol) -> None:
-        """Test that when first middleware doesn't call next(), subsequent middlewares are not called."""
+        """最初のmiddlewareがnext()を呼び出さない場合、後続のmiddlewareが呼び出されないことをテストします。"""
         execution_order: list[str] = []
 
         class FirstMiddleware(AgentMiddleware):
@@ -1550,7 +1550,7 @@ class TestMiddlewareExecutionControl:
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
                 execution_order.append("first")
-                # Don't call next() - this should stop the pipeline
+                # next()を呼び出さない - これによりパイプラインが停止するはずです
 
         class SecondMiddleware(AgentMiddleware):
             async def process(
@@ -1572,19 +1572,19 @@ class TestMiddlewareExecutionControl:
 
         result = await pipeline.execute(mock_agent, messages, context, final_handler)
 
-        # Verify only first middleware was called and empty response returned
+        # 最初のmiddlewareのみが呼び出され、空のレスポンスが返されたことを検証します
         assert execution_order == ["first"]
         assert result is not None
         assert isinstance(result, AgentRunResponse)
-        assert result.messages == []  # Empty response
+        assert result.messages == []  # 空のレスポンス
         assert not handler_called
 
     async def test_chat_middleware_no_next_no_execution(self, mock_chat_client: Any) -> None:
-        """Test that when chat middleware doesn't call next(), no execution happens."""
+        """chat middlewareがnext()を呼び出さない場合、実行が行われないことをテストします。"""
 
         class NoNextChatMiddleware(ChatMiddleware):
             async def process(self, context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
-                # Don't call next() - this should prevent any execution
+                # next()を呼び出さない - これにより実行が防止されるはずです
                 pass
 
         middleware = NoNextChatMiddleware()
@@ -1602,17 +1602,17 @@ class TestMiddlewareExecutionControl:
 
         result = await pipeline.execute(mock_chat_client, messages, chat_options, context, final_handler)
 
-        # Verify no execution happened
+        # 実行が行われなかったことを検証します
         assert result is None
         assert not handler_called
         assert context.result is None
 
     async def test_chat_middleware_no_next_no_streaming_execution(self, mock_chat_client: Any) -> None:
-        """Test that when chat middleware doesn't call next(), no streaming execution happens."""
+        """chat middlewareがnext()を呼び出さない場合、ストリーミング実行が行われないことをテストします。"""
 
         class NoNextStreamingChatMiddleware(ChatMiddleware):
             async def process(self, context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
-                # Don't call next() - this should prevent any execution
+                # next()を呼び出さない - これにより実行が防止されるはずです
                 pass
 
         middleware = NoNextStreamingChatMiddleware()
@@ -1630,24 +1630,24 @@ class TestMiddlewareExecutionControl:
             handler_called = True
             yield ChatResponseUpdate(contents=[TextContent(text="should not execute")])
 
-        # When middleware doesn't call next(), streaming should yield no updates
+        # middlewareがnext()を呼び出さない場合、ストリーミングは更新を生成しないはずです
         updates: list[ChatResponseUpdate] = []
         async for update in pipeline.execute_stream(mock_chat_client, messages, chat_options, context, final_handler):
             updates.append(update)
 
-        # Verify no execution happened and no updates were yielded
+        # 実行が行われず、更新が生成されなかったことを検証します
         assert len(updates) == 0
         assert not handler_called
         assert context.result is None
 
     async def test_multiple_chat_middlewares_early_stop(self, mock_chat_client: Any) -> None:
-        """Test that when first chat middleware doesn't call next(), subsequent middlewares are not called."""
+        """最初のchat middlewareがnext()を呼び出さない場合、後続のmiddlewareが呼び出されないことをテストします。"""
         execution_order: list[str] = []
 
         class FirstChatMiddleware(ChatMiddleware):
             async def process(self, context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
                 execution_order.append("first")
-                # Don't call next() - this should stop the pipeline
+                # next()を呼び出さない - これによりパイプラインが停止するはずです
 
         class SecondChatMiddleware(ChatMiddleware):
             async def process(self, context: ChatContext, next: Callable[[ChatContext], Awaitable[None]]) -> None:
@@ -1668,7 +1668,7 @@ class TestMiddlewareExecutionControl:
 
         result = await pipeline.execute(mock_chat_client, messages, chat_options, context, final_handler)
 
-        # Verify only first middleware was called and no result returned
+        # 最初のmiddlewareのみが呼び出され、結果が返されなかったことを検証します
         assert execution_order == ["first"]
         assert result is None
         assert not handler_called
@@ -1676,7 +1676,7 @@ class TestMiddlewareExecutionControl:
 
 @pytest.fixture
 def mock_agent() -> AgentProtocol:
-    """Mock agent for testing."""
+    """テスト用のMock agent。"""
     agent = MagicMock(spec=AgentProtocol)
     agent.name = "test_agent"
     return agent
@@ -1684,7 +1684,7 @@ def mock_agent() -> AgentProtocol:
 
 @pytest.fixture
 def mock_function() -> AIFunction[Any, Any]:
-    """Mock function for testing."""
+    """テスト用のMock function。"""
     function = MagicMock(spec=AIFunction[Any, Any])
     function.name = "test_function"
     return function
@@ -1692,7 +1692,7 @@ def mock_function() -> AIFunction[Any, Any]:
 
 @pytest.fixture
 def mock_chat_client() -> Any:
-    """Mock chat client for testing."""
+    """テスト用のMock chat client。"""
     from agent_framework._clients import ChatClientProtocol
 
     client = MagicMock(spec=ChatClientProtocol)

@@ -15,7 +15,7 @@ showing Pydantic model integration for type-safe response parsing and data extra
 
 
 class OutputStruct(BaseModel):
-    """A structured output for testing purposes."""
+    """テスト目的のための構造化された出力。"""
 
     city: str
     description: str
@@ -24,20 +24,20 @@ class OutputStruct(BaseModel):
 async def non_streaming_example() -> None:
     print("=== Non-streaming example ===")
 
-    # Create an OpenAI Responses agent
+    # OpenAI Responsesエージェントを作成する
     agent = OpenAIResponsesClient().create_agent(
         name="CityAgent",
         instructions="You are a helpful agent that describes cities in a structured format.",
     )
 
-    # Ask the agent about a city
+    # エージェントに都市について尋ねる
     query = "Tell me about Paris, France"
     print(f"User: {query}")
 
-    # Get structured response from the agent using response_format parameter
+    # response_formatパラメータを使用してエージェントから構造化されたレスポンスを取得する
     result = await agent.run(query, response_format=OutputStruct)
 
-    # Access the structured output directly from the response value
+    # レスポンス値から直接構造化された出力にアクセスする
     if result.value:
         structured_data: OutputStruct = result.value  # type: ignore
         print("Structured Output Agent (from result.value):")
@@ -50,24 +50,24 @@ async def non_streaming_example() -> None:
 async def streaming_example() -> None:
     print("=== Streaming example ===")
 
-    # Create an OpenAI Responses agent
+    # OpenAI Responsesエージェントを作成する
     agent = OpenAIResponsesClient().create_agent(
         name="CityAgent",
         instructions="You are a helpful agent that describes cities in a structured format.",
     )
 
-    # Ask the agent about a city
+    # エージェントに都市について尋ねる
     query = "Tell me about Tokyo, Japan"
     print(f"User: {query}")
 
-    # Get structured response from streaming agent using AgentRunResponse.from_agent_response_generator
-    # This method collects all streaming updates and combines them into a single AgentRunResponse
+    # AgentRunResponse.from_agent_response_generatorを使用してストリーミングエージェントから構造化されたレスポンスを取得する
+    # このメソッドはすべてのストリーミング更新を収集し、それらを単一のAgentRunResponseに結合します
     result = await AgentRunResponse.from_agent_response_generator(
         agent.run_stream(query, response_format=OutputStruct),
         output_format_type=OutputStruct,
     )
 
-    # Access the structured output directly from the response value
+    # レスポンス値から直接構造化された出力にアクセスする
     if result.value:
         structured_data: OutputStruct = result.value  # type: ignore
         print("Structured Output (from streaming with AgentRunResponse.from_agent_response_generator):")

@@ -1,17 +1,17 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""High-level builder for conversational handoff workflows.
+"""会話のハンドオフワークフローのためのハイレベルビルダー。
 
-The handoff pattern models a coordinator agent that optionally routes
-control to specialist agents before handing the conversation back to the user.
-The flow is intentionally cyclical:
+ハンドオフパターンは、コーディネーターAgentがオプションで
+スペシャリストAgentに制御をルーティングし、その後会話をユーザーに戻すモデルです。
+フローは意図的に循環的です：
 
     user input -> coordinator -> optional specialist -> request user input -> ...
 
-Key properties:
-- The entire conversation is maintained and reused on every hop
-- The coordinator signals a handoff by invoking a tool call that names the specialist
-- After a specialist responds, the workflow immediately requests new user input
+主な特徴:
+- 会話全体が維持され、各ホップで再利用される
+- コーディネーターはスペシャリストの名前を指定するツールコールを呼び出してハンドオフを示す
+- スペシャリストが応答した後、ワークフローは即座に新しいユーザー入力を要求する
 """
 
 import logging
@@ -57,26 +57,24 @@ _HANDOFF_TOOL_PATTERN = re.compile(r"(?:handoff|transfer)[_\s-]*to[_\s-]*(?P<tar
 
 
 def _create_handoff_tool(alias: str, description: str | None = None) -> AIFunction[Any, Any]:
-    """Construct the synthetic handoff tool that signals routing to `alias`."""
+    """`alias`へのルーティングを示す合成ハンドオフツールを構築します。"""
     sanitized = sanitize_identifier(alias)
     tool_name = f"handoff_to_{sanitized}"
     doc = description or f"Handoff to the {alias} agent."
 
-    # Note: approval_mode is intentionally NOT set for handoff tools.
-    # Handoff tools are framework-internal signals that trigger routing logic,
-    # not actual function executions. They are automatically intercepted and
-    # never actually execute, so approval is unnecessary and causes issues
-    # with tool_calls/responses pairing when cleaning conversations.
+    # 注意：approval_modeはハンドオフツールには意図的に設定されていません。
+    # ハンドオフツールはフレームワーク内部の信号であり、ルーティングロジックをトリガーします。 実際の関数実行ではありません。自動的にインターセプトされ、
+    # 実際には実行されないため、承認は不要であり、 会話のクリーンアップ時にtool_calls/responsesのペアリングに問題を引き起こします。
     @ai_function(name=tool_name, description=doc)
     def _handoff_tool(context: str | None = None) -> str:
-        """Return a deterministic acknowledgement that encodes the target alias."""
+        """ターゲットのaliasをエンコードした決定論的な承認を返します。"""
         return f"Handoff to {alias}"
 
     return _handoff_tool
 
 
 def _clone_chat_agent(agent: ChatAgent) -> ChatAgent:
-    """Produce a deep copy of the ChatAgent while preserving runtime configuration."""
+    """ChatAgentのランタイム設定を保持しつつディープコピーを作成します。"""
     options = agent.chat_options
     middleware = list(agent.middleware or [])
 
@@ -110,7 +108,7 @@ def _clone_chat_agent(agent: ChatAgent) -> ChatAgent:
 
 @dataclass
 class HandoffUserInputRequest(RequestInfoMessage):
-    """Request message emitted when the workflow needs fresh user input."""
+    """ワークフローが新しいユーザー入力を必要とするときに発行されるリクエストメッセージ。"""
 
     conversation: list[ChatMessage] = field(default_factory=lambda: [])  # type: ignore[misc]
     awaiting_agent_id: str | None = None
@@ -119,16 +117,16 @@ class HandoffUserInputRequest(RequestInfoMessage):
 
 @dataclass
 class _ConversationWithUserInput:
-    """Internal message carrying full conversation + new user messages from gateway to coordinator."""
+    """ゲートウェイからコーディネーターへ送られる、完全な会話と新しいユーザーメッセージを含む内部メッセージ。"""
 
     full_conversation: list[ChatMessage] = field(default_factory=lambda: [])  # type: ignore[misc]
 
 
 class _AutoHandoffMiddleware(FunctionMiddleware):
-    """Intercept handoff tool invocations and short-circuit execution with synthetic results."""
+    """ハンドオフツールの呼び出しをインターセプトし、合成結果で実行をショートサーキットします。"""
 
     def __init__(self, handoff_targets: Mapping[str, str]) -> None:
-        """Initialise middleware with the mapping from tool name to specialist id."""
+        """ツール名からスペシャリストIDへのマッピングでミドルウェアを初期化します。"""
         self._targets = {name.lower(): target for name, target in handoff_targets.items()}
 
     async def process(
@@ -136,7 +134,7 @@ class _AutoHandoffMiddleware(FunctionMiddleware):
         context: FunctionInvocationContext,
         next: Callable[[FunctionInvocationContext], Awaitable[None]],
     ) -> None:
-        """Intercept matching handoff tool calls and inject synthetic results."""
+        """一致するハンドオフツール呼び出しをインターセプトし、合成結果を注入します。"""
         name = getattr(context.function, "name", "")
         normalized = name.lower() if name else ""
         target = self._targets.get(normalized)
@@ -144,22 +142,22 @@ class _AutoHandoffMiddleware(FunctionMiddleware):
             await next(context)
             return
 
-        # Short-circuit execution and provide deterministic response payload for the tool call.
+        # 実行をショートサーキットし、ツール呼び出しに対して決定論的な応答ペイロードを提供します。
         context.result = {"handoff_to": target}
         context.terminate = True
 
 
 class _InputToConversation(Executor):
-    """Normalises initial workflow input into a list[ChatMessage]."""
+    """初期ワークフロー入力をlist[ChatMessage]に正規化します。"""
 
     @handler
     async def from_str(self, prompt: str, ctx: WorkflowContext[list[ChatMessage]]) -> None:
-        """Convert a raw user prompt into a conversation containing a single user message."""
+        """生のユーザープロンプトを単一のユーザーメッセージを含む会話に変換します。"""
         await ctx.send_message([ChatMessage(Role.USER, text=prompt)])
 
     @handler
     async def from_message(self, message: ChatMessage, ctx: WorkflowContext[list[ChatMessage]]) -> None:  # type: ignore[name-defined]
-        """Pass through an existing chat message as the initial conversation."""
+        """既存のチャットメッセージを初期会話としてそのまま通過させます。"""
         await ctx.send_message([message])
 
     @handler
@@ -168,20 +166,20 @@ class _InputToConversation(Executor):
         messages: list[ChatMessage],
         ctx: WorkflowContext[list[ChatMessage]],
     ) -> None:  # type: ignore[name-defined]
-        """Forward a list of chat messages as the starting conversation history."""
+        """チャットメッセージのリストを開始会話履歴として転送します。"""
         await ctx.send_message(list(messages))
 
 
 @dataclass
 class _HandoffResolution:
-    """Result of handoff detection containing the target alias and originating call."""
+    """ハンドオフ検出の結果で、ターゲットaliasと発信元呼び出しを含みます。"""
 
     target: str
     function_call: FunctionCallContent | None = None
 
 
 def _resolve_handoff_target(agent_response: AgentRunResponse) -> _HandoffResolution | None:
-    """Detect handoff intent from tool call metadata."""
+    """ツールコールのメタデータからハンドオフ意図を検出します。"""
     for message in agent_response.messages:
         resolution = _resolution_from_message(message)
         if resolution:
@@ -197,7 +195,7 @@ def _resolve_handoff_target(agent_response: AgentRunResponse) -> _HandoffResolut
 
 
 def _resolution_from_message(message: ChatMessage) -> _HandoffResolution | None:
-    """Inspect an assistant message for embedded handoff tool metadata."""
+    """アシスタントメッセージを検査し、埋め込まれたハンドオフツールのメタデータを抽出します。"""
     for content in getattr(message, "contents", ()):
         if isinstance(content, FunctionApprovalRequestContent):
             resolution = _resolution_from_function_call(content.function_call)
@@ -211,7 +209,7 @@ def _resolution_from_message(message: ChatMessage) -> _HandoffResolution | None:
 
 
 def _resolution_from_function_call(function_call: FunctionCallContent | None) -> _HandoffResolution | None:
-    """Wrap the target resolved from a function call in a `_HandoffResolution`."""
+    """関数呼び出しから解決されたターゲットを`_HandoffResolution`でラップします。"""
     if function_call is None:
         return None
     target = _target_from_function_call(function_call)
@@ -221,7 +219,7 @@ def _resolution_from_function_call(function_call: FunctionCallContent | None) ->
 
 
 def _target_from_function_call(function_call: FunctionCallContent) -> str | None:
-    """Extract the handoff target from the tool name or structured arguments."""
+    """ツール名または構造化引数からハンドオフターゲットを抽出します。"""
     name_candidate = _target_from_tool_name(function_call.name)
     if name_candidate:
         return name_candidate
@@ -243,7 +241,7 @@ def _target_from_function_call(function_call: FunctionCallContent) -> str | None
 
 
 def _target_from_tool_name(name: str | None) -> str | None:
-    """Parse the specialist alias encoded in a handoff tool's name."""
+    """ハンドオフツール名にエンコードされたスペシャリストのaliasを解析します。"""
     if not name:
         return None
     match = _HANDOFF_TOOL_PATTERN.search(name)
@@ -255,7 +253,7 @@ def _target_from_tool_name(name: str | None) -> str | None:
 
 
 class _HandoffCoordinator(BaseGroupChatOrchestrator):
-    """Coordinates agent-to-agent transfers and user turn requests."""
+    """Agent間の転送とユーザーターン要求を調整します。"""
 
     def __init__(
         self,
@@ -267,7 +265,7 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         id: str,
         handoff_tool_targets: Mapping[str, str] | None = None,
     ) -> None:
-        """Create a coordinator that manages routing between specialists and the user."""
+        """スペシャリストとユーザー間のルーティングを管理するコーディネーターを作成します。"""
         super().__init__(id)
         self._starting_agent_id = starting_agent_id
         self._specialist_by_alias = dict(specialist_ids)
@@ -277,7 +275,7 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         self._handoff_tool_targets = {k.lower(): v for k, v in (handoff_tool_targets or {}).items()}
 
     def _get_author_name(self) -> str:
-        """Get the coordinator name for orchestrator-generated messages."""
+        """オーケストレーター生成メッセージのためのコーディネーター名を取得します。"""
         return "handoff_coordinator"
 
     @handler
@@ -286,8 +284,8 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         response: AgentExecutorResponse,
         ctx: WorkflowContext[AgentExecutorRequest | list[ChatMessage], list[ChatMessage]],
     ) -> None:
-        """Process an agent's response and determine whether to route, request input, or terminate."""
-        # Hydrate coordinator state (and detect new run) using checkpointable executor state
+        """エージェントの応答を処理し、ルーティング、入力要求、または終了を決定します。"""
+        # チェックポイント可能なエグゼキューター状態を使用してコーディネーター状態を復元（新しい実行を検出）します。
         state = await ctx.get_executor_state()
         if not state:
             self._clear_conversation()
@@ -299,17 +297,15 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         source = ctx.get_source_executor_id()
         is_starting_agent = source == self._starting_agent_id
 
-        # On first turn of a run, conversation is empty
-        # Track new messages only, build authoritative history incrementally
+        # 実行の最初のターンでは会話は空です 新しいメッセージのみを追跡し、権威ある履歴を段階的に構築します
         conversation_msgs = self._get_conversation()
         if not conversation_msgs:
-            # First response from starting agent - initialize with authoritative conversation snapshot
-            # Keep the FULL conversation including tool calls (OpenAI SDK default behavior)
+            # 開始エージェントからの最初の応答 - 権威ある会話スナップショットで初期化 ツールコールを含む完全な会話を保持（OpenAI
+            # SDKのデフォルト動作）
             full_conv = self._conversation_from_response(response)
             self._conversation = list(full_conv)
         else:
-            # Subsequent responses - append only new messages from this agent
-            # Keep ALL messages including tool calls to maintain complete history
+            # 以降の応答 - このエージェントからの新しいメッセージのみを追加 完全な履歴を維持するためにツールコールを含むすべてのメッセージを保持
             new_messages = response.agent_run_response.messages or []
             self._conversation.extend(new_messages)
 
@@ -317,17 +313,17 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
 
         conversation = list(self._conversation)
 
-        # Check for handoff from ANY agent (starting agent or specialist)
+        # 任意のエージェント（開始エージェントまたはスペシャリスト）からのハンドオフをチェックします。
         target = self._resolve_specialist(response.agent_run_response, conversation)
         if target is not None:
             await self._persist_state(ctx)
-            # Clean tool-related content before sending to next agent
+            # 次のエージェントに送信する前にツール関連の内容をクリーンアップします。
             cleaned = clean_conversation_for_handoff(conversation)
             request = AgentExecutorRequest(messages=cleaned, should_respond=True)
             await ctx.send_message(request, target_id=target)
             return
 
-        # No handoff detected - response must come from starting agent or known specialist
+        # ハンドオフが検出されない場合 - 応答は開始エージェントまたは既知のスペシャリストからのものでなければなりません。
         if not is_starting_agent and source not in self._specialist_ids:
             raise RuntimeError(f"HandoffCoordinator received response from unknown executor '{source}'.")
 
@@ -346,24 +342,24 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         message: _ConversationWithUserInput,
         ctx: WorkflowContext[AgentExecutorRequest, list[ChatMessage]],
     ) -> None:
-        """Receive full conversation with new user input from gateway, update history, trim for agent."""
-        # Update authoritative conversation
+        """ゲートウェイから新しいユーザー入力を含む完全な会話を受け取り、履歴を更新し、エージェント用にトリムします。"""
+        # 権威ある会話を更新します。
         self._conversation = list(message.full_conversation)
         await self._persist_state(ctx)
 
-        # Check termination before sending to agent
+        # エージェントに送信する前に終了をチェックします。
         if await self._check_termination():
             logger.info("Handoff workflow termination condition met. Ending conversation.")
             await ctx.yield_output(list(self._conversation))
             return
 
-        # Clean before sending to starting agent
+        # 開始エージェントに送信する前にクリーンアップします。
         cleaned = clean_conversation_for_handoff(self._conversation)
         request = AgentExecutorRequest(messages=cleaned, should_respond=True)
         await ctx.send_message(request, target_id=self._starting_agent_id)
 
     def _resolve_specialist(self, agent_response: AgentRunResponse, conversation: list[ChatMessage]) -> str | None:
-        """Resolve the specialist executor id requested by the agent response, if any."""
+        """エージェント応答で要求されたスペシャリストエグゼキューターIDを解決します（存在する場合）。"""
         resolution = _resolve_handoff_target(agent_response)
         if not resolution:
             return None
@@ -397,7 +393,7 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         function_call: FunctionCallContent,
         resolved_id: str,
     ) -> None:
-        """Append a synthetic tool result acknowledging the resolved specialist id."""
+        """解決されたスペシャリストIDを承認する合成ツール結果を追加します。"""
         call_id = getattr(function_call, "call_id", None)
         if not call_id:
             return
@@ -409,12 +405,12 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
             contents=[result_content],
             author_name=function_call.name,
         )
-        # Add tool acknowledgement to both the conversation being sent and the full history
+        # ツール承認を送信中の会話と完全な履歴の両方に追加します。
         conversation.extend((tool_message,))
         self._append_messages((tool_message,))
 
     def _conversation_from_response(self, response: AgentExecutorResponse) -> list[ChatMessage]:
-        """Return the authoritative conversation snapshot from an executor response."""
+        """エグゼキューター応答から権威ある会話スナップショットを返します。"""
         conversation = response.full_conversation
         if conversation is None:
             raise RuntimeError(
@@ -423,34 +419,37 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         return list(conversation)
 
     async def _persist_state(self, ctx: WorkflowContext[Any, Any]) -> None:
-        """Store authoritative conversation snapshot without losing rich metadata."""
+        """豊富なメタデータを失わずに権威ある会話スナップショットを保存します。"""
         state_payload = self.snapshot_state()
         await ctx.set_executor_state(state_payload)
 
     def _snapshot_pattern_metadata(self) -> dict[str, Any]:
-        """Serialize pattern-specific state.
+        """パターン固有の状態をシリアライズします。
 
-        Handoff has no additional metadata beyond base conversation state.
+        ハンドオフは基本会話状態以外の追加メタデータを持ちません。
 
         Returns:
-            Empty dict (no pattern-specific state)
+            空の辞書（パターン固有の状態なし）
+
         """
         return {}
 
     def _restore_pattern_metadata(self, metadata: dict[str, Any]) -> None:
-        """Restore pattern-specific state.
+        """パターン固有の状態を復元します。
 
-        Handoff has no additional metadata beyond base conversation state.
+        ハンドオフは基本会話状態以外の追加メタデータを持ちません。
 
         Args:
-            metadata: Pattern-specific state dict (ignored)
+            metadata: パターン固有の状態辞書（無視されます）
+
         """
         pass
 
     def _restore_conversation_from_state(self, state: Mapping[str, Any]) -> list[ChatMessage]:
-        """Rehydrate the coordinator's conversation history from checkpointed state.
+        """チェックポイントされた状態からコーディネーターの会話履歴を復元します。
 
-        DEPRECATED: Use restore_state() instead. Kept for backward compatibility.
+        DEPRECATED: 代わりにrestore_state()を使用してください。後方互換性のために保持されています。
+
         """
         from ._orchestration_state import OrchestrationState
 
@@ -459,17 +458,17 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
         return list(temp_state.conversation)
 
     def _apply_response_metadata(self, conversation: list[ChatMessage], agent_response: AgentRunResponse) -> None:
-        """Merge top-level response metadata into the latest assistant message."""
+        """トップレベルの応答メタデータを最新のアシスタントメッセージにマージします。"""
         if not agent_response.additional_properties:
             return
 
-        # Find the most recent assistant message contributed by this response
+        # この応答によって寄与された最新のアシスタントメッセージを見つけます。
         for message in reversed(conversation):
             if message.role == Role.ASSISTANT:
                 metadata = agent_response.additional_properties or {}
                 if not metadata:
                     return
-                # Merge metadata without mutating shared dict from agent response
+                # エージェント応答から共有辞書を変更せずにメタデータをマージします。
                 merged = dict(message.additional_properties or {})
                 for key, value in metadata.items():
                     merged.setdefault(key, value)
@@ -478,7 +477,7 @@ class _HandoffCoordinator(BaseGroupChatOrchestrator):
 
 
 class _UserInputGateway(Executor):
-    """Bridges conversation context with RequestInfoExecutor and re-enters the loop."""
+    """会話コンテキストをRequestInfoExecutorと橋渡しし、ループに再入します。"""
 
     def __init__(
         self,
@@ -488,7 +487,7 @@ class _UserInputGateway(Executor):
         prompt: str | None,
         id: str,
     ) -> None:
-        """Initialise the gateway that requests user input and forwards responses."""
+        """ユーザー入力を要求し応答を転送するゲートウェイを初期化します。"""
         super().__init__(id)
         self._request_executor_id = request_executor_id
         self._starting_agent_id = starting_agent_id
@@ -500,7 +499,7 @@ class _UserInputGateway(Executor):
         conversation: list[ChatMessage],
         ctx: WorkflowContext[HandoffUserInputRequest],
     ) -> None:
-        """Emit a `HandoffUserInputRequest` capturing the conversation snapshot."""
+        """会話スナップショットをキャプチャする`HandoffUserInputRequest`を発行します。"""
         if not conversation:
             raise ValueError("Handoff workflow requires non-empty conversation before requesting user input.")
         request = HandoffUserInputRequest(
@@ -517,28 +516,27 @@ class _UserInputGateway(Executor):
         response: RequestResponse[HandoffUserInputRequest, Any],
         ctx: WorkflowContext[_ConversationWithUserInput],
     ) -> None:
-        """Convert user input responses back into chat messages and resume the workflow."""
-        # Reconstruct full conversation with new user input
+        """ユーザー入力応答をチャットメッセージに変換し、ワークフローを再開します。"""
+        # 新しいユーザー入力を含む完全な会話を再構築します。
         conversation = list(response.original_request.conversation)
         user_messages = _as_user_messages(response.data)
         conversation.extend(user_messages)
 
-        # Send full conversation back to coordinator (not trimmed)
-        # Coordinator will update its authoritative history and trim for agent
+        # 完全な会話をコーディネーターに返送します（トリムされていません） コーディネーターは権威ある履歴を更新し、エージェント用にトリムします。
         message = _ConversationWithUserInput(full_conversation=conversation)
-        # CRITICAL: Must specify target to avoid broadcasting to all connected executors
-        # Gateway is connected to both request_info and coordinator, we want coordinator only
+        # 重要：すべての接続されたエグゼキューターにブロードキャストしないようにターゲットを指定する必要があります
+        # ゲートウェイはrequest_infoとcoordinatorの両方に接続されていますが、coordinatorのみを対象とします。
         await ctx.send_message(message, target_id="handoff-coordinator")
 
 
 def _as_user_messages(payload: Any) -> list[ChatMessage]:
-    """Normalise arbitrary payloads into user-authored chat messages."""
+    """任意のペイロードをユーザー作成のチャットメッセージに正規化します。"""
     if isinstance(payload, ChatMessage):
         if payload.role == Role.USER:
             return [payload]
         return [ChatMessage(Role.USER, text=payload.text)]
     if isinstance(payload, list):
-        # Check if all items are ChatMessage instances
+        # すべてのアイテムがChatMessageインスタンスかどうかをチェックします。
         all_chat_messages = all(isinstance(msg, ChatMessage) for msg in payload)  # type: ignore[arg-type]
         if all_chat_messages:
             messages: list[ChatMessage] = payload  # type: ignore[assignment]
@@ -551,7 +549,7 @@ def _as_user_messages(payload: Any) -> list[ChatMessage]:
 
 
 def _default_termination_condition(conversation: list[ChatMessage]) -> bool:
-    """Default termination: stop after 10 user messages to prevent infinite loops."""
+    """デフォルトの終了条件：無限ループ防止のため10件のユーザーメッセージ後に停止します。"""
     user_message_count = sum(1 for msg in conversation if msg.role == Role.USER)
     return user_message_count >= 10
 
@@ -874,54 +872,47 @@ class HandoffBuilder:
         tool_name: str | None = None,
         tool_description: str | None = None,
     ) -> "HandoffBuilder":
-        """Add handoff routing from a source agent to one or more target agents.
+        """ソースAgentから1つ以上のターゲットAgentへのhandoffルーティングを追加します。
 
-        This method enables specialist-to-specialist handoffs by configuring which agents
-        can hand off to which others. Call this method multiple times to build a complete
-        routing graph. By default, only the starting agent can hand off to all other participants;
-        use this method to enable additional routing paths.
+        このメソッドは、どのAgentがどのAgentにhandoffできるかを設定することで、スペシャリスト間のhandoffを可能にします。完全なルーティンググラフを構築するために、このメソッドを複数回呼び出してください。デフォルトでは、開始Agentのみが他のすべての参加者にhandoffできます。追加のルーティングパスを有効にするには、このメソッドを使用します。
 
         Args:
-            source: The agent that can initiate the handoff. Can be:
-                   - Agent name (str): e.g., "triage_agent"
-                   - AgentProtocol instance: The actual agent object
-                   - Executor instance: A custom executor wrapping an agent
-            targets: One or more target agents that the source can hand off to. Can be:
-                    - Single agent: "billing_agent" or agent_instance
-                    - Multiple agents: ["billing_agent", "support_agent"] or [agent1, agent2]
-            tool_name: Optional custom name for the handoff tool. If not provided, generates
-                      "handoff_to_<target>" for single targets or "handoff_to_<target>_agent"
-                      for multiple targets based on target names.
-            tool_description: Optional custom description for the handoff tool. If not provided,
-                             generates "Handoff to the <target> agent."
+            source: handoffを開始できるAgent。以下のいずれかです：
+                   - Agent名（str）：例 "triage_agent"
+                   - AgentProtocolインスタンス：実際のAgentオブジェクト
+                   - Executorインスタンス：AgentをラップするカスタムExecutor
+            targets: sourceがhandoffできる1つ以上のターゲットAgent。以下のいずれかです：
+                    - 単一Agent："billing_agent" または agent_instance
+                    - 複数Agent： ["billing_agent", "support_agent"] または [agent1, agent2]
+            tool_name: handoffツールの任意のカスタム名。指定しない場合、単一ターゲットの場合は "handoff_to_<target>", 複数ターゲットの場合は "handoff_to_<target>_agent" をターゲット名に基づいて生成します。
+            tool_description: handoffツールの任意のカスタム説明。指定しない場合、"Handoff to the <target> agent." を生成します。
 
         Returns:
-            Self for method chaining.
+            メソッドチェーンのためのself。
 
         Raises:
-            ValueError: If source or targets are not in the participants list, or if
-                       participants(...) hasn't been called yet.
+            ValueError: sourceまたはtargetsが参加者リストに存在しない場合、またはparticipants(...)がまだ呼ばれていない場合。
 
         Examples:
-            Single target:
+            単一ターゲット:
 
             .. code-block:: python
 
                 builder.add_handoff("triage_agent", "billing_agent")
 
-            Multiple targets (using agent names):
+            複数ターゲット（Agent名を使用）:
 
             .. code-block:: python
 
                 builder.add_handoff("triage_agent", ["billing_agent", "support_agent", "escalation_agent"])
 
-            Multiple targets (using agent instances):
+            複数ターゲット（Agentインスタンスを使用）:
 
             .. code-block:: python
 
                 builder.add_handoff(triage, [billing, support, escalation])
 
-            Chain multiple configurations:
+            複数の設定をチェーン:
 
             .. code-block:: python
 
@@ -934,7 +925,7 @@ class HandoffBuilder:
                     .build()
                 )
 
-            Custom tool names and descriptions:
+            カスタムツール名と説明:
 
             .. code-block:: python
 
@@ -946,21 +937,22 @@ class HandoffBuilder:
                 )
 
         Note:
-            - Handoff tools are automatically registered for each source agent
-            - If a source agent is configured multiple times via add_handoff, targets are merged
+            - handoffツールは各source Agentに自動的に登録されます
+            - add_handoffでsource Agentが複数回設定された場合、targetsはマージされます
+
         """
         if not self._executors:
             raise ValueError("Call participants(...) before add_handoff(...)")
 
-        # Resolve source agent ID
+        # source Agent IDを解決します
         source_id = self._resolve_to_id(source)
         if source_id not in self._executors:
             raise ValueError(f"Source agent '{source}' is not in the participants list")
 
-        # Normalize targets to list
+        # targetsをリストに正規化します
         target_list = [targets] if isinstance(targets, (str, AgentProtocol, Executor)) else list(targets)
 
-        # Resolve all target IDs
+        # すべてのtarget IDを解決します
         target_ids: list[str] = []
         for target in target_list:
             target_id = self._resolve_to_id(target)
@@ -968,9 +960,9 @@ class HandoffBuilder:
                 raise ValueError(f"Target agent '{target}' is not in the participants list")
             target_ids.append(target_id)
 
-        # Merge with existing handoff configuration for this source
+        # このsourceの既存のhandoff設定とマージします
         if source_id in self._handoff_config:
-            # Add new targets to existing list, avoiding duplicates
+            # 重複を避けて既存のリストに新しいtargetsを追加します
             existing = self._handoff_config[source_id]
             for target_id in target_ids:
                 if target_id not in existing:
@@ -981,12 +973,12 @@ class HandoffBuilder:
         return self
 
     def auto_register_handoff_tools(self, enabled: bool) -> "HandoffBuilder":
-        """Configure whether the builder should synthesize handoff tools for the starting agent."""
+        """builderがstarting Agentのためにhandoffツールを合成すべきかどうかを設定します。"""
         self._auto_register_handoff_tools = enabled
         return self
 
     def _apply_auto_tools(self, agent: ChatAgent, specialists: Mapping[str, Executor]) -> dict[str, str]:
-        """Attach synthetic handoff tools to a chat agent and return the target lookup table."""
+        """チャットAgentに合成されたhandoffツールを添付し、targetのルックアップテーブルを返します。"""
         chat_options = agent.chat_options
         existing_tools = list(chat_options.tools or [])
         existing_names = {getattr(tool, "name", "") for tool in existing_tools if hasattr(tool, "name")}
@@ -1011,26 +1003,27 @@ class HandoffBuilder:
         return tool_targets
 
     def _resolve_agent_id(self, agent_identifier: str) -> str:
-        """Resolve an agent identifier to an executor ID.
+        """Agent識別子をexecutor IDに解決します。
 
         Args:
-            agent_identifier: Can be agent name, display name, or executor ID
+            agent_identifier: Agent名、表示名、またはexecutor IDのいずれか
 
         Returns:
-            The executor ID
+            executor ID
 
         Raises:
-            ValueError: If the identifier cannot be resolved
+            ValueError: 識別子が解決できない場合
+
         """
-        # Check if it's already an executor ID
+        # すでにexecutor IDかどうかをチェックします
         if agent_identifier in self._executors:
             return agent_identifier
 
-        # Check if it's an alias
+        # エイリアスかどうかをチェックします
         if agent_identifier in self._aliases:
             return self._aliases[agent_identifier]
 
-        # Not found
+        # 見つかりませんでした
         raise ValueError(f"Agent identifier '{agent_identifier}' not found in participants")
 
     def _prepare_agent_with_handoffs(
@@ -1038,14 +1031,15 @@ class HandoffBuilder:
         executor: AgentExecutor,
         target_agents: Mapping[str, Executor],
     ) -> tuple[AgentExecutor, dict[str, str]]:
-        """Prepare an agent by adding handoff tools for the specified target agents.
+        """指定されたtarget Agentのためにhandoffツールを追加してAgentを準備します。
 
         Args:
-            executor: The agent executor to prepare
-            target_agents: Map of executor IDs to target executors this agent can hand off to
+            executor: 準備するAgent executor
+            target_agents: このAgentがhandoff可能なexecutor IDからターゲットexecutorへのマップ
 
         Returns:
-            Tuple of (updated executor, tool_targets map)
+            (更新されたexecutor, tool_targetsマップ)のタプル
+
         """
         agent = getattr(executor, "_agent", None)
         if not isinstance(agent, ChatAgent):
@@ -1068,17 +1062,15 @@ class HandoffBuilder:
         return new_executor, tool_targets
 
     def request_prompt(self, prompt: str | None) -> "HandoffBuilder":
-        """Set a custom prompt message displayed when requesting user input.
+        """ユーザー入力を要求する際に表示されるカスタムプロンプトメッセージを設定します。
 
-        By default, the workflow uses a generic prompt: "Provide your next input for the
-        conversation." Use this method to customize the message shown to users when the
-        workflow needs their response.
+        デフォルトでは、ワークフローは一般的なプロンプト "Provide your next input for the conversation." を使用します。このメソッドを使って、ワークフローがユーザーの応答を必要とする際に表示されるメッセージをカスタマイズできます。
 
         Args:
-            prompt: Custom prompt text to display, or None to use the default prompt.
+            prompt: 表示するカスタムプロンプトテキスト、またはデフォルトプロンプトを使用する場合はNone。
 
         Returns:
-            Self for method chaining.
+            メソッドチェーンのためのself。
 
         Example:
 
@@ -1091,33 +1083,31 @@ class HandoffBuilder:
                 .build()
             )
 
-            # For more context-aware prompts, you can access the prompt via
-            # RequestInfoEvent.data.prompt in your event handling loop
+            # よりコンテキストに応じたプロンプトには、イベント処理ループ内でRequestInfoEvent.data.promptを参照できます
 
         Note:
-            The prompt is static and set once during workflow construction. If you need
-            dynamic prompts based on conversation state, you'll need to handle that in
-            your application's event processing logic.
+            プロンプトは静的で、ワークフロー構築時に一度設定されます。会話の状態に基づく動的なプロンプトが必要な場合は、アプリケーションのイベント処理ロジックで対応してください。
+
         """
         self._request_prompt = prompt
         return self
 
     def with_checkpointing(self, checkpoint_storage: CheckpointStorage) -> "HandoffBuilder":
-        """Enable workflow state persistence for resumable conversations.
+        """再開可能な会話のためにワークフローの状態永続化を有効にします。
 
-        Checkpointing allows the workflow to save its state at key points, enabling you to:
-        - Resume conversations after application restarts
-        - Implement long-running support tickets that span multiple sessions
-        - Recover from failures without losing conversation context
-        - Audit and replay conversation history
+        チェックポイント機能により、ワークフローは重要なポイントで状態を保存でき、以下が可能になります：
+        - アプリケーション再起動後に会話を再開
+        - 複数セッションにまたがる長期サポートチケットの実装
+        - 障害からの回復時に会話コンテキストを失わない
+        - 会話履歴の監査および再生
 
         Args:
-            checkpoint_storage: Storage backend implementing CheckpointStorage interface.
-                               Common implementations: InMemoryCheckpointStorage (testing),
-                               database-backed storage (production).
+            checkpoint_storage: CheckpointStorageインターフェースを実装するストレージバックエンド。
+                               一般的な実装例：InMemoryCheckpointStorage（テスト用）、
+                               データベースベースのストレージ（本番用）。
 
         Returns:
-            Self for method chaining.
+            メソッドチェーンのためのself。
 
         Example (In-Memory):
 
@@ -1133,25 +1123,25 @@ class HandoffBuilder:
                 .build()
             )
 
-            # Run workflow with a session ID for resumption
+            # セッションIDを指定してワークフローを実行し再開可能に
             async for event in workflow.run_stream("Help me", session_id="user_123"):
-                # Process events...
+                # イベント処理...
                 pass
 
-            # Later, resume the same conversation
+            # 後で同じ会話を再開
             async for event in workflow.run_stream("I need a refund", session_id="user_123"):
-                # Conversation continues from where it left off
+                # 会話は中断したところから続行
                 pass
 
         Use Cases:
-            - Customer support systems with persistent ticket history
-            - Multi-day conversations that need to survive server restarts
-            - Compliance requirements for conversation auditing
-            - A/B testing different agent configurations on same conversation
+            - 永続的なチケット履歴を持つカスタマーサポートシステム
+            - サーバー再起動をまたぐ数日にわたる会話
+            - 会話監査のためのコンプライアンス要件
+            - 同じ会話で異なるAgent構成のA/Bテスト
 
         Note:
-            Checkpointing adds overhead for serialization and storage I/O. Use it when
-            persistence is required, not for simple stateless request-response patterns.
+            チェックポイントはシリアライズとストレージI/Oのオーバーヘッドを追加します。永続化が必要な場合に使用し、単純なステートレスなリクエスト-レスポンスパターンには使用しないでください。
+
         """
         self._checkpoint_storage = checkpoint_storage
         return self
@@ -1159,55 +1149,54 @@ class HandoffBuilder:
     def with_termination_condition(
         self, condition: Callable[[list[ChatMessage]], bool | Awaitable[bool]]
     ) -> "HandoffBuilder":
-        """Set a custom termination condition for the handoff workflow.
+        """handoffワークフローのカスタム終了条件を設定します。
 
-        The condition can be either synchronous or asynchronous.
+        条件は同期または非同期のいずれかです。
 
         Args:
-            condition: Function that receives the full conversation and returns True
-                      (or awaitable True) if the workflow should terminate (not request further user input).
+            condition: 会話全体を受け取り、ワークフローを終了すべき場合にTrue（またはawait可能なTrue）を返す関数。
 
         Returns:
-            Self for chaining.
+            チェーン用のself。
 
         Example:
 
         .. code-block:: python
 
-            # Synchronous condition
+            # 同期条件
             builder.with_termination_condition(
                 lambda conv: len(conv) > 20 or any("goodbye" in msg.text.lower() for msg in conv[-2:])
             )
 
 
-            # Asynchronous condition
+            # 非同期条件
             async def check_termination(conv: list[ChatMessage]) -> bool:
-                # Can perform async operations
+                # 非同期処理が可能
                 return len(conv) > 20
 
 
             builder.with_termination_condition(check_termination)
+
         """
         self._termination_condition = condition
         return self
 
     def build(self) -> Workflow:
-        """Construct the final Workflow instance from the configured builder.
+        """設定されたbuilderから最終的なWorkflowインスタンスを構築します。
 
-        This method validates the configuration and assembles all internal components:
-        - Input normalization executor
-        - Starting agent executor
+        このメソッドは設定を検証し、以下の内部コンポーネントを組み立てます：
+        - 入力正規化executor
+        - 開始Agent executor
         - Handoff coordinator
-        - Specialist agent executors
-        - User input gateway
-        - Request/response handling
+        - スペシャリストAgent executor
+        - ユーザー入力ゲートウェイ
+        - リクエスト/レスポンス処理
 
         Returns:
-            A fully configured Workflow ready to execute via `.run()` or `.run_stream()`.
+            `.run()`または`.run_stream()`で実行可能な完全に設定されたWorkflow。
 
         Raises:
-            ValueError: If participants or coordinator were not configured, or if
-                       required configuration is invalid.
+            ValueError: 参加者またはcoordinatorが設定されていない場合、または必要な設定が無効な場合。
 
         Example (Minimal):
 
@@ -1217,9 +1206,9 @@ class HandoffBuilder:
                 HandoffBuilder(participants=[coordinator, refund, billing]).set_coordinator("coordinator").build()
             )
 
-            # Run the workflow
+            # ワークフローを実行
             async for event in workflow.run_stream("I need help"):
-                # Handle events...
+                # イベント処理...
                 pass
 
         Example (Full Configuration):
@@ -1243,8 +1232,8 @@ class HandoffBuilder:
             )
 
         Note:
-            After calling build(), the builder instance should not be reused. Create a
-            new builder if you need to construct another workflow with different configuration.
+            build()呼び出し後はbuilderインスタンスを再利用しないでください。異なる設定で別のワークフローを構築する場合は新しいbuilderを作成してください。
+
         """
         if not self._executors:
             raise ValueError("No participants provided. Call participants([...]) first.")
@@ -1256,19 +1245,19 @@ class HandoffBuilder:
             exec_id: executor for exec_id, executor in self._executors.items() if exec_id != self._starting_agent_id
         }
 
-        # Build handoff tool registry for all agents that need them
+        # handoffツールレジストリを必要なすべてのAgentのために構築します
         handoff_tool_targets: dict[str, str] = {}
         if self._auto_register_handoff_tools:
-            # Determine which agents should have handoff tools
+            # handoffツールを持つべきAgentを決定します
             if self._handoff_config:
-                # Use explicit handoff configuration from add_handoff() calls
+                # add_handoff()呼び出しからの明示的なhandoff設定を使用します
                 for source_exec_id, target_exec_ids in self._handoff_config.items():
                     executor = self._executors.get(source_exec_id)
                     if not executor:
                         raise ValueError(f"Handoff source agent '{source_exec_id}' not found in participants")
 
                     if isinstance(executor, AgentExecutor):
-                        # Build targets map for this source agent
+                        # このsource Agentのためのtargetsマップを構築します
                         targets_map: dict[str, Executor] = {}
                         for target_exec_id in target_exec_ids:
                             target_executor = self._executors.get(target_exec_id)
@@ -1276,16 +1265,16 @@ class HandoffBuilder:
                                 raise ValueError(f"Handoff target agent '{target_exec_id}' not found in participants")
                             targets_map[target_exec_id] = target_executor
 
-                        # Register handoff tools for this agent
+                        # このAgentのためにhandoffツールを登録します
                         updated_executor, tool_targets = self._prepare_agent_with_handoffs(executor, targets_map)
                         self._executors[source_exec_id] = updated_executor
                         handoff_tool_targets.update(tool_targets)
         else:
-            # Default behavior: only coordinator gets handoff tools to all specialists
+            # デフォルト動作：coordinatorのみがすべてのスペシャリストへのhandoffツールを持ちます
             if isinstance(starting_executor, AgentExecutor) and specialists:
                 starting_executor, tool_targets = self._prepare_agent_with_handoffs(starting_executor, specialists)
                 self._executors[self._starting_agent_id] = starting_executor
-                handoff_tool_targets.update(tool_targets)  # Update references after potential agent modifications
+                handoff_tool_targets.update(tool_targets)  # Agentの変更後に参照を更新します
         starting_executor = self._executors[self._starting_agent_id]
         specialists = {
             exec_id: executor for exec_id, executor in self._executors.items() if exec_id != self._starting_agent_id
@@ -1355,7 +1344,7 @@ class HandoffBuilder:
         return builder.build()
 
     def _resolve_to_id(self, candidate: str | AgentProtocol | Executor) -> str:
-        """Resolve a participant reference into a concrete executor identifier."""
+        """参加者の参照を具体的なexecutor識別子に解決します。"""
         if isinstance(candidate, Executor):
             return candidate.id
         if isinstance(candidate, AgentProtocol):

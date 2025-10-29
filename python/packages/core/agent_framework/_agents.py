@@ -51,36 +51,37 @@ TThreadType = TypeVar("TThreadType", bound="AgentThread")
 
 
 def _sanitize_agent_name(agent_name: str | None) -> str | None:
-    """Sanitize agent name for use as a function name.
+    """関数名として使用するためにagent名をサニタイズします。
 
-    Replaces spaces and special characters with underscores to create
-    a valid Python identifier.
+    スペースや特殊文字をアンダースコアに置き換え、
+    有効なPython識別子を作成します。
 
     Args:
-        agent_name: The agent name to sanitize.
+        agent_name: サニタイズするagent名。
 
     Returns:
-        The sanitized agent name with invalid characters replaced by underscores.
-        If the input is None, returns None.
-        If sanitization results in an empty string (e.g., agent_name="@@@"), returns "agent" as a default.
+        無効な文字がアンダースコアに置き換えられたサニタイズ済みのagent名。
+        入力がNoneの場合はNoneを返します。
+        サニタイズ結果が空文字列（例: agent_name="@@@"）の場合はデフォルトで"agent"を返します。
+
     """
     if agent_name is None:
         return None
 
-    # Replace any character that is not alphanumeric or underscore with underscore
+    # 英数字またはアンダースコアでない文字をすべてアンダースコアに置き換えます。
     sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", agent_name)
 
-    # Replace multiple consecutive underscores with a single underscore
+    # 連続する複数のアンダースコアを単一のアンダースコアに置き換えます。
     sanitized = re.sub(r"_+", "_", sanitized)
 
-    # Remove leading/trailing underscores
+    # 先頭および末尾のアンダースコアを削除します。
     sanitized = sanitized.strip("_")
 
-    # Handle empty string case
+    # 空文字列の場合の処理を行います。
     if not sanitized:
         return "agent"
 
-    # Prefix with underscore if the sanitized name starts with a digit
+    # サニタイズされた名前が数字で始まる場合は先頭にアンダースコアを付加します。
     if sanitized and sanitized[0].isdigit():
         sanitized = f"_{sanitized}"
 
@@ -95,16 +96,16 @@ __all__ = ["AgentProtocol", "BaseAgent", "ChatAgent"]
 
 @runtime_checkable
 class AgentProtocol(Protocol):
-    """A protocol for an agent that can be invoked.
+    """呼び出し可能なagentのためのプロトコル。
 
-    This protocol defines the interface that all agents must implement,
-    including properties for identification and methods for execution.
+    このプロトコルはすべてのagentが実装すべきインターフェースを定義し、
+    識別用のプロパティや実行用のメソッドを含みます。
 
     Note:
-        Protocols use structural subtyping (duck typing). Classes don't need
-        to explicitly inherit from this protocol to be considered compatible.
-        This allows you to create completely custom agents without using
-        any Agent Framework base classes.
+        プロトコルは構造的サブタイピング（ダックタイピング）を使用します。
+        クラスはこのプロトコルを明示的に継承する必要はありません。
+        これにより、Agent Frameworkのベースクラスを使用せずに
+        完全にカスタムなagentを作成できます。
 
     Examples:
         .. code-block:: python
@@ -112,8 +113,8 @@ class AgentProtocol(Protocol):
             from agent_framework import AgentProtocol
 
 
-            # Any class implementing the required methods is compatible
-            # No need to inherit from AgentProtocol or use any framework classes
+            # 必要なメソッドを実装する任意のクラスは互換性があります
+            # AgentProtocolを継承したりフレームワーククラスを使う必要はありません
             class CustomAgent:
                 def __init__(self):
                     self._id = "custom-agent-001"
@@ -136,13 +137,13 @@ class AgentProtocol(Protocol):
                     return "A fully custom agent implementation"
 
                 async def run(self, messages=None, *, thread=None, **kwargs):
-                    # Your custom implementation
+                    # カスタム実装
                     from agent_framework import AgentRunResponse
 
                     return AgentRunResponse(messages=[], response_id="custom-response")
 
                 def run_stream(self, messages=None, *, thread=None, **kwargs):
-                    # Your custom streaming implementation
+                    # カスタムストリーミング実装
                     async def _stream():
                         from agent_framework import AgentRunResponseUpdate
 
@@ -151,33 +152,34 @@ class AgentProtocol(Protocol):
                     return _stream()
 
                 def get_new_thread(self, **kwargs):
-                    # Return your own thread implementation
+                    # 独自のスレッド実装を返す
                     return {"id": "custom-thread", "messages": []}
 
 
-            # Verify the instance satisfies the protocol
+            # インスタンスがプロトコルを満たすことを検証
             instance = CustomAgent()
             assert isinstance(instance, AgentProtocol)
+
     """
 
     @property
     def id(self) -> str:
-        """Returns the ID of the agent."""
+        """AgentのIDを返します。"""
         ...
 
     @property
     def name(self) -> str | None:
-        """Returns the name of the agent."""
+        """Agentの名前を返します。"""
         ...
 
     @property
     def display_name(self) -> str:
-        """Returns the display name of the agent."""
+        """Agentの表示名を返します。"""
         ...
 
     @property
     def description(self) -> str | None:
-        """Returns the description of the agent."""
+        """Agentの説明を返します。"""
         ...
 
     async def run(
@@ -187,27 +189,26 @@ class AgentProtocol(Protocol):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Get a response from the agent.
+        """Agentからのレスポンスを取得します。
 
-        This method returns the final result of the agent's execution
-        as a single AgentRunResponse object. The caller is blocked until
-        the final result is available.
+        このメソッドはAgentの実行の最終結果を単一のAgentRunResponseオブジェクトとして返します。
+        呼び出し元は最終結果が利用可能になるまでブロックされます。
 
-        Note: For streaming responses, use the run_stream method, which returns
-        intermediate steps and the final result as a stream of AgentRunResponseUpdate
-        objects. Streaming only the final result is not feasible because the timing of
-        the final result's availability is unknown, and blocking the caller until then
-        is undesirable in streaming scenarios.
+        注意: ストリーミングレスポンスの場合は、run_streamメソッドを使用してください。
+        これは中間ステップと最終結果をAgentRunResponseUpdateオブジェクトのストリームとして返します。
+        最終結果のみをストリーミングすることは、最終結果の利用可能なタイミングが不明であり、
+        その時点まで呼び出し元をブロックすることがストリーミングシナリオでは望ましくないため、実現不可能です。
 
         Args:
-            messages: The message(s) to send to the agent.
+            messages: Agentに送信するメッセージ。
 
         Keyword Args:
-            thread: The conversation thread associated with the message(s).
-            kwargs: Additional keyword arguments.
+            thread: メッセージに関連付けられた会話スレッド。
+            kwargs: 追加のキーワード引数。
 
         Returns:
-            An agent response item.
+            Agentのレスポンスアイテム。
+
         """
         ...
 
@@ -218,27 +219,28 @@ class AgentProtocol(Protocol):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Run the agent as a stream.
+        """エージェントをストリームとして実行します。
 
-        This method will return the intermediate steps and final results of the
-        agent's execution as a stream of AgentRunResponseUpdate objects to the caller.
+        このメソッドは、エージェントの実行の中間ステップと最終結果を
+        AgentRunResponseUpdateオブジェクトのストリームとして呼び出し元に返します。
 
-        Note: An AgentRunResponseUpdate object contains a chunk of a message.
+        注意: AgentRunResponseUpdateオブジェクトはメッセージのチャンクを含みます。
 
         Args:
-            messages: The message(s) to send to the agent.
+            messages: エージェントに送信するメッセージ。
 
         Keyword Args:
-            thread: The conversation thread associated with the message(s).
-            kwargs: Additional keyword arguments.
+            thread: メッセージに関連付けられた会話スレッド。
+            kwargs: 追加のキーワード引数。
 
         Yields:
-            An agent response item.
+            エージェントのレスポンスアイテム。
+
         """
         ...
 
     def get_new_thread(self, **kwargs: Any) -> AgentThread:
-        """Creates a new conversation thread for the agent."""
+        """エージェントの新しい会話スレッドを作成します。"""
         ...
 
 
@@ -246,15 +248,15 @@ class AgentProtocol(Protocol):
 
 
 class BaseAgent(SerializationMixin):
-    """Base class for all Agent Framework agents.
+    """すべてのAgent Frameworkエージェントの基底クラス。
 
-    This class provides core functionality for agent implementations, including
-    context providers, middleware support, and thread management.
+    このクラスは、コンテキストプロバイダー、ミドルウェアサポート、スレッド管理など、
+    エージェント実装のコア機能を提供します。
 
-    Note:
-        BaseAgent cannot be instantiated directly as it doesn't implement the
-        ``run()``, ``run_stream()``, and other methods required by AgentProtocol.
-        Use a concrete implementation like ChatAgent or create a subclass.
+    注意:
+        BaseAgentはAgentProtocolで要求される``run()``, ``run_stream()``などのメソッドを実装していないため、
+        直接インスタンス化できません。
+        ChatAgentのような具体的な実装を使用するか、サブクラスを作成してください。
 
     Examples:
         .. code-block:: python
@@ -262,24 +264,24 @@ class BaseAgent(SerializationMixin):
             from agent_framework import BaseAgent, AgentThread, AgentRunResponse
 
 
-            # Create a concrete subclass that implements the protocol
+            # プロトコルを実装する具体的なサブクラスを作成
             class SimpleAgent(BaseAgent):
                 async def run(self, messages=None, *, thread=None, **kwargs):
-                    # Custom implementation
+                    # カスタム実装
                     return AgentRunResponse(messages=[], response_id="simple-response")
 
                 def run_stream(self, messages=None, *, thread=None, **kwargs):
                     async def _stream():
-                        # Custom streaming implementation
+                        # カスタムストリーミング実装
                         yield AgentRunResponseUpdate()
 
                     return _stream()
 
 
-            # Now instantiate the concrete subclass
+            # 具体的なサブクラスをインスタンス化
             agent = SimpleAgent(name="my-agent", description="A simple agent implementation")
 
-            # Create with specific ID and additional properties
+            # 特定のIDと追加プロパティで作成
             agent = SimpleAgent(
                 id="custom-id-123",
                 name="configured-agent",
@@ -287,9 +289,10 @@ class BaseAgent(SerializationMixin):
                 additional_properties={"version": "1.0", "environment": "production"},
             )
 
-            # Access agent properties
-            print(agent.id)  # Custom or auto-generated UUID
-            print(agent.display_name)  # Returns name or id
+            # エージェントのプロパティにアクセス
+            print(agent.id)  # カスタムまたは自動生成されたUUID
+            print(agent.display_name)  # nameまたはidを返す
+
     """
 
     DEFAULT_EXCLUDE: ClassVar[set[str]] = {"additional_properties"}
@@ -305,17 +308,17 @@ class BaseAgent(SerializationMixin):
         additional_properties: MutableMapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize a BaseAgent instance.
+        """BaseAgentインスタンスを初期化します。
 
         Keyword Args:
-            id: The unique identifier of the agent. If no id is provided,
-                a new UUID will be generated.
-            name: The name of the agent, can be None.
-            description: The description of the agent.
-            context_providers: The collection of multiple context providers to include during agent invocation.
-            middleware: List of middleware to intercept agent and function invocations.
-            additional_properties: Additional properties set on the agent.
-            kwargs: Additional keyword arguments (merged into additional_properties).
+            id: エージェントの一意の識別子。指定がない場合は新しいUUIDが生成されます。
+            name: エージェントの名前。Noneも可。
+            description: エージェントの説明。
+            context_providers: エージェント呼び出し時に含める複数のコンテキストプロバイダーのコレクション。
+            middleware: エージェントおよび関数呼び出しをインターセプトするミドルウェアのリスト。
+            additional_properties: エージェントに設定する追加プロパティ。
+            kwargs: 追加のキーワード引数（additional_propertiesにマージされます）。
+
         """
         if id is None:
             id = str(uuid4())
@@ -328,7 +331,7 @@ class BaseAgent(SerializationMixin):
         else:
             self.middleware = [middleware]
 
-        # Merge kwargs into additional_properties
+        # kwargsをadditional_propertiesにマージします
         self.additional_properties: dict[str, Any] = cast(dict[str, Any], additional_properties or {})
         self.additional_properties.update(kwargs)
 
@@ -338,14 +341,15 @@ class BaseAgent(SerializationMixin):
         input_messages: ChatMessage | Sequence[ChatMessage],
         response_messages: ChatMessage | Sequence[ChatMessage],
     ) -> None:
-        """Notify the thread of new messages.
+        """スレッドに新しいメッセージを通知します。
 
-        This also calls the invoked method of a potential context provider on the thread.
+        これにより、スレッド上の潜在的なコンテキストプロバイダーの呼び出しメソッドも呼ばれます。
 
         Args:
-            thread: The thread to notify of new messages.
-            input_messages: The input messages to notify about.
-            response_messages: The response messages to notify about.
+            thread: 新しいメッセージを通知するスレッド。
+            input_messages: 通知する入力メッセージ。
+            response_messages: 通知するレスポンスメッセージ。
+
         """
         if isinstance(input_messages, ChatMessage) or len(input_messages) > 0:
             await thread.on_new_messages(input_messages)
@@ -356,34 +360,37 @@ class BaseAgent(SerializationMixin):
 
     @property
     def display_name(self) -> str:
-        """Returns the display name of the agent.
+        """エージェントの表示名を返します。
 
-        This is the name if present, otherwise the id.
+        nameが存在すればそれを返し、そうでなければidを返します。
+
         """
         return self.name or self.id
 
     def get_new_thread(self, **kwargs: Any) -> AgentThread:
-        """Return a new AgentThread instance that is compatible with the agent.
+        """エージェントに対応した新しいAgentThreadインスタンスを返します。
 
         Keyword Args:
-            kwargs: Additional keyword arguments passed to AgentThread.
+            kwargs: AgentThreadに渡される追加のキーワード引数。
 
         Returns:
-            A new AgentThread instance configured with the agent's context provider.
+            エージェントのコンテキストプロバイダーで構成された新しいAgentThreadインスタンス。
+
         """
         return AgentThread(**kwargs, context_provider=self.context_provider)
 
     async def deserialize_thread(self, serialized_thread: Any, **kwargs: Any) -> AgentThread:
-        """Deserialize a thread from its serialized state.
+        """シリアライズされた状態からスレッドをデシリアライズします。
 
         Args:
-            serialized_thread: The serialized thread data.
+            serialized_thread: シリアライズされたスレッドデータ。
 
         Keyword Args:
-            kwargs: Additional keyword arguments.
+            kwargs: 追加のキーワード引数。
 
         Returns:
-            A new AgentThread instance restored from the serialized state.
+            シリアライズ状態から復元された新しいAgentThreadインスタンス。
+
         """
         thread: AgentThread = self.get_new_thread()
         await thread.update_from_thread_state(serialized_thread, **kwargs)
@@ -400,38 +407,39 @@ class BaseAgent(SerializationMixin):
         | Callable[[AgentRunResponseUpdate], Awaitable[None]]
         | None = None,
     ) -> AIFunction[BaseModel, str]:
-        """Create an AIFunction tool that wraps this agent.
+        """このエージェントをラップするAIFunctionツールを作成します。
 
         Keyword Args:
-            name: The name for the tool. If None, uses the agent's name.
-            description: The description for the tool. If None, uses the agent's description or empty string.
-            arg_name: The name of the function argument (default: "task").
-            arg_description: The description for the function argument.
-                If None, defaults to "Task for {tool_name}".
-            stream_callback: Optional callback for streaming responses. If provided, uses run_stream.
+            name: ツールの名前。Noneの場合はエージェントの名前を使用します。
+            description: ツールの説明。Noneの場合はエージェントの説明または空文字を使用します。
+            arg_name: 関数引数の名前（デフォルトは"task"）。
+            arg_description: 関数引数の説明。
+                Noneの場合は"Task for {tool_name}"がデフォルト。
+            stream_callback: ストリーミングレスポンス用のオプションのコールバック。指定があればrun_streamを使用します。
 
         Returns:
-            An AIFunction that can be used as a tool by other agents.
+            他のエージェントがツールとして使用できるAIFunction。
 
         Raises:
-            TypeError: If the agent does not implement AgentProtocol.
-            ValueError: If the agent tool name cannot be determined.
+            TypeError: エージェントがAgentProtocolを実装していない場合。
+            ValueError: エージェントツール名が特定できない場合。
 
         Examples:
             .. code-block:: python
 
                 from agent_framework import ChatAgent
 
-                # Create an agent
+                # エージェントを作成
                 agent = ChatAgent(chat_client=client, name="research-agent", description="Performs research tasks")
 
-                # Convert the agent to a tool
+                # エージェントをツールに変換
                 research_tool = agent.as_tool()
 
-                # Use the tool with another agent
+                # 別のエージェントでツールを使用
                 coordinator = ChatAgent(chat_client=client, name="coordinator", tools=research_tool)
+
         """
-        # Verify that self implements AgentProtocol
+        # selfがAgentProtocolを実装していることを検証します
         if not isinstance(self, AgentProtocol):
             raise TypeError(f"Agent {self.__class__.__name__} must implement AgentProtocol to be used as a tool")
 
@@ -441,24 +449,24 @@ class BaseAgent(SerializationMixin):
         tool_description = description or self.description or ""
         argument_description = arg_description or f"Task for {tool_name}"
 
-        # Create dynamic input model with the specified argument name
+        # 指定されたarg_nameで動的入力モデルを作成します
         field_info = Field(..., description=argument_description)
         model_name = f"{name or _sanitize_agent_name(self.name) or 'agent'}_task"
         input_model = create_model(model_name, **{arg_name: (str, field_info)})  # type: ignore[call-overload]
 
-        # Check if callback is async once, outside the wrapper
+        # ラッパー外で一度だけコールバックがasyncかどうかをチェックします
         is_async_callback = stream_callback is not None and inspect.iscoroutinefunction(stream_callback)
 
         async def agent_wrapper(**kwargs: Any) -> str:
-            """Wrapper function that calls the agent."""
-            # Extract the input from kwargs using the specified arg_name
+            """エージェントを呼び出すラッパー関数です。"""
+            # 指定されたarg_nameを使ってkwargsから入力を抽出します
             input_text = kwargs.get(arg_name, "")
 
             if stream_callback is None:
-                # Use non-streaming mode
+                # 非ストリーミングモードを使用します
                 return (await self.run(input_text)).text
 
-            # Use streaming mode - accumulate updates and create final response
+            # ストリーミングモードを使用します - 更新を蓄積し最終レスポンスを作成します
             response_updates: list[AgentRunResponseUpdate] = []
             async for update in self.run_stream(input_text):
                 response_updates.append(update)
@@ -467,7 +475,7 @@ class BaseAgent(SerializationMixin):
                 else:
                     stream_callback(update)
 
-            # Create final text from accumulated updates
+            # 蓄積された更新から最終テキストを作成します
             return AgentRunResponse.from_agent_run_response_updates(response_updates).text
 
         return AIFunction(
@@ -511,33 +519,33 @@ class BaseAgent(SerializationMixin):
 @use_agent_middleware
 @use_agent_observability
 class ChatAgent(BaseAgent):
-    """A Chat Client Agent.
+    """Chat Client Agentです。
 
-    This is the primary agent implementation that uses a chat client to interact
-    with language models. It supports tools, context providers, middleware, and
-    both streaming and non-streaming responses.
+    これは言語モデルと対話するためにチャットクライアントを使用する主要なエージェント実装です。
+    ツール、コンテキストプロバイダー、ミドルウェアをサポートし、
+    ストリーミングおよび非ストリーミングのレスポンスの両方に対応しています。
 
     Examples:
-        Basic usage:
+        基本的な使用例:
 
         .. code-block:: python
 
             from agent_framework import ChatAgent
             from agent_framework.clients import OpenAIChatClient
 
-            # Create a basic chat agent
+            # 基本的なチャットエージェントを作成
             client = OpenAIChatClient(model_id="gpt-4")
             agent = ChatAgent(chat_client=client, name="assistant", description="A helpful assistant")
 
-            # Run the agent with a simple message
+            # シンプルなメッセージでエージェントを実行
             response = await agent.run("Hello, how are you?")
             print(response.text)
 
-        With tools and streaming:
+        ツールとストリーミングを使う例:
 
         .. code-block:: python
 
-            # Create an agent with tools and instructions
+            # ツールと指示を持つエージェントを作成
             def get_weather(location: str) -> str:
                 return f"The weather in {location} is sunny."
 
@@ -551,11 +559,11 @@ class ChatAgent(BaseAgent):
                 max_tokens=500,
             )
 
-            # Use streaming responses
+            # ストリーミングレスポンスを使用
             async for update in agent.run_stream("What's the weather in Paris?"):
                 print(update.text, end="")
 
-        With additional provider specific options:
+        プロバイダー固有の追加オプションを使う例:
 
         .. code-block:: python
 
@@ -568,12 +576,13 @@ class ChatAgent(BaseAgent):
                 max_tokens=500,
                 additional_chat_options={
                     "reasoning": {"effort": "high", "summary": "concise"}
-                },  # OpenAI Responses specific.
+                },  # OpenAI Responses固有のオプション
             )
 
-            # Use streaming responses
+            # ストリーミングレスポンスを使用
             async for update in agent.run_stream("How do you prove the pythagorean theorem?"):
                 print(update.text, end="")
+
     """
 
     AGENT_SYSTEM_NAME: ClassVar[str] = "microsoft.agent_framework"
@@ -612,50 +621,50 @@ class ChatAgent(BaseAgent):
         additional_chat_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize a ChatAgent instance.
+        """ChatAgentインスタンスを初期化します。
 
-        Note:
-            The set of parameters from frequency_penalty to request_kwargs are used to
-            call the chat client. They can also be passed to both run methods.
-            When both are set, the ones passed to the run methods take precedence.
+        注意:
+            frequency_penaltyからrequest_kwargsまでのパラメータはチャットクライアント呼び出しに使用されます。
+            これらは両方のrunメソッドにも渡せます。
+            両方が設定された場合、runメソッドに渡されたものが優先されます。
 
         Args:
-            chat_client: The chat client to use for the agent.
-            instructions: Optional instructions for the agent.
-                These will be put into the messages sent to the chat client service as a system message.
+            chat_client: エージェントで使用するチャットクライアント。
+            instructions: エージェントへのオプションの指示。
+                これらはチャットクライアントサービスに送信されるメッセージのシステムメッセージとして含まれます。
 
         Keyword Args:
-            id: The unique identifier for the agent. Will be created automatically if not provided.
-            name: The name of the agent.
-            description: A brief description of the agent's purpose.
-            chat_message_store_factory: Factory function to create an instance of ChatMessageStoreProtocol.
-                If not provided, the default in-memory store will be used.
-            conversation_id: The conversation ID for service-managed threads.
-                Cannot be used together with chat_message_store_factory.
-            context_providers: The collection of multiple context providers to include during agent invocation.
-            middleware: List of middleware to intercept agent and function invocations.
-            frequency_penalty: The frequency penalty to use.
-            logit_bias: The logit bias to use.
-            max_tokens: The maximum number of tokens to generate.
-            metadata: Additional metadata to include in the request.
-            model_id: The model_id to use for the agent.
-            presence_penalty: The presence penalty to use.
-            response_format: The format of the response.
-            seed: The random seed to use.
-            stop: The stop sequence(s) for the request.
-            store: Whether to store the response.
-            temperature: The sampling temperature to use.
-            tool_choice: The tool choice for the request.
-            tools: The tools to use for the request.
-            top_p: The nucleus sampling probability to use.
-            user: The user to associate with the request.
-            additional_chat_options: A dictionary of other values that will be passed through
-                to the chat_client ``get_response`` and ``get_streaming_response`` methods.
-                This can be used to pass provider specific parameters.
-            kwargs: Any additional keyword arguments. Will be stored as ``additional_properties``.
+            id: エージェントの一意識別子。指定がなければ自動生成されます。
+            name: エージェントの名前。
+            description: エージェントの目的の簡単な説明。
+            chat_message_store_factory: ChatMessageStoreProtocolのインスタンスを作成するファクトリ関数。
+                指定しない場合はデフォルトのインメモリストアが使用されます。
+            conversation_id: サービス管理スレッドの会話ID。
+                chat_message_store_factoryと同時に使用できません。
+            context_providers: エージェント呼び出し時に含める複数のコンテキストプロバイダーのコレクション。
+            middleware: エージェントおよび関数呼び出しをインターセプトするミドルウェアのリスト。
+            frequency_penalty: 使用するfrequency penalty。
+            logit_bias: 使用するlogit bias。
+            max_tokens: 生成する最大トークン数。
+            metadata: リクエストに含める追加メタデータ。
+            model_id: エージェントで使用するmodel_id。
+            presence_penalty: 使用するpresence penalty。
+            response_format: レスポンスのフォーマット。
+            seed: 使用するランダムシード。
+            stop: リクエストの停止シーケンス。
+            store: レスポンスを保存するかどうか。
+            temperature: 使用するサンプリング温度。
+            tool_choice: リクエストのツール選択。
+            tools: リクエストで使用するツール。
+            top_p: 使用するnucleus sampling確率。
+            user: リクエストに関連付けるユーザー。
+            additional_chat_options: chat_clientの``get_response``および``get_streaming_response``メソッドに渡されるその他の値の辞書。
+                プロバイダー固有のパラメータを渡すために使用可能。
+            kwargs: その他のキーワード引数。``additional_properties``として保存されます。
 
         Raises:
-            AgentInitializationError: If both conversation_id and chat_message_store_factory are provided.
+            AgentInitializationError: conversation_idとchat_message_store_factoryの両方が指定された場合。
+
         """
         if conversation_id is not None and chat_message_store_factory is not None:
             raise AgentInitializationError(
@@ -679,8 +688,7 @@ class ChatAgent(BaseAgent):
         self.chat_client = chat_client
         self.chat_message_store_factory = chat_message_store_factory
 
-        # We ignore the MCP Servers here and store them separately,
-        # we add their functions to the tools list at runtime
+        # ここではMCPサーバーを無視し、別に保存します。 実行時にそれらの関数をtoolsリストに追加します。
         normalized_tools: list[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]] = (  # type:ignore[reportUnknownVariableType]
             [] if tools is None else tools if isinstance(tools, list) else [tools]  # type: ignore[list-item]
         )
@@ -710,16 +718,17 @@ class ChatAgent(BaseAgent):
         self._update_agent_name()
 
     async def __aenter__(self) -> "Self":
-        """Enter the async context manager.
+        """非同期コンテキストマネージャに入ります。
 
-        If any of the chat_client or local_mcp_tools are context managers,
-        they will be entered into the async exit stack to ensure proper cleanup.
+        chat_clientまたはlocal_mcp_toolsのいずれかがコンテキストマネージャであれば、
+        適切なクリーンアップを保証するためにasync exit stackに入ります。
 
-        Note:
-            This list might be extended in the future.
+        注意:
+            このリストは将来的に拡張される可能性があります。
 
         Returns:
-            The ChatAgent instance.
+            ChatAgentインスタンス。
+
         """
         for context_manager in chain([self.chat_client], self._local_mcp_tools):
             if isinstance(context_manager, AbstractAsyncContextManager):
@@ -732,23 +741,22 @@ class ChatAgent(BaseAgent):
         exc_val: BaseException | None,
         exc_tb: Any,
     ) -> None:
-        """Exit the async context manager.
+        """非同期コンテキストマネージャーを終了します。
 
-        Close the async exit stack to ensure all context managers are exited properly.
+        すべてのコンテキストマネージャーが適切に終了されるように、非同期のexitスタックを閉じます。
 
         Args:
-            exc_type: The exception type if an exception was raised, None otherwise.
-            exc_val: The exception value if an exception was raised, None otherwise.
-            exc_tb: The exception traceback if an exception was raised, None otherwise.
+            exc_type: 例外が発生した場合の例外タイプ、そうでなければNone。
+            exc_val: 例外が発生した場合の例外値、そうでなければNone。
+            exc_tb: 例外が発生した場合の例外トレースバック、そうでなければNone。
         """
         await self._async_exit_stack.aclose()
 
     def _update_agent_name(self) -> None:
-        """Update the agent name in the chat client.
+        """チャットクライアント内のagent名を更新します。
 
-        Checks if the chat client supports agent name updates. The implementation
-        should check if there is already an agent name defined, and if not
-        set it to this value.
+        チャットクライアントがagent名の更新をサポートしているかをチェックします。
+        実装はすでにagent名が定義されているかを確認し、定義されていなければこの値に設定するべきです。
         """
         if hasattr(self.chat_client, "_update_agent_name") and callable(self.chat_client._update_agent_name):  # type: ignore[reportAttributeAccessIssue, attr-defined]
             self.chat_client._update_agent_name(self.name)  # type: ignore[reportAttributeAccessIssue, attr-defined]
@@ -780,41 +788,40 @@ class ChatAgent(BaseAgent):
         additional_chat_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Run the agent with the given messages and options.
+        """指定されたメッセージとオプションでagentを実行します。
 
         Note:
-            Since you won't always call ``agent.run()`` directly (it gets called
-            through workflows), it is advised to set your default values for
-            all the chat client parameters in the agent constructor.
-            If both parameters are used, the ones passed to the run methods take precedence.
+            ``agent.run()``を常に直接呼び出すわけではないため（ワークフローを通じて呼ばれます）、
+            agentコンストラクタでチャットクライアントのすべてのパラメータのデフォルト値を設定することを推奨します。
+            両方のパラメータが使用された場合、runメソッドに渡されたものが優先されます。
 
         Args:
-            messages: The messages to process.
+            messages: 処理するメッセージ。
 
         Keyword Args:
-            thread: The thread to use for the agent.
-            frequency_penalty: The frequency penalty to use.
-            logit_bias: The logit bias to use.
-            max_tokens: The maximum number of tokens to generate.
-            metadata: Additional metadata to include in the request.
-            model_id: The model_id to use for the agent.
-            presence_penalty: The presence penalty to use.
-            response_format: The format of the response.
-            seed: The random seed to use.
-            stop: The stop sequence(s) for the request.
-            store: Whether to store the response.
-            temperature: The sampling temperature to use.
-            tool_choice: The tool choice for the request.
-            tools: The tools to use for the request.
-            top_p: The nucleus sampling probability to use.
-            user: The user to associate with the request.
-            additional_chat_options: Additional properties to include in the request.
-                Use this field for provider-specific parameters.
-            kwargs: Additional keyword arguments for the agent.
-                Will only be passed to functions that are called.
+            thread: agentに使用するスレッド。
+            frequency_penalty: 使用するfrequency penalty。
+            logit_bias: 使用するlogit bias。
+            max_tokens: 生成する最大トークン数。
+            metadata: リクエストに含める追加のメタデータ。
+            model_id: agentに使用するmodel_id。
+            presence_penalty: 使用するpresence penalty。
+            response_format: レスポンスのフォーマット。
+            seed: 使用するランダムシード。
+            stop: リクエストの停止シーケンス。
+            store: レスポンスを保存するかどうか。
+            temperature: 使用するサンプリング温度。
+            tool_choice: リクエストのツール選択。
+            tools: リクエストに使用するツール。
+            top_p: 使用するnucleus sampling確率。
+            user: リクエストに関連付けるユーザー。
+            additional_chat_options: リクエストに含める追加のプロパティ。
+                プロバイダー固有のパラメータにこのフィールドを使用してください。
+            kwargs: agentへの追加のキーワード引数。
+                呼び出される関数にのみ渡されます。
 
         Returns:
-            An AgentRunResponse containing the agent's response.
+            agentのレスポンスを含むAgentRunResponse。
         """
         input_messages = self._normalize_messages(messages)
         thread, run_chat_options, thread_messages = await self._prepare_thread_and_messages(
@@ -825,9 +832,9 @@ class ChatAgent(BaseAgent):
         )
         agent_name = self._get_agent_name()
 
-        # Resolve final tool list (runtime provided tools + local MCP server tools)
+        # 最終的なツールリストを解決する（ランタイム提供ツール + ローカルMCPサーバーツール）
         final_tools: list[ToolProtocol | Callable[..., Any] | dict[str, Any]] = []
-        # Normalize tools argument to a list without mutating the original parameter
+        # 元のパラメータを変更せずにtools引数をリストに正規化する
         for tool in normalized_tools:
             if isinstance(tool, MCPTool):
                 if not tool.is_connected:
@@ -864,13 +871,12 @@ class ChatAgent(BaseAgent):
 
         await self._update_thread_with_type_and_conversation_id(thread, response.conversation_id)
 
-        # Ensure that the author name is set for each message in the response.
+        # レスポンス内の各メッセージに対してauthor名が設定されていることを保証する。
         for message in response.messages:
             if message.author_name is None:
                 message.author_name = agent_name
 
-        # Only notify the thread of new messages if the chatResponse was successful
-        # to avoid inconsistent messages state in the thread.
+        # chatResponseが成功した場合にのみスレッドに新しいメッセージを通知し、スレッド内のメッセージ状態の不整合を避ける。
         await self._notify_thread_of_new_messages(thread, input_messages, response.messages)
         return AgentRunResponse(
             messages=response.messages,
@@ -909,53 +915,52 @@ class ChatAgent(BaseAgent):
         additional_chat_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Stream the agent with the given messages and options.
+        """指定されたメッセージとオプションでagentをストリーム実行します。
 
         Note:
-            Since you won't always call ``agent.run_stream()`` directly (it gets called
-            through orchestration), it is advised to set your default values for
-            all the chat client parameters in the agent constructor.
-            If both parameters are used, the ones passed to the run methods take precedence.
+            ``agent.run_stream()``を常に直接呼び出すわけではないため（オーケストレーションを通じて呼ばれます）、
+            agentコンストラクタでチャットクライアントのすべてのパラメータのデフォルト値を設定することを推奨します。
+            両方のパラメータが使用された場合、runメソッドに渡されたものが優先されます。
 
         Args:
-            messages: The messages to process.
+            messages: 処理するメッセージ。
 
         Keyword Args:
-            thread: The thread to use for the agent.
-            frequency_penalty: The frequency penalty to use.
-            logit_bias: The logit bias to use.
-            max_tokens: The maximum number of tokens to generate.
-            metadata: Additional metadata to include in the request.
-            model_id: The model_id to use for the agent.
-            presence_penalty: The presence penalty to use.
-            response_format: The format of the response.
-            seed: The random seed to use.
-            stop: The stop sequence(s) for the request.
-            store: Whether to store the response.
-            temperature: The sampling temperature to use.
-            tool_choice: The tool choice for the request.
-            tools: The tools to use for the request.
-            top_p: The nucleus sampling probability to use.
-            user: The user to associate with the request.
-            additional_chat_options: Additional properties to include in the request.
-                Use this field for provider-specific parameters.
-            kwargs: Any additional keyword arguments.
-                Will only be passed to functions that are called.
+            thread: agentに使用するスレッド。
+            frequency_penalty: 使用するfrequency penalty。
+            logit_bias: 使用するlogit bias。
+            max_tokens: 生成する最大トークン数。
+            metadata: リクエストに含める追加のメタデータ。
+            model_id: agentに使用するmodel_id。
+            presence_penalty: 使用するpresence penalty。
+            response_format: レスポンスのフォーマット。
+            seed: 使用するランダムシード。
+            stop: リクエストの停止シーケンス。
+            store: レスポンスを保存するかどうか。
+            temperature: 使用するサンプリング温度。
+            tool_choice: リクエストのツール選択。
+            tools: リクエストに使用するツール。
+            top_p: 使用するnucleus sampling確率。
+            user: リクエストに関連付けるユーザー。
+            additional_chat_options: リクエストに含める追加のプロパティ。
+                プロバイダー固有のパラメータにこのフィールドを使用してください。
+            kwargs: 追加のキーワード引数。
+                呼び出される関数にのみ渡されます。
 
         Yields:
-            AgentRunResponseUpdate objects containing chunks of the agent's response.
+            agentのレスポンスのチャンクを含むAgentRunResponseUpdateオブジェクト。
         """
         input_messages = self._normalize_messages(messages)
         thread, run_chat_options, thread_messages = await self._prepare_thread_and_messages(
             thread=thread, input_messages=input_messages
         )
         agent_name = self._get_agent_name()
-        # Resolve final tool list (runtime provided tools + local MCP server tools)
+        # 最終的なツールリストを解決する（ランタイム提供ツール + ローカルMCPサーバーツール）
         final_tools: list[ToolProtocol | MutableMapping[str, Any] | Callable[..., Any]] = []
         normalized_tools: list[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]] = (  # type: ignore[reportUnknownVariableType]
             [] if tools is None else tools if isinstance(tools, list) else [tools]
         )
-        # Normalize tools argument to a list without mutating the original parameter
+        # 元のパラメータを変更せずにtools引数をリストに正規化する
         for tool in normalized_tools:
             if isinstance(tool, MCPTool):
                 if not tool.is_connected:
@@ -1020,28 +1025,25 @@ class ChatAgent(BaseAgent):
         service_thread_id: str | None = None,
         **kwargs: Any,
     ) -> AgentThread:
-        """Get a new conversation thread for the agent.
+        """agent用の新しい会話スレッドを取得します。
 
-        If you supply a service_thread_id, the thread will be marked as service managed.
+        service_thread_idを指定すると、そのスレッドはサービス管理としてマークされます。
 
-        If you don't supply a service_thread_id but have a conversation_id configured on the agent,
-        that conversation_id will be used to create a service-managed thread.
+        service_thread_idを指定せず、agentにconversation_idが設定されている場合、そのconversation_idを使ってサービス管理スレッドが作成されます。
 
-        If you don't supply a service_thread_id but have a chat_message_store_factory configured on the agent,
-        that factory will be used to create a message store for the thread and the thread will be
-        managed locally.
+        service_thread_idを指定せず、agentにchat_message_store_factoryが設定されている場合、そのファクトリを使ってスレッドのメッセージストアが作成され、スレッドはローカルで管理されます。
 
-        When neither is present, the thread will be created without a service ID or message store.
-        This will be updated based on usage when you run the agent with this thread.
-        If you run with ``store=True``, the response will include a thread_id and that will be set.
-        Otherwise a message store is created from the default factory.
+        どちらも存在しない場合、スレッドはサービスIDやメッセージストアなしで作成されます。
+        これは、このスレッドでagentを実行した際の使用状況に基づいて更新されます。
+        ``store=True``で実行すると、レスポンスにthread_idが含まれ、それが設定されます。
+        そうでなければ、デフォルトのファクトリからメッセージストアが作成されます。
 
         Keyword Args:
-            service_thread_id: Optional service managed thread ID.
-            kwargs: Not used at present.
+            service_thread_id: オプションのサービス管理スレッドID。
+            kwargs: 現在は使用されていません。
 
         Returns:
-            A new AgentThread instance.
+            新しいAgentThreadインスタンス。
         """
         if service_thread_id is not None:
             return AgentThread(
@@ -1069,20 +1071,19 @@ class ChatAgent(BaseAgent):
         lifespan: Callable[["Server[Any]"], AbstractAsyncContextManager[Any]] | None = None,
         **kwargs: Any,
     ) -> "Server[Any]":
-        """Create an MCP server from an agent instance.
+        """agentインスタンスからMCPサーバーを作成します。
 
-        This function automatically creates a MCP server from an agent instance, it uses the provided arguments to
-        configure the server and exposes the agent as a single MCP tool.
+        この関数はagentインスタンスから自動的にMCPサーバーを作成し、提供された引数を使ってサーバーを設定し、agentを単一のMCPツールとして公開します。
 
         Keyword Args:
-            server_name: The name of the server.
-            version: The version of the server.
-            instructions: The instructions to use for the server.
-            lifespan: The lifespan of the server.
-            **kwargs: Any extra arguments to pass to the server creation.
+            server_name: サーバーの名前。
+            version: サーバーのバージョン。
+            instructions: サーバーで使用する指示。
+            lifespan: サーバーの寿命。
+            **kwargs: サーバー作成に渡す追加の引数。
 
         Returns:
-            The MCP server instance.
+            MCPサーバーインスタンス。
         """
         server_args: dict[str, Any] = {
             "name": server_name,
@@ -1099,8 +1100,8 @@ class ChatAgent(BaseAgent):
         agent_tool = self.as_tool(name=self._get_agent_name())
 
         async def _log(level: types.LoggingLevel, data: Any) -> None:
-            """Log a message to the server and logger."""
-            # Log to the local logger
+            """サーバーとロガーにメッセージをログします。"""
+            # ローカルロガーにログします。
             logger.log(LOG_LEVEL_MAPPING[level], data)
             if server and server.request_context and server.request_context.session:
                 try:
@@ -1110,8 +1111,8 @@ class ChatAgent(BaseAgent):
 
         @server.list_tools()  # type: ignore
         async def _list_tools() -> list[types.Tool]:  # type: ignore
-            """List all tools in the agent."""
-            # Get the JSON schema from the Pydantic model
+            """agent内のすべてのツールを一覧表示します。"""
+            # PydanticモデルからJSONスキーマを取得します。
             schema = agent_tool.input_model.model_json_schema()
 
             tool = types.Tool(
@@ -1131,7 +1132,7 @@ class ChatAgent(BaseAgent):
         async def _call_tool(  # type: ignore
             name: str, arguments: dict[str, Any]
         ) -> Sequence[types.TextContent | types.ImageContent | types.AudioContent | types.EmbeddedResource]:
-            """Call a tool in the agent."""
+            """agent内のツールを呼び出します。"""
             await _log(level="debug", data=f"Calling tool with args: {arguments}")
 
             if name != agent_tool.name:
@@ -1142,7 +1143,7 @@ class ChatAgent(BaseAgent):
                     ),
                 )
 
-            # Create an instance of the input model with the arguments
+            # 引数を使って入力モデルのインスタンスを作成します。
             try:
                 args_instance = agent_tool.input_model(**arguments)
                 result = await agent_tool.invoke(arguments=args_instance)
@@ -1154,7 +1155,7 @@ class ChatAgent(BaseAgent):
                     ),
                 ) from e
 
-            # Convert result to MCP content
+            # 結果をMCPコンテンツに変換します。
             if isinstance(result, str):
                 return [types.TextContent(type="text", text=result)]
 
@@ -1162,9 +1163,9 @@ class ChatAgent(BaseAgent):
 
         @server.set_logging_level()  # type: ignore
         async def _set_logging_level(level: types.LoggingLevel) -> None:  # type: ignore
-            """Set the logging level for the server."""
+            """サーバーのログレベルを設定します。"""
             logger.setLevel(LOG_LEVEL_MAPPING[level])
-            # emit this log with the new minimum level
+            # このログを新しい最小レベルで出力します。
             await _log(level=level, data=f"Log level set to {level}")
 
         return server
@@ -1172,33 +1173,32 @@ class ChatAgent(BaseAgent):
     async def _update_thread_with_type_and_conversation_id(
         self, thread: AgentThread, response_conversation_id: str | None
     ) -> None:
-        """Update thread with storage type and conversation ID.
+        """スレッドをストレージタイプと会話IDで更新します。
 
         Args:
-            thread: The thread to update.
-            response_conversation_id: The conversation ID from the response, if any.
+            thread: 更新するスレッド。
+            response_conversation_id: レスポンスからの会話ID（存在する場合）。
 
         Raises:
-            AgentExecutionException: If conversation ID is missing for service-managed thread.
+            AgentExecutionException: サービス管理スレッドに会話IDがない場合。
         """
         if response_conversation_id is None and thread.service_thread_id is not None:
-            # We were passed a thread that is service managed, but we got no conversation id back from the chat client,
-            # meaning the service doesn't support service managed threads,
-            # so the thread cannot be used with this service.
+            # サービス管理されたスレッドが渡されましたが、チャットクライアントから会話IDが返されませんでした。
+            # これはサービスがサービス管理スレッドをサポートしていないことを意味し、 そのためこのスレッドはこのサービスで使用できません。
             raise AgentExecutionException(
                 "Service did not return a valid conversation id when using a service managed thread."
             )
 
         if response_conversation_id is not None:
-            # If we got a conversation id back from the chat client, it means that the service
-            # supports server side thread storage so we should update the thread with the new id.
+            # チャットクライアントから会話IDが返された場合、それはサービスがサーバー側スレッドストレージをサポートしていることを意味し、
+            # スレッドを新しいIDで更新すべきです。
             thread.service_thread_id = response_conversation_id
             if thread.context_provider:
                 await thread.context_provider.thread_created(thread.service_thread_id)
         elif thread.message_store is None and self.chat_message_store_factory is not None:
-            # If the service doesn't use service side thread storage (i.e. we got no id back from invocation), and
-            # the thread has no message_store yet, and we have a custom messages store, we should update the thread
-            # with the custom message_store so that it has somewhere to store the chat history.
+            # サービスがサーバー側スレッドストレージを使用しない場合（呼び出しからIDが返されなかった場合）、
+            # スレッドにまだメッセージストアがなく、カスタムメッセージストアがある場合、
+            # チャット履歴を保存するためにカスタムメッセージストアでスレッドを更新すべきです。
             thread.message_store = self.chat_message_store_factory()
 
     async def _prepare_thread_and_messages(
@@ -1207,23 +1207,23 @@ class ChatAgent(BaseAgent):
         thread: AgentThread | None,
         input_messages: list[ChatMessage] | None = None,
     ) -> tuple[AgentThread, ChatOptions, list[ChatMessage]]:
-        """Prepare the thread and messages for agent execution.
+        """agent実行のためにスレッドとメッセージを準備します。
 
-        This method prepares the conversation thread, merges context provider data,
-        and assembles the final message list for the chat client.
+        このメソッドは会話スレッドを準備し、コンテキストプロバイダーデータをマージし、
+        チャットクライアント用の最終的なメッセージリストを組み立てます。
 
         Keyword Args:
-            thread: The conversation thread.
-            input_messages: Messages to process.
+            thread: 会話スレッド。
+            input_messages: 処理するメッセージ。
 
         Returns:
-            A tuple containing:
-                - The validated or created thread
-                - The merged chat options
-                - The complete list of messages for the chat client
+            タプルを返します:
+                - 検証または作成されたスレッド
+                - マージされたチャットオプション
+                - チャットクライアント用の完全なメッセージリスト
 
         Raises:
-            AgentExecutionException: If the conversation IDs on the thread and agent don't match.
+            AgentExecutionException: スレッドとagentの会話IDが一致しない場合。
         """
         chat_options = copy(self.chat_options) if self.chat_options else ChatOptions()
         thread = thread or self.get_new_thread()
@@ -1263,9 +1263,9 @@ class ChatAgent(BaseAgent):
         return thread, chat_options, thread_messages
 
     def _get_agent_name(self) -> str:
-        """Get the agent name for message attribution.
+        """メッセージの帰属のためにagent名を取得します。
 
         Returns:
-            The agent's name, or 'UnnamedAgent' if no name is set.
+            agentの名前、設定されていない場合は'UnnamedAgent'。
         """
         return self.name or "UnnamedAgent"

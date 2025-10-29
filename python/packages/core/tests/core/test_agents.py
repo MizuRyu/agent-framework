@@ -64,7 +64,7 @@ async def test_chat_client_agent_init(chat_client: ChatClientProtocol) -> None:
     assert agent.id == agent_id
     assert agent.name is None
     assert agent.description == "Test"
-    assert agent.display_name == agent_id  # Display name defaults to id if name is None
+    assert agent.display_name == agent_id  # name が None の場合、表示名は id をデフォルトとする
 
 
 async def test_chat_client_agent_init_with_name(chat_client: ChatClientProtocol) -> None:
@@ -74,7 +74,7 @@ async def test_chat_client_agent_init_with_name(chat_client: ChatClientProtocol)
     assert agent.id == agent_id
     assert agent.name == "Test Agent"
     assert agent.description == "Test"
-    assert agent.display_name == "Test Agent"  # Display name is the name if present
+    assert agent.display_name == "Test Agent"  # 表示名は name があればそれを使う
 
 
 async def test_chat_client_agent_run(chat_client: ChatClientProtocol) -> None:
@@ -160,7 +160,7 @@ async def test_chat_client_agent_update_thread_conversation_id_missing(chat_clie
 
 
 async def test_chat_client_agent_default_author_name(chat_client: ChatClientProtocol) -> None:
-    # Name is not specified here, so default name should be used
+    # ここでは name が指定されていないのでデフォルト名を使うべき
     agent = ChatAgent(chat_client=chat_client)
 
     result = await agent.run("Hello")
@@ -169,7 +169,7 @@ async def test_chat_client_agent_default_author_name(chat_client: ChatClientProt
 
 
 async def test_chat_client_agent_author_name_as_agent_name(chat_client: ChatClientProtocol) -> None:
-    # Name is specified here, so it should be used as author name
+    # ここでは name が指定されているので著者名として使うべき
     agent = ChatAgent(chat_client=chat_client, name="TestAgent")
 
     result = await agent.run("Hello")
@@ -193,7 +193,7 @@ async def test_chat_client_agent_author_name_is_used_from_response(chat_client_b
     assert result.messages[0].author_name == "TestAuthor"
 
 
-# Mock context provider for testing
+# テスト用のモックコンテキストプロバイダー
 class MockContextProvider(ContextProvider):
     def __init__(self, messages: list[ChatMessage] | None = None) -> None:
         self.context_messages = messages
@@ -231,7 +231,7 @@ class MockContextProvider(ContextProvider):
 
 
 async def test_chat_agent_context_providers_model_invoking(chat_client: ChatClientProtocol) -> None:
-    """Test that context providers' invoking is called during agent run."""
+    """Agent 実行中にコンテキストプロバイダーの invoking が呼ばれることをテストする。"""
     mock_provider = MockContextProvider(messages=[ChatMessage(role=Role.SYSTEM, text="Test context instructions")])
     agent = ChatAgent(chat_client=chat_client, context_providers=mock_provider)
 
@@ -241,7 +241,7 @@ async def test_chat_agent_context_providers_model_invoking(chat_client: ChatClie
 
 
 async def test_chat_agent_context_providers_thread_created(chat_client_base: ChatClientProtocol) -> None:
-    """Test that context providers' thread_created is called during agent run."""
+    """Agent 実行中にコンテキストプロバイダーの thread_created が呼ばれることをテストする。"""
     mock_provider = MockContextProvider()
     chat_client_base.run_responses = [
         ChatResponse(
@@ -259,38 +259,38 @@ async def test_chat_agent_context_providers_thread_created(chat_client_base: Cha
 
 
 async def test_chat_agent_context_providers_messages_adding(chat_client: ChatClientProtocol) -> None:
-    """Test that context providers' invoked is called during agent run."""
+    """Agent 実行中にコンテキストプロバイダーの invoked が呼ばれることをテストする。"""
     mock_provider = MockContextProvider()
     agent = ChatAgent(chat_client=chat_client, context_providers=mock_provider)
 
     await agent.run("Hello")
 
     assert mock_provider.invoked_called
-    # Should be called with both input and response messages
+    # 入力メッセージとレスポンスメッセージの両方で呼ばれるべき
     assert len(mock_provider.new_messages) >= 2
 
 
 async def test_chat_agent_context_instructions_in_messages(chat_client: ChatClientProtocol) -> None:
-    """Test that AI context instructions are included in messages."""
+    """AI コンテキストの指示がメッセージに含まれることをテストする。"""
     mock_provider = MockContextProvider(messages=[ChatMessage(role="system", text="Context-specific instructions")])
     agent = ChatAgent(chat_client=chat_client, instructions="Agent instructions", context_providers=mock_provider)
 
-    # We need to test the _prepare_thread_and_messages method directly
+    # _prepare_thread_and_messages メソッドを直接テストする必要がある
     _, _, messages = await agent._prepare_thread_and_messages(  # type: ignore[reportPrivateUsage]
         thread=None, input_messages=[ChatMessage(role=Role.USER, text="Hello")]
     )
 
-    # Should have context instructions, and user message
+    # コンテキスト指示とユーザーメッセージを持つべき
     assert len(messages) == 2
     assert messages[0].role == Role.SYSTEM
     assert messages[0].text == "Context-specific instructions"
     assert messages[1].role == Role.USER
     assert messages[1].text == "Hello"
-    # instructions system message is added by a chat_client
+    # instructions システムメッセージは chat_client によって追加される
 
 
 async def test_chat_agent_no_context_instructions(chat_client: ChatClientProtocol) -> None:
-    """Test behavior when AI context has no instructions."""
+    """AI コンテキストに指示がない場合の動作をテストする。"""
     mock_provider = MockContextProvider()
     agent = ChatAgent(chat_client=chat_client, instructions="Agent instructions", context_providers=mock_provider)
 
@@ -298,31 +298,31 @@ async def test_chat_agent_no_context_instructions(chat_client: ChatClientProtoco
         thread=None, input_messages=[ChatMessage(role=Role.USER, text="Hello")]
     )
 
-    # Should have agent instructions and user message only
+    # エージェント指示とユーザーメッセージのみを持つべき
     assert len(messages) == 1
     assert messages[0].role == Role.USER
     assert messages[0].text == "Hello"
 
 
 async def test_chat_agent_run_stream_context_providers(chat_client: ChatClientProtocol) -> None:
-    """Test that context providers work with run_stream method."""
+    """run_stream メソッドでコンテキストプロバイダーが動作することをテストする。"""
     mock_provider = MockContextProvider(messages=[ChatMessage(role=Role.SYSTEM, text="Stream context instructions")])
     agent = ChatAgent(chat_client=chat_client, context_providers=mock_provider)
 
-    # Collect all stream updates
+    # すべてのストリーム更新を収集する
     updates: list[AgentRunResponseUpdate] = []
     async for update in agent.run_stream("Hello"):
         updates.append(update)
 
-    # Verify context provider was called
+    # コンテキストプロバイダーが呼ばれたことを検証する
     assert mock_provider.invoking_called
-    # no conversation id is created, so no need to thread_create to be called.
+    # 会話IDが作成されないため、thread_createを呼び出す必要はありません。
     assert not mock_provider.thread_created_called
     assert mock_provider.invoked_called
 
 
 async def test_chat_agent_multiple_context_providers(chat_client: ChatClientProtocol) -> None:
-    """Test that multiple context providers work together."""
+    """複数のcontext providersが一緒に動作することをテストします。"""
     provider1 = MockContextProvider(messages=[ChatMessage(role=Role.SYSTEM, text="First provider instructions")])
     provider2 = MockContextProvider(messages=[ChatMessage(role=Role.SYSTEM, text="Second provider instructions")])
 
@@ -330,7 +330,7 @@ async def test_chat_agent_multiple_context_providers(chat_client: ChatClientProt
 
     await agent.run("Hello")
 
-    # Both providers should be called
+    # 両方のprovidersが呼び出されるべきです。
     assert provider1.invoking_called
     assert not provider1.thread_created_called
     assert provider1.invoked_called
@@ -341,7 +341,7 @@ async def test_chat_agent_multiple_context_providers(chat_client: ChatClientProt
 
 
 async def test_chat_agent_aggregate_context_provider_combines_instructions() -> None:
-    """Test that AggregateContextProvider combines instructions from multiple providers."""
+    """AggregateContextProviderが複数のprovidersからの指示を結合することをテストします。"""
     provider1 = MockContextProvider(messages=[ChatMessage(role=Role.SYSTEM, text="First instruction")])
     provider2 = MockContextProvider(messages=[ChatMessage(role=Role.SYSTEM, text="Second instruction")])
 
@@ -349,7 +349,7 @@ async def test_chat_agent_aggregate_context_provider_combines_instructions() -> 
     aggregate.providers.append(provider1)
     aggregate.providers.append(provider2)
 
-    # Test invoking combines instructions
+    # invokingが指示を結合することをテストします。
     result = await aggregate.invoking([ChatMessage(role=Role.USER, text="Test")])
 
     assert result.messages
@@ -360,7 +360,7 @@ async def test_chat_agent_aggregate_context_provider_combines_instructions() -> 
 
 
 async def test_chat_agent_context_providers_with_thread_service_id(chat_client_base: ChatClientProtocol) -> None:
-    """Test context providers with service-managed thread."""
+    """サービス管理のthreadを持つcontext providersをテストします。"""
     mock_provider = MockContextProvider()
     chat_client_base.run_responses = [
         ChatResponse(
@@ -371,17 +371,17 @@ async def test_chat_agent_context_providers_with_thread_service_id(chat_client_b
 
     agent = ChatAgent(chat_client=chat_client_base, context_providers=mock_provider)
 
-    # Use existing service-managed thread
+    # 既存のサービス管理のthreadを使用します。
     thread = agent.get_new_thread(service_thread_id="existing-thread-id")
     await agent.run("Hello", thread=thread)
 
-    # invoked should be called with the service thread ID from response
+    # invokedはresponseからのサービスthread IDで呼び出されるべきです。
     assert mock_provider.invoked_called
 
 
-# Tests for as_tool method
+# as_toolメソッドのテストです。
 async def test_chat_agent_as_tool_basic(chat_client: ChatClientProtocol) -> None:
-    """Test basic as_tool functionality."""
+    """基本的なas_toolの機能をテストします。"""
     agent = ChatAgent(chat_client=chat_client, name="TestAgent", description="Test agent for as_tool")
 
     tool = agent.as_tool()
@@ -393,7 +393,7 @@ async def test_chat_agent_as_tool_basic(chat_client: ChatClientProtocol) -> None
 
 
 async def test_chat_agent_as_tool_custom_parameters(chat_client: ChatClientProtocol) -> None:
-    """Test as_tool with custom parameters."""
+    """カスタムパラメータを使ったas_toolのテストです。"""
     agent = ChatAgent(chat_client=chat_client, name="TestAgent", description="Original description")
 
     tool = agent.as_tool(
@@ -406,59 +406,59 @@ async def test_chat_agent_as_tool_custom_parameters(chat_client: ChatClientProto
     assert tool.name == "CustomTool"
     assert tool.description == "Custom description"
 
-    # Check that the input model has the custom field name
+    # 入力モデルにカスタムフィールド名があることを確認します。
     schema = tool.input_model.model_json_schema()
     assert "query" in schema["properties"]
     assert schema["properties"]["query"]["description"] == "Custom input description"
 
 
 async def test_chat_agent_as_tool_defaults(chat_client: ChatClientProtocol) -> None:
-    """Test as_tool with default parameters."""
+    """デフォルトパラメータを使ったas_toolのテストです。"""
     agent = ChatAgent(
         chat_client=chat_client,
         name="TestAgent",
-        # No description provided
+        # 説明は提供されていません。
     )
 
     tool = agent.as_tool()
 
     assert tool.name == "TestAgent"
-    assert tool.description == ""  # Should default to empty string
+    assert tool.description == ""  # 空文字列がデフォルトになるべきです。
 
-    # Check default input field
+    # デフォルトの入力フィールドを確認します。
     schema = tool.input_model.model_json_schema()
     assert "task" in schema["properties"]
     assert "Task for TestAgent" in schema["properties"]["task"]["description"]
 
 
 async def test_chat_agent_as_tool_no_name(chat_client: ChatClientProtocol) -> None:
-    """Test as_tool when agent has no name (should raise ValueError)."""
-    agent = ChatAgent(chat_client=chat_client)  # No name provided
+    """agentに名前がない場合のas_toolをテストします（ValueErrorを発生させるべきです）。"""
+    agent = ChatAgent(chat_client=chat_client)  # 名前が提供されていません。
 
-    # Should raise ValueError since agent has no name
+    # agentに名前がないためValueErrorを発生させるべきです。
     with raises(ValueError, match="Agent tool name cannot be None"):
         agent.as_tool()
 
 
 async def test_chat_agent_as_tool_function_execution(chat_client: ChatClientProtocol) -> None:
-    """Test that the generated AIFunction can be executed."""
+    """生成されたAIFunctionが実行可能であることをテストします。"""
     agent = ChatAgent(chat_client=chat_client, name="TestAgent", description="Test agent")
 
     tool = agent.as_tool()
 
-    # Test function execution
+    # 関数の実行をテストします。
     result = await tool.invoke(arguments=tool.input_model(task="Hello"))
 
-    # Should return the agent's response text
+    # agentのresponseテキストを返すべきです。
     assert isinstance(result, str)
-    assert result == "test response"  # From mock chat client
+    assert result == "test response"  # モックのchat clientから。
 
 
 async def test_chat_agent_as_tool_with_stream_callback(chat_client: ChatClientProtocol) -> None:
-    """Test as_tool with stream callback functionality."""
+    """stream callback機能を使ったas_toolのテストです。"""
     agent = ChatAgent(chat_client=chat_client, name="StreamingAgent")
 
-    # Collect streaming updates
+    # ストリーミングの更新を収集します。
     collected_updates: list[AgentRunResponseUpdate] = []
 
     def stream_callback(update: AgentRunResponseUpdate) -> None:
@@ -466,33 +466,33 @@ async def test_chat_agent_as_tool_with_stream_callback(chat_client: ChatClientPr
 
     tool = agent.as_tool(stream_callback=stream_callback)
 
-    # Execute the tool
+    # ツールを実行します。
     result = await tool.invoke(arguments=tool.input_model(task="Hello"))
 
-    # Should have collected streaming updates
+    # ストリーミングの更新が収集されているべきです。
     assert len(collected_updates) > 0
     assert isinstance(result, str)
-    # Result should be concatenation of all streaming updates
+    # 結果はすべてのストリーミング更新の連結であるべきです。
     expected_text = "".join(update.text for update in collected_updates)
     assert result == expected_text
 
 
 async def test_chat_agent_as_tool_with_custom_arg_name(chat_client: ChatClientProtocol) -> None:
-    """Test as_tool with custom argument name."""
+    """カスタム引数名を使ったas_toolのテストです。"""
     agent = ChatAgent(chat_client=chat_client, name="CustomArgAgent")
 
     tool = agent.as_tool(arg_name="prompt", arg_description="Custom prompt input")
 
-    # Test that the custom argument name works
+    # カスタム引数名が機能することをテストします。
     result = await tool.invoke(arguments=tool.input_model(prompt="Test prompt"))
     assert result == "test response"
 
 
 async def test_chat_agent_as_tool_with_async_stream_callback(chat_client: ChatClientProtocol) -> None:
-    """Test as_tool with async stream callback functionality."""
+    """非同期ストリームcallback機能を使ったas_toolのテストです。"""
     agent = ChatAgent(chat_client=chat_client, name="AsyncStreamingAgent")
 
-    # Collect streaming updates using an async callback
+    # 非同期callbackを使ってストリーミングの更新を収集します。
     collected_updates: list[AgentRunResponseUpdate] = []
 
     async def async_stream_callback(update: AgentRunResponseUpdate) -> None:
@@ -500,19 +500,19 @@ async def test_chat_agent_as_tool_with_async_stream_callback(chat_client: ChatCl
 
     tool = agent.as_tool(stream_callback=async_stream_callback)
 
-    # Execute the tool
+    # ツールを実行します。
     result = await tool.invoke(arguments=tool.input_model(task="Hello"))
 
-    # Should have collected streaming updates
+    # ストリーミングの更新が収集されているべきです。
     assert len(collected_updates) > 0
     assert isinstance(result, str)
-    # Result should be concatenation of all streaming updates
+    # 結果はすべてのストリーミング更新の連結であるべきです。
     expected_text = "".join(update.text for update in collected_updates)
     assert result == expected_text
 
 
 async def test_chat_agent_as_tool_name_sanitization(chat_client: ChatClientProtocol) -> None:
-    """Test as_tool name sanitization."""
+    """as_toolの名前のサニタイズをテストします。"""
     test_cases = [
         ("Invoice & Billing Agent", "Invoice_Billing_Agent"),
         ("Travel & Logistics Agent", "Travel_Logistics_Agent"),
@@ -530,48 +530,48 @@ async def test_chat_agent_as_tool_name_sanitization(chat_client: ChatClientProto
 
 
 async def test_chat_agent_as_mcp_server_basic(chat_client: ChatClientProtocol) -> None:
-    """Test basic as_mcp_server functionality."""
+    """基本的なas_mcp_serverの機能をテストします。"""
     agent = ChatAgent(chat_client=chat_client, name="TestAgent", description="Test agent for MCP")
 
-    # Create MCP server with default parameters
+    # デフォルトパラメータでMCPサーバーを作成します。
     server = agent.as_mcp_server()
 
-    # Verify server is created
+    # サーバーが作成されたことを検証します。
     assert server is not None
     assert hasattr(server, "name")
     assert hasattr(server, "version")
 
 
 async def test_chat_agent_run_with_mcp_tools(chat_client: ChatClientProtocol) -> None:
-    """Test run method with MCP tools to cover MCP tool handling code."""
+    """MCPツールを使ったrunメソッドをテストし、MCPツール処理コードをカバーします。"""
     agent = ChatAgent(chat_client=chat_client, name="TestAgent", description="Test agent")
 
-    # Create a mock MCP tool
+    # モックのMCPツールを作成します。
     mock_mcp_tool = MagicMock(spec=MCPTool)
     mock_mcp_tool.is_connected = False
     mock_mcp_tool.functions = [MagicMock()]
 
-    # Mock the async context manager entry
+    # 非同期コンテキストマネージャのエントリをモックします。
     mock_mcp_tool.__aenter__ = AsyncMock(return_value=mock_mcp_tool)
     mock_mcp_tool.__aexit__ = AsyncMock(return_value=None)
 
-    # Test run with MCP tools - this should hit the MCP tool handling code
+    # MCPツールを使ったrunをテストします - これはMCPツール処理コードに到達するはずです。
     with contextlib.suppress(Exception):
-        # We expect this to fail since we're using mocks, but we want to exercise the code path
+        # モックを使っているため失敗することが予想されますが、コードパスを実行したいです。
         await agent.run(messages="Test message", tools=[mock_mcp_tool])
 
 
 async def test_chat_agent_with_local_mcp_tools(chat_client: ChatClientProtocol) -> None:
-    """Test agent initialization with local MCP tools."""
-    # Create a mock MCP tool
+    """ローカルMCPツールを使ったagentの初期化をテストします。"""
+    # モックのMCPツールを作成します。
     mock_mcp_tool = MagicMock(spec=MCPTool)
     mock_mcp_tool.is_connected = False
     mock_mcp_tool.__aenter__ = AsyncMock(return_value=mock_mcp_tool)
     mock_mcp_tool.__aexit__ = AsyncMock(return_value=None)
 
-    # Test agent with MCP tools in constructor
+    # コンストラクタでMCPツールを持つagentをテストします。
     with contextlib.suppress(Exception):
         agent = ChatAgent(chat_client=chat_client, name="TestAgent", description="Test agent", tools=[mock_mcp_tool])
-        # Test async context manager with MCP tools
+        # MCPツールを使った非同期コンテキストマネージャをテストします。
         async with agent:
             pass

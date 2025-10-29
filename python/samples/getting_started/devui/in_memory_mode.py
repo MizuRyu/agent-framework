@@ -1,9 +1,9 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Example of using Agent Framework DevUI with in-memory entity registration.
+"""Agent Framework DevUIを使用したインメモリエンティティ登録の例。
 
-This demonstrates the simplest way to serve agents and workflows as OpenAI-compatible API endpoints.
-Includes both agents and a basic workflow to showcase different entity types.
+これはAgentやワークフローをOpenAI互換APIエンドポイントとして提供する最も簡単な方法を示します。
+異なるエンティティタイプを示すためにAgentと基本的なワークフローの両方を含みます。
 """
 
 import logging
@@ -16,11 +16,11 @@ from agent_framework.devui import serve
 from typing_extensions import Never
 
 
-# Tool functions for the agent
+# Agentのためのツール関数
 def get_weather(
     location: Annotated[str, "The location to get the weather for."],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     temperature = 53
     return f"The weather in {location} is {conditions[0]} with a high of {temperature}°C."
@@ -29,41 +29,41 @@ def get_weather(
 def get_time(
     timezone: Annotated[str, "The timezone to get time for."] = "UTC",
 ) -> str:
-    """Get current time for a timezone."""
+    """タイムゾーンの現在時刻を取得します。"""
     from datetime import datetime
 
-    # Simplified for example
+    # 例のために簡略化しています
     return f"Current time in {timezone}: {datetime.now().strftime('%H:%M:%S')}"
 
 
-# Basic workflow executors
+# 基本的なワークフローのExecutor
 class UpperCase(Executor):
-    """Convert text to uppercase."""
+    """テキストを大文字に変換します。"""
 
     @handler
     async def to_upper(self, text: str, ctx: WorkflowContext[str]) -> None:
-        """Convert input to uppercase and forward to next executor."""
+        """入力を大文字に変換し、次のExecutorに渡します。"""
         result = text.upper()
         await ctx.send_message(result)
 
 
 class AddExclamation(Executor):
-    """Add exclamation mark to text."""
+    """テキストに感嘆符を追加します。"""
 
     @handler
     async def add_exclamation(self, text: str, ctx: WorkflowContext[Never, str]) -> None:
-        """Add exclamation and yield as workflow output."""
+        """感嘆符を追加し、ワークフローの出力としてyieldします。"""
         result = f"{text}!"
         await ctx.yield_output(result)
 
 
 def main():
-    """Main function demonstrating in-memory entity registration."""
-    # Setup logging
+    """インメモリのエンティティ登録を示すメイン関数。"""
+    # ログのセットアップ
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger = logging.getLogger(__name__)
 
-    # Create Azure OpenAI chat client
+    # Azure OpenAIのChat Clientを作成します。
     chat_client = AzureOpenAIChatClient(
         api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
         azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
@@ -71,7 +71,7 @@ def main():
         model_id=os.environ.get("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-4o"),
     )
 
-    # Create agents
+    # Agentを作成します。
     weather_agent = ChatAgent(
         name="weather-assistant",
         description="Provides weather information and time",
@@ -90,7 +90,7 @@ def main():
         chat_client=chat_client,
     )
 
-    # Create a basic workflow: Input -> UpperCase -> AddExclamation -> Output
+    # 基本的なワークフローを作成します: Input -> UpperCase -> AddExclamation -> Output
     upper_executor = UpperCase(id="upper_case")
     exclaim_executor = AddExclamation(id="add_exclamation")
 
@@ -104,7 +104,7 @@ def main():
         .build()
     )
 
-    # Collect entities for serving
+    # サービング用のエンティティを収集します。
     entities = [weather_agent, simple_agent, basic_workflow]
 
     logger.info("Starting DevUI on http://localhost:8090")
@@ -112,7 +112,7 @@ def main():
     logger.info("  - Agents: weather-assistant, general-assistant")
     logger.info("  - Workflow: basic text transformer (uppercase + exclamation)")
 
-    # Launch server with auto-generated entity IDs
+    # 自動生成されたエンティティIDでサーバーを起動します。
     serve(entities=entities, port=8090, auto_open=True)
 
 

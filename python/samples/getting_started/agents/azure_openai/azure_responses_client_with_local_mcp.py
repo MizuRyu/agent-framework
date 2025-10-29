@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+# 著作権 (c) Microsoft。無断転載を禁じます。
 
 import os
 import asyncio
@@ -15,23 +15,22 @@ servers.
 """
 
 
-# --- Below code uses Microsoft Learn MCP server over Streamable HTTP ---
-# --- Users can set these environment variables, or just edit the values below to their desired local MCP server
-MCP_NAME = os.environ.get("MCP_NAME", "Microsoft Learn MCP")  # example name
-MCP_URL = os.environ.get("MCP_URL", "https://learn.microsoft.com/api/mcp")   # example endpoint
+# --- 以下のコードはStreamable HTTP経由でMicrosoft Learn MCPサーバーを使用します --- ---
+# ユーザーはこれらの環境変数を設定するか、以下の値を希望のローカルMCPサーバーに編集できます
+MCP_NAME = os.environ.get("MCP_NAME", "Microsoft Learn MCP")  # 例の名前
+MCP_URL = os.environ.get("MCP_URL", "https://learn.microsoft.com/api/mcp")   # 例のエンドポイント
 
-# Environment variables for Azure OpenAI Responses authentication
-# AZURE_OPENAI_ENDPOINT="<your-azure openai-endpoint>"
+# Azure OpenAI Responses認証用の環境変数 AZURE_OPENAI_ENDPOINT="<your-azure openai-endpoint>"
 # AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME="<your-deployment-name>"
-# AZURE_OPENAI_API_VERSION="<your-api-version>"  # e.g. "2025-03-01-preview"
+# AZURE_OPENAI_API_VERSION="<your-api-version>"  # 例: "2025-03-01-preview"
 
 async def main():
-    """Example showing local MCP tools for a Azure OpenAI Responses Agent."""
-    # AuthN: use Azure CLI
+    """Azure OpenAI Responses Agent用のローカルMCPツールの例です。"""
+    # 認証: Azure CLIを使用
     credential = AzureCliCredential()
 
-    # Build an agent backed by Azure OpenAI Responses
-    # (endpoint/deployment/api_version can also come from env vars above)
+    # Azure OpenAI ResponsesをバックエンドにしたAgentを構築します
+    # （endpoint/deployment/api_versionは上記の環境変数からも取得可能）
     responses_client = AzureOpenAIResponsesClient(
         credential=credential,
     )
@@ -43,18 +42,18 @@ async def main():
         ),
     )
 
-    # Connect to the MCP server (Streamable HTTP)
+    # MCPサーバーに接続します（Streamable HTTP）
     async with MCPStreamableHTTPTool(
         name=MCP_NAME,
         url=MCP_URL,
         
     ) as mcp_tool:
-        # First query — expect the agent to use the MCP tool if it helps
+        # 最初のクエリ — 助けになる場合はAgentがMCPツールを使用することを期待します
         q1 = "How to create an Azure storage account using az cli?"
         r1 = await agent.run(q1, tools=mcp_tool)
         print("\n=== Answer 1 ===\n", r1.text)
 
-        # Follow-up query (connection is reused)
+        # フォローアップクエリ（接続は再利用されます）
         q2 = "What is Microsoft Agent Framework?"
         r2 = await agent.run(q2, tools=mcp_tool)
         print("\n=== Answer 2 ===\n", r2.text)

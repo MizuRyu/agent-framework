@@ -1,8 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Compare conversation threading and streaming responses for chat agents.
+"""チャットAgentの会話スレッドとストリーミングレスポンスを比較します。
 
-Both implementations reuse a conversation thread across turns and stream output
-for the second turn.
+両実装はターン間で会話スレッドを再利用し、2ターン目で出力をストリームします。
 """
 
 import asyncio
@@ -12,7 +11,7 @@ async def run_semantic_kernel() -> None:
     from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    # SK thread object keeps the conversation history on the agent side.
+    # SKのスレッドオブジェクトはAgent側で会話履歴を保持します。
     agent = ChatCompletionAgent(
         service=OpenAIChatCompletion(),
         name="Writer",
@@ -39,7 +38,7 @@ async def run_semantic_kernel() -> None:
 async def run_agent_framework() -> None:
     from agent_framework.openai import OpenAIChatClient
 
-    # AF thread objects are requested explicitly from the agent.
+    # AFのスレッドオブジェクトはAgentから明示的に要求されます。
     chat_agent = OpenAIChatClient().create_agent(
         name="Writer",
         instructions="Keep answers short and friendly.",

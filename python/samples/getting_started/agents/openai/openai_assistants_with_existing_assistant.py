@@ -21,7 +21,7 @@ using existing assistant IDs rather than creating new ones.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -29,10 +29,10 @@ def get_weather(
 async def main() -> None:
     print("=== OpenAI Assistants Chat Client with Existing Assistant ===")
 
-    # Create the client
+    # クライアントを作成する
     client = AsyncOpenAI()
 
-    # Create an assistant that will persist
+    # 永続化するassistantを作成する
     created_assistant = await client.beta.assistants.create(
         model=os.environ["OPENAI_CHAT_MODEL_ID"], name="WeatherAssistant"
     )
@@ -46,7 +46,7 @@ async def main() -> None:
             result = await agent.run("What's the weather like in Tokyo?")
             print(f"Result: {result}\n")
     finally:
-        # Clean up the assistant manually
+        # assistantを手動でクリーンアップする
         await client.beta.assistants.delete(created_assistant.id)
 
 

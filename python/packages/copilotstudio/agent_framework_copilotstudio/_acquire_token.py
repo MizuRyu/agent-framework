@@ -1,7 +1,5 @@
-# Copyright (c) Microsoft. All rights reserved.
-# pyright: reportUnknownMemberType = false
-# pyright: reportUnknownVariableType = false
-# pyright: reportUnknownArgumentType = false
+# Copyright (c) Microsoft. All rights reserved. pyright: reportUnknownMemberType = false
+# pyright: reportUnknownVariableType = false pyright: reportUnknownArgumentType = false
 
 import logging
 from typing import Any
@@ -11,7 +9,7 @@ from msal import PublicClientApplication
 
 logger = logging.getLogger(__name__)
 
-# Default scopes for Power Platform API
+# Power Platform API のデフォルトスコープ
 DEFAULT_SCOPES = ["https://api.powerplatform.com/.default"]
 
 
@@ -23,23 +21,23 @@ def acquire_token(
     token_cache: Any | None = None,
     scopes: list[str] | None = None,
 ) -> str:
-    """Acquire an authentication token using MSAL Public Client Application.
+    """MSAL Public Client Application を使って認証トークンを取得する。
 
-    This function attempts to acquire a token silently first (using cached tokens),
-    and falls back to interactive authentication if needed.
+    この関数はまずトークンをサイレントに取得しようと試み（キャッシュされたトークンを使用）、
+    必要に応じてインタラクティブ認証にフォールバックする。
 
     Keyword Args:
-        client_id: The client ID of the application.
-        tenant_id: The tenant ID for authentication.
-        username: Optional username to filter accounts.
-        token_cache: Optional token cache for storing tokens.
-        scopes: Optional list of scopes. Defaults to Power Platform API scopes.
+        client_id: アプリケーションのクライアントID。
+        tenant_id: 認証用のテナントID。
+        username: オプションのユーザー名（アカウントをフィルタリングするため）。
+        token_cache: オプションのトークンキャッシュ。
+        scopes: オプションのスコープリスト。デフォルトは Power Platform API のスコープ。
 
     Returns:
-        The access token string.
+        アクセストークンの文字列。
 
     Raises:
-        ServiceException: If authentication token cannot be acquired.
+        ServiceException: 認証トークンが取得できなかった場合。
     """
     if not client_id:
         raise ServiceException("Client ID is required for token acquisition.")
@@ -56,7 +54,7 @@ def acquire_token(
 
     token: str | None = None
 
-    # Try silent token acquisition first if we have cached accounts
+    # キャッシュされたアカウントがあればまずサイレントトークン取得を試みる
     if accounts:
         try:
             logger.debug("Attempting silent token acquisition")
@@ -71,7 +69,7 @@ def acquire_token(
         except Exception as ex:
             logger.warning("Silent token acquisition failed with exception: %s", ex)
 
-    # Fall back to interactive authentication if silent acquisition failed
+    # サイレント取得に失敗した場合はインタラクティブ認証にフォールバックする
     if not token:
         try:
             logger.debug("Attempting interactive token acquisition")

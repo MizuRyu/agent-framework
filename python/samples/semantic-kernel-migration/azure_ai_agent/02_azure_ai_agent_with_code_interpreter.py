@@ -1,9 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Enable the hosted code interpreter for Azure AI agents in SK and AF.
+"""SKとAFでAzure AI Agent向けのホストされたコードインタープリタを有効にします。
 
-The Azure AI service natively executes the code interpreter tool. Provide the
-resource details via AzureAIAgentSettings (SK) or environment variables consumed
-by AzureAIAgentClient (AF).
+Azure AIサービスはコードインタープリタツールをネイティブに実行します。リソースの詳細はAzureAIAgentSettings（SK）またはAzureAIAgentClient（AF）が使用する環境変数で提供してください。
 """
 
 import asyncio
@@ -16,7 +14,7 @@ async def run_semantic_kernel() -> None:
     async with AzureCliCredential() as credential:
         async with AzureAIAgent.create_client(credential=credential) as client:
             settings = AzureAIAgentSettings()
-            # Register the hosted code interpreter tool with the remote agent.
+            # リモートAgentにホストされたコードインタープリタツールを登録します。
             definition = await client.agents.create_agent(
                 model=settings.model_deployment_name,
                 name="Analyst",
@@ -40,7 +38,7 @@ async def run_agent_framework() -> None:
             instructions="Use the code interpreter for numeric work.",
             tools=[HostedCodeInterpreterTool()],
         ) as agent:
-            # HostedCodeInterpreterTool mirrors the built-in Azure AI capability.
+            # HostedCodeInterpreterToolは組み込みのAzure AI機能を反映しています。
             reply = await agent.run(
                 "Use Python to compute 42 ** 2 and explain the result.",
                 tool_choice="auto",

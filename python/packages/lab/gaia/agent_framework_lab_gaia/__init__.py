@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""GAIA benchmark module for Agent Framework."""
+"""Agent Framework用のGAIAベンチマークモジュール。"""
 
 import importlib.metadata
 
@@ -10,7 +10,7 @@ from .gaia import GAIA, GAIATelemetryConfig, gaia_scorer, viewer_main
 try:
     __version__ = importlib.metadata.version(__name__)
 except importlib.metadata.PackageNotFoundError:
-    __version__ = "0.0.0"  # Fallback for development mode
+    __version__ = "0.0.0"  # 開発モード用のフォールバック。
 
 __all__ = [
     "GAIA",

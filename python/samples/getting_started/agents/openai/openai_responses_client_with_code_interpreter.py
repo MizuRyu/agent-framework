@@ -16,7 +16,7 @@ for Python code execution and mathematical problem solving.
 
 
 async def main() -> None:
-    """Example showing how to use the HostedCodeInterpreterTool with OpenAI Responses."""
+    """HostedCodeInterpreterToolをOpenAI Responsesで使用する方法を示す例。"""
     print("=== OpenAI Responses Agent with Code Interpreter Example ===")
 
     agent = ChatAgent(

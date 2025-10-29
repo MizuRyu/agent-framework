@@ -13,7 +13,7 @@ TModel = TypeVar("TModel", bound="DictConvertible")
 
 
 class DictConvertible:
-    """Mixin providing conversion helpers for plain Python models."""
+    """プレーンなPythonモデルの変換ヘルパーを提供するMixin。"""
 
     def to_dict(self) -> dict[str, Any]:
         raise NotImplementedError
@@ -41,7 +41,7 @@ class DictConvertible:
 
 
 def encode_value(value: Any) -> Any:
-    """Recursively encode values for JSON-friendly serialization."""
+    """JSONに適したシリアライズのために値を再帰的にエンコードします。"""
     if isinstance(value, DictConvertible):
         return value.to_dict()
     if isinstance(value, dict):

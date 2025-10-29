@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for lightning module."""
+"""lightningモジュールのテスト。"""
 
 from unittest.mock import AsyncMock, patch
 
@@ -20,9 +20,9 @@ from openai.types.chat.chat_completion import Choice
 
 @pytest.fixture
 def workflow_two_agents():
-    """Test a workflow with two OpenAI chat agents where first agent's result passes to second agent."""
+    """最初のエージェントの結果が2番目のエージェントに渡される2つのOpenAIチャットエージェントのワークフローテスト。"""
 
-    # Mock OpenAI responses
+    # OpenAIレスポンスのモック
     first_agent_response = ChatCompletion(
         id="chatcmpl-123",
         object="chat.completion",
@@ -54,7 +54,7 @@ def workflow_two_agents():
         ],
     )
 
-    # Create mock OpenAI clients
+    # モックOpenAIクライアントを作成する
     with patch.dict(
         "os.environ",
         {
@@ -65,7 +65,7 @@ def workflow_two_agents():
         first_chat_client = OpenAIChatClient()
         second_chat_client = OpenAIChatClient()
 
-        # Mock the OpenAI API calls
+        # OpenAI APIコールをモックする
         with (
             patch.object(
                 first_chat_client.client.chat.completions,
@@ -80,7 +80,7 @@ def workflow_two_agents():
                 return_value=second_agent_response,
             ),
         ):
-            # Create the two agents
+            # 2つのエージェントを作成する
             analyzer_agent = ChatAgent(
                 chat_client=first_chat_client,
                 name="DataAnalyzer",
@@ -96,7 +96,7 @@ def workflow_two_agents():
             analyzer_executor = AgentExecutor(id="analyzer", agent=analyzer_agent)
             advisor_executor = AgentExecutor(id="advisor", agent=advisor_agent)
 
-            # Build workflow: analyzer -> advisor
+            # ワークフローを構築：analyzer -> advisor
             workflow = (
                 WorkflowBuilder()
                 .set_start_executor(analyzer_executor)
@@ -110,10 +110,10 @@ def workflow_two_agents():
 async def test_openai_workflow_two_agents(workflow_two_agents):
     events = await workflow_two_agents.run("Please analyze the quarterly sales data")
 
-    # Get all AgentRunEvent data
+    # すべてのAgentRunEventデータを取得する
     agent_outputs = [event.data for event in events if isinstance(event, AgentRunEvent)]
 
-    # Check that we have outputs from both agents
+    # 両方のエージェントから出力があることを確認する
     assert len(agent_outputs) == 2
     assert any("Analyzed data shows trend upward" in str(output) for output in agent_outputs)
     assert any(
@@ -123,15 +123,16 @@ async def test_openai_workflow_two_agents(workflow_two_agents):
 
 
 async def test_observability(workflow_two_agents):
-    r"""Expected trace tree:
+    r"""期待されるトレースツリー：
 
                     [workflow.run]
                     /      \
-            [analyzer]      [advisor]
-            /      \          /    \
-    [DataAnalyzer] [send] [Investment] [send]
-            |                    |
-        [chat gpt-4o]        [chat gpt-4o]
+                    [analyzer]      [advisor]
+                    /      \          /    \
+                    [DataAnalyzer] [send] [Investment] [send]
+                    |                    |
+                    [chat gpt-4o]        [chat gpt-4o]
+
     """
     tracer = AgentFrameworkTracer()
     try:
@@ -150,7 +151,7 @@ async def test_observability(workflow_two_agents):
         triplets = TracerTraceToTriplet(agent_match="advisor", llm_call_match="chat").adapt(tracer.get_last_trace())
         assert len(triplets) == 1
 
-        # Parent agent is not matched
+        # 親エージェントが一致しません
         triplets = TracerTraceToTriplet(agent_match="DataAnalyzer", llm_call_match="chat").adapt(
             tracer.get_last_trace()
         )

@@ -30,23 +30,23 @@ from .conftest import MockChatClient
 
 
 class FunctionTestArgs(BaseModel):
-    """Test arguments for function middleware tests."""
+    """function middlewareテスト用のテスト引数。"""
 
     name: str = Field(description="Test name parameter")
 
 
 class TestResultOverrideMiddleware:
-    """Test cases for middleware result override functionality."""
+    """middlewareのresult override機能のテストケース。"""
 
     async def test_agent_middleware_response_override_non_streaming(self, mock_agent: AgentProtocol) -> None:
-        """Test that agent middleware can override response for non-streaming execution."""
+        """agent middlewareが非ストリーミング実行のレスポンスをオーバーライドできることをテストします。"""
         override_response = AgentRunResponse(messages=[ChatMessage(role=Role.ASSISTANT, text="overridden response")])
 
         class ResponseOverrideMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Execute the pipeline first, then override the response
+                # まずパイプラインを実行し、その後レスポンスをオーバーライドします
                 await next(context)
                 context.result = override_response
 
@@ -64,15 +64,15 @@ class TestResultOverrideMiddleware:
 
         result = await pipeline.execute(mock_agent, messages, context, final_handler)
 
-        # Verify the overridden response is returned
+        # オーバーライドされたレスポンスが返されることを検証します
         assert result is not None
         assert result == override_response
         assert result.messages[0].text == "overridden response"
-        # Verify original handler was called since middleware called next()
+        # middlewareがnext()を呼び出したため、元のハンドラーが呼び出されたことを検証します
         assert handler_called
 
     async def test_agent_middleware_response_override_streaming(self, mock_agent: AgentProtocol) -> None:
-        """Test that agent middleware can override response for streaming execution."""
+        """agent middlewareがストリーミング実行のレスポンスをオーバーライドできることをテストします。"""
 
         async def override_stream() -> AsyncIterable[AgentRunResponseUpdate]:
             yield AgentRunResponseUpdate(contents=[TextContent(text="overridden")])
@@ -82,7 +82,7 @@ class TestResultOverrideMiddleware:
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Execute the pipeline first, then override the response stream
+                # まずパイプラインを実行し、その後レスポンスストリームをオーバーライドします
                 await next(context)
                 context.result = override_stream()
 
@@ -98,13 +98,13 @@ class TestResultOverrideMiddleware:
         async for update in pipeline.execute_stream(mock_agent, messages, context, final_handler):
             updates.append(update)
 
-        # Verify the overridden response stream is returned
+        # オーバーライドされたレスポンスストリームが返されることを検証します
         assert len(updates) == 2
         assert updates[0].text == "overridden"
         assert updates[1].text == " stream"
 
     async def test_function_middleware_result_override(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test that function middleware can override result."""
+        """function middlewareが結果をオーバーライドできることをテストします。"""
         override_result = "overridden function result"
 
         class ResultOverrideMiddleware(FunctionMiddleware):
@@ -113,7 +113,7 @@ class TestResultOverrideMiddleware:
                 context: FunctionInvocationContext,
                 next: Callable[[FunctionInvocationContext], Awaitable[None]],
             ) -> None:
-                # Execute the pipeline first, then override the result
+                # まずパイプラインを実行し、その後結果をオーバーライドします
                 await next(context)
                 context.result = override_result
 
@@ -131,47 +131,47 @@ class TestResultOverrideMiddleware:
 
         result = await pipeline.execute(mock_function, arguments, context, final_handler)
 
-        # Verify the overridden result is returned
+        # オーバーライドされた結果が返されることを検証します
         assert result == override_result
-        # Verify original handler was called since middleware called next()
+        # middlewareがnext()を呼び出したため、元のハンドラーが呼び出されたことを検証します
         assert handler_called
 
     async def test_chat_agent_middleware_response_override(self) -> None:
-        """Test result override functionality with ChatAgent integration."""
+        """ChatAgent統合でのresult override機能をテストします。"""
         mock_chat_client = MockChatClient()
 
         class ChatAgentResponseOverrideMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Always call next() first to allow execution
+                # 常に最初にnext()を呼び出して実行を許可します
                 await next(context)
-                # Then conditionally override based on content
+                # その後、内容に基づいて条件付きでオーバーライドします
                 if any("special" in msg.text for msg in context.messages if msg.text):
                     context.result = AgentRunResponse(
                         messages=[ChatMessage(role=Role.ASSISTANT, text="Special response from middleware!")]
                     )
 
-        # Create ChatAgent with override middleware
+        # override middlewareを使ってChatAgentを作成します
         middleware = ChatAgentResponseOverrideMiddleware()
         agent = ChatAgent(chat_client=mock_chat_client, middleware=[middleware])
 
-        # Test override case
+        # オーバーライドケースをテストします
         override_messages = [ChatMessage(role=Role.USER, text="Give me a special response")]
         override_response = await agent.run(override_messages)
         assert override_response.messages[0].text == "Special response from middleware!"
-        # Verify chat client was called since middleware called next()
+        # middlewareがnext()を呼び出したため、chat clientが呼び出されたことを検証します
         assert mock_chat_client.call_count == 1
 
-        # Test normal case
+        # 通常ケースをテストします
         normal_messages = [ChatMessage(role=Role.USER, text="Normal request")]
         normal_response = await agent.run(normal_messages)
         assert normal_response.messages[0].text == "test response"
-        # Verify chat client was called for normal case
+        # 通常ケースでchat clientが呼び出されたことを検証します
         assert mock_chat_client.call_count == 2
 
     async def test_chat_agent_middleware_streaming_override(self) -> None:
-        """Test streaming result override functionality with ChatAgent integration."""
+        """ChatAgent統合でのストリーミング結果オーバーライド機能をテストします。"""
         mock_chat_client = MockChatClient()
 
         async def custom_stream() -> AsyncIterable[AgentRunResponseUpdate]:
@@ -183,17 +183,17 @@ class TestResultOverrideMiddleware:
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Always call next() first to allow execution
+                # 常に最初にnext()を呼び出して実行を許可します
                 await next(context)
-                # Then conditionally override based on content
+                # その後、内容に基づいて条件付きでオーバーライドします
                 if any("custom stream" in msg.text for msg in context.messages if msg.text):
                     context.result = custom_stream()
 
-        # Create ChatAgent with override middleware
+        # override middlewareを使ってChatAgentを作成します
         middleware = ChatAgentStreamOverrideMiddleware()
         agent = ChatAgent(chat_client=mock_chat_client, middleware=[middleware])
 
-        # Test streaming override case
+        # ストリーミングオーバーライドケースをテストします
         override_messages = [ChatMessage(role=Role.USER, text="Give me a custom stream")]
         override_updates: list[AgentRunResponseUpdate] = []
         async for update in agent.run_stream(override_messages):
@@ -204,7 +204,7 @@ class TestResultOverrideMiddleware:
         assert override_updates[1].text == " streaming"
         assert override_updates[2].text == " response!"
 
-        # Test normal streaming case
+        # 通常のストリーミングケースをテストします
         normal_messages = [ChatMessage(role=Role.USER, text="Normal streaming request")]
         normal_updates: list[AgentRunResponseUpdate] = []
         async for update in agent.run_stream(normal_messages):
@@ -215,16 +215,16 @@ class TestResultOverrideMiddleware:
         assert normal_updates[1].text == "another update"
 
     async def test_agent_middleware_conditional_no_next(self, mock_agent: AgentProtocol) -> None:
-        """Test that when agent middleware conditionally doesn't call next(), no execution happens."""
+        """agent middlewareが条件付きでnext()を呼び出さない場合、実行が行われないことをテストします。"""
 
         class ConditionalNoNextMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Only call next() if message contains "execute"
+                # メッセージに"execute"が含まれる場合のみnext()を呼び出します
                 if any("execute" in msg.text for msg in context.messages if msg.text):
                     await next(context)
-                # Otherwise, don't call next() - no execution should happen
+                # それ以外の場合はnext()を呼び出さない - 実行は行われないはずです
 
         middleware = ConditionalNoNextMiddleware()
         pipeline = AgentMiddlewarePipeline([middleware])
@@ -236,22 +236,22 @@ class TestResultOverrideMiddleware:
             handler_called = True
             return AgentRunResponse(messages=[ChatMessage(role=Role.ASSISTANT, text="executed response")])
 
-        # Test case where next() is NOT called
+        # next()が呼び出されないケースのテスト
         no_execute_messages = [ChatMessage(role=Role.USER, text="Don't run this")]
         no_execute_context = AgentRunContext(agent=mock_agent, messages=no_execute_messages)
         no_execute_result = await pipeline.execute(mock_agent, no_execute_messages, no_execute_context, final_handler)
 
-        # When middleware doesn't call next(), result should be empty AgentRunResponse
+        # middlewareがnext()を呼び出さない場合、結果は空のAgentRunResponseであるべきです
         assert no_execute_result is not None
         assert isinstance(no_execute_result, AgentRunResponse)
-        assert no_execute_result.messages == []  # Empty response
+        assert no_execute_result.messages == []  # 空のレスポンス
         assert not handler_called
         assert no_execute_context.result is None
 
-        # Reset for next test
+        # 次のテストのためにリセットします
         handler_called = False
 
-        # Test case where next() IS called
+        # next()が呼び出されるケースのテスト
         execute_messages = [ChatMessage(role=Role.USER, text="Please execute this")]
         execute_context = AgentRunContext(agent=mock_agent, messages=execute_messages)
         execute_result = await pipeline.execute(mock_agent, execute_messages, execute_context, final_handler)
@@ -261,7 +261,7 @@ class TestResultOverrideMiddleware:
         assert handler_called
 
     async def test_function_middleware_conditional_no_next(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test that when function middleware conditionally doesn't call next(), no execution happens."""
+        """function middlewareが条件付きでnext()を呼び出さない場合、実行が行われないことをテストします。"""
 
         class ConditionalNoNextFunctionMiddleware(FunctionMiddleware):
             async def process(
@@ -269,12 +269,12 @@ class TestResultOverrideMiddleware:
                 context: FunctionInvocationContext,
                 next: Callable[[FunctionInvocationContext], Awaitable[None]],
             ) -> None:
-                # Only call next() if argument name contains "execute"
+                # 引数名に"execute"が含まれる場合のみnext()を呼び出します
                 args = context.arguments
                 assert isinstance(args, FunctionTestArgs)
                 if "execute" in args.name:
                     await next(context)
-                # Otherwise, don't call next() - no execution should happen
+                # それ以外の場合はnext()を呼び出さない - 実行は行われないはずです
 
         middleware = ConditionalNoNextFunctionMiddleware()
         pipeline = FunctionMiddlewarePipeline([middleware])
@@ -286,20 +286,20 @@ class TestResultOverrideMiddleware:
             handler_called = True
             return "executed function result"
 
-        # Test case where next() is NOT called
+        # next()が呼び出されないケースのテスト
         no_execute_args = FunctionTestArgs(name="test_no_action")
         no_execute_context = FunctionInvocationContext(function=mock_function, arguments=no_execute_args)
         no_execute_result = await pipeline.execute(mock_function, no_execute_args, no_execute_context, final_handler)
 
-        # When middleware doesn't call next(), function result should be None (functions can return None)
+        # middlewareがnext()を呼び出さない場合、functionの結果はNoneであるべきです（関数はNoneを返すことがあります）
         assert no_execute_result is None
         assert not handler_called
         assert no_execute_context.result is None
 
-        # Reset for next test
+        # 次のテストのためにリセットします
         handler_called = False
 
-        # Test case where next() IS called
+        # next()が呼び出されるケースのテスト
         execute_args = FunctionTestArgs(name="test_execute")
         execute_context = FunctionInvocationContext(function=mock_function, arguments=execute_args)
         execute_result = await pipeline.execute(mock_function, execute_args, execute_context, final_handler)
@@ -309,23 +309,23 @@ class TestResultOverrideMiddleware:
 
 
 class TestResultObservability:
-    """Test cases for middleware result observability functionality."""
+    """middlewareのresult observability機能のテストケース。"""
 
     async def test_agent_middleware_response_observability(self, mock_agent: AgentProtocol) -> None:
-        """Test that middleware can observe response after execution."""
+        """middlewareが実行後にレスポンスを観察できることをテストします。"""
         observed_responses: list[AgentRunResponse] = []
 
         class ObservabilityMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Context should be empty before next()
+                # next()前はContextは空であるべきです
                 assert context.result is None
 
-                # Call next to execute
+                # nextを呼び出して実行します
                 await next(context)
 
-                # Context should now contain the response for observability
+                # 現在、Contextには観察用のレスポンスが含まれているはずです
                 assert context.result is not None
                 assert isinstance(context.result, AgentRunResponse)
                 observed_responses.append(context.result)
@@ -340,13 +340,13 @@ class TestResultObservability:
 
         result = await pipeline.execute(mock_agent, messages, context, final_handler)
 
-        # Verify response was observed
+        # レスポンスが観察されたことを検証します
         assert len(observed_responses) == 1
         assert observed_responses[0].messages[0].text == "executed response"
         assert result == observed_responses[0]
 
     async def test_function_middleware_result_observability(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test that middleware can observe function result after execution."""
+        """middlewareが実行後にfunction結果を観察できることをテストします。"""
         observed_results: list[str] = []
 
         class ObservabilityMiddleware(FunctionMiddleware):
@@ -355,13 +355,13 @@ class TestResultObservability:
                 context: FunctionInvocationContext,
                 next: Callable[[FunctionInvocationContext], Awaitable[None]],
             ) -> None:
-                # Context should be empty before next()
+                # next()前はContextは空であるべきです
                 assert context.result is None
 
-                # Call next to execute
+                # nextを呼び出して実行します
                 await next(context)
 
-                # Context should now contain the result for observability
+                # 現在、Contextには観察用の結果が含まれているはずです
                 assert context.result is not None
                 observed_results.append(context.result)
 
@@ -375,27 +375,27 @@ class TestResultObservability:
 
         result = await pipeline.execute(mock_function, arguments, context, final_handler)
 
-        # Verify result was observed
+        # 結果が観察されたことを検証します
         assert len(observed_results) == 1
         assert observed_results[0] == "executed function result"
         assert result == observed_results[0]
 
     async def test_agent_middleware_post_execution_override(self, mock_agent: AgentProtocol) -> None:
-        """Test that middleware can override response after observing execution."""
+        """middlewareが実行を観察した後にレスポンスをオーバーライドできることをテストします。"""
 
         class PostExecutionOverrideMiddleware(AgentMiddleware):
             async def process(
                 self, context: AgentRunContext, next: Callable[[AgentRunContext], Awaitable[None]]
             ) -> None:
-                # Call next to execute first
+                # まずnextを呼び出して実行します
                 await next(context)
 
-                # Now observe and conditionally override
+                # 現在、観察して条件付きでオーバーライドします
                 assert context.result is not None
                 assert isinstance(context.result, AgentRunResponse)
 
                 if "modify" in context.result.messages[0].text:
-                    # Override after observing
+                    # 観察後にオーバーライドします
                     context.result = AgentRunResponse(
                         messages=[ChatMessage(role=Role.ASSISTANT, text="modified after execution")]
                     )
@@ -410,12 +410,12 @@ class TestResultObservability:
 
         result = await pipeline.execute(mock_agent, messages, context, final_handler)
 
-        # Verify response was modified after execution
+        # 実行後にレスポンスが修正されたことを検証します
         assert result is not None
         assert result.messages[0].text == "modified after execution"
 
     async def test_function_middleware_post_execution_override(self, mock_function: AIFunction[Any, Any]) -> None:
-        """Test that middleware can override function result after observing execution."""
+        """middlewareが実行を観察した後にfunction結果をオーバーライドできることをテストします。"""
 
         class PostExecutionOverrideMiddleware(FunctionMiddleware):
             async def process(
@@ -423,14 +423,14 @@ class TestResultObservability:
                 context: FunctionInvocationContext,
                 next: Callable[[FunctionInvocationContext], Awaitable[None]],
             ) -> None:
-                # Call next to execute first
+                # まずnextを呼び出して実行します
                 await next(context)
 
-                # Now observe and conditionally override
+                # 現在、観察して条件付きでオーバーライドします
                 assert context.result is not None
 
                 if "modify" in context.result:
-                    # Override after observing
+                    # 観察後にオーバーライドします
                     context.result = "modified after execution"
 
         middleware = PostExecutionOverrideMiddleware()
@@ -443,13 +443,13 @@ class TestResultObservability:
 
         result = await pipeline.execute(mock_function, arguments, context, final_handler)
 
-        # Verify result was modified after execution
+        # 実行後に結果が修正されたことを検証します
         assert result == "modified after execution"
 
 
 @pytest.fixture
 def mock_agent() -> AgentProtocol:
-    """Mock agent for testing."""
+    """テスト用のMock agent。"""
     agent = MagicMock(spec=AgentProtocol)
     agent.name = "test_agent"
     return agent
@@ -457,7 +457,7 @@ def mock_agent() -> AgentProtocol:
 
 @pytest.fixture
 def mock_function() -> AIFunction[Any, Any]:
-    """Mock function for testing."""
+    """テスト用のMock function。"""
     function = MagicMock(spec=AIFunction[Any, Any])
     function.name = "test_function"
     return function

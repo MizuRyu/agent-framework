@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-# Ensure local getting_started package can be imported when running as a script.
+# スクリプトとして実行する際に、ローカルのgetting_startedパッケージがインポート可能であることを保証する。
 _SAMPLES_ROOT = Path(__file__).resolve().parents[3]
 if str(_SAMPLES_ROOT) not in sys.path:
     sys.path.insert(0, str(_SAMPLES_ROOT))
@@ -54,13 +54,13 @@ Prerequisites:
 
 @dataclass
 class HumanReviewRequest(RequestInfoMessage):
-    """A request message type for escalation to a human reviewer."""
+    """人間のレビュアーへのエスカレーション用のRequestメッセージタイプ。"""
 
     agent_request: ReviewRequest | None = None
 
 
 class ReviewerWithHumanInTheLoop(Executor):
-    """Executor that always escalates reviews to a human manager."""
+    """常にレビューを人間のマネージャーにエスカレーションするExecutor。"""
 
     def __init__(self, worker_id: str, request_info_id: str, reviewer_id: str | None = None) -> None:
         unique_id = reviewer_id or f"{worker_id}-reviewer"
@@ -70,13 +70,12 @@ class ReviewerWithHumanInTheLoop(Executor):
 
     @handler
     async def review(self, request: ReviewRequest, ctx: WorkflowContext[ReviewResponse | HumanReviewRequest]) -> None:
-        # In this simplified example, we always escalate to a human manager.
-        # See workflow_as_agent_reflection.py for an implementation
-        # using an automated agent to make the review decision.
+        # この簡略化された例では、常に人間のマネージャーにエスカレーションします。
+        # 自動Agentを使ってレビュー判断を行う実装はworkflow_as_agent_reflection.pyを参照してください。
         print(f"Reviewer: Evaluating response for request {request.request_id[:8]}...")
         print("Reviewer: Escalating to human manager...")
 
-        # Forward the request to a human manager by sending a HumanReviewRequest.
+        # HumanReviewRequestを送信してリクエストを人間のマネージャーに転送します。
         await ctx.send_message(
             HumanReviewRequest(agent_request=request),
             target_id=self._request_info_id,
@@ -86,7 +85,7 @@ class ReviewerWithHumanInTheLoop(Executor):
     async def accept_human_review(
         self, response: RequestResponse[HumanReviewRequest, ReviewResponse], ctx: WorkflowContext[ReviewResponse]
     ) -> None:
-        # Accept the human review response and forward it back to the Worker.
+        # 人間のレビューのレスポンスを受け取り、Workerに転送します。
         human_response = response.data
         assert isinstance(human_response, ReviewResponse)
         print(f"Reviewer: Accepting human review for request {human_response.request_id[:8]}...")
@@ -100,7 +99,7 @@ async def main() -> None:
     print("Starting Workflow Agent with Human-in-the-Loop Demo")
     print("=" * 50)
 
-    # Create executors for the workflow.
+    # ワークフロー用のExecutorを作成します。
     print("Creating chat client and executors...")
     mini_chat_client = OpenAIChatClient(model_id="gpt-4.1-nano")
     worker = Worker(id="sub-worker", chat_client=mini_chat_client)
@@ -108,8 +107,7 @@ async def main() -> None:
     reviewer = ReviewerWithHumanInTheLoop(worker_id=worker.id, request_info_id=request_info_executor.id)
 
     print("Building workflow with Worker ↔ Reviewer cycle...")
-    # Build a workflow with bidirectional communication between Worker and Reviewer,
-    # and escalation paths for human review.
+    # WorkerとReviewer間の双方向通信と人間レビューのエスカレーション経路を持つワークフローを構築します。
     agent = (
         WorkflowBuilder()
         .add_edge(worker, reviewer)  # Worker sends requests to Reviewer
@@ -125,21 +123,21 @@ async def main() -> None:
     print("Query: 'Write code for parallel reading 1 million files on disk and write to a sorted output file.'")
     print("-" * 50)
 
-    # Run the agent with an initial query.
+    # 初期クエリでAgentを実行します。
     response = await agent.run(
         "Write code for parallel reading 1 million Files on disk and write to a sorted output file."
     )
 
-    # Locate the human review function call in the response messages.
+    # レスポンスメッセージ内の人間レビューの関数呼び出しを特定します。
     human_review_function_call: FunctionCallContent | None = None
     for message in response.messages:
         for content in message.contents:
             if isinstance(content, FunctionCallContent) and content.name == WorkflowAgent.REQUEST_INFO_FUNCTION_NAME:
                 human_review_function_call = content
 
-    # Handle the human review if required.
+    # 必要に応じて人間レビューを処理します。
     if human_review_function_call:
-        # Parse the human review request arguments.
+        # 人間レビューリクエストの引数を解析します。
         human_request_args = human_review_function_call.arguments
         if isinstance(human_request_args, str):
             request: WorkflowAgent.RequestInfoFunctionArgs = WorkflowAgent.RequestInfoFunctionArgs.from_json(
@@ -159,15 +157,15 @@ async def main() -> None:
             raise ValueError("Human review request must include agent_request.")
 
         request_id = agent_request.request_id
-        # Mock a human response approval for demonstration purposes.
+        # デモ目的で人間の承認レスポンスをモックします。
         human_response = ReviewResponse(request_id=request_id, feedback="Approved", approved=True)
 
-        # Create the function call result object to send back to the agent.
+        # Agentに返すための関数呼び出し結果オブジェクトを作成します。
         human_review_function_result = FunctionResultContent(
             call_id=human_review_function_call.call_id,
             result=human_response,
         )
-        # Send the human review result back to the agent.
+        # 人間レビューの結果をAgentに送信します。
         response = await agent.run(ChatMessage(role=Role.TOOL, contents=[human_review_function_result]))
         print(f"📤 Agent Response: {response.messages[-1].text}")
 

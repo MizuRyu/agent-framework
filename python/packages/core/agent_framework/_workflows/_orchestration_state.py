@@ -1,9 +1,8 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Unified state management for group chat orchestrators.
+"""グループチャットオーケストレーターのための統一された状態管理。
 
-Provides OrchestrationState dataclass for standardized checkpoint serialization
-across GroupChat, Handoff, and Magentic patterns.
+GroupChat、Handoff、Magenticパターン間で標準化されたチェックポイントシリアライズのためのOrchestrationStateデータクラスを提供します。
 """
 
 from dataclasses import dataclass, field
@@ -13,36 +12,39 @@ from .._types import ChatMessage
 
 
 def _new_chat_message_list() -> list[ChatMessage]:
-    """Factory function for typed empty ChatMessage list.
+    """型付き空のChatMessageリストのファクトリー関数。
 
-    Satisfies the type checker.
+    型チェッカーを満たします。
+
     """
     return []
 
 
 def _new_metadata_dict() -> dict[str, Any]:
-    """Factory function for typed empty metadata dict.
+    """型付き空のメタデータ辞書のファクトリー関数。
 
-    Satisfies the type checker.
+    型チェッカーを満たします。
+
     """
     return {}
 
 
 @dataclass
 class OrchestrationState:
-    """Unified state container for orchestrator checkpointing.
+    """オーケストレーターのチェックポイント用の統一された状態コンテナ。
 
-    This dataclass standardizes checkpoint serialization across all three
-    group chat patterns while allowing pattern-specific extensions via metadata.
+    このデータクラスは、3つのグループチャットパターン全体でチェックポイントのシリアライズを標準化し、
+    メタデータを通じてパターン固有の拡張を可能にします。
 
-    Common attributes cover shared orchestration concerns (task, conversation,
-    round tracking). Pattern-specific state goes in the metadata dict.
+    共通属性は共有のオーケストレーションの関心事（タスク、会話、ラウンド追跡）をカバーし、
+    パターン固有の状態はメタデータ辞書に格納されます。
 
     Attributes:
-        conversation: Full conversation history (all messages)
-        round_index: Number of coordination rounds completed (0 if not tracked)
-        metadata: Extensible dict for pattern-specific state
-        task: Optional primary task/question being orchestrated
+        conversation: 完全な会話履歴（すべてのメッセージ）
+        round_index: 完了した調整ラウンドの数（追跡されていない場合は0）
+        metadata: パターン固有の状態のための拡張可能な辞書
+        task: オプショナルな主要タスク／質問
+
     """
 
     conversation: list[ChatMessage] = field(default_factory=_new_chat_message_list)
@@ -51,10 +53,11 @@ class OrchestrationState:
     task: ChatMessage | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize to dict for checkpointing.
+        """チェックポイント用に辞書にシリアライズします。
 
         Returns:
-            Dict with encoded conversation and metadata for persistence
+            永続化のためにエンコードされたconversationとmetadataを含む辞書
+
         """
         from ._conversation_state import encode_chat_messages
 
@@ -69,13 +72,14 @@ class OrchestrationState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "OrchestrationState":
-        """Deserialize from checkpointed dict.
+        """チェックポイント化された辞書からデシリアライズします。
 
         Args:
-            data: Checkpoint data with encoded conversation
+            data: エンコードされたconversationを含むチェックポイントデータ
 
         Returns:
-            Restored OrchestrationState instance
+            復元されたOrchestrationStateインスタンス
+
         """
         from ._conversation_state import decode_chat_messages
 

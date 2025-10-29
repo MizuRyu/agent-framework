@@ -62,38 +62,38 @@ Simple flow visualization:
 """
 
 
-# 1. Define domain-specific message types
+# 1. ドメイン固有のメッセージタイプを定義する
 @dataclass
 class EmailValidationRequest:
-    """Request to validate an email address."""
+    """メールアドレスを検証するリクエスト。"""
 
     email: str
 
 
 @dataclass
 class DomainCheckRequest(RequestInfoMessage):
-    """Request to check if a domain is approved."""
+    """ドメインが承認されているか確認するリクエスト。"""
 
     domain: str = ""
 
 
 @dataclass
 class ValidationResult:
-    """Result of email validation."""
+    """メール検証の結果。"""
 
     email: str
     is_valid: bool
     reason: str
 
 
-# 2. Implement the sub-workflow executor (completely standard)
+# 2. サブワークフローexecutorを実装する（完全に標準的）
 class EmailValidator(Executor):
-    """Validates email addresses - doesn't know it's in a sub-workflow."""
+    """メールアドレスを検証します - サブワークフロー内であることは認識していません。"""
 
     def __init__(self) -> None:
-        """Initialize the EmailValidator executor."""
+        """EmailValidator executorを初期化します。"""
         super().__init__(id="email_validator")
-        # Use a dict to track multiple pending emails by request_id
+        # request_idごとに複数の保留中メールを追跡するためにdictを使用します
         self._pending_emails: dict[str, str] = {}
 
     @handler
@@ -102,10 +102,10 @@ class EmailValidator(Executor):
         request: EmailValidationRequest,
         ctx: WorkflowContext[DomainCheckRequest | ValidationResult, ValidationResult],
     ) -> None:
-        """Validate an email address."""
+        """メールアドレスを検証します。"""
         print(f"🔍 Sub-workflow validating email: {request.email}")
 
-        # Extract domain
+        # ドメインを抽出する
         domain = request.email.split("@")[1] if "@" in request.email else ""
 
         if not domain:
@@ -115,9 +115,9 @@ class EmailValidator(Executor):
             return
 
         print(f"🌐 Sub-workflow requesting domain check for: {domain}")
-        # Request domain check
+        # ドメインチェックをリクエストする
         domain_check = DomainCheckRequest(domain=domain)
-        # Store the pending email with the request_id for correlation
+        # 相関のためにrequest_idで保留中のメールを保存する
         self._pending_emails[domain_check.request_id] = request.email
         await ctx.send_message(domain_check, target_id="email_request_info")
 
@@ -127,7 +127,7 @@ class EmailValidator(Executor):
         response: RequestResponse[DomainCheckRequest, bool],
         ctx: WorkflowContext[ValidationResult, ValidationResult],
     ) -> None:
-        """Handle domain check response from RequestInfo with correlation."""
+        """相関付きでRequestInfoからのドメインチェック応答を処理する。"""
         approved = bool(response.data)
         domain = (
             response.original_request.domain
@@ -136,14 +136,14 @@ class EmailValidator(Executor):
         )
         print(f"📬 Sub-workflow received domain response for '{domain}': {approved}")
 
-        # Find the corresponding email using the request_id
+        # request_idを使って対応するメールを見つける
         request_id = (
             response.original_request.request_id
             if (hasattr(response, "original_request") and response.original_request)
             else None
         )
         if request_id and request_id in self._pending_emails:
-            email = self._pending_emails.pop(request_id)  # Remove from pending
+            email = self._pending_emails.pop(request_id)  # 保留中から削除する
             result = ValidationResult(
                 email=email,
                 is_valid=approved,
@@ -153,24 +153,25 @@ class EmailValidator(Executor):
             await ctx.yield_output(result)
 
 
-# 3. Implement the parent workflow with request interception
+# 3. リクエストインターセプション付きの親ワークフローを実装する
 class SmartEmailOrchestrator(Executor):
-    """Parent orchestrator that can intercept domain checks."""
+    """ドメインチェックをインターセプトできる親オーケストレーター。"""
 
     approved_domains: set[str] = set()
 
     def __init__(self, approved_domains: set[str] | None = None):
-        """Initialize the SmartEmailOrchestrator with approved domains.
+        """承認済みドメインでSmartEmailOrchestratorを初期化します。
 
         Args:
-            approved_domains: Set of pre-approved domains, defaults to example.com, test.org, company.com
+            approved_domains: 事前承認されたドメインのセット。デフォルトはexample.com、test.org、company.com
+
         """
         super().__init__(id="email_orchestrator", approved_domains=approved_domains)
         self._results: list[ValidationResult] = []
 
     @handler
     async def start_validation(self, emails: list[str], ctx: WorkflowContext[EmailValidationRequest]) -> None:
-        """Start validating a batch of emails."""
+        """メールのバッチ検証を開始します。"""
         print(f"📧 Starting validation of {len(emails)} email addresses")
         print("=" * 60)
         for email in emails:
@@ -184,40 +185,40 @@ class SmartEmailOrchestrator(Executor):
         request: DomainCheckRequest,
         ctx: WorkflowContext[RequestResponse[DomainCheckRequest, bool] | DomainCheckRequest],
     ) -> None:
-        """Handle requests from sub-workflows."""
+        """サブワークフローからのリクエストを処理する。"""
         print(f"🔍 Parent intercepting domain check for: {request.domain}")
 
         if request.domain in self.approved_domains:
             print(f"✅ Domain '{request.domain}' is pre-approved locally!")
-            # Send response back to sub-workflow
+            # サブワークフローにレスポンスを返す
             response = RequestResponse(data=True, original_request=request, request_id=request.request_id)
             await ctx.send_message(response, target_id=request.source_executor_id)
         else:
             print(f"❓ Domain '{request.domain}' unknown, forwarding to external service...")
-            # Forward to external handler
+            # 外部ハンドラーに転送する
             await ctx.send_message(request)
 
     @handler
     async def collect_result(self, result: ValidationResult, ctx: WorkflowContext) -> None:
-        """Collect validation results. It comes from the sub-workflow yielded output."""
+        """検証結果を収集します。これはサブワークフローから生成された出力に由来します。"""
         status_icon = "✅" if result.is_valid else "❌"
         print(f"📥 {status_icon} Validation result: {result.email} -> {result.reason}")
         self._results.append(result)
 
     @property
     def results(self) -> list[ValidationResult]:
-        """Get the collected validation results."""
+        """収集された検証結果を取得する。"""
         return self._results
 
 
 async def run_example() -> None:
-    """Run the sub-workflow example."""
+    """サブワークフローの例を実行する。"""
     print("🚀 Setting up sub-workflow with request interception...")
     print()
 
-    # 4. Build the sub-workflow
+    # 4. サブワークフローを構築する
     email_validator = EmailValidator()
-    # Match the target_id used in EmailValidator ("email_request_info")
+    # EmailValidatorで使用されるtarget_id（"email_request_info"）に一致させる
     request_info = RequestInfoExecutor(id="email_request_info")
 
     validation_workflow = (
@@ -228,10 +229,10 @@ async def run_example() -> None:
         .build()
     )
 
-    # 5. Build the parent workflow with interception
+    # 5. インターセプション付きの親ワークフローを構築する
     orchestrator = SmartEmailOrchestrator(approved_domains={"example.com", "company.com"})
     workflow_executor = WorkflowExecutor(validation_workflow, id="email_validator_workflow")
-    # Add a RequestInfoExecutor to handle forwarded external requests
+    # 転送された外部リクエストを処理するRequestInfoExecutorを追加する
     main_request_info = RequestInfoExecutor(id="main_request_info")
 
     main_workflow = (
@@ -239,23 +240,23 @@ async def run_example() -> None:
         .set_start_executor(orchestrator)
         .add_edge(orchestrator, workflow_executor)
         .add_edge(workflow_executor, orchestrator)  # For ValidationResult collection and request interception
-        # Add edges for external request handling
+        # 外部リクエスト処理のためのエッジを追加する
         .add_edge(orchestrator, main_request_info)
         .add_edge(main_request_info, workflow_executor)  # Route external responses to sub-workflow
         .build()
     )
 
-    # 6. Prepare test inputs: known domain, unknown domain
+    # 6. テスト入力を準備する：既知のドメイン、未知のドメイン
     test_emails = [
         "user@example.com",  # Should be intercepted and approved
         "admin@company.com",  # Should be intercepted and approved
         "guest@unknown.org",  # Should be forwarded externally
     ]
 
-    # 7. Run the workflow
+    # 7. ワークフローを実行する
     result = await main_workflow.run(test_emails)
 
-    # 8. Handle any external requests
+    # 8. すべての外部リクエストを処理する
     request_events = result.get_request_info_events()
     if request_events:
         print(f"\n🌐 Handling {len(request_events)} external request(s)...")
@@ -263,23 +264,23 @@ async def run_example() -> None:
             if event.data and hasattr(event.data, "domain"):
                 print(f"🔍 External domain check needed for: {event.data.domain}")
 
-        # Simulate external responses
+        # 外部応答をシミュレートする
         external_responses: dict[str, bool] = {}
         for event in request_events:
-            # Simulate external domain checking
+            # 外部ドメインチェックをシミュレートする
             if event.data and hasattr(event.data, "domain"):
                 domain = event.data.domain
-                # Let's say unknown.org is actually approved externally
+                # unknown.orgは実際には外部で承認されていると仮定する
                 approved = domain == "unknown.org"
                 print(f"🌐 External service response for '{domain}': {'APPROVED' if approved else 'REJECTED'}")
                 external_responses[event.request_id] = approved
 
-        # 9. Send external responses
+        # 9. 外部応答を送信する
         await main_workflow.send_responses(external_responses)
     else:
         print("\n🎯 All requests were intercepted and handled locally!")
 
-    # 10. Display final summary
+    # 10. 最終サマリーを表示する
     print("\n📊 Final Results Summary:")
     print("=" * 60)
     for result in orchestrator.results:

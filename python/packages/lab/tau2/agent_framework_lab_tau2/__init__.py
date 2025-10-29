@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tau2 Benchmark for Agent Framework."""
+"""Agent FrameworkのTau2ベンチマーク。"""
 
 import importlib.metadata
 
@@ -10,7 +10,7 @@ from .runner import ASSISTANT_AGENT_ID, ORCHESTRATOR_ID, USER_SIMULATOR_ID, Task
 try:
     __version__ = importlib.metadata.version(__name__)
 except importlib.metadata.PackageNotFoundError:
-    __version__ = "0.0.0"  # Fallback for development mode
+    __version__ = "0.0.0"  # 開発モードのフォールバック
 
 __all__ = [
     "ASSISTANT_AGENT_ID",

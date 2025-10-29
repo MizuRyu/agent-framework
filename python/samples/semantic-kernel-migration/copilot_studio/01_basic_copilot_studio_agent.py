@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Call a Copilot Studio agent with SK and Agent Framework."""
+"""SKとAgent FrameworkでCopilot Studio Agentを呼び出します。"""
 
 import asyncio
 
@@ -7,7 +7,7 @@ import asyncio
 async def run_semantic_kernel() -> None:
     from semantic_kernel.agents import CopilotStudioAgent
 
-    # SK agent talks to the configured Copilot Studio bot directly.
+    # SKのAgentは設定されたCopilot Studioボットと直接対話します。
     agent = CopilotStudioAgent(
         name="PhysicsAgent",
         instructions="Answer physics questions concisely.",
@@ -19,7 +19,7 @@ async def run_semantic_kernel() -> None:
 async def run_agent_framework() -> None:
     from agent_framework.microsoft import CopilotStudioAgent
 
-    # AF exposes an equivalent CopilotStudioAgent wrapper.
+    # AFは同等のCopilotStudioAgentラッパーを公開します。
     agent = CopilotStudioAgent(
         name="PhysicsAgent",
         instructions="Answer physics questions concisely.",

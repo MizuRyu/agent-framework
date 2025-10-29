@@ -19,13 +19,13 @@ the thread stores and retrieves them automatically.
 def add_to_calendar(
     event_name: Annotated[str, "Name of the event"], date: Annotated[str, "Date of the event"]
 ) -> str:
-    """Add an event to the calendar (requires approval)."""
+    """カレンダーにイベントを追加する（承認が必要）。"""
     print(f">>> EXECUTING: add_to_calendar(event_name='{event_name}', date='{date}')")
     return f"Added '{event_name}' to calendar on {date}"
 
 
 async def approval_example() -> None:
-    """Example showing approval with threads."""
+    """スレッドでの承認を示す例。"""
     print("=== Tool Approval with Thread ===\n")
 
     agent = ChatAgent(
@@ -37,23 +37,23 @@ async def approval_example() -> None:
 
     thread = agent.get_new_thread()
 
-    # Step 1: Agent requests to call the tool
+    # ステップ1: Agentがツール呼び出しを要求する
     query = "Add a dentist appointment on March 15th"
     print(f"User: {query}")
     result = await agent.run(query, thread=thread)
 
-    # Check for approval requests
+    # 承認リクエストをチェックする
     if result.user_input_requests:
         for request in result.user_input_requests:
             print(f"\nApproval needed:")
             print(f"  Function: {request.function_call.name}")
             print(f"  Arguments: {request.function_call.arguments}")
 
-            # User approves (in real app, this would be user input)
-            approved = True  # Change to False to see rejection
+            # ユーザーが承認する（実際のアプリではユーザー入力）
+            approved = True  # 拒否を見るにはFalseに変更する
             print(f"  Decision: {'Approved' if approved else 'Rejected'}")
 
-            # Step 2: Send approval response
+            # ステップ2: 承認レスポンスを送信する
             approval_response = request.create_response(approved=approved)
             result = await agent.run(ChatMessage(role="user", contents=[approval_response]), thread=thread)
 
@@ -61,7 +61,7 @@ async def approval_example() -> None:
 
 
 async def rejection_example() -> None:
-    """Example showing rejection with threads."""
+    """スレッドでの拒否を示す例。"""
     print("=== Tool Rejection with Thread ===\n")
 
     agent = ChatAgent(
@@ -83,10 +83,10 @@ async def rejection_example() -> None:
             print(f"  Function: {request.function_call.name}")
             print(f"  Arguments: {request.function_call.arguments}")
 
-            # User rejects
+            # ユーザーが拒否する
             print(f"  Decision: Rejected")
 
-            # Send rejection response
+            # 拒否レスポンスを送信する
             rejection_response = request.create_response(approved=False)
             result = await agent.run(ChatMessage(role="user", contents=[rejection_response]), thread=thread)
 

@@ -12,11 +12,11 @@ This sample demonstrates using HostedFileSearchTool with OpenAI Responses Client
 for direct document-based question answering and information retrieval.
 """
 
-# Helper functions
+# ヘルパー関数
 
 
 async def create_vector_store(client: OpenAIResponsesClient) -> tuple[str, HostedVectorStoreContent]:
-    """Create a vector store with sample documents."""
+    """サンプルドキュメントでベクトルストアを作成します。"""
     file = await client.client.files.create(
         file=("todays_weather.txt", b"The weather today is sunny with a high of 75F."), purpose="user_data"
     )
@@ -32,7 +32,7 @@ async def create_vector_store(client: OpenAIResponsesClient) -> tuple[str, Hoste
 
 
 async def delete_vector_store(client: OpenAIResponsesClient, file_id: str, vector_store_id: str) -> None:
-    """Delete the vector store after using it."""
+    """使用後にベクトルストアを削除します。"""
 
     await client.client.vector_stores.delete(vector_store_id=vector_store_id)
     await client.client.files.delete(file_id=file_id)

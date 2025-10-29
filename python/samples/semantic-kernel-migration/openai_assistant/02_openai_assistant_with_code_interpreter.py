@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Enable the code interpreter tool for OpenAI Assistants in SK and AF."""
+"""SKとAFでOpenAI Assistants向けのコードインタープリタツールを有効にします。"""
 
 import asyncio
 
@@ -12,7 +12,7 @@ async def run_semantic_kernel() -> None:
 
     code_interpreter_tool, code_interpreter_tool_resources = OpenAIAssistantAgent.configure_code_interpreter_tool()
 
-    # Enable the hosted code interpreter tool on the assistant definition.
+    # アシスタント定義でホストされたコードインタープリタツールを有効にします。
     definition = await client.beta.assistants.create(
         model=OpenAISettings().chat_deployment_name,
         name="CodeRunner",
@@ -32,7 +32,7 @@ async def run_agent_framework() -> None:
     from agent_framework.openai import OpenAIAssistantsClient
 
     assistants_client = OpenAIAssistantsClient()
-    # AF exposes the same tool configuration via create_agent.
+    # AFはcreate_agent経由で同じツール設定を公開します。
     async with assistants_client.create_agent(
         name="CodeRunner",
         instructions="Use the code interpreter when calculations are required.",

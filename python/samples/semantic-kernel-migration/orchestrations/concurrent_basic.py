@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Side-by-side concurrent orchestrations for Agent Framework and Semantic Kernel."""
+"""Agent FrameworkとSemantic Kernelの並行オーケストレーションを並べて示します。"""
 
 import asyncio
 from collections.abc import Sequence
@@ -17,9 +17,7 @@ from semantic_kernel.contents import ChatMessageContent
 PROMPT = "Explain the concept of temperature from multiple scientific perspectives."
 
 
-######################################################################
-# Semantic Kernel orchestration path
-######################################################################
+#  Semantic Kernelのオーケストレーションパス
 
 
 def build_semantic_kernel_agents() -> list[Agent]:
@@ -69,9 +67,7 @@ def _print_semantic_kernel_outputs(outputs: Sequence[ChatMessageContent]) -> Non
         print(f"# {item.name}\n{content}\n")
 
 
-######################################################################
-# Agent Framework orchestration path
-######################################################################
+#  Agent Frameworkのオーケストレーションパス
 
 
 async def run_agent_framework_example(prompt: str) -> Sequence[list[ChatMessage]]:

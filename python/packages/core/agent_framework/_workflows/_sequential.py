@@ -1,39 +1,29 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Sequential builder for agent/executor workflows with shared conversation context.
+"""共有された会話コンテキストを持つAgent/Executorの逐次ワークフローのビルダー。
 
-This module provides a high-level, agent-focused API to assemble a sequential
-workflow where:
-- Participants are a sequence of AgentProtocol instances or Executors
-- A shared conversation context (list[ChatMessage]) is passed along the chain
-- Agents append their assistant messages to the context
-- Custom executors can transform or summarize and return a refined context
-- The workflow finishes with the final context produced by the last participant
+このモジュールは、高レベルでAgentに焦点を当てたAPIを提供し、以下のような逐次ワークフローを組み立てます：
+- 参加者はAgentProtocolインスタンスまたはExecutorのシーケンス
+- 共有された会話コンテキスト（list[ChatMessage]）がチェーンに渡される
+- Agentはアシスタントメッセージをコンテキストに追加する
+- カスタムExecutorはコンテキストを変換または要約して洗練されたコンテキストを返す
+- ワークフローは最後の参加者が生成した最終コンテキストで終了する
 
-Typical wiring:
+典型的な配線例：
     input -> _InputToConversation -> participant1 -> (agent? -> _ResponseToConversation) -> ... -> participantN -> _EndWithConversation
 
-Notes:
-- Participants can mix AgentProtocol and Executor objects
-- Agents are auto-wrapped by WorkflowBuilder as AgentExecutor
-- AgentExecutor produces AgentExecutorResponse; _ResponseToConversation converts this to list[ChatMessage]
-- Non-agent executors must define a handler that consumes `list[ChatMessage]` and sends back
-  the updated `list[ChatMessage]` via their workflow context
+注意点：
+- 参加者はAgentProtocolとExecutorオブジェクトを混在させることができる
+- AgentはWorkflowBuilderによって自動的にAgentExecutorとしてラップされる
+- AgentExecutorはAgentExecutorResponseを生成し、_ResponseToConversationがこれをlist[ChatMessage]に変換する
+- 非AgentのExecutorはlist[ChatMessage]を消費し、更新されたlist[ChatMessage]をワークフローコンテキスト経由で返すハンドラを定義する必要がある
 
-Why include the small internal adapter executors?
-- Input normalization ("input-conversation"): ensures the workflow always starts with a
-  `list[ChatMessage]` regardless of whether callers pass a `str`, a single `ChatMessage`,
-  or a list. This keeps the first hop strongly typed and avoids boilerplate in participants.
-- Agent response adaptation ("to-conversation:<participant>"): agents (via AgentExecutor)
-  emit `AgentExecutorResponse`. The adapter converts that to a `list[ChatMessage]`
-  using `full_conversation` so original prompts aren't lost when chaining.
-- Result output ("end"): yields the final conversation list and the workflow becomes idle
-  giving a consistent terminal payload shape for both agents and custom executors.
+なぜ小さな内部アダプターExecutorを含めるのか？
+- 入力正規化（"input-conversation"）：呼び出し元がstr、単一のChatMessage、またはリストを渡しても、常にlist[ChatMessage]でワークフローを開始することを保証し、最初のホップを強く型付けし、参加者のボイラープレートを減らすため。
+- Agent応答適応（"to-conversation:<participant>"）：AgentExecutor経由のAgentはAgentExecutorResponseを出力する。アダプターはfull_conversationを使ってこれをlist[ChatMessage]に変換し、チェーン時に元のPromptが失われないようにする。
+- 結果出力（"end"）：最終的な会話リストを出力し、ワークフローをアイドル状態にして、AgentおよびカスタムExecutorの両方に一貫した終端ペイロード形状を提供する。
 
-These adapters are first-class executors by design so they are type-checked at edges,
-observable (ExecutorInvoke/Completed events), and easily testable/reusable. Their IDs are
-deterministic and self-describing (for example, "to-conversation:writer") to reduce event-log
-confusion and to mirror how the concurrent builder uses explicit dispatcher/aggregator nodes.
+これらのアダプターは設計上ファーストクラスのExecutorであり、エッジで型チェックされ、ExecutorInvoke/Completedイベントで観測可能で、テストや再利用が容易です。IDは決定論的かつ自己記述的（例："to-conversation:writer"）で、イベントログの混乱を減らし、並行ビルダーが明示的なdispatcher/aggregatorノードを使う方法を反映しています。
 """  # noqa: E501
 
 import logging
@@ -60,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 class _InputToConversation(Executor):
-    """Normalizes initial input into a list[ChatMessage] conversation."""
+    """初期入力をlist[ChatMessage]の会話に正規化します。"""
 
     @handler
     async def from_str(self, prompt: str, ctx: WorkflowContext[list[ChatMessage]]) -> None:
@@ -76,24 +66,24 @@ class _InputToConversation(Executor):
         messages: list[str | ChatMessage],
         ctx: WorkflowContext[list[ChatMessage]],
     ) -> None:
-        # Make a copy to avoid mutation downstream
+        # 下流での変更を避けるためにコピーを作成します。
         normalized = normalize_messages_input(messages)
         await ctx.send_message(list(normalized))
 
 
 class _ResponseToConversation(Executor):
-    """Converts AgentExecutorResponse to list[ChatMessage] conversation for chaining."""
+    """AgentExecutorResponseをlist[ChatMessage]の会話に変換してチェーン処理用にします。"""
 
     @handler
     async def convert(self, response: AgentExecutorResponse, ctx: WorkflowContext[list[ChatMessage]]) -> None:
-        # Always use full_conversation; AgentExecutor guarantees it is populated.
+        # 常にfull_conversationを使用します。AgentExecutorはこれが設定されていることを保証します。
         if response.full_conversation is None:  # Defensive: indicates a contract violation
             raise RuntimeError("AgentExecutorResponse.full_conversation missing. AgentExecutor must populate it.")
         await ctx.send_message(list(response.full_conversation))
 
 
 class _EndWithConversation(Executor):
-    """Terminates the workflow by emitting the final conversation context."""
+    """最終的な会話コンテキストを出力してワークフローを終了します。"""
 
     @handler
     async def end(self, conversation: list[ChatMessage], ctx: WorkflowContext[Any, list[ChatMessage]]) -> None:
@@ -101,15 +91,15 @@ class _EndWithConversation(Executor):
 
 
 class SequentialBuilder:
-    r"""High-level builder for sequential agent/executor workflows with shared context.
+    r"""共有コンテキストを持つ逐次Agent/Executorワークフローの高レベルビルダー。
 
-    - `participants([...])` accepts a list of AgentProtocol (recommended) or Executor
-    - The workflow wires participants in order, passing a list[ChatMessage] down the chain
-    - Agents append their assistant messages to the conversation
-    - Custom executors can transform/summarize and return a list[ChatMessage]
-    - The final output is the conversation produced by the last participant
+    - `participants([...])`はAgentProtocol（推奨）またはExecutorのリストを受け入れます
+    - ワークフローは参加者を順に配線し、list[ChatMessage]をチェーンに渡します
+    - Agentはアシスタントメッセージを会話に追加します
+    - カスタムExecutorは変換/要約してlist[ChatMessage]を返せます
+    - 最終出力は最後の参加者が生成した会話です
 
-    Usage:
+    使用例:
 
     .. code-block:: python
 
@@ -117,8 +107,9 @@ class SequentialBuilder:
 
         workflow = SequentialBuilder().participants([agent1, agent2, summarizer_exec]).build()
 
-        # Enable checkpoint persistence
+        # チェックポイント永続化を有効にする
         workflow = SequentialBuilder().participants([agent1, agent2]).with_checkpointing(storage).build()
+
     """
 
     def __init__(self) -> None:
@@ -126,15 +117,16 @@ class SequentialBuilder:
         self._checkpoint_storage: CheckpointStorage | None = None
 
     def participants(self, participants: Sequence[AgentProtocol | Executor]) -> "SequentialBuilder":
-        """Define the ordered participants for this sequential workflow.
+        """この逐次ワークフローのために順序付けられた参加者を定義します。
 
-        Accepts AgentProtocol instances (auto-wrapped as AgentExecutor) or Executor instances.
-        Raises if empty or duplicates are provided for clarity.
+        AgentProtocolインスタンス（AgentExecutorとして自動ラップ）またはExecutorインスタンスを受け入れます。
+        空または重複がある場合は明確化のため例外を発生させます。
+
         """
         if not participants:
             raise ValueError("participants cannot be empty")
 
-        # Defensive duplicate detection
+        # 重複検出の防御的処理。
         seen_agent_ids: set[int] = set()
         seen_executor_ids: set[str] = set()
         for p in participants:
@@ -143,7 +135,7 @@ class SequentialBuilder:
                     raise ValueError(f"Duplicate executor participant detected: id '{p.id}'")
                 seen_executor_ids.add(p.id)
             else:
-                # Treat non-Executor as agent-like (AgentProtocol). Structural checks can be brittle at runtime.
+                # 非ExecutorはAgentProtocolのように扱います。構造的チェックは実行時に脆弱な場合があります。
                 pid = id(p)
                 if pid in seen_agent_ids:
                     raise ValueError("Duplicate agent participant detected (same agent instance provided twice)")
@@ -153,53 +145,53 @@ class SequentialBuilder:
         return self
 
     def with_checkpointing(self, checkpoint_storage: CheckpointStorage) -> "SequentialBuilder":
-        """Enable checkpointing for the built workflow using the provided storage."""
+        """指定されたストレージを使ってビルドされたワークフローのチェックポイント機能を有効にします。"""
         self._checkpoint_storage = checkpoint_storage
         return self
 
     def build(self) -> Workflow:
-        """Build and validate the sequential workflow.
+        """逐次ワークフローをビルドして検証します。
 
-        Wiring pattern:
-        - _InputToConversation normalizes the initial input into list[ChatMessage]
-        - For each participant in order:
-            - If Agent (or AgentExecutor): pass conversation to the agent, then convert response
-              to conversation via _ResponseToConversation
-            - Else (custom Executor): pass conversation directly to the executor
-        - _EndWithConversation yields the final conversation and the workflow becomes idle
+        配線パターン：
+        - _InputToConversationが初期入力をlist[ChatMessage]に正規化
+        - 順に各参加者に対して：
+            - Agent（またはAgentExecutor）なら会話を渡し、応答を_ResponseToConversationで会話に変換
+            - それ以外（カスタムExecutor）は会話を直接渡す
+        - _EndWithConversationが最終会話を出力し、ワークフローをアイドル状態にする
+
         """
         if not self._participants:
             raise ValueError("No participants provided. Call .participants([...]) first.")
 
-        # Internal nodes
+        # 内部ノード。
         input_conv = _InputToConversation(id="input-conversation")
         end = _EndWithConversation(id="end")
 
         builder = WorkflowBuilder()
         builder.set_start_executor(input_conv)
 
-        # Start of the chain is the input normalizer
+        # チェーンの開始は入力正規化器。
         prior: Executor | AgentProtocol = input_conv
 
         for p in self._participants:
-            # Agent-like branch: either explicitly an AgentExecutor or any non-AgentExecutor
+            # Agentのような分岐：明示的にAgentExecutorか、AgentExecutorでないもの。
             if not (isinstance(p, Executor) and not isinstance(p, AgentExecutor)):
-                # input conversation -> (agent) -> response -> conversation
+                # 入力会話 -> (agent) -> 応答 -> 会話
                 builder.add_edge(prior, p)
-                # Give the adapter a deterministic, self-describing id
+                # アダプターに決定論的で自己記述的なIDを付与する。
                 label: str
                 label = p.id if isinstance(p, Executor) else getattr(p, "name", None) or p.__class__.__name__
                 resp_to_conv = _ResponseToConversation(id=f"to-conversation:{label}")
                 builder.add_edge(p, resp_to_conv)
                 prior = resp_to_conv
             elif isinstance(p, Executor):
-                # Custom executor operates on list[ChatMessage]
+                # カスタムExecutorはlist[ChatMessage]で動作する。
                 builder.add_edge(prior, p)
                 prior = p
             else:  # pragma: no cover - defensive
                 raise TypeError(f"Unsupported participant type: {type(p).__name__}")
 
-        # Terminate with the final conversation
+        # 最終会話で終了する。
         builder.add_edge(prior, end)
 
         if self._checkpoint_storage is not None:

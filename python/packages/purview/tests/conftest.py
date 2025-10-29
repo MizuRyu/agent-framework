@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Shared pytest fixtures for Purview tests."""
+"""Purview テスト用の共有 pytest フィクスチャ。"""
 
 import pytest
 
@@ -20,7 +20,7 @@ from agent_framework_purview._models import (
 
 @pytest.fixture
 def content_to_process_factory():
-    """Factory fixture to create ContentToProcess objects with test data."""
+    """テストデータを持つ ContentToProcess オブジェクトを作成するファクトリーフィクスチャ。"""
 
     def _create_content(text: str = "Test") -> ContentToProcess:
         text_content = PurviewTextContent(data=text)
@@ -53,7 +53,7 @@ def content_to_process_factory():
 
 @pytest.fixture
 def process_content_request_factory(content_to_process_factory):
-    """Factory fixture to create ProcessContentRequest objects with test data."""
+    """テストデータを持つ ProcessContentRequest オブジェクトを作成するファクトリーフィクスチャ。"""
 
     def _create_request(
         text: str = "Test", user_id: str = "user-123", tenant_id: str = "tenant-456"

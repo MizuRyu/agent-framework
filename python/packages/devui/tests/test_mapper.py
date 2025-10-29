@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Clean focused tests for message mapping functionality."""
+"""メッセージマッピング機能に特化したクリーンなテスト。"""
 
 import asyncio
 import sys
@@ -9,10 +9,10 @@ from typing import Any
 
 import pytest
 
-# Add the main agent_framework package for real types
+# 実際のタイプのためにメインのagent_frameworkパッケージを追加する
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "main"))
 
-# Import Agent Framework types (assuming they are always available)
+# Agent Frameworkのタイプをインポートする（常に利用可能と仮定）
 from agent_framework._types import (
     AgentRunResponseUpdate,
     ErrorContent,
@@ -27,7 +27,7 @@ from agent_framework_devui.models._openai_custom import AgentFrameworkRequest
 
 
 def create_test_content(content_type: str, **kwargs: Any) -> Any:
-    """Create test content objects."""
+    """テスト用コンテンツオブジェクトを作成する。"""
     if content_type == "text":
         return TextContent(text=kwargs.get("text", "Hello, world!"))
     if content_type == "function_call":
@@ -42,7 +42,7 @@ def create_test_content(content_type: str, **kwargs: Any) -> Any:
 
 
 def create_test_agent_update(contents: list[Any]) -> Any:
-    """Create test AgentRunResponseUpdate - NO fake attributes!"""
+    """テスト用AgentRunResponseUpdateを作成する - 偽の属性なし！"""
     return AgentRunResponseUpdate(
         contents=contents, role=Role.ASSISTANT, message_id="test_msg", response_id="test_resp"
     )
@@ -55,7 +55,7 @@ def mapper() -> MessageMapper:
 
 @pytest.fixture
 def test_request() -> AgentFrameworkRequest:
-    # Use simplified routing: model = entity_id
+    # 簡略化されたルーティングを使用：model = entity_id
     return AgentFrameworkRequest(
         model="test_agent",  # Model IS the entity_id
         input="Test input",
@@ -64,67 +64,65 @@ def test_request() -> AgentFrameworkRequest:
 
 
 async def test_critical_isinstance_bug_detection(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """CRITICAL: Test that would have caught the isinstance vs hasattr bug."""
+    """重大：isinstance と hasattr のバグを検出できたテスト。"""
 
     content = create_test_content("text", text="Bug detection test")
     update = create_test_agent_update([content])
 
-    # Key assertions that would have caught the bug
-    assert hasattr(update, "contents")  # Real attribute ✅
-    assert not hasattr(update, "response")  # Fake attribute should not exist ✅
+    # バグを検出できた重要なアサーション
+    assert hasattr(update, "contents")  # 実際の属性 ✅
+    assert not hasattr(update, "response")  # 偽の属性は存在すべきでない ✅
 
-    # Test isinstance works with real types
+    # 実際のタイプで isinstance が動作することをテストする
     assert isinstance(update, AgentRunResponseUpdate)
 
-    # Test mapper conversion - should NOT produce "Unknown event"
+    # マッパー変換をテスト - "Unknown event" を生成してはならない
     events = await mapper.convert_event(update, test_request)
 
     assert len(events) > 0
     assert all(hasattr(event, "type") for event in events)
-    # Should never get unknown events with proper types
+    # 適切なタイプで未知のイベントは決して発生しないはずである
     assert all(event.type != "unknown" for event in events)
 
 
 async def test_text_content_mapping(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test TextContent mapping with proper OpenAI event hierarchy."""
+    """適切なOpenAIイベント階層でのTextContentマッピングをテストする。"""
     content = create_test_content("text", text="Hello, clean test!")
     update = create_test_agent_update([content])
 
     events = await mapper.convert_event(update, test_request)
 
-    # With proper OpenAI hierarchy, we expect 3 events:
-    # 1. response.output_item.added (message)
-    # 2. response.content_part.added (text part)
-    # 3. response.output_text.delta (actual text)
+    # 適切なOpenAI階層では、3つのイベントを期待する： 1. response.output_item.added (message) 2.
+    # response.content_part.added (text part) 3. response.output_text.delta (実際のテキスト)
     assert len(events) == 3
 
-    # Check message output item
+    # message output item をチェックする
     assert events[0].type == "response.output_item.added"
     assert events[0].item.type == "message"
     assert events[0].item.role == "assistant"
 
-    # Check content part
+    # content part をチェックする
     assert events[1].type == "response.content_part.added"
     assert events[1].part.type == "output_text"
 
-    # Check text delta
+    # text delta をチェックする
     assert events[2].type == "response.output_text.delta"
     assert events[2].delta == "Hello, clean test!"
 
 
 async def test_function_call_mapping(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test FunctionCallContent mapping."""
+    """FunctionCallContent マッピングをテストする。"""
     content = create_test_content("function_call", name="test_func", arguments={"location": "TestCity"})
     update = create_test_agent_update([content])
 
     events = await mapper.convert_event(update, test_request)
 
-    # Should generate: response.output_item.added + response.function_call_arguments.delta
+    # 生成されるべき：response.output_item.added + response.function_call_arguments.delta
     assert len(events) >= 2
     assert events[0].type == "response.output_item.added"
     assert events[1].type == "response.function_call_arguments.delta"
 
-    # Check JSON is in delta event
+    # JSONがdeltaイベントに含まれていることをチェックする
     delta_events = [e for e in events if e.type == "response.function_call_arguments.delta"]
     full_json = "".join(event.delta for event in delta_events)
     assert "TestCity" in full_json
@@ -133,7 +131,7 @@ async def test_function_call_mapping(mapper: MessageMapper, test_request: AgentF
 async def test_function_result_content_with_string_result(
     mapper: MessageMapper, test_request: AgentFrameworkRequest
 ) -> None:
-    """Test FunctionResultContent with plain string result (regular tools)."""
+    """プレーンな文字列結果を持つFunctionResultContentをテストする（通常のツール）。"""
     content = FunctionResultContent(
         call_id="test_call_123",
         result="Hello, World!",  # Plain string like regular Python function tools
@@ -142,7 +140,7 @@ async def test_function_result_content_with_string_result(
 
     events = await mapper.convert_event(update, test_request)
 
-    # Should produce response.function_result.complete event
+    # response.function_result.complete イベントを生成するべきである
     assert len(events) >= 1
     result_events = [e for e in events if e.type == "response.function_result.complete"]
     assert len(result_events) == 1
@@ -154,12 +152,12 @@ async def test_function_result_content_with_string_result(
 async def test_function_result_content_with_nested_content_objects(
     mapper: MessageMapper, test_request: AgentFrameworkRequest
 ) -> None:
-    """Test FunctionResultContent with nested Content objects (MCP tools case).
+    """ネストされたContentオブジェクトを持つFunctionResultContentをテストする（MCPツールの場合）。
 
-    This tests the issue from GitHub #1476 where MCP tools return FunctionResultContent
-    with nested TextContent objects that fail to serialize properly.
+    GitHub #1476 の問題をテストする。MCPツールはFunctionResultContentを返し、
+    ネストされたTextContentオブジェクトが正しくシリアライズされない問題がある。
     """
-    # This is what MCP tools return - result contains nested Content objects
+    # これがMCPツールが返すもので、結果はネストされたContentオブジェクトを含む
     content = FunctionResultContent(
         call_id="mcp_call_456",
         result=[TextContent(text="Hello from MCP!")],  # List containing TextContent object
@@ -168,13 +166,12 @@ async def test_function_result_content_with_nested_content_objects(
 
     events = await mapper.convert_event(update, test_request)
 
-    # Should successfully serialize the nested Content object
+    # ネストされたContentオブジェクトを正常にシリアライズできるべきである
     assert len(events) >= 1
     result_events = [e for e in events if e.type == "response.function_result.complete"]
     assert len(result_events) == 1
 
-    # The output should contain the text from the nested TextContent
-    # Should not have TypeError or empty output
+    # 出力はネストされたTextContentのテキストを含むべきであり、TypeErrorや空の出力はないべきである
     assert result_events[0].output != ""
     assert "Hello from MCP!" in result_events[0].output
     assert result_events[0].call_id == "mcp_call_456"
@@ -183,8 +180,8 @@ async def test_function_result_content_with_nested_content_objects(
 async def test_function_result_content_with_multiple_nested_content_objects(
     mapper: MessageMapper, test_request: AgentFrameworkRequest
 ) -> None:
-    """Test FunctionResultContent with multiple nested Content objects."""
-    # MCP tools can return multiple Content objects
+    """複数のネストされたContentオブジェクトを持つFunctionResultContentをテストする。"""
+    # MCPツールは複数のContentオブジェクトを返すことができる
     content = FunctionResultContent(
         call_id="mcp_call_789",
         result=[
@@ -200,7 +197,7 @@ async def test_function_result_content_with_multiple_nested_content_objects(
     result_events = [e for e in events if e.type == "response.function_result.complete"]
     assert len(result_events) == 1
 
-    # Should serialize all nested Content objects
+    # すべてのネストされたContentオブジェクトをシリアライズするべきである
     output = result_events[0].output
     assert output != ""
     assert "First result" in output
@@ -208,7 +205,7 @@ async def test_function_result_content_with_multiple_nested_content_objects(
 
 
 async def test_error_content_mapping(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test ErrorContent mapping."""
+    """ErrorContent マッピングをテストする。"""
     content = create_test_content("error", message="Test error", code="test_code")
     update = create_test_agent_update([content])
 
@@ -221,7 +218,7 @@ async def test_error_content_mapping(mapper: MessageMapper, test_request: AgentF
 
 
 async def test_mixed_content_types(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test multiple content types together."""
+    """複数のコンテンツタイプを一緒にテストする。"""
     contents = [
         create_test_content("text", text="Starting..."),
         create_test_content("function_call", name="process", arguments={"data": "test"}),
@@ -233,26 +230,26 @@ async def test_mixed_content_types(mapper: MessageMapper, test_request: AgentFra
 
     assert len(events) >= 3
 
-    # Should have both types of events
+    # 両方のタイプのイベントが存在するべきである
     event_types = {event.type for event in events}
     assert "response.output_text.delta" in event_types
     assert "response.function_call_arguments.delta" in event_types
 
 
 async def test_unknown_content_fallback(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test graceful handling of unknown content types."""
-    # Test the fallback path directly since we can't create invalid AgentRunResponseUpdate
-    # due to Pydantic validation. Instead, test the content mapper's unknown content handling.
+    """未知のコンテンツタイプの優雅な処理をテストする。"""
+    # Pydanticのバリデーションにより無効なAgentRunResponseUpdateを作成できないため、
+    # フォールバックパスを直接テストする。代わりにcontent mapperの未知コンテンツ処理をテストする。
 
     class MockUnknownContent:
         def __init__(self):
-            self.__class__.__name__ = "WeirdUnknownContent"  # Not in content_mappers
+            self.__class__.__name__ = "WeirdUnknownContent"  # content_mappers に存在しない
 
-    # Test the content mapper directly
+    # content mapper を直接テストする
     context = mapper._get_or_create_context(test_request)
     unknown_content = MockUnknownContent()
 
-    # This should trigger the unknown content fallback in _convert_agent_update
+    # これにより _convert_agent_update の未知コンテンツフォールバックがトリガーされるはずである
     event = await mapper._create_unknown_content_event(unknown_content, context)
 
     assert event.type == "response.output_text.delta"
@@ -261,41 +258,41 @@ async def test_unknown_content_fallback(mapper: MessageMapper, test_request: Age
 
 
 async def test_agent_run_response_mapping(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test that mapper handles complete AgentRunResponse (non-streaming)."""
+    """mapperが完全なAgentRunResponse（非ストリーミング）を処理できることをテストします。"""
     from agent_framework import AgentRunResponse, ChatMessage, Role, TextContent
 
-    # Create a complete response like agent.run() would return
+    # agent.run()が返すような完全なレスポンスを作成します。
     message = ChatMessage(
         role=Role.ASSISTANT,
         contents=[TextContent(text="Complete response from run()")],
     )
     response = AgentRunResponse(messages=[message], response_id="test_resp_123")
 
-    # Mapper should convert it to streaming events
+    # Mapperはこれをストリーミングイベントに変換する必要があります。
     events = await mapper.convert_event(response, test_request)
 
     assert len(events) > 0
-    # Should produce text delta events
+    # テキストデルタイベントを生成する必要があります。
     text_events = [e for e in events if e.type == "response.output_text.delta"]
     assert len(text_events) > 0
     assert text_events[0].delta == "Complete response from run()"
 
 
 async def test_agent_lifecycle_events(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test that agent lifecycle events are properly converted to OpenAI format."""
+    """agentのライフサイクルイベントがOpenAI形式に正しく変換されることをテストします。"""
     from agent_framework_devui.models._openai_custom import AgentCompletedEvent, AgentFailedEvent, AgentStartedEvent
 
-    # Test AgentStartedEvent
+    # AgentStartedEventをテストします。
     start_event = AgentStartedEvent()
     events = await mapper.convert_event(start_event, test_request)
 
-    assert len(events) == 2  # Should emit response.created and response.in_progress
+    assert len(events) == 2  # response.createdとresponse.in_progressを発行する必要があります。
     assert events[0].type == "response.created"
     assert events[1].type == "response.in_progress"
-    assert events[0].response.model == "test_agent"  # Should use model from request
+    assert events[0].response.model == "test_agent"  # リクエストからモデルを使用する必要があります。
     assert events[0].response.status == "in_progress"
 
-    # Test AgentCompletedEvent
+    # AgentCompletedEventをテストします。
     complete_event = AgentCompletedEvent()
     events = await mapper.convert_event(complete_event, test_request)
 
@@ -303,7 +300,7 @@ async def test_agent_lifecycle_events(mapper: MessageMapper, test_request: Agent
     assert events[0].type == "response.completed"
     assert events[0].response.status == "completed"
 
-    # Test AgentFailedEvent
+    # AgentFailedEventをテストします。
     error = Exception("Test error")
     failed_event = AgentFailedEvent(error=error)
     events = await mapper.convert_event(failed_event, test_request)
@@ -317,9 +314,9 @@ async def test_agent_lifecycle_events(mapper: MessageMapper, test_request: Agent
 
 @pytest.mark.skip(reason="Workflow events need real classes from agent_framework.workflows")
 async def test_workflow_lifecycle_events(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test that workflow lifecycle events are properly converted to OpenAI format."""
+    """ワークフローのライフサイクルイベントがOpenAI形式に正しく変換されることをテストします。"""
 
-    # Create mock workflow events (since we don't have access to the real ones in tests)
+    # モックのワークフローイベントを作成します（テストで実際のものにアクセスできないため）。
     class WorkflowStartedEvent:  # noqa: B903
         def __init__(self, workflow_id: str):
             self.workflow_id = workflow_id
@@ -333,17 +330,17 @@ async def test_workflow_lifecycle_events(mapper: MessageMapper, test_request: Ag
             self.workflow_id = workflow_id
             self.error_info = error_info
 
-    # Test WorkflowStartedEvent
+    # WorkflowStartedEventをテストします。
     start_event = WorkflowStartedEvent(workflow_id="test_workflow_123")
     events = await mapper.convert_event(start_event, test_request)
 
-    assert len(events) == 2  # Should emit response.created and response.in_progress
+    assert len(events) == 2  # response.createdとresponse.in_progressを発行する必要があります。
     assert events[0].type == "response.created"
     assert events[1].type == "response.in_progress"
-    assert events[0].response.model == "test_agent"  # Should use model from request
+    assert events[0].response.model == "test_agent"  # リクエストからモデルを使用する必要があります。
     assert events[0].response.status == "in_progress"
 
-    # Test WorkflowCompletedEvent
+    # WorkflowCompletedEventをテストします。
     complete_event = WorkflowCompletedEvent(workflow_id="test_workflow_123")
     events = await mapper.convert_event(complete_event, test_request)
 
@@ -351,7 +348,7 @@ async def test_workflow_lifecycle_events(mapper: MessageMapper, test_request: Ag
     assert events[0].type == "response.completed"
     assert events[0].response.status == "completed"
 
-    # Test WorkflowFailedEvent with error info
+    # エラー情報を含むWorkflowFailedEventをテストします。
     failed_event = WorkflowFailedEvent(workflow_id="test_workflow_123", error_info={"message": "Workflow failed"})
     events = await mapper.convert_event(failed_event, test_request)
 
@@ -364,9 +361,9 @@ async def test_workflow_lifecycle_events(mapper: MessageMapper, test_request: Ag
 
 @pytest.mark.skip(reason="Executor events need real classes from agent_framework.workflows")
 async def test_executor_action_events(mapper: MessageMapper, test_request: AgentFrameworkRequest) -> None:
-    """Test that workflow executor events are properly converted to custom output item events."""
+    """ワークフローのexecutorイベントがカスタムの出力アイテムイベントに正しく変換されることをテストします。"""
 
-    # Create mock executor events (since we don't have access to the real ones in tests)
+    # モックのexecutorイベントを作成します（テストで実際のものにアクセスできないため）。
     class ExecutorInvokedEvent:  # noqa: B903
         def __init__(self, executor_id: str, executor_type: str = "test"):
             self.executor_id = executor_id
@@ -382,7 +379,7 @@ async def test_executor_action_events(mapper: MessageMapper, test_request: Agent
             self.executor_id = executor_id
             self.error = error
 
-    # Test ExecutorInvokedEvent
+    # ExecutorInvokedEventをテストします。
     invoked_event = ExecutorInvokedEvent(executor_id="exec_123", executor_type="test_executor")
     events = await mapper.convert_event(invoked_event, test_request)
 
@@ -392,7 +389,7 @@ async def test_executor_action_events(mapper: MessageMapper, test_request: Agent
     assert events[0].item["executor_id"] == "exec_123"
     assert events[0].item["status"] == "in_progress"
 
-    # Test ExecutorCompletedEvent
+    # ExecutorCompletedEventをテストします。
     complete_event = ExecutorCompletedEvent(executor_id="exec_123", result={"data": "success"})
     events = await mapper.convert_event(complete_event, test_request)
 
@@ -403,7 +400,7 @@ async def test_executor_action_events(mapper: MessageMapper, test_request: Agent
     assert events[0].item["status"] == "completed"
     assert events[0].item["result"] == {"data": "success"}
 
-    # Test ExecutorFailedEvent
+    # ExecutorFailedEventをテストします。
     failed_event = ExecutorFailedEvent(executor_id="exec_123", error=Exception("Executor failed"))
     events = await mapper.convert_event(failed_event, test_request)
 
@@ -416,7 +413,7 @@ async def test_executor_action_events(mapper: MessageMapper, test_request: Agent
 
 
 if __name__ == "__main__":
-    # Simple test runner
+    # シンプルなテストランナー。
     async def run_all_tests() -> None:
         mapper = MessageMapper()
         test_request = AgentFrameworkRequest(

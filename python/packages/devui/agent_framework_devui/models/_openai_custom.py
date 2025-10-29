@@ -1,9 +1,9 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Custom OpenAI-compatible event types for Agent Framework extensions.
+"""Agent Framework拡張のためのカスタムOpenAI互換イベントタイプ。
 
-These are custom event types that extend beyond the standard OpenAI Responses API
-to support Agent Framework specific features like workflows and traces.
+これらは標準のOpenAI Responses APIを超えて拡張されたカスタムイベントタイプで、
+workflowやtraceなどAgent Framework固有の機能をサポートします。
 """
 
 from __future__ import annotations
@@ -13,35 +13,33 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-# Custom Agent Framework OpenAI event types for structured data
-
-
-# Agent lifecycle events - simple and clear
+# 構造化データのためのカスタムAgent Framework OpenAIイベントタイプ エージェントのライフサイクルイベント - シンプルで明確
 class AgentStartedEvent:
-    """Event emitted when an agent starts execution."""
+    """エージェントが実行を開始したときに発行されるイベント。"""
 
     pass
 
 
 class AgentCompletedEvent:
-    """Event emitted when an agent completes execution successfully."""
+    """エージェントが正常に実行を完了したときに発行されるイベント。"""
 
     pass
 
 
 @dataclass
 class AgentFailedEvent:
-    """Event emitted when an agent fails during execution."""
+    """エージェントが実行中に失敗したときに発行されるイベント。"""
 
     error: Exception | None = None
 
 
 class ExecutorActionItem(BaseModel):
-    """Custom item type for workflow executor actions.
+    """workflow executorアクションのためのカスタムアイテムタイプ。
 
-    This is a DevUI-specific extension to represent workflow executors as output items.
-    Since OpenAI's ResponseOutputItemAddedEvent only accepts specific item types,
-    and executor actions are not part of the standard, we need this custom type.
+    これはDevUI固有の拡張で、workflow executorを出力アイテムとして表現します。
+    OpenAIのResponseOutputItemAddedEventは特定のアイテムタイプのみを受け入れるため、
+    executorアクションは標準の一部ではないため、このカスタムタイプが必要です。
+
     """
 
     type: Literal["executor_action"] = "executor_action"
@@ -54,36 +52,36 @@ class ExecutorActionItem(BaseModel):
 
 
 class CustomResponseOutputItemAddedEvent(BaseModel):
-    """Custom version of ResponseOutputItemAddedEvent that accepts any item type.
+    """任意のアイテムタイプを受け入れるResponseOutputItemAddedEventのカスタムバージョン。
 
-    This allows us to emit executor action items while maintaining the same
-    event structure as OpenAI's standard.
+    これにより、OpenAIの標準と同じイベント構造を維持しつつ、executorアクションアイテムを発行できます。
+
     """
 
     type: Literal["response.output_item.added"] = "response.output_item.added"
     output_index: int
     sequence_number: int
-    item: dict[str, Any] | ExecutorActionItem | Any  # Flexible item type
+    item: dict[str, Any] | ExecutorActionItem | Any  # 柔軟なアイテムタイプ
 
 
 class CustomResponseOutputItemDoneEvent(BaseModel):
-    """Custom version of ResponseOutputItemDoneEvent that accepts any item type.
+    """任意のアイテムタイプを受け入れるResponseOutputItemDoneEventのカスタムバージョン。
 
-    This allows us to emit executor action items while maintaining the same
-    event structure as OpenAI's standard.
+    これにより、OpenAIの標準と同じイベント構造を維持しながら、executorのアクションアイテムを発行できます。
+
     """
 
     type: Literal["response.output_item.done"] = "response.output_item.done"
     output_index: int
     sequence_number: int
-    item: dict[str, Any] | ExecutorActionItem | Any  # Flexible item type
+    item: dict[str, Any] | ExecutorActionItem | Any  # 柔軟なアイテムタイプ
 
 
 class ResponseWorkflowEventComplete(BaseModel):
-    """Complete workflow event data."""
+    """完全なワークフローイベントデータ。"""
 
     type: Literal["response.workflow_event.complete"] = "response.workflow_event.complete"
-    data: dict[str, Any]  # Complete event data, not delta
+    data: dict[str, Any]  # デルタではない完全なイベントデータ
     executor_id: str | None = None
     item_id: str
     output_index: int = 0
@@ -91,10 +89,10 @@ class ResponseWorkflowEventComplete(BaseModel):
 
 
 class ResponseTraceEventComplete(BaseModel):
-    """Complete trace event data."""
+    """完全なトレースイベントデータ。"""
 
     type: Literal["response.trace.complete"] = "response.trace.complete"
-    data: dict[str, Any]  # Complete trace data, not delta
+    data: dict[str, Any]  # デルタではない完全なトレースデータ
     span_id: str | None = None
     item_id: str
     output_index: int = 0
@@ -102,16 +100,16 @@ class ResponseTraceEventComplete(BaseModel):
 
 
 class ResponseFunctionResultComplete(BaseModel):
-    """DevUI extension: Stream function execution results.
+    """DevUI拡張：関数実行結果のストリーム。
 
-    This is a DevUI extension because:
-    - OpenAI Responses API doesn't stream function results (clients execute functions)
-    - Agent Framework executes functions server-side, so we stream results for debugging visibility
-    - ResponseFunctionToolCallOutputItem exists in OpenAI SDK but isn't in ResponseOutputItem union
-      (it's for Conversations API input, not Responses API streaming output)
+    これはDevUI拡張です。理由は以下の通りです：
+    - OpenAI Responses APIは関数結果をストリームしません（クライアントが関数を実行します）
+    - Agent Frameworkはサーバー側で関数を実行するため、デバッグの可視性のために結果をストリームします
+    - ResponseFunctionToolCallOutputItemはOpenAI SDKに存在しますが、ResponseOutputItemのユニオンには含まれていません
+      （Conversations APIの入力用であり、Responses APIのストリーミング出力用ではありません）
 
-    This event provides the same structure as OpenAI's function output items but wrapped
-    in a custom event type since standard events don't support streaming function results.
+    このイベントはOpenAIの関数出力アイテムと同じ構造を提供しますが、標準イベントが関数結果のストリーミングをサポートしないため、カスタムイベントタイプでラップされています。
+
     """
 
     type: Literal["response.function_result.complete"] = "response.function_result.complete"
@@ -121,62 +119,65 @@ class ResponseFunctionResultComplete(BaseModel):
     item_id: str
     output_index: int = 0
     sequence_number: int
-    timestamp: str | None = None  # Optional timestamp for UI display
+    timestamp: str | None = None  # UI表示用のオプショナルなタイムスタンプ
 
 
-# Agent Framework extension fields
+# Agent Framework拡張フィールド
 class AgentFrameworkExtraBody(BaseModel):
-    """Agent Framework specific routing fields for OpenAI requests."""
+    """OpenAIリクエスト用のAgent Framework固有のルーティングフィールド。"""
 
     entity_id: str
-    # input_data removed - now using standard input field for all data
+    # input_dataは削除され、すべてのデータに標準のinputフィールドを使用するようになりました
 
     model_config = ConfigDict(extra="allow")
 
 
-# Agent Framework Request Model - Extending real OpenAI types
+# Agent Frameworkリクエストモデル - 実際のOpenAIタイプを拡張
 class AgentFrameworkRequest(BaseModel):
-    """OpenAI ResponseCreateParams with Agent Framework routing.
+    """Agent Frameworkルーティングを含むOpenAI ResponseCreateParams。
 
-    This properly extends the real OpenAI API request format.
-    - Uses 'model' field as entity_id (agent/workflow name)
-    - Uses 'conversation' field for conversation context (OpenAI standard)
+    これは実際のOpenAI APIリクエスト形式を適切に拡張しています。
+    - 'model'フィールドをentity_id（agent/workflow名）として使用
+    - 'conversation'フィールドを会話コンテキストとして使用（OpenAI標準）
+
     """
 
-    # All OpenAI fields from ResponseCreateParams
-    model: str  # Used as entity_id in DevUI!
-    input: str | list[Any] | dict[str, Any]  # ResponseInputParam + dict for workflow structured input
+    # ResponseCreateParamsのすべてのOpenAIフィールド
+    model: str  # DevUIでentity_idとして使用！
+    input: str | list[Any] | dict[str, Any]  # ResponseInputParam + ワークフロー構造化入力用のdict
     stream: bool | None = False
 
-    # OpenAI conversation parameter (standard!)
+    # OpenAI会話パラメータ（標準！）
     conversation: str | dict[str, Any] | None = None  # Union[str, {"id": str}]
 
-    # Common OpenAI optional fields
+    # 共通のOpenAIオプショナルフィールド
     instructions: str | None = None
     metadata: dict[str, Any] | None = None
     temperature: float | None = None
     max_output_tokens: int | None = None
     tools: list[dict[str, Any]] | None = None
 
-    # Optional extra_body for advanced use cases
+    # 高度なユースケース用のオプショナルなextra_body
     extra_body: dict[str, Any] | None = None
 
     model_config = ConfigDict(extra="allow")
 
     def get_entity_id(self) -> str:
-        """Get entity_id from model field.
+        """modelフィールドからentity_idを取得。
 
-        In DevUI, model IS the entity_id (agent/workflow name).
-        Simple and clean!
+        DevUIでは、modelがentity_id（agent/workflow名）です。
+        シンプルでクリーン！
+
         """
         return self.model
 
     def get_conversation_id(self) -> str | None:
-        """Extract conversation_id from conversation parameter.
+        """conversationパラメータからconversation_idを抽出。
 
-        Supports both string and object forms:
+        文字列形式とオブジェクト形式の両方をサポート：
         - conversation: "conv_123"
         - conversation: {"id": "conv_123"}
+
         """
         if isinstance(self.conversation, str):
             return self.conversation
@@ -185,13 +186,13 @@ class AgentFrameworkRequest(BaseModel):
         return None
 
     def to_openai_params(self) -> dict[str, Any]:
-        """Convert to dict for OpenAI client compatibility."""
+        """OpenAIクライアント互換のためにdictに変換。"""
         return self.model_dump(exclude_none=True)
 
 
-# Error handling
+# エラー処理
 class ResponseTraceEvent(BaseModel):
-    """Trace event for execution tracing."""
+    """実行トレース用のトレースイベント。"""
 
     type: Literal["trace_event"] = "trace_event"
     data: dict[str, Any]
@@ -199,26 +200,26 @@ class ResponseTraceEvent(BaseModel):
 
 
 class OpenAIError(BaseModel):
-    """OpenAI standard error response model."""
+    """OpenAI標準のエラーレスポンスモデル。"""
 
     error: dict[str, Any]
 
     @classmethod
     def create(cls, message: str, type: str = "invalid_request_error", code: str | None = None) -> OpenAIError:
-        """Create a standard OpenAI error response."""
+        """標準のOpenAIエラーレスポンスを作成。"""
         error_data = {"message": message, "type": type, "code": code}
         return cls(error=error_data)
 
     def to_dict(self) -> dict[str, Any]:
-        """Return the error payload as a plain mapping."""
+        """エラーペイロードをプレーンなマッピングとして返す。"""
         return {"error": dict(self.error)}
 
     def to_json(self) -> str:
-        """Return the error payload serialized to JSON."""
+        """エラーペイロードをJSONにシリアライズして返す。"""
         return self.model_dump_json()
 
 
-# Export all custom types
+# すべてのカスタムタイプをエクスポート
 __all__ = [
     "AgentFrameworkRequest",
     "OpenAIError",

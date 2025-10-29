@@ -56,7 +56,7 @@ __all__ = ["OpenAIAssistantsClient"]
 @use_observability
 @use_chat_middleware
 class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
-    """OpenAI Assistants client."""
+    """OpenAI Assistantsクライアント。"""
 
     def __init__(
         self,
@@ -74,46 +74,44 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         env_file_encoding: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize an OpenAI Assistants client.
+        """OpenAI Assistantsクライアントを初期化します。
 
         Keyword Args:
-            model_id: OpenAI model name, see https://platform.openai.com/docs/models.
-                Can also be set via environment variable OPENAI_CHAT_MODEL_ID.
-            assistant_id: The ID of an OpenAI assistant to use.
-                If not provided, a new assistant will be created (and deleted after the request).
-            assistant_name: The name to use when creating new assistants.
-            thread_id: Default thread ID to use for conversations. Can be overridden by
-                conversation_id property when making a request.
-                If not provided, a new thread will be created (and deleted after the request).
-            api_key: The API key to use. If provided will override the env vars or .env file value.
-                Can also be set via environment variable OPENAI_API_KEY.
-            org_id: The org ID to use. If provided will override the env vars or .env file value.
-                Can also be set via environment variable OPENAI_ORG_ID.
-            base_url: The base URL to use. If provided will override the standard value.
-                Can also be set via environment variable OPENAI_BASE_URL.
-            default_headers: The default headers mapping of string keys to
-                string values for HTTP requests.
-            async_client: An existing client to use.
-            env_file_path: Use the environment settings file as a fallback
-                to environment variables.
-            env_file_encoding: The encoding of the environment settings file.
-            kwargs: Other keyword parameters.
+            model_id: OpenAIモデル名。詳細は https://platform.openai.com/docs/models を参照してください。
+                環境変数OPENAI_CHAT_MODEL_IDでも設定可能です。
+            assistant_id: 使用するOpenAIアシスタントのID。
+                指定しない場合は新しいアシスタントが作成され（リクエスト後に削除されます）。
+            assistant_name: 新しいアシスタント作成時に使用する名前。
+            thread_id: 会話に使用するデフォルトのスレッドID。リクエスト時のconversation_idプロパティで上書き可能。
+                指定しない場合は新しいスレッドが作成され（リクエスト後に削除されます）。
+            api_key: 使用するAPIキー。指定すると環境変数や.envファイルの値を上書きします。
+                環境変数OPENAI_API_KEYでも設定可能です。
+            org_id: 使用する組織ID。指定すると環境変数や.envファイルの値を上書きします。
+                環境変数OPENAI_ORG_IDでも設定可能です。
+            base_url: 使用するベースURL。指定すると標準値を上書きします。
+                環境変数OPENAI_BASE_URLでも設定可能です。
+            default_headers: HTTPリクエストのための文字列キーから文字列値へのデフォルトヘッダーのマッピング。
+            async_client: 使用する既存のクライアント。
+            env_file_path: 環境変数の代わりに環境設定ファイルを使用。
+            env_file_encoding: 環境設定ファイルのエンコーディング。
+            kwargs: その他のキーワードパラメータ。
 
         Examples:
             .. code-block:: python
 
                 from agent_framework.openai import OpenAIAssistantsClient
 
-                # Using environment variables
-                # Set OPENAI_API_KEY=sk-...
-                # Set OPENAI_CHAT_MODEL_ID=gpt-4
+                # 環境変数を使用する場合
+                # OPENAI_API_KEY=sk-... を設定
+                # OPENAI_CHAT_MODEL_ID=gpt-4 を設定
                 client = OpenAIAssistantsClient()
 
-                # Or passing parameters directly
+                # またはパラメータを直接渡す場合
                 client = OpenAIAssistantsClient(model_id="gpt-4", api_key="sk-...")
 
-                # Or loading from a .env file
+                # または.envファイルから読み込む場合
                 client = OpenAIAssistantsClient(env_file_path="path/to/.env")
+
         """
         try:
             openai_settings = OpenAISettings(
@@ -151,15 +149,15 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         self._should_delete_assistant: bool = False
 
     async def __aenter__(self) -> "Self":
-        """Async context manager entry."""
+        """非同期コンテキストマネージャーのエントリー。"""
         return self
 
     async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
-        """Async context manager exit - clean up any assistants we created."""
+        """非同期コンテキストマネージャーの終了 - 作成したアシスタントをクリーンアップします。"""
         await self.close()
 
     async def close(self) -> None:
-        """Clean up any assistants we created."""
+        """作成したアシスタントをクリーンアップします。"""
         if self._should_delete_assistant and self.assistant_id is not None:
             await self.client.beta.assistants.delete(self.assistant_id)
             object.__setattr__(self, "assistant_id", None)
@@ -184,10 +182,10 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         chat_options: ChatOptions,
         **kwargs: Any,
     ) -> AsyncIterable[ChatResponseUpdate]:
-        # Extract necessary state from messages and options
+        # メッセージとオプションから必要なStateを抽出します。
         run_options, tool_results = self._prepare_options(messages, chat_options, **kwargs)
 
-        # Get the thread ID
+        # スレッドIDを取得します。
         thread_id: str | None = (
             chat_options.conversation_id
             if chat_options.conversation_id is not None
@@ -197,23 +195,24 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         if thread_id is None and tool_results is not None:
             raise ValueError("No thread ID was provided, but chat messages includes tool results.")
 
-        # Determine which assistant to use and create if needed
+        # 使用するアシスタントを決定し、必要に応じて作成します。
         assistant_id = await self._get_assistant_id_or_create()
 
-        # Create the streaming response
+        # ストリーミングレスポンスを作成します。
         stream, thread_id = await self._create_assistant_stream(thread_id, assistant_id, run_options, tool_results)
 
-        # Process and yield each update from the stream
+        # ストリームからの各更新を処理してyieldします。
         async for update in self._process_stream_events(stream, thread_id):
             yield update
 
     async def _get_assistant_id_or_create(self) -> str:
-        """Determine which assistant to use and create if needed.
+        """使用するアシスタントを決定し、必要に応じて作成します。
 
         Returns:
-            str: The assistant_id to use.
+            str: 使用するassistant_id。
+
         """
-        # If no assistant is provided, create a temporary assistant
+        # アシスタントが提供されていない場合、一時的なアシスタントを作成します。
         if self.assistant_id is None:
             created_assistant = await self.client.beta.assistants.create(name=self.assistant_name, model=self.model_id)
             self.assistant_id = created_assistant.id
@@ -228,27 +227,28 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         run_options: dict[str, Any],
         tool_results: list[FunctionResultContent] | None,
     ) -> tuple[Any, str]:
-        """Create the assistant stream for processing.
+        """処理用のアシスタントストリームを作成します。
 
         Returns:
             tuple: (stream, final_thread_id)
+
         """
-        # Get any active run for this thread
+        # このスレッドのアクティブなrunを取得します。
         thread_run = await self._get_active_thread_run(thread_id)
 
         tool_run_id, tool_outputs = self._convert_function_results_to_tool_output(tool_results)
 
         if thread_run is not None and tool_run_id is not None and tool_run_id == thread_run.id and tool_outputs:
-            # There's an active run and we have tool results to submit, so submit the results.
+            # アクティブなrunがあり、送信すべきツール結果があるため、結果を送信します。
             stream = self.client.beta.threads.runs.submit_tool_outputs_stream(  # type: ignore[reportDeprecated]
                 run_id=tool_run_id, thread_id=thread_run.thread_id, tool_outputs=tool_outputs
             )
             final_thread_id = thread_run.thread_id
         else:
-            # Handle thread creation or cancellation
+            # スレッドの作成またはキャンセルを処理します。
             final_thread_id = await self._prepare_thread(thread_id, thread_run, run_options)
 
-            # Now create a new run and stream the results.
+            # 新しいrunを作成し、結果をストリームします。
             stream = self.client.beta.threads.runs.stream(  # type: ignore[reportDeprecated]
                 assistant_id=assistant_id, thread_id=final_thread_id, **run_options
             )
@@ -256,7 +256,7 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         return stream, final_thread_id
 
     async def _get_active_thread_run(self, thread_id: str | None) -> Run | None:
-        """Get any active run for the given thread."""
+        """指定されたスレッドのアクティブなrunを取得します。"""
         if thread_id is None:
             return None
 
@@ -266,9 +266,9 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         return None
 
     async def _prepare_thread(self, thread_id: str | None, thread_run: Run | None, run_options: dict[str, Any]) -> str:
-        """Prepare the thread for a new run, creating or cleaning up as needed."""
+        """新しいrunのためにスレッドを準備し、必要に応じて作成またはクリーンアップします。"""
         if thread_id is None:
-            # No thread ID was provided, so create a new thread.
+            # スレッドIDが提供されなかったため、新しいスレッドを作成します。
             thread = await self.client.beta.threads.create(  # type: ignore[reportDeprecated]
                 messages=run_options["additional_messages"],
                 tool_resources=run_options.get("tool_resources"),
@@ -279,7 +279,7 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
             return thread.id
 
         if thread_run is not None:
-            # There was an active run; we need to cancel it before starting a new run.
+            # アクティブなrunがあったため、新しいrunを開始する前にキャンセルする必要があります。
             await self.client.beta.threads.runs.cancel(run_id=thread_run.id, thread_id=thread_id)  # type: ignore[reportDeprecated]
 
         return thread_id
@@ -357,7 +357,7 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
                     )
 
     def _create_function_call_contents(self, event_data: Run, response_id: str | None) -> list[Contents]:
-        """Create function call contents from a tool action event."""
+        """ツールアクションイベントから関数呼び出し内容を作成します。"""
         contents: list[Contents] = []
 
         if event_data.required_action is not None:
@@ -430,9 +430,8 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
 
         additional_messages: list[AdditionalMessage] | None = None
 
-        # System/developer messages are turned into instructions,
-        # since there is no such message roles in OpenAI Assistants.
-        # All other messages are added 1:1.
+        # System/developerメッセージは指示に変換されます。 OpenAI Assistantsにはそのようなメッセージロールがないためです。
+        # その他のメッセージは1:1で追加されます。
         for chat_message in messages:
             if chat_message.role.value in ["system", "developer"]:
                 for text_content in [content for content in chat_message.contents if isinstance(content, TextContent)]:
@@ -481,9 +480,8 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
 
         if tool_results:
             for function_result_content in tool_results:
-                # When creating the FunctionCallContent, we created it with a CallId == [runId, callId].
-                # We need to extract the run ID and ensure that the ToolOutput we send back to Azure
-                # is only the call ID.
+                # FunctionCallContentを作成する際、CallIdは[runId, callId]でした。 run
+                # IDを抽出し、Azureに返すToolOutputはcall IDのみであることを保証する必要があります。
                 run_and_call_ids: list[str] = json.loads(function_result_content.call_id)
 
                 if (
@@ -511,12 +509,12 @@ class OpenAIAssistantsClient(OpenAIConfigMixin, BaseChatClient):
         return run_id, tool_outputs
 
     def _update_agent_name(self, agent_name: str | None) -> None:
-        """Update the agent name in the chat client.
+        """チャットクライアントのagent名を更新します。
 
         Args:
-            agent_name: The new name for the agent.
+            agent_name: 新しいagent名。
+
         """
-        # This is a no-op in the base class, but can be overridden by subclasses
-        # to update the agent name in the client.
+        # これはベースクラスではno-opですが、サブクラスでオーバーライドして クライアント内のagent名を更新できます。
         if agent_name and not self.assistant_name:
             object.__setattr__(self, "assistant_name", agent_name)

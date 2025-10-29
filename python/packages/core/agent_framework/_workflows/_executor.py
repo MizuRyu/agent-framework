@@ -26,54 +26,54 @@ logger = logging.getLogger(__name__)
 
 # region Executor
 class Executor(DictConvertible):
-    """Base class for all workflow executors that process messages and perform computations.
+    """メッセージを処理し計算を実行するすべてのワークフローExecutorの基底クラス。
 
     ## Overview
-    Executors are the fundamental building blocks of workflows, representing individual processing
-    units that receive messages, perform operations, and produce outputs. Each executor is uniquely
-    identified and can handle specific message types through decorated handler methods.
+    Executorはワークフローの基本的な構成要素であり、個々の処理ユニットを表します。
+    メッセージを受け取り、操作を実行し、出力を生成します。各Executorは一意に識別され、
+    デコレータで装飾されたハンドラメソッドを通じて特定のメッセージタイプを処理できます。
 
     ## Type System
-    Executors have a rich type system that defines their capabilities:
+    Executorはその能力を定義する豊富な型システムを持ちます：
 
     ### Input Types
-    The types of messages an executor can process, discovered from handler method signatures:
+    Executorが処理できるメッセージの型で、ハンドラメソッドのシグネチャから検出されます：
 
     .. code-block:: python
 
         class MyExecutor(Executor):
             @handler
             async def handle_string(self, message: str, ctx: WorkflowContext) -> None:
-                # This executor can handle 'str' input types
-    Access via the `input_types` property.
+                # このExecutorは'str'型の入力を処理可能
+    `input_types`プロパティからアクセス可能。
 
     ### Output Types
-    The types of messages an executor can send to other executors via `ctx.send_message()`:
+    Executorが`ctx.send_message()`を通じて他のExecutorに送信できるメッセージの型：
 
     .. code-block:: python
 
         class MyExecutor(Executor):
             @handler
             async def handle_data(self, message: str, ctx: WorkflowContext[int | bool]) -> None:
-                # This executor can send 'int' or 'bool' messages
-    Access via the `output_types` property.
+                # このExecutorは'int'または'bool'型のメッセージを送信可能
+    `output_types`プロパティからアクセス可能。
 
     ### Workflow Output Types
-    The types of data an executor can emit as workflow-level outputs via `ctx.yield_output()`:
+    Executorが`ctx.yield_output()`を通じてワークフロー全体の出力として生成できるデータの型：
 
     .. code-block:: python
 
         class MyExecutor(Executor):
             @handler
             async def process(self, message: str, ctx: WorkflowContext[int, str]) -> None:
-                # Can send 'int' messages AND yield 'str' workflow outputs
-    Access via the `workflow_output_types` property.
+                # 'int'メッセージを送信し、'str'のワークフロー出力を生成可能
+    `workflow_output_types`プロパティからアクセス可能。
 
     ## Handler Discovery
-    Executors discover their capabilities through decorated methods:
+    Executorはデコレータで装飾されたメソッドを通じてその能力を検出します：
 
     ### @handler Decorator
-    Marks methods that process incoming messages:
+    受信メッセージを処理するメソッドをマークします：
 
     .. code-block:: python
 
@@ -83,7 +83,7 @@ class Executor(DictConvertible):
                 await ctx.send_message(message.upper())
 
     ### Sub-workflow Request Interception
-    Use @handler methods to intercept sub-workflow requests:
+    @handlerメソッドを使ってサブワークフローのリクエストをインターセプトします：
 
     .. code-block:: python
 
@@ -91,51 +91,51 @@ class Executor(DictConvertible):
             @handler
             async def handle_domain_request(
                 self,
-                request: DomainRequest,  # Subclass of RequestInfoMessage
+                request: DomainRequest,  # RequestInfoMessageのサブクラス
                 ctx: WorkflowContext[RequestResponse[RequestInfoMessage, Any] | DomainRequest],
             ) -> None:
                 if self.is_allowed(request.domain):
                     response = RequestResponse(data=True, original_request=request, request_id=request.request_id)
                     await ctx.send_message(response, target_id=request.source_executor_id)
                 else:
-                    await ctx.send_message(request)  # Forward to external
+                    await ctx.send_message(request)  # 外部へ転送
 
     ## Context Types
-    Handler methods receive different WorkflowContext variants based on their type annotations:
+    ハンドラメソッドは型注釈に基づき異なるWorkflowContextのバリアントを受け取ります：
 
-    ### WorkflowContext (no type parameters)
-    For handlers that only perform side effects without sending messages or yielding outputs:
+    ### WorkflowContext (型パラメータなし)
+    メッセージ送信や出力生成を行わず副作用のみを実行するハンドラ用：
 
     .. code-block:: python
 
         class LoggingExecutor(Executor):
             @handler
             async def log_message(self, msg: str, ctx: WorkflowContext) -> None:
-                print(f"Received: {msg}")  # Only logging, no outputs
+                print(f"Received: {msg}")  # ロギングのみ、出力なし
 
     ### WorkflowContext[T_Out]
-    Enables sending messages of type T_Out via `ctx.send_message()`:
+    `ctx.send_message()`でT_Out型のメッセージ送信を可能にします：
 
     .. code-block:: python
 
         class ProcessorExecutor(Executor):
             @handler
             async def handler(self, msg: str, ctx: WorkflowContext[int]) -> None:
-                await ctx.send_message(42)  # Can send int messages
+                await ctx.send_message(42)  # intメッセージ送信可能
 
     ### WorkflowContext[T_Out, T_W_Out]
-    Enables both sending messages (T_Out) and yielding workflow outputs (T_W_Out):
+    メッセージ送信(T_Out)とワークフロー出力生成(T_W_Out)の両方を可能にします：
 
     .. code-block:: python
 
         class DualOutputExecutor(Executor):
             @handler
             async def handler(self, msg: str, ctx: WorkflowContext[int, str]) -> None:
-                await ctx.send_message(42)  # Send int message
-                await ctx.yield_output("done")  # Yield str workflow output
+                await ctx.send_message(42)  # intメッセージ送信
+                await ctx.yield_output("done")  # strのワークフロー出力生成
 
     ## Function Executors
-    Simple functions can be converted to executors using the `@executor` decorator:
+    シンプルな関数は`@executor`デコレータを使ってExecutorに変換可能です：
 
     .. code-block:: python
 
@@ -144,25 +144,23 @@ class Executor(DictConvertible):
             await ctx.send_message(text.upper())
 
 
-        # Or with custom ID:
+        # またはカスタムID付き：
         @executor(id="text_processor")
         def sync_process(text: str, ctx: WorkflowContext[str]) -> None:
-            ctx.send_message(text.lower())  # Sync functions run in thread pool
+            ctx.send_message(text.lower())  # 同期関数はスレッドプールで実行
 
     ## Sub-workflow Composition
-    Executors can contain sub-workflows using WorkflowExecutor. Sub-workflows can make requests
-    that parent workflows can intercept. See WorkflowExecutor documentation for details on
-    workflow composition patterns and request/response handling.
+    ExecutorはWorkflowExecutorを使ってサブワークフローを含めることができます。サブワークフローは親ワークフローがインターセプト可能なリクエストを行えます。詳細はWorkflowExecutorのドキュメントを参照してください。
 
     ## Implementation Notes
-    - Do not call `execute()` directly - it's invoked by the workflow engine
-    - Do not override `execute()` - define handlers using decorators instead
-    - Each executor must have at least one `@handler` method
-    - Handler method signatures are validated at initialization time
+    - `execute()`を直接呼び出さないでください。ワークフローエンジンが呼び出します。
+    - `execute()`をオーバーライドしないでください。代わりにデコレータでハンドラを定義してください。
+    - 各Executorは少なくとも1つの`@handler`メソッドを持つ必要があります。
+    - ハンドラメソッドのシグネチャは初期化時に検証されます。
+
     """
 
-    # Provide a default so static analyzers (e.g., pyright) don't require passing `id`.
-    # Runtime still sets a concrete value in __init__.
+    # デフォルトを提供し、静的解析ツール（例：pyright）が`id`の渡しを要求しないようにします。 ランタイムは`__init__`で具体的な値を設定します。
     def __init__(
         self,
         id: str,
@@ -172,16 +170,17 @@ class Executor(DictConvertible):
         defer_discovery: bool = False,
         **_: Any,
     ) -> None:
-        """Initialize the executor with a unique identifier.
+        """一意の識別子でExecutorを初期化します。
 
         Args:
-            id: A unique identifier for the executor.
+            id: Executorの一意の識別子。
 
         Keyword Args:
-            type: The executor type name. If not provided, uses class name.
-            type_: Alternative parameter name for executor type.
-            defer_discovery: If True, defer handler method discovery until later.
-            **_: Additional keyword arguments. Unused in this implementation.
+            type: Executorのタイプ名。指定しない場合はクラス名を使用。
+            type_: Executorタイプの代替パラメータ名。
+            defer_discovery: Trueの場合、ハンドラメソッドの検出を後回しにします。
+            **_: 追加のキーワード引数。この実装では未使用。
+
         """
         if not id:
             raise ValueError("Executor ID must be a non-empty string.")
@@ -213,25 +212,24 @@ class Executor(DictConvertible):
         trace_contexts: list[dict[str, str]] | None = None,
         source_span_ids: list[str] | None = None,
     ) -> None:
-        """Execute the executor with a given message and context parameters.
+        """指定されたメッセージとコンテキストパラメータでExecutorを実行します。
 
-        - Do not call this method directly - it is invoked by the workflow engine.
-        - Do not override this method. Instead, define handlers using @handler decorator.
+        - このメソッドを直接呼び出さないでください。ワークフローエンジンが呼び出します。
+        - このメソッドをオーバーライドしないでください。代わりに@handlerデコレータでハンドラを定義してください。
 
         Args:
-            message: The message to be processed by the executor.
-            source_executor_ids: The IDs of the source executors that sent messages to this executor.
-            shared_state: The shared state for the workflow.
-            runner_context: The runner context that provides methods to send messages and events.
-            trace_contexts: Optional trace contexts from multiple sources for OpenTelemetry propagation.
-            source_span_ids: Optional source span IDs from multiple sources for linking.
+            message: Executorが処理するメッセージ。
+            source_executor_ids: このExecutorにメッセージを送った送信元ExecutorのID。
+            shared_state: ワークフローの共有状態。
+            runner_context: メッセージやイベント送信メソッドを提供するランナーコンテキスト。
+            trace_contexts: OpenTelemetry伝播のための複数ソースからのオプショナルなトレースコンテキスト。
+            source_span_ids: リンク用の複数ソースからのオプショナルなソーススパンID。
 
         Returns:
-            An awaitable that resolves to the result of the execution.
-        """
-        # Create processing span for tracing (gracefully handles disabled tracing)
+            実行結果を解決するawaitable。
 
-        # Handle case where Message wrapper is passed instead of raw data
+        """
+        # トレース用の処理スパンを作成（トレース無効時も正常に処理） Messageラッパーが生データの代わりに渡された場合の処理
         if isinstance(message, Message):
             message = message.data
 
@@ -242,13 +240,13 @@ class Executor(DictConvertible):
             source_trace_contexts=trace_contexts,
             source_span_ids=source_span_ids,
         ):
-            # Find the handler and handler spec that matches the message type.
+            # メッセージタイプに一致するハンドラとハンドラスペックを検索します。
             handler: Callable[[Any, WorkflowContext[Any, Any]], Awaitable[None]] | None = None
             ctx_annotation = None
             for message_type in self._handlers:
                 if is_instance_of(message, message_type):
                     handler = self._handlers[message_type]
-                    # Find the corresponding handler spec for context annotation
+                    # コンテキスト注釈に対応するハンドラスペックを検索します。
                     for spec in self._handler_specs:
                         if spec.get("message_type") == message_type:
                             ctx_annotation = spec.get("ctx_annotation")
@@ -258,7 +256,7 @@ class Executor(DictConvertible):
             if handler is None:
                 raise RuntimeError(f"Executor {self.__class__.__name__} cannot handle message of type {type(message)}.")
 
-            # Create the appropriate WorkflowContext based on handler specs
+            # ハンドラスペックに基づいて適切なWorkflowContextを作成します。
             context = self._create_context_for_handler(
                 source_executor_ids=source_executor_ids,
                 shared_state=shared_state,
@@ -268,14 +266,14 @@ class Executor(DictConvertible):
                 source_span_ids=source_span_ids,
             )
 
-            # Invoke the handler with the message and context
+            # メッセージとコンテキストを使ってハンドラを呼び出します。
             with _framework_event_origin():
                 invoke_event = ExecutorInvokedEvent(self.id)
             await context.add_event(invoke_event)
             try:
                 await handler(message, context)
             except Exception as exc:
-                # Surface structured executor failure before propagating
+                # 伝播前に構造化されたExecutorの失敗を表面化させます。
                 with _framework_event_origin():
                     failure_event = ExecutorFailedEvent(self.id, WorkflowErrorDetails.from_exception(exc))
                 await context.add_event(failure_event)
@@ -293,20 +291,21 @@ class Executor(DictConvertible):
         trace_contexts: list[dict[str, str]] | None = None,
         source_span_ids: list[str] | None = None,
     ) -> WorkflowContext[Any]:
-        """Create the appropriate WorkflowContext based on the handler's context annotation.
+        """ハンドラのコンテキスト注釈に基づいて適切なWorkflowContextを作成します。
 
         Args:
-            source_executor_ids: The IDs of the source executors that sent messages to this executor.
-            shared_state: The shared state for the workflow.
-            runner_context: The runner context that provides methods to send messages and events.
-            ctx_annotation: The context annotation from the handler spec to determine which context type to create.
-            trace_contexts: Optional trace contexts from multiple sources for OpenTelemetry propagation.
-            source_span_ids: Optional source span IDs from multiple sources for linking.
+            source_executor_ids: このExecutorにメッセージを送った送信元ExecutorのID。
+            shared_state: ワークフローの共有状態。
+            runner_context: メッセージやイベント送信メソッドを提供するランナーコンテキスト。
+            ctx_annotation: 作成するコンテキストタイプを決定するためのハンドラスペックからのコンテキスト注釈。
+            trace_contexts: OpenTelemetry伝播のための複数ソースからのオプショナルなトレースコンテキスト。
+            source_span_ids: リンク用の複数ソースからのオプショナルなソーススパンID。
 
         Returns:
-            WorkflowContext[Any] based on the handler's context annotation.
+            ハンドラのコンテキスト注釈に基づくWorkflowContext[Any]。
+
         """
-        # Create WorkflowContext
+        # WorkflowContextを作成します。
         return WorkflowContext(
             executor_id=self.id,
             source_executor_ids=source_executor_ids,
@@ -317,27 +316,27 @@ class Executor(DictConvertible):
         )
 
     def _discover_handlers(self) -> None:
-        """Discover message handlers in the executor class."""
-        # Use __class__.__dict__ to avoid accessing pydantic's dynamic attributes
+        """Executorクラス内のメッセージハンドラを検出します。"""
+        # pydanticの動的属性にアクセスしないように__class__.__dict__を使用します。
         for attr_name in dir(self.__class__):
             try:
                 attr = getattr(self.__class__, attr_name)
-                # Discover @handler methods
+                # @handlerメソッドを検出します。
                 if callable(attr) and hasattr(attr, "_handler_spec"):
                     handler_spec = attr._handler_spec  # type: ignore
                     message_type = handler_spec["message_type"]
 
-                    # Keep full generic types for handler registration to avoid conflicts
-                    # Different RequestResponse[T, U] specializations are distinct handler types
+                    # ハンドラ登録時に完全なジェネリック型を保持し、競合を避けます。 異なるRequestResponse[T,
+                    # U]の特殊化は異なるハンドラタイプとして扱います。
 
                     if self._handlers.get(message_type) is not None:
                         raise ValueError(f"Duplicate handler for type {message_type} in {self.__class__.__name__}")
 
-                    # Get the bound method
+                    # バウンドメソッドを取得します。
                     bound_method = getattr(self, attr_name)
                     self._handlers[message_type] = bound_method
 
-                    # Add to unified handler specs list
+                    # 統合されたハンドラスペックリストに追加します。
                     self._handler_specs.append({
                         "name": handler_spec["name"],
                         "message_type": message_type,
@@ -347,17 +346,18 @@ class Executor(DictConvertible):
                         "source": "class_method",  # Distinguish from instance handlers if needed
                     })
             except AttributeError:
-                # Skip attributes that may not be accessible
+                # アクセスできない可能性のある属性はスキップします。
                 continue
 
     def can_handle(self, message: Any) -> bool:
-        """Check if the executor can handle a given message type.
+        """Executorが指定されたメッセージタイプを処理可能かどうかをチェックします。
 
         Args:
-            message: The message to check.
+            message: チェックするメッセージ。
 
         Returns:
-            True if the executor can handle the message type, False otherwise.
+            Executorがメッセージタイプを処理可能ならTrue、そうでなければFalse。
+
         """
         return any(is_instance_of(message, message_type) for message_type in self._handlers)
 
@@ -370,15 +370,16 @@ class Executor(DictConvertible):
         output_types: list[type],
         workflow_output_types: list[type],
     ) -> None:
-        """Register a handler at instance level.
+        """インスタンスレベルでハンドラを登録します。
 
         Args:
-            name: Name of the handler function for error reporting
-            func: The async handler function to register
-            message_type: Type of message this handler processes
-            ctx_annotation: The WorkflowContext[T] annotation from the function
-            output_types: List of output types for send_message()
-            workflow_output_types: List of workflow output types for yield_output()
+            name: エラー報告用のハンドラ関数名
+            func: 登録する非同期ハンドラ関数
+            message_type: このハンドラが処理するメッセージの型
+            ctx_annotation: 関数のWorkflowContext[T]注釈
+            output_types: send_message()用の出力型リスト
+            workflow_output_types: yield_output()用のワークフロー出力型リスト
+
         """
         if message_type in self._handlers:
             raise ValueError(f"Handler for type {message_type} already registered in {self.__class__.__name__}")
@@ -395,23 +396,25 @@ class Executor(DictConvertible):
 
     @property
     def input_types(self) -> list[type[Any]]:
-        """Get the list of input types that this executor can handle.
+        """このExecutorが処理可能な入力型のリストを取得します。
 
         Returns:
-            A list of the message types that this executor's handlers can process.
+            このExecutorのハンドラが処理可能なメッセージ型のリスト。
+
         """
         return list(self._handlers.keys())
 
     @property
     def output_types(self) -> list[type[Any]]:
-        """Get the list of output types that this executor can produce via send_message().
+        """send_message()を通じてこのExecutorが生成可能な出力型のリストを取得します。
 
         Returns:
-            A list of the output types inferred from the handlers' WorkflowContext[T] annotations.
+            ハンドラのWorkflowContext[T]注釈から推論された出力型のリスト。
+
         """
         output_types: set[type[Any]] = set()
 
-        # Collect output types from all handlers
+        # すべてのハンドラから出力型を収集します。
         for handler_spec in self._handler_specs:
             handler_output_types = handler_spec.get("output_types", [])
             output_types.update(handler_output_types)
@@ -420,14 +423,15 @@ class Executor(DictConvertible):
 
     @property
     def workflow_output_types(self) -> list[type[Any]]:
-        """Get the list of workflow output types that this executor can produce via yield_output().
+        """yield_output()を通じてこのExecutorが生成可能なワークフロー出力型のリストを取得します。
 
         Returns:
-            A list of the workflow output types inferred from handlers' WorkflowContext[T, U] annotations.
+            ハンドラのWorkflowContext[T, U]注釈から推論されたワークフロー出力型のリスト。
+
         """
         output_types: set[type[Any]] = set()
 
-        # Collect workflow output types from all handlers
+        # すべてのハンドラからワークフロー出力型を収集します。
         for handler_spec in self._handler_specs:
             handler_workflow_output_types = handler_spec.get("workflow_output_types", [])
             output_types.update(handler_workflow_output_types)
@@ -435,13 +439,11 @@ class Executor(DictConvertible):
         return list(output_types)
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize executor definition for workflow topology export."""
+        """ワークフロートポロジーのExport用にExecutor定義をシリアライズします。"""
         return {"id": self.id, "type": self.type}
 
 
-# endregion: Executor
-
-# region Handler Decorator
+# endregion: Executor region Handler Decorator
 
 
 ExecutorT = TypeVar("ExecutorT", bound="Executor")
@@ -451,13 +453,13 @@ ContextT = TypeVar("ContextT", bound="WorkflowContext[Any, Any]")
 def handler(
     func: Callable[[ExecutorT, Any, ContextT], Awaitable[Any]],
 ) -> Callable[[ExecutorT, Any, ContextT], Awaitable[Any]]:
-    """Decorator to register a handler for an executor.
+    """Executorのハンドラーを登録するためのデコレーター。
 
     Args:
-        func: The function to decorate. Can be None when used without parameters.
+        func: デコレートする関数。パラメータなしで使用する場合はNoneでもよい。
 
     Returns:
-        The decorated function with handler metadata.
+        ハンドラーメタデータを持つデコレートされた関数。
 
     Example:
         @handler
@@ -467,32 +469,33 @@ def handler(
         @handler
         async def handle_data(self, message: dict, ctx: WorkflowContext[str | int]) -> None:
             ...
+
     """
 
     def decorator(
         func: Callable[[ExecutorT, Any, ContextT], Awaitable[Any]],
     ) -> Callable[[ExecutorT, Any, ContextT], Awaitable[Any]]:
-        # Extract the message type and validate using unified validation
+        # メッセージタイプを抽出し、unified validationを使って検証する
         message_type, ctx_annotation, inferred_output_types, inferred_workflow_output_types = (
             validate_function_signature(func, "Handler method")
         )
 
-        # Get signature for preservation
+        # 署名を取得して保存する
         sig = inspect.signature(func)
 
         @functools.wraps(func)
         async def wrapper(self: ExecutorT, message: Any, ctx: ContextT) -> Any:
-            """Wrapper function to call the handler."""
+            """ハンドラーを呼び出すためのラッパー関数。"""
             return await func(self, message, ctx)
 
-        # Preserve the original function signature for introspection during validation
+        # 検証時のイントロスペクションのために元の関数の署名を保持する
         with contextlib.suppress(AttributeError, TypeError):
             wrapper.__signature__ = sig  # type: ignore[attr-defined]
 
         wrapper._handler_spec = {  # type: ignore
             "name": func.__name__,
             "message_type": message_type,
-            # Keep output_types and workflow_output_types in spec for validators
+            # バリデーターのためにspecにoutput_typesとworkflow_output_typesを保持する
             "output_types": inferred_output_types,
             "workflow_output_types": inferred_workflow_output_types,
             "ctx_annotation": ctx_annotation,

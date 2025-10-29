@@ -23,7 +23,7 @@ def mock_index() -> AsyncMock:
     idx.exists = AsyncMock(return_value=False)
 
     async def _paginate_generator(*_args: Any, **_kwargs: Any):
-        # Default empty generator; override per-test as needed
+        # デフォルトの空ジェネレーター；必要に応じてテストごとにオーバーライド
         if False:  # pragma: no cover
             yield []
         return
@@ -37,12 +37,10 @@ def patch_index_from_dict(mock_index: AsyncMock):
     with patch("agent_framework_redis._provider.AsyncSearchIndex") as mock_cls:
         mock_cls.from_dict = MagicMock(return_value=mock_index)
 
-        # Mock from_existing to return a mock with matching schema by default
-        # This prevents schema validation errors in tests that don't specifically test schema validation
+        # from_existingをモックしてデフォルトで一致するスキーマのモックを返す これはスキーマ検証を特にテストしないテストでのスキーマ検証エラーを防ぎます
         async def mock_from_existing(index_name, redis_url):
             mock_existing = AsyncMock()
-            # Return a schema that will match whatever the provider generates
-            # This is a bit of a hack, but allows existing tests to continue working
+            # プロバイダーが生成するものと一致するスキーマを返す これは少しハックですが、既存のテストを継続して動作させます
             mock_existing.schema.to_dict = MagicMock(
                 side_effect=lambda: mock_cls.from_dict.call_args[0][0] if mock_cls.from_dict.call_args else {}
             )
@@ -83,13 +81,13 @@ def patch_queries():
 
 
 class TestRedisProviderInitialization:
-    # Verifies the provider can be imported from the package
+    # パッケージからプロバイダーをインポートできることを検証します
     def test_import(self):
         from agent_framework_redis._provider import RedisProvider
 
         assert RedisProvider is not None
 
-    # Constructing without filters should not raise; filters are enforced at call-time
+    # フィルターなしでの構築は例外を発生させないはずです；フィルターは呼び出し時に強制されます
     def test_init_without_filters_ok(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider()
         assert provider.user_id is None
@@ -97,10 +95,10 @@ class TestRedisProviderInitialization:
         assert provider.application_id is None
         assert provider.thread_id is None
 
-    # Schema should omit vector field when no vector configuration is provided
+    # ベクター設定が提供されていない場合、スキーマはベクターフィールドを省略すべきです
     def test_schema_without_vector_field(self, patch_index_from_dict):
         RedisProvider(user_id="u1")
-        # Inspect schema passed to from_dict
+        # from_dictに渡されたスキーマを検査する
         args, kwargs = patch_index_from_dict.from_dict.call_args
         schema = args[0]
         assert isinstance(schema, dict)
@@ -120,19 +118,19 @@ class TestRedisProviderMessages:
             ChatMessage(role=Role.SYSTEM, text="You are a helpful assistant"),
         ]
 
-    # Writes require at least one scoping filter to avoid unbounded operations
+    # 書き込みは無制限の操作を避けるために少なくとも1つのスコーピングフィルターを必要とします
     async def test_messages_adding_requires_filters(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider()
         with pytest.raises(ServiceInitializationError):
             await provider.invoked("thread123", ChatMessage(role=Role.USER, text="Hello"))
 
-    # Captures the per-operation thread id when provided
+    # 提供された場合に操作ごとのスレッドIDをキャプチャします
     async def test_thread_created_sets_per_operation_id(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider(user_id="u1")
         await provider.thread_created("t1")
         assert provider._per_operation_thread_id == "t1"
 
-    # Enforces single-thread usage when scope_to_per_operation_thread_id is True
+    # scope_to_per_operation_thread_idがTrueの場合に単一スレッド使用を強制します
     async def test_thread_created_conflict_when_scoped(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider(user_id="u1", scope_to_per_operation_thread_id=True)
         provider._per_operation_thread_id = "t1"
@@ -140,7 +138,7 @@ class TestRedisProviderMessages:
             await provider.thread_created("t2")
         assert "only be used with one thread" in str(exc.value)
 
-    # Aggregates all results from the async paginator into a flat list
+    # 非同期ページネーターからのすべての結果を集約してフラットなリストにします
     async def test_search_all_paginates(self, mock_index: AsyncMock, patch_index_from_dict):  # noqa: ARG002
         async def gen(_q, page_size: int = 200):  # noqa: ARG001, ANN001
             yield [{"id": 1}]
@@ -153,24 +151,24 @@ class TestRedisProviderMessages:
 
 
 class TestRedisProviderModelInvoking:
-    # Reads require at least one scoping filter to avoid unbounded operations
+    # 読み取りは無制限の操作を避けるために少なくとも1つのスコーピングフィルターを必要とします
     async def test_model_invoking_requires_filters(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider()
         with pytest.raises(ServiceInitializationError):
             await provider.invoking(ChatMessage(role=Role.USER, text="Hi"))
 
-    # Ensures text-only search path is used and context is composed from hits
+    # テキストのみの検索パスを使用し、ヒットからコンテキストを構成することを保証します
     async def test_textquery_path_and_context_contents(
         self, mock_index: AsyncMock, patch_index_from_dict, patch_queries
     ):  # noqa: ARG002
-        # Arrange: text-only search
+        # 準備：テキストのみの検索
         mock_index.query = AsyncMock(return_value=[{"content": "A"}, {"content": "B"}])
         provider = RedisProvider(user_id="u1")
 
-        # Act
+        # 実行
         ctx = await provider.invoking([ChatMessage(role=Role.USER, text="q1")])
 
-        # Assert: TextQuery used (not HybridQuery), filter_expression included
+        # 検証：TextQueryが使用されている（HybridQueryではない）、filter_expressionが含まれている
         assert patch_queries["TextQuery"].call_count == 1
         assert patch_queries["HybridQuery"].call_count == 0
         kwargs = patch_queries["calls"]["TextQuery"][0]
@@ -179,12 +177,12 @@ class TestRedisProviderModelInvoking:
         assert kwargs["num_results"] == 10
         assert "filter_expression" in kwargs
 
-        # Context contains memories joined after the default prompt
+        # ContextはデフォルトのPromptの後に結合されたメモリを含みます
         assert ctx.messages is not None and len(ctx.messages) == 1
         text = ctx.messages[0].text
         assert text.endswith("A\nB")
 
-    # When no results are returned, Context should have no contents
+    # 結果が返されない場合、Contextは内容を持ちません
     async def test_model_invoking_empty_results_returns_empty_context(
         self, mock_index: AsyncMock, patch_index_from_dict, patch_queries
     ):  # noqa: ARG002
@@ -193,14 +191,14 @@ class TestRedisProviderModelInvoking:
         ctx = await provider.invoking([ChatMessage(role=Role.USER, text="any")])
         assert ctx.messages == []
 
-    # Ensures hybrid vector-text search is used when a vectorizer and vector field are configured
+    # ベクタイザーとベクターフィールドが設定されている場合にハイブリッドベクター・テキスト検索が使用されることを保証します
     async def test_hybridquery_path_with_vectorizer(self, mock_index: AsyncMock, patch_index_from_dict, patch_queries):  # noqa: ARG002
         mock_index.query = AsyncMock(return_value=[{"content": "Hit"}])
         provider = RedisProvider(user_id="u1", redis_vectorizer=CUSTOM_VECTORIZER, vector_field_name="vec")
 
         ctx = await provider.invoking([ChatMessage(role=Role.USER, text="hello")])
 
-        # Assert: HybridQuery used with vector and vector field
+        # 検証：ベクターとベクターフィールドを使ったHybridQueryが使用されている
         assert patch_queries["HybridQuery"].call_count == 1
         k = patch_queries["calls"]["HybridQuery"][0]
         assert k["text"] == "hello"
@@ -210,25 +208,25 @@ class TestRedisProviderModelInvoking:
         assert k["num_results"] == 10
         assert "filter_expression" in k
 
-        # Context assembled from returned memories
+        # 返されたメモリから組み立てられたContext
         assert ctx.messages and "Hit" in ctx.messages[0].text
 
 
 class TestRedisProviderContextManager:
-    # Verifies async context manager returns self for chaining
+    # 非同期コンテキストマネージャがチェーンのためにselfを返すことを検証します
     async def test_async_context_manager_returns_self(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider(user_id="u1")
         async with provider as ctx:
             assert ctx is provider
 
-    # Exit should be a no-op and not raise
+    # Exitは何もしない操作で例外を発生させません
     async def test_aexit_noop(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider(user_id="u1")
         assert await provider.__aexit__(None, None, None) is None
 
 
 class TestMessagesAddingBehavior:
-    # Adds messages while injecting partition defaults and preserving allowed roles
+    # パーティションのデフォルトを注入し、許可されたロールを保持しながらメッセージを追加します
     async def test_messages_adding_adds_partition_defaults_and_roles(
         self, mock_index: AsyncMock, patch_index_from_dict
     ):  # noqa: ARG002
@@ -247,7 +245,7 @@ class TestMessagesAddingBehavior:
 
         await provider.invoked(msgs)
 
-        # Ensure load invoked with shaped docs containing defaults
+        # デフォルトを含む整形されたドキュメントでloadが呼び出されることを保証します
         assert mock_index.load.await_count == 1
         (loaded_args, _kwargs) = mock_index.load.call_args
         docs = loaded_args[0]
@@ -259,7 +257,7 @@ class TestMessagesAddingBehavior:
             assert d["agent_id"] == "agent"
             assert d["user_id"] == "u1"
 
-    # Skips blank text and disallowed roles (e.g., TOOL) when adding messages
+    # メッセージを追加する際に空白のテキストや許可されていないロール（例：TOOL）をスキップします
     async def test_messages_adding_ignores_blank_and_disallowed_roles(
         self, mock_index: AsyncMock, patch_index_from_dict
     ):  # noqa: ARG002
@@ -269,22 +267,22 @@ class TestMessagesAddingBehavior:
             ChatMessage(role=Role.TOOL, text="tool output"),
         ]
         await provider.invoked(msgs)
-        # No valid messages -> no load
+        # 有効なメッセージがない場合 -> ロードしません
         assert mock_index.load.await_count == 0
 
 
 class TestIndexCreationPublicCalls:
-    # Ensures index is created only once when drop=True on first public write call
+    # drop=True の場合、最初のパブリック書き込み呼び出し時にインデックスが一度だけ作成されることを保証します
     async def test_messages_adding_triggers_index_create_once_when_drop_true(
         self, mock_index: AsyncMock, patch_index_from_dict
     ):  # noqa: ARG002
         provider = RedisProvider(user_id="u1")
         await provider.invoked(ChatMessage(role=Role.USER, text="m1"))
         await provider.invoked(ChatMessage(role=Role.USER, text="m2"))
-        # create only on first call
+        # 最初の呼び出し時のみ作成します
         assert mock_index.create.await_count == 1
 
-    # Ensures index is created when drop=False and the index does not exist on first read
+    # drop=False でインデックスが存在しない場合、最初の読み込み時にインデックスが作成されることを保証します
     async def test_model_invoking_triggers_create_when_drop_false_and_not_exists(
         self, mock_index: AsyncMock, patch_index_from_dict
     ):  # noqa: ARG002
@@ -296,21 +294,21 @@ class TestIndexCreationPublicCalls:
 
 
 class TestThreadCreatedAdditional:
-    # Allows None or same thread id repeatedly; different id raises when scoped
+    # None または同じスレッドIDの繰り返しを許可します。スコープ内で異なるIDは例外を発生させます
     async def test_thread_created_allows_none_and_same_id(self, patch_index_from_dict):  # noqa: ARG002
         provider = RedisProvider(user_id="u1", scope_to_per_operation_thread_id=True)
-        # None is allowed
+        # None は許可されます
         await provider.thread_created(None)
-        # Same id is allowed repeatedly
+        # 同じIDの繰り返しは許可されます
         await provider.thread_created("t1")
         await provider.thread_created("t1")
-        # Different id should raise
+        # 異なるIDは例外を発生させるべきです
         with pytest.raises(ValueError):
             await provider.thread_created("t2")
 
 
 class TestVectorPopulation:
-    # When vectorizer configured, invoked should embed content and populate the vector field
+    # vectorizer が設定されている場合、呼び出されるとコンテンツを埋め込み、ベクトルフィールドを埋めます
     async def test_messages_adding_populates_vector_field_when_vectorizer_present(
         self, mock_index: AsyncMock, patch_index_from_dict
     ):  # noqa: ARG002
@@ -332,7 +330,7 @@ class TestVectorPopulation:
 
 
 class TestRedisProviderSchemaVectors:
-    # Adds a vector field when vectorizer supplies dims implicitly
+    # vectorizer が暗黙的に次元を提供する場合、ベクトルフィールドを追加します
     def test_schema_with_vector_field_and_dims_inferred(self, patch_index_from_dict):  # noqa: ARG002
         RedisProvider(user_id="u1", redis_vectorizer=CUSTOM_VECTORIZER, vector_field_name="vec")
         args, _ = patch_index_from_dict.from_dict.call_args
@@ -342,7 +340,7 @@ class TestRedisProviderSchemaVectors:
         assert "vec" in names
         assert types["vec"] == "vector"
 
-    # Raises when redis_vectorizer is not the correct type
+    # redis_vectorizer が正しい型でない場合に例外を発生させます
     def test_init_invalid_vectorizer(self, patch_index_from_dict):  # noqa: ARG002
         class DummyVectorizer:
             pass
@@ -352,9 +350,9 @@ class TestRedisProviderSchemaVectors:
 
 
 class TestEnsureIndex:
-    # Creates index once and marks _index_initialized to prevent duplicate calls
+    # インデックスを一度だけ作成し、重複呼び出しを防ぐために _index_initialized をマークします
     async def test_ensure_index_creates_once(self, mock_index: AsyncMock, patch_index_from_dict):  # noqa: ARG002
-        # Mock index doesn't exist, so it will be created
+        # モックインデックスは存在しないため、作成されます
         mock_index.exists = AsyncMock(return_value=False)
         provider = RedisProvider(user_id="u1", overwrite_index=False)
 
@@ -363,51 +361,51 @@ class TestEnsureIndex:
         assert mock_index.create.await_count == 1
         assert provider._index_initialized is True
 
-        # Second call should not create again due to _index_initialized flag
+        # _index_initialized フラグにより、2回目の呼び出しで再作成されるべきではありません
         await provider._ensure_index()
         assert mock_index.create.await_count == 1
 
-    # Creates index with overwrite=True when overwrite_index=True
+    # overwrite_index=True の場合、overwrite=True でインデックスを作成します
     async def test_ensure_index_with_overwrite_true(self, mock_index: AsyncMock, patch_index_from_dict):  # noqa: ARG002
         mock_index.exists = AsyncMock(return_value=True)
         provider = RedisProvider(user_id="u1", overwrite_index=True)
 
         await provider._ensure_index()
 
-        # Should call create with overwrite=True, drop=False
+        # overwrite=True, drop=False で create を呼び出すべきです
         mock_index.create.assert_called_once_with(overwrite=True, drop=False)
 
-    # Creates index with overwrite=False when index doesn't exist
+    # インデックスが存在しない場合、overwrite=False でインデックスを作成します
     async def test_ensure_index_create_if_missing(self, mock_index: AsyncMock, patch_index_from_dict):  # noqa: ARG002
         mock_index.exists = AsyncMock(return_value=False)
         provider = RedisProvider(user_id="u1", overwrite_index=False)
 
         await provider._ensure_index()
 
-        # Should call create with overwrite=False, drop=False
+        # overwrite=False, drop=False で create を呼び出すべきです
         mock_index.create.assert_called_once_with(overwrite=False, drop=False)
 
-    # Validates schema compatibility when index exists and overwrite=False
+    # インデックスが存在し overwrite=False の場合、スキーマの互換性を検証します
     async def test_ensure_index_schema_validation_success(self, mock_index: AsyncMock, patch_index_from_dict):  # noqa: ARG002
         mock_index.exists = AsyncMock(return_value=True)
         provider = RedisProvider(user_id="u1", overwrite_index=False)
 
-        # Mock existing index with matching schema
+        # スキーマが一致する既存のモックインデックス
         expected_schema = provider.schema_dict
         patch_index_from_dict.from_existing.return_value.schema.to_dict.return_value = expected_schema
 
         await provider._ensure_index()
 
-        # Should validate schema and proceed to create
+        # スキーマを検証し、作成を続行すべきです
         patch_index_from_dict.from_existing.assert_called_once_with("context", redis_url="redis://localhost:6379")
         mock_index.create.assert_called_once_with(overwrite=False, drop=False)
 
-    # Raises ServiceInitializationError when schemas don't match
+    # スキーマが一致しない場合、ServiceInitializationError を発生させます
     async def test_ensure_index_schema_validation_failure(self, mock_index: AsyncMock, patch_index_from_dict):  # noqa: ARG002
         mock_index.exists = AsyncMock(return_value=True)
         provider = RedisProvider(user_id="u1", overwrite_index=False)
 
-        # Override the mock to return a different schema after provider is created
+        # プロバイダー作成後に異なるスキーマを返すようにモックをオーバーライドします
         async def mock_from_existing_different(index_name, redis_url):
             mock_existing = AsyncMock()
             mock_existing.schema.to_dict = MagicMock(return_value={"different": "schema"})
@@ -421,5 +419,5 @@ class TestEnsureIndex:
         assert "incompatible with the current configuration" in str(exc.value)
         assert "overwrite_index=True" in str(exc.value)
 
-        # Should not call create when schema validation fails
+        # スキーマ検証に失敗した場合、create を呼び出すべきではありません
         mock_index.create.assert_not_called()

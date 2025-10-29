@@ -1,21 +1,21 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Purview policy enforcement sample (Python).
+"""Purviewポリシー適用サンプル（Python）。
 
-Shows:
-1. Creating a basic chat agent
-2. Adding Purview policy evaluation via AGENT middleware (agent-level)
-3. Adding Purview policy evaluation via CHAT middleware (chat-client level)
-4. Running a threaded conversation and printing results
+以下を示します:
+1. 基本的なchat agentの作成
+2. AGENT middleware（agentレベル）によるPurviewポリシー評価の追加
+3. CHAT middleware（chat-clientレベル）によるPurviewポリシー評価の追加
+4. スレッド会話の実行と結果の表示
 
-Environment variables:
-- AZURE_OPENAI_ENDPOINT (required)
-- AZURE_OPENAI_DEPLOYMENT_NAME (optional, defaults to gpt-4o-mini)
-- PURVIEW_CLIENT_APP_ID (required)
-- PURVIEW_USE_CERT_AUTH (optional, set to "true" for certificate auth)
-- PURVIEW_TENANT_ID (required if certificate auth)
-- PURVIEW_CERT_PATH (required if certificate auth)
-- PURVIEW_CERT_PASSWORD (optional)
-- PURVIEW_DEFAULT_USER_ID (optional, user ID for Purview evaluation)
+環境変数:
+- AZURE_OPENAI_ENDPOINT (必須)
+- AZURE_OPENAI_DEPLOYMENT_NAME (任意、デフォルトは gpt-4o-mini)
+- PURVIEW_CLIENT_APP_ID (必須)
+- PURVIEW_USE_CERT_AUTH (任意、証明書認証を使用する場合は "true" に設定)
+- PURVIEW_TENANT_ID (証明書認証時に必須)
+- PURVIEW_CERT_PATH (証明書認証時に必須)
+- PURVIEW_CERT_PASSWORD (任意)
+- PURVIEW_DEFAULT_USER_ID (任意、Purview評価用のユーザーID)
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from azure.identity import (
     InteractiveBrowserCredential,
 )
 
-# Purview integration pieces
+# Purview統合の構成要素
 from agent_framework.microsoft import (
     PurviewPolicyMiddleware,
     PurviewChatPolicyMiddleware,
@@ -50,11 +50,12 @@ def _get_env(name: str, *, required: bool = True, default: str | None = None) ->
 
 
 def build_credential() -> Any:
-    """Select an Azure credential for Purview authentication.
+    """Purview認証用のAzure credentialを選択します。
 
-    Supported modes:
-    1. CertificateCredential (if PURVIEW_USE_CERT_AUTH=true)
-    2. InteractiveBrowserCredential (requires PURVIEW_CLIENT_APP_ID)
+    サポートされているモード:
+    1. CertificateCredential (PURVIEW_USE_CERT_AUTH=trueの場合)
+    2. InteractiveBrowserCredential (PURVIEW_CLIENT_APP_IDが必要)
+
     """
     client_id = _get_env("PURVIEW_CLIENT_APP_ID", required=True)
     use_cert_auth = _get_env("PURVIEW_USE_CERT_AUTH", required=False, default="false").lower() == "true"

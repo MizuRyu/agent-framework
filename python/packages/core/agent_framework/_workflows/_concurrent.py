@@ -42,11 +42,11 @@ Notes:
 
 
 class _DispatchToAllParticipants(Executor):
-    """Broadcasts input to all downstream participants (via fan-out edges)."""
+    """入力をすべての下流参加者にブロードキャストします（fan-outエッジ経由）。"""
 
     @handler
     async def from_request(self, request: AgentExecutorRequest, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-        # No explicit target: edge routing delivers to all connected participants.
+        # 明示的なターゲットなし：エッジルーティングはすべての接続された参加者に配信します。
         await ctx.send_message(request)
 
     @handler
@@ -70,14 +70,14 @@ class _DispatchToAllParticipants(Executor):
 
 
 class _AggregateAgentConversations(Executor):
-    """Aggregates agent responses and completes with combined ChatMessages.
+    """Agentのレスポンスを集約し、結合されたChatMessagesで完了します。
 
-    Emits a list[ChatMessage] shaped as:
-      [ single_user_prompt?, agent1_final_assistant, agent2_final_assistant, ... ]
+    以下の形状のlist[ChatMessage]を出力します：
+      [ 単一ユーザープロンプト?, agent1_final_assistant, agent2_final_assistant, ... ]
 
-    - Extracts a single user prompt (first user message seen across results).
-    - For each result, selects the final assistant message (prefers agent_run_response.messages).
-    - Avoids duplicating the same user message per agent.
+    - 単一のユーザープロンプト（結果全体で最初に見つかったユーザーメッセージ）を抽出します。
+    - 各結果について、最終的なアシスタントメッセージを選択します（agent_run_response.messagesを優先）。
+    - 各Agentごとに同じユーザーメッセージの重複を避けます。
     """
 
     @handler
@@ -92,7 +92,7 @@ class _AggregateAgentConversations(Executor):
             r = getattr(msg, "role", None)
             if r is None:
                 return False
-            # Normalize both r and role to lowercase strings for comparison
+            # 比較のためにrとroleの両方を小文字の文字列に正規化します
             r_str = str(r).lower() if isinstance(r, str) or hasattr(r, "__str__") else r
             role_str = getattr(role, "value", None)
             if role_str is None:
@@ -112,13 +112,13 @@ class _AggregateAgentConversations(Executor):
                 f"{len(resp_messages)} response msgs, {len(conv)} conversation msgs"
             )
 
-            # Capture a single user prompt (first encountered across any conversation)
+            # 単一のユーザープロンプトをキャプチャします（任意の会話で最初に出現したもの）
             if prompt_message is None:
                 found_user = next((m for m in conv if _is_role(m, Role.USER)), None)
                 if found_user is not None:
                     prompt_message = found_user
 
-            # Pick the final assistant message from the response; fallback to conversation search
+            # レスポンスから最終的なアシスタントメッセージを選択します。フォールバックは会話検索です。
             final_assistant = next((m for m in reversed(resp_messages) if _is_role(m, Role.ASSISTANT)), None)
             if final_assistant is None:
                 final_assistant = next((m for m in reversed(conv) if _is_role(m, Role.ASSISTANT)), None)
@@ -145,16 +145,16 @@ class _AggregateAgentConversations(Executor):
 
 
 class _CallbackAggregator(Executor):
-    """Wraps a Python callback as an aggregator.
+    """PythonのコールバックをAggregatorとしてラップします。
 
-    Accepts either an async or sync callback with one of the signatures:
+    以下のいずれかのシグネチャの非同期または同期コールバックを受け入れます：
       - (results: list[AgentExecutorResponse]) -> Any | None
       - (results: list[AgentExecutorResponse], ctx: WorkflowContext[Any]) -> Any | None
 
-    Notes:
-    - Async callbacks are awaited directly.
-    - Sync callbacks are executed via asyncio.to_thread to avoid blocking the event loop.
-    - If the callback returns a non-None value, it is yielded as an output.
+    注意:
+    - 非同期コールバックは直接awaitされます。
+    - 同期コールバックはasyncio.to_thread経由で実行され、イベントループのブロックを回避します。
+    - コールバックがNone以外の値を返した場合、それが出力としてyieldされます。
     """
 
     def __init__(self, callback: Callable[..., Any], id: str | None = None) -> None:
@@ -167,7 +167,7 @@ class _CallbackAggregator(Executor):
 
     @handler
     async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext[Never, Any]) -> None:
-        # Call according to provided signature, always non-blocking for sync callbacks
+        # 提供されたシグネチャに従って呼び出し、同期コールバックでも常にノンブロッキングにします
         if self._param_count >= 2:
             if inspect.iscoroutinefunction(self._callback):
                 ret = await self._callback(results, ctx)  # type: ignore[misc]
@@ -179,30 +179,30 @@ class _CallbackAggregator(Executor):
             else:
                 ret = await asyncio.to_thread(self._callback, results)
 
-        # If the callback returned a value, finalize the workflow with it
+        # コールバックが値を返した場合、それでワークフローを最終化します
         if ret is not None:
             await ctx.yield_output(ret)
 
 
 class ConcurrentBuilder:
-    r"""High-level builder for concurrent agent workflows.
+    r"""並行Agentワークフローの高レベルビルダー。
 
-    - `participants([...])` accepts a list of AgentProtocol (recommended) or Executor.
-    - `build()` wires: dispatcher -> fan-out -> participants -> fan-in -> aggregator.
-    - `with_custom_aggregator(...)` overrides the default aggregator with an Executor or callback.
+    - `participants([...])`はAgentProtocol（推奨）またはExecutorのリストを受け入れます。
+    - `build()`はdispatcher -> fan-out -> participants -> fan-in -> aggregatorを配線します。
+    - `with_custom_aggregator(...)`はデフォルトのaggregatorをExecutorまたはコールバックで上書きします。
 
-    Usage:
+    使用例:
 
     .. code-block:: python
 
         from agent_framework import ConcurrentBuilder
 
-        # Minimal: use default aggregator (returns list[ChatMessage])
+        # 最小限：デフォルトaggregatorを使用（list[ChatMessage]を返す）
         workflow = ConcurrentBuilder().participants([agent1, agent2, agent3]).build()
 
 
-        # Custom aggregator via callback (sync or async). The callback receives
-        # list[AgentExecutorResponse] and its return value becomes the workflow's output.
+        # コールバックによるカスタムaggregator（同期または非同期）。コールバックは
+        # list[AgentExecutorResponse]を受け取り、その戻り値がワークフローの出力になります。
         def summarize(results):
             return " | ".join(r.agent_run_response.messages[-1].text for r in results)
 
@@ -210,8 +210,9 @@ class ConcurrentBuilder:
         workflow = ConcurrentBuilder().participants([agent1, agent2, agent3]).with_custom_aggregator(summarize).build()
 
 
-        # Enable checkpoint persistence so runs can resume
+        # チェックポイント永続化を有効にして実行を再開可能にする
         workflow = ConcurrentBuilder().participants([agent1, agent2, agent3]).with_checkpointing(storage).build()
+
     """
 
     def __init__(self) -> None:
@@ -220,29 +221,29 @@ class ConcurrentBuilder:
         self._checkpoint_storage: CheckpointStorage | None = None
 
     def participants(self, participants: Sequence[AgentProtocol | Executor]) -> "ConcurrentBuilder":
-        r"""Define the parallel participants for this concurrent workflow.
+        r"""この並行ワークフローの並列参加者を定義します。
 
-        Accepts AgentProtocol instances (e.g., created by a chat client) or Executor
-        instances. Each participant is wired as a parallel branch using fan-out edges
-        from an internal dispatcher.
+        AgentProtocolインスタンス（例：chat clientで作成）またはExecutorインスタンスを受け入れます。
+        各参加者は内部dispatcherからのfan-outエッジを使って並列ブランチとして配線されます。
 
-        Raises:
-            ValueError: if `participants` is empty or contains duplicates
-            TypeError: if any entry is not AgentProtocol or Executor
+        例外:
+            ValueError: `participants`が空または重複を含む場合
+            TypeError: エントリがAgentProtocolまたはExecutorでない場合
 
-        Example:
+        例:
 
         .. code-block:: python
 
             wf = ConcurrentBuilder().participants([researcher_agent, marketer_agent, legal_agent]).build()
 
-            # Mixing agent(s) and executor(s) is supported
+            # AgentとExecutorの混在もサポート
             wf2 = ConcurrentBuilder().participants([researcher_agent, my_custom_executor]).build()
+
         """
         if not participants:
             raise ValueError("participants cannot be empty")
 
-        # Defensive duplicate detection
+        # 重複検出の防御的処理
         seen_agent_ids: set[int] = set()
         seen_executor_ids: set[str] = set()
         for p in participants:
@@ -262,26 +263,26 @@ class ConcurrentBuilder:
         return self
 
     def with_aggregator(self, aggregator: Executor | Callable[..., Any]) -> "ConcurrentBuilder":
-        r"""Override the default aggregator with an Executor or a callback.
+        r"""デフォルトのaggregatorをExecutorまたはコールバックで上書きします。
 
-        - Executor: must handle `list[AgentExecutorResponse]` and
-            yield output using `ctx.yield_output(...)` and add a
-          output and the workflow becomes idle.
-        - Callback: sync or async callable with one of the signatures:
-          `(results: list[AgentExecutorResponse]) -> Any | None` or
-          `(results: list[AgentExecutorResponse], ctx: WorkflowContext) -> Any | None`.
-          If the callback returns a non-None value, it becomes the workflow's output.
+        - Executor: `list[AgentExecutorResponse]`を処理し、`ctx.yield_output(...)`を使って出力をyieldします。
+          出力がyieldされるとワークフローはアイドル状態になります。
+        - コールバック: 同期または非同期のcallableで、以下のシグネチャのいずれかを持ちます：
+          `(results: list[AgentExecutorResponse]) -> Any | None` または
+          `(results: list[AgentExecutorResponse], ctx: WorkflowContext) -> Any | None`。
+          コールバックがNone以外の値を返した場合、それがワークフローの出力になります。
 
-        Example:
+        例:
 
         .. code-block:: python
 
-            # Callback-based aggregator (string result)
+            # コールバックベースのaggregator（文字列結果）
             async def summarize(results):
                 return " | ".join(r.agent_run_response.messages[-1].text for r in results)
 
 
             wf = ConcurrentBuilder().participants([a1, a2, a3]).with_custom_aggregator(summarize).build()
+
         """
         if isinstance(aggregator, Executor):
             self._aggregator = aggregator
@@ -292,31 +293,32 @@ class ConcurrentBuilder:
         return self
 
     def with_checkpointing(self, checkpoint_storage: CheckpointStorage) -> "ConcurrentBuilder":
-        """Enable checkpoint persistence using the provided storage backend."""
+        """提供されたストレージバックエンドを使用してチェックポイント永続化を有効にします。"""
         self._checkpoint_storage = checkpoint_storage
         return self
 
     def build(self) -> Workflow:
-        r"""Build and validate the concurrent workflow.
+        r"""並行ワークフローをビルドして検証します。
 
-        Wiring pattern:
-        - Dispatcher (internal) fans out the input to all `participants`
-        - Fan-in aggregator collects `AgentExecutorResponse` objects
-        - Aggregator yields output and the workflow becomes idle. The output is either:
-          - list[ChatMessage] (default aggregator: one user + one assistant per agent)
-          - custom payload from the provided callback/executor
+        配線パターン:
+        - Dispatcher（内部）が入力をすべての`participants`にfan-outします
+        - Fan-in aggregatorが`AgentExecutorResponse`オブジェクトを収集します
+        - Aggregatorが出力をyieldし、ワークフローはアイドル状態になります。出力は以下のいずれかです：
+          - list[ChatMessage]（デフォルトaggregator：ユーザー1人＋エージェントごとに1人のアシスタント）
+          - 提供されたコールバック/Executorによるカスタムペイロード
 
-        Returns:
-            Workflow: a ready-to-run workflow instance
+        戻り値:
+            Workflow: 実行準備が整ったワークフローインスタンス
 
-        Raises:
-            ValueError: if no participants were defined
+        例外:
+            ValueError: 参加者が定義されていない場合
 
-        Example:
+        例:
 
         .. code-block:: python
 
             workflow = ConcurrentBuilder().participants([agent1, agent2]).build()
+
         """
         if not self._participants:
             raise ValueError("No participants provided. Call .participants([...]) first.")

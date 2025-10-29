@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Agent Framework DevUI - Debug interface with OpenAI compatible API server."""
+"""Agent Framework DevUI - OpenAI互換APIサーバーを備えたデバッグインターフェース。"""
 
 import importlib.metadata
 import logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 try:
     __version__ = importlib.metadata.version(__name__)
 except importlib.metadata.PackageNotFoundError:
-    __version__ = "0.0.0"  # Fallback for development mode
+    __version__ = "0.0.0"  # 開発モード用のフォールバック
 
 
 def serve(
@@ -29,35 +29,36 @@ def serve(
     ui_enabled: bool = True,
     tracing_enabled: bool = False,
 ) -> None:
-    """Launch Agent Framework DevUI with simple API.
+    """Agent Framework DevUIをシンプルなAPIで起動する。
 
     Args:
-        entities: List of entities for in-memory registration (IDs auto-generated)
-        entities_dir: Directory to scan for entities
-        port: Port to run server on
-        host: Host to bind server to
-        auto_open: Whether to automatically open browser
-        cors_origins: List of allowed CORS origins
-        ui_enabled: Whether to enable the UI
-        tracing_enabled: Whether to enable OpenTelemetry tracing
+        entities: インメモリ登録用のエンティティリスト（IDは自動生成される）
+        entities_dir: エンティティをスキャンするディレクトリ
+        port: サーバーを起動するポート
+        host: サーバーをバインドするホスト
+        auto_open: ブラウザを自動で開くかどうか
+        cors_origins: 許可されたCORSオリジンのリスト
+        ui_enabled: UIを有効にするかどうか
+        tracing_enabled: OpenTelemetryトレースを有効にするかどうか
+
     """
     import re
 
     import uvicorn
 
-    # Validate host parameter early for security
+    # セキュリティのためにhostパラメータを早期に検証する
     if not re.match(r"^(localhost|127\.0\.0\.1|0\.0\.0\.0|[a-zA-Z0-9.-]+)$", host):
         raise ValueError(f"Invalid host: {host}. Must be localhost, IP address, or valid hostname")
 
-    # Validate port parameter
+    # portパラメータを検証する
     if not isinstance(port, int) or not (1 <= port <= 65535):
         raise ValueError(f"Invalid port: {port}. Must be integer between 1 and 65535")
 
-    # Configure tracing environment variables if enabled
+    # 有効な場合はトレース環境変数を設定する
     if tracing_enabled:
         import os
 
-        # Only set if not already configured by user
+        # ユーザーによって既に設定されていなければ設定する
         if not os.environ.get("ENABLE_OTEL"):
             os.environ["ENABLE_OTEL"] = "true"
             logger.info("Set ENABLE_OTEL=true for tracing")
@@ -70,15 +71,15 @@ def serve(
             os.environ["OTLP_ENDPOINT"] = "http://localhost:4317"
             logger.info("Set OTLP_ENDPOINT=http://localhost:4317 for tracing")
 
-    # Create server with direct parameters
+    # 直接パラメータでサーバーを作成する
     server = DevServer(
         entities_dir=entities_dir, port=port, host=host, cors_origins=cors_origins, ui_enabled=ui_enabled
     )
 
-    # Register in-memory entities if provided
+    # 提供された場合はインメモリエンティティを登録する
     if entities:
         logger.info(f"Registering {len(entities)} in-memory entities")
-        # Store entities for later registration during server startup
+        # サーバー起動時に登録するためにエンティティを保存する
         server._pending_entities = entities
 
     app = server.get_app()
@@ -90,7 +91,7 @@ def serve(
             import re
             import time
 
-            # Validate host and port for security
+            # セキュリティのためにhostとportを検証する
             if not re.match(r"^(localhost|127\.0\.0\.1|0\.0\.0\.0|[a-zA-Z0-9.-]+)$", host):
                 logger.warning(f"Invalid host for auto-open: {host}")
                 return
@@ -99,12 +100,12 @@ def serve(
                 logger.warning(f"Invalid port for auto-open: {port}")
                 return
 
-            # Wait for server to be ready by checking health endpoint
+            # ヘルスエンドポイントをチェックしてサーバーの準備完了を待つ
             browser_url = f"http://{host}:{port}"
 
             for _ in range(30):  # 15 second timeout (30 * 0.5s)
                 try:
-                    # Use http.client for safe connection handling (standard library)
+                    # 安全な接続処理のためにhttp.clientを使用する（標準ライブラリ）
                     conn = http.client.HTTPConnection(host, port, timeout=1)
                     try:
                         conn.request("GET", "/health")
@@ -118,7 +119,7 @@ def serve(
                     pass
                 time.sleep(0.5)
 
-            # Fallback: open browser anyway after timeout
+            # フォールバック：タイムアウト後にブラウザを開く
             webbrowser.open(browser_url)
 
         import threading
@@ -130,13 +131,13 @@ def serve(
 
 
 def main() -> None:
-    """CLI entry point for devui command."""
+    """devuiコマンドのCLIエントリポイント。"""
     from ._cli import main as cli_main
 
     cli_main()
 
 
-# Export main public API
+# メインの公開APIをエクスポートする
 __all__ = [
     "AgentFrameworkRequest",
     "DevServer",

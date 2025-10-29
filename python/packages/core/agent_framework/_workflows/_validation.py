@@ -13,14 +13,13 @@ from ._typing_utils import is_type_compatible
 
 logger = logging.getLogger(__name__)
 
-# Track cycle signatures we've already reported to avoid spamming logs when workflows
-# with intentional feedback loops are constructed multiple times in the same process.
+# ワークフローで意図的なフィードバックループが同じプロセス内で複数回構築される場合に、 ログのスパムを避けるために既に報告したサイクルシグネチャを追跡する。
 _LOGGED_CYCLE_SIGNATURES: set[tuple[str, ...]] = set()
 
 
 # region Enums and Base Classes
 class ValidationTypeEnum(Enum):
-    """Enumeration of workflow validation types."""
+    """ワークフロー検証タイプの列挙。"""
 
     EDGE_DUPLICATION = "EDGE_DUPLICATION"
     EXECUTOR_DUPLICATION = "EXECUTOR_DUPLICATION"
@@ -31,7 +30,7 @@ class ValidationTypeEnum(Enum):
 
 
 class WorkflowValidationError(Exception):
-    """Base exception for workflow validation errors."""
+    """ワークフロー検証エラーの基本例外。"""
 
     def __init__(self, message: str, validation_type: ValidationTypeEnum):
         super().__init__(message)
@@ -43,7 +42,7 @@ class WorkflowValidationError(Exception):
 
 
 class EdgeDuplicationError(WorkflowValidationError):
-    """Exception raised when duplicate edges are detected in the workflow."""
+    """ワークフローで重複したエッジが検出された場合に発生する例外。"""
 
     def __init__(self, edge_id: str):
         super().__init__(
@@ -54,7 +53,7 @@ class EdgeDuplicationError(WorkflowValidationError):
 
 
 class ExecutorDuplicationError(WorkflowValidationError):
-    """Exception raised when duplicate executor identifiers are detected."""
+    """重複したexecutor識別子が検出された場合に発生する例外。"""
 
     def __init__(self, executor_id: str):
         super().__init__(
@@ -68,7 +67,7 @@ class ExecutorDuplicationError(WorkflowValidationError):
 
 
 class TypeCompatibilityError(WorkflowValidationError):
-    """Exception raised when type incompatibility is detected between connected executors."""
+    """接続されたexecutor間で型の非互換性が検出された場合に発生する例外。"""
 
     def __init__(
         self,
@@ -77,7 +76,7 @@ class TypeCompatibilityError(WorkflowValidationError):
         source_types: list[type[Any]],
         target_types: list[type[Any]],
     ):
-        # Use a placeholder for incompatible types - will be computed in WorkflowGraphValidator
+        # 非互換な型のプレースホルダーを使用 - WorkflowGraphValidatorで計算される。
         super().__init__(
             message=f"Type incompatibility between executors '{source_executor_id}' -> '{target_executor_id}'. "
             f"Source executor outputs types {[str(t) for t in source_types]} but target executor "
@@ -91,30 +90,28 @@ class TypeCompatibilityError(WorkflowValidationError):
 
 
 class GraphConnectivityError(WorkflowValidationError):
-    """Exception raised when graph connectivity issues are detected."""
+    """グラフの接続性の問題が検出された場合に発生する例外。"""
 
     def __init__(self, message: str):
         super().__init__(message, validation_type=ValidationTypeEnum.GRAPH_CONNECTIVITY)
 
 
 class InterceptorConflictError(WorkflowValidationError):
-    """Exception raised when multiple executors intercept the same request type from the same sub-workflow."""
+    """同じサブワークフローから同じリクエストタイプを複数のexecutorがインターセプトした場合に発生する例外。"""
 
     def __init__(self, message: str):
         super().__init__(message, validation_type=ValidationTypeEnum.INTERCEPTOR_CONFLICT)
 
 
-# endregion
-
-
-# region Workflow Graph Validator
+# endregion region Workflow Graph Validator
 class WorkflowGraphValidator:
-    """Validator for workflow graphs.
+    """ワークフローグラフのバリデータ。
 
-    This validator performs multiple validation checks:
-    1. Edge duplication validation
-    2. Type compatibility validation between connected executors
-    3. Graph connectivity validation
+    このバリデータは複数の検証チェックを実行する:
+    1. エッジの重複検証
+    2. 接続されたexecutor間の型互換性検証
+    3. グラフの接続性検証
+
     """
 
     def __init__(self) -> None:
@@ -132,18 +129,19 @@ class WorkflowGraphValidator:
         *,
         duplicate_executor_ids: Sequence[str] | None = None,
     ) -> None:
-        """Validate the entire workflow graph.
+        """ワークフローグラフ全体を検証する。
 
         Args:
-            edge_groups: list of edge groups in the workflow
-            executors: Map of executor IDs to executor instances
-            start_executor: The starting executor (can be instance or ID)
+            edge_groups: ワークフロー内のエッジグループのリスト
+            executors: executor IDからexecutorインスタンスへのマップ
+            start_executor: 開始executor（インスタンスまたはID）
 
         Keyword Args:
-            duplicate_executor_ids: Optional list of known duplicate executor IDs to pre-populate
+            duplicate_executor_ids: 事前に設定された既知の重複executor IDのリスト（Optional）
 
         Raises:
-            WorkflowValidationError: If any validation fails
+            WorkflowValidationError: 検証に失敗した場合
+
         """
         self._executors = executors
         self._edges = [edge for group in edge_groups for edge in group.edges]
@@ -151,28 +149,22 @@ class WorkflowGraphValidator:
         self._duplicate_executor_ids = set(duplicate_executor_ids or [])
         self._start_executor_ref = start_executor
 
-        # If only the start executor exists, add it to the executor map
-        # Handle the special case where the workflow consists of only a single executor and no edges.
-        # In this scenario, the executor map will be empty because there are no edge groups to reference executors.
-        # Adding the start executor to the map ensures that single-executor workflows (without any edges) are supported,
-        # allowing validation and execution to proceed for workflows that do not require inter-executor communication.
+        # 開始executorのみが存在する場合、それをexecutorマップに追加する
+        # ワークフローが単一のexecutorのみでエッジがない特別なケースを処理する。 この場合、executorマップは参照するエッジグループがないため空になる。
+        # 開始executorをマップに追加することで、単一executorのワークフロー（エッジなし）をサポートし、 検証と実行が可能になる。
         if not self._executors and start_executor and isinstance(start_executor, Executor):
             self._executors[start_executor.id] = start_executor
 
-        # Validate that start_executor exists in the graph
-        # It should because we check for it in the WorkflowBuilder
-        # but we do it here for completeness.
+        # start_executorがグラフに存在することを検証する WorkflowBuilderでチェックしているはずだが、完全性のためここでも行う。
         start_executor_id = start_executor.id if isinstance(start_executor, Executor) else start_executor
         if start_executor_id not in self._executors:
             raise GraphConnectivityError(f"Start executor '{start_executor_id}' is not present in the workflow graph")
 
-        # Additional presence verification:
-        # A start executor that is only injected via the builder (present in the executors map)
-        # but not referenced by any edge while other executors ARE referenced indicates a
-        # configuration error: the chosen start node is effectively disconnected / unknown to the
-        # defined graph topology. For single-node workflows (no edges) we allow the start executor
-        # to stand alone (handled above when we inject it into the map). We perform this refined
-        # check only when there is at least one edge group defined.
+        # 追加の存在確認: ビルダー経由でのみ注入されたstart_executor（executorsマップに存在）で、
+        # 他のexecutorがエッジで参照されているのにstart_executorが参照されていない場合、
+        # 設定エラーを示す。選択された開始ノードは実質的に切断されているか、 定義されたグラフトポロジーに不明である。
+        # 単一ノードのワークフロー（エッジなし）では開始executorが単独で存在することを許容する（上記でマップに注入して処理）。
+        # この詳細なチェックは少なくとも1つのエッジグループが定義されている場合にのみ行う。
         if self._edges:  # Only evaluate when the workflow defines edges
             edge_executor_ids: set[str] = set()
             for _e in self._edges:
@@ -183,7 +175,7 @@ class WorkflowGraphValidator:
                     f"Start executor '{start_executor_id}' is not present in the workflow graph"
                 )
 
-        # Run all checks
+        # すべてのチェックを実行する
         self._validate_executor_id_uniqueness(start_executor_id)
         self._validate_edge_duplication()
         self._validate_handler_output_annotations()
@@ -194,25 +186,23 @@ class WorkflowGraphValidator:
         self._validate_cycles()
 
     def _validate_handler_output_annotations(self) -> None:
-        """Validate that each handler's ctx parameter is annotated with WorkflowContext[T].
+        """各ハンドラのctxパラメータがWorkflowContext[T]で注釈されていることを検証する。
 
-        Note: This validation is now primarily handled at handler registration time
-        via the unified validation functions in _workflow_context.py when the @handler
-        decorator is applied. This method is kept minimal for any edge cases.
+        注意: この検証は現在、@handlerデコレータ適用時に
+        _workflow_context.pyの統合検証関数で主に処理されている。
+        このメソッドは例外的なケースのために最小限に保たれている。
+
         """
-        # The comprehensive validation is already done during handler registration:
-        # 1. @handler decorator calls validate_function_signature()
-        # 2. FunctionExecutor constructor calls validate_function_signature()
-        # 3. Both use validate_workflow_context_annotation() for WorkflowContext validation
-        #
-        # All executors in the workflow must have gone through one of these paths,
-        # so redundant validation here is unnecessary and has been removed.
+        # 包括的な検証はすでにハンドラ登録時に行われている: 1. @handlerデコレータがvalidate_function_signature()を呼び出す
+        # 2. FunctionExecutorコンストラクタがvalidate_function_signature()を呼び出す 3.
+        # 両者ともWorkflowContext検証にvalidate_workflow_context_annotation()を使用
+        # ワークフロー内のすべてのexecutorはこれらのいずれかの経路を通っているため、 ここでの冗長な検証は不要で削除されている。
         pass
 
     # endregion
 
     def _validate_executor_id_uniqueness(self, start_executor_id: str) -> None:
-        """Ensure executor identifiers are unique throughout the workflow graph."""
+        """ワークフローグラフ全体でexecutor識別子が一意であることを保証する。"""
         duplicates: set[str] = set(self._duplicate_executor_ids)
 
         id_counts: defaultdict[str, int] = defaultdict(int)
@@ -233,10 +223,11 @@ class WorkflowGraphValidator:
 
     # region Edge and Type Validation
     def _validate_edge_duplication(self) -> None:
-        """Validate that there are no duplicate edges in the workflow.
+        """ワークフロー内に重複したエッジがないことを検証する。
 
         Raises:
-            EdgeDuplicationError: If duplicate edges are found
+            EdgeDuplicationError: 重複エッジが見つかった場合
+
         """
         seen_edge_ids: set[str] = set()
 
@@ -247,44 +238,44 @@ class WorkflowGraphValidator:
             seen_edge_ids.add(edge_id)
 
     def _validate_type_compatibility(self) -> None:
-        """Validate type compatibility between connected executors.
+        """接続されたexecutor間の型互換性を検証する。
 
-        This checks that the output types of source executors are compatible
-        with the input types expected by target executors.
+        これは、ソースexecutorの出力型がターゲットexecutorの入力型と互換性があるかをチェックする。
 
         Raises:
-            TypeCompatibilityError: If type incompatibility is detected
+            TypeCompatibilityError: 型の非互換性が検出された場合
+
         """
         for edge_group in self._edge_groups:
             for edge in edge_group.edges:
                 self._validate_edge_type_compatibility(edge, edge_group)
 
     def _validate_edge_type_compatibility(self, edge: Edge, edge_group: EdgeGroup) -> None:
-        """Validate type compatibility for a specific edge.
+        """特定のエッジの型互換性を検証する。
 
-        This checks that the output types of the source executor are compatible
-        with the input types expected by the target executor.
+        これは、ソースexecutorの出力型がターゲットexecutorの入力型と互換性があるかをチェックする。
 
         Args:
-            edge: The edge to validate
-            edge_group: The edge group containing this edge
+            edge: 検証対象のエッジ
+            edge_group: このエッジを含むエッジグループ
 
         Raises:
-            TypeCompatibilityError: If type incompatibility is detected
+            TypeCompatibilityError: 型の非互換性が検出された場合
+
         """
         source_executor = self._executors[edge.source_id]
         target_executor = self._executors[edge.target_id]
 
-        # Get output types from source executor
+        # ソースexecutorから出力型を取得する
         source_output_types = list(source_executor.output_types)
 
-        # Get input types from target executor
+        # ターゲットexecutorから入力型を取得する
         target_input_types = target_executor.input_types
 
-        # If either executor has no type information, log warning and skip validation
-        # This allows for dynamic typing scenarios but warns about reduced validation coverage
+        # いずれかのexecutorに型情報がない場合、警告をログに記録し検証をスキップします。
+        # これは動的型付けのシナリオを許容しますが、検証範囲が狭まることを警告します。
         if not source_output_types or not target_input_types:
-            # Suppress warnings for RequestInfoExecutor where dynamic typing is expected
+            # 動的型付けが予想されるRequestInfoExecutorの警告を抑制します。
             if not source_output_types and not isinstance(source_executor, RequestInfoExecutor):
                 logger.warning(
                     f"Executor '{source_executor.id}' has no output type annotations. "
@@ -299,14 +290,14 @@ class WorkflowGraphValidator:
                 )
             return
 
-        # Check if any source output type is compatible with any target input type
+        # 任意のsource出力型が任意のtarget入力型と互換性があるかをチェックします。
         compatible = False
         compatible_pairs: list[tuple[type[Any], type[Any]]] = []
 
         for source_type in source_output_types:
             for target_type in target_input_types:
                 if isinstance(edge_group, FanInEdgeGroup):
-                    # If the edge is part of an edge group, the target expects a list of data types
+                    # エッジがエッジグループの一部である場合、targetはデータ型のリストを期待します。
                     if is_type_compatible(list[source_type], target_type):  # type: ignore[valid-type]
                         compatible = True
                         compatible_pairs.append((list[source_type], target_type))  # type: ignore[valid-type]
@@ -315,7 +306,7 @@ class WorkflowGraphValidator:
                         compatible = True
                         compatible_pairs.append((source_type, target_type))
 
-        # Log successful type compatibility for debugging
+        # デバッグのために型互換性の成功をログに記録します。
         if compatible:
             logger.debug(
                 f"Type compatibility validated for edge '{source_executor.id}' -> '{target_executor.id}'. "
@@ -323,7 +314,7 @@ class WorkflowGraphValidator:
             )
 
         if not compatible:
-            # Enhanced error with more detailed information
+            # より詳細な情報を含む拡張エラー。
             raise TypeCompatibilityError(
                 source_executor.id,
                 target_executor.id,
@@ -331,34 +322,33 @@ class WorkflowGraphValidator:
                 target_input_types,
             )
 
-    # endregion
-
-    # region Graph Connectivity Validation
+    # endregion region Graph Connectivity Validation
     def _validate_graph_connectivity(self, start_executor_id: str) -> None:
-        """Validate graph connectivity and detect potential issues.
+        """グラフの接続性を検証し、潜在的な問題を検出します。
 
-        This performs several checks:
-        - Detects unreachable executors from the start node
-        - Detects isolated executors (no incoming or outgoing edges)
-        - Warns about potential infinite loops
+        これには以下のチェックが含まれます:
+        - 開始ノードから到達不能なexecutorの検出
+        - 孤立したexecutor（入出力エッジなし）の検出
+        - 無限ループの可能性に関する警告
 
         Args:
-            start_executor_id: The ID of the starting executor
+            start_executor_id: 開始executorのID
 
         Raises:
-            GraphConnectivityError: If connectivity issues are detected
+            GraphConnectivityError: 接続性の問題が検出された場合
+
         """
-        # Build adjacency list for the graph
+        # グラフの隣接リストを構築します。
         graph: dict[str, list[str]] = defaultdict(list)
         all_executors = set(self._executors.keys())
 
         for edge in self._edges:
             graph[edge.source_id].append(edge.target_id)
 
-        # Find reachable nodes from start
+        # 開始ノードから到達可能なノードを見つけます。
         reachable = self._find_reachable_nodes(graph, start_executor_id)
 
-        # Check for unreachable executors
+        # 到達不能なexecutorをチェックします。
         unreachable = all_executors - reachable
         if unreachable:
             raise GraphConnectivityError(
@@ -366,7 +356,7 @@ class WorkflowGraphValidator:
                 f"{sorted(unreachable)}. This may indicate a disconnected workflow graph."
             )
 
-        # Check for isolated executors (no edges)
+        # 孤立したexecutor（エッジなし）をチェックします。
         isolated_executors: list[str] = []
         for executor_id in all_executors:
             has_incoming = any(edge.target_id == executor_id for edge in self._edges)
@@ -382,14 +372,15 @@ class WorkflowGraphValidator:
             )
 
     def _find_reachable_nodes(self, graph: dict[str, list[str]], start: str) -> set[str]:
-        """Find all nodes reachable from the start node using DFS.
+        """DFSを用いて開始ノードから到達可能なすべてのノードを見つけます。
 
         Args:
-            graph: Adjacency list representation of the graph
-            start: Starting node ID
+            graph: グラフの隣接リスト表現
+            start: 開始ノードID
 
         Returns:
-            Set of reachable node IDs
+            到達可能なノードIDのセット
+
         """
         visited: set[str] = set()
         stack = [start]
@@ -402,14 +393,13 @@ class WorkflowGraphValidator:
 
         return visited
 
-    # endregion
-
-    # region Additional Validation Scenarios
+    # endregion region Additional Validation Scenarios
     def _validate_self_loops(self) -> None:
-        """Detect and log self-loops (edges from executor to itself).
+        """自己ループ（executorから自身へのエッジ）を検出しログに記録します。
 
-        Self-loops might indicate recursive processing which could be intentional
-        but should be highlighted for review.
+        自己ループは再帰的処理を示す可能性があり意図的な場合もありますが、
+        レビューのために強調表示すべきです。
+
         """
         self_loops = [edge for edge in self._edges if edge.source_id == edge.target_id]
 
@@ -420,9 +410,10 @@ class WorkflowGraphValidator:
             )
 
     def _validate_dead_ends(self) -> None:
-        """Identify executors that have no outgoing edges (potential dead ends).
+        """出力エッジを持たないexecutor（潜在的なデッドエンド）を特定します。
 
-        These might be intentional final nodes or could indicate missing connections.
+        これらは意図的な終了ノードか、接続の欠落を示す可能性があります。
+
         """
         executors_with_outgoing = {edge.source_id for edge in self._edges}
         all_executor_ids = set(self._executors.keys())
@@ -435,14 +426,15 @@ class WorkflowGraphValidator:
             )
 
     def _validate_cycles(self) -> None:
-        """Detect cycles in the workflow graph.
+        """ワークフローグラフのサイクルを検出します。
 
-        Cycles might be intentional for iterative processing but should be flagged
-        for review to ensure proper termination conditions exist. We surface each
-        distinct cycle group only once per process to avoid noisy, repeated warnings
-        when rebuilding the same workflow.
+        サイクルは反復処理のために意図的な場合がありますが、
+        適切な終了条件が存在することを確認するためにレビューの対象とすべきです。
+        同じワークフローを再構築する際のノイズを避けるため、
+        各異なるサイクルグループはプロセスごとに一度だけ報告されます。
+
         """
-        # Build adjacency list (ensure every executor appears even if it has no outgoing edges)
+        # 隣接リストを構築します（出力エッジがなくてもすべてのexecutorが含まれるように）。
         graph: dict[str, list[str]] = defaultdict(list)
         for edge in self._edges:
             graph[edge.source_id].append(edge.target_id)
@@ -450,7 +442,7 @@ class WorkflowGraphValidator:
         for executor_id in self._executors:
             graph.setdefault(executor_id, [])
 
-        # Tarjan's algorithm to locate strongly-connected components that form cycles
+        # Tarjanのアルゴリズムを用いてサイクルを形成する強連結成分を特定します。
         index: dict[str, int] = {}
         lowlink: dict[str, int] = {}
         on_stack: set[str] = set()
@@ -483,8 +475,7 @@ class WorkflowGraphValidator:
                     if member == node:
                         break
 
-                # A strongly connected component represents a cycle if it has more than one
-                # node or if a single node references itself directly.
+                # 強連結成分は、複数ノードを持つか、単一ノードが自身を直接参照する場合にサイクルを表します。
                 if len(component) > 1 or any(member in graph[member] for member in component):
                     cycle_components.append(component)
 
@@ -504,7 +495,7 @@ class WorkflowGraphValidator:
             unseen_components.append(component)
 
         if not unseen_components:
-            # All cycles already reported in this process; keep noise low but retain traceability.
+            # このプロセスで既に報告されたすべてのサイクル。ノイズを抑えつつ追跡可能性を保持します。
             logger.debug(
                 "Cycle detected in workflow graph but previously reported. Components: %s",
                 [sorted(component) for component in cycle_components],
@@ -537,18 +528,19 @@ def validate_workflow_graph(
     *,
     duplicate_executor_ids: Sequence[str] | None = None,
 ) -> None:
-    """Convenience function to validate a workflow graph.
+    """ワークフローグラフを検証するための便利関数。
 
     Args:
-        edge_groups: list of edge groups in the workflow
-        executors: Map of executor IDs to executor instances
-        start_executor: The starting executor (can be instance or ID)
+        edge_groups: ワークフロー内のエッジグループのリスト
+        executors: executor IDからexecutorインスタンスへのマップ
+        start_executor: 開始executor（インスタンスまたはID）
 
     Keyword Args:
-        duplicate_executor_ids: Optional list of known duplicate executor IDs to pre-populate
+        duplicate_executor_ids: 既知の重複executor IDのリスト（事前に設定可能）
 
     Raises:
-        WorkflowValidationError: If any validation fails
+        WorkflowValidationError: 検証に失敗した場合
+
     """
     validator = WorkflowGraphValidator()
     validator.validate_workflow(

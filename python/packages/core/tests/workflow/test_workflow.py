@@ -38,13 +38,13 @@ from agent_framework import (
 
 @dataclass
 class NumberMessage:
-    """A mock message for testing purposes."""
+    """テスト用のモックメッセージ。"""
 
     data: int
 
 
 class IncrementExecutor(Executor):
-    """An executor that increments message data by a specified amount for testing purposes."""
+    """指定された量だけメッセージデータをインクリメントするテスト用Executor。"""
 
     def __init__(self, id: str, *, limit: int = 10, increment: int = 1) -> None:
         super().__init__(id=id)
@@ -60,27 +60,27 @@ class IncrementExecutor(Executor):
 
 
 class AggregatorExecutor(Executor):
-    """A mock executor that aggregates results from multiple executors."""
+    """複数のExecutorからの結果を集約するモックExecutor。"""
 
     @handler
     async def mock_handler(self, messages: list[NumberMessage], ctx: WorkflowContext[Any, int]) -> None:
-        # This mock simply returns the sum of the data
+        # このモックは単にデータの合計を返すだけである。
         await ctx.yield_output(sum(msg.data for msg in messages))
 
 
 @dataclass
 class ApprovalMessage:
-    """A mock message for approval requests."""
+    """承認要求用のモックメッセージ。"""
 
     approved: bool
 
 
 class MockExecutorRequestApproval(Executor):
-    """A mock executor that simulates a request for approval."""
+    """承認要求をシミュレートするモックExecutor。"""
 
     @handler
     async def mock_handler_a(self, message: NumberMessage, ctx: WorkflowContext[RequestInfoMessage]) -> None:
-        """A mock handler that requests approval."""
+        """承認を要求するモックハンドラ。"""
         await ctx.set_shared_state(self.id, message.data)
         await ctx.send_message(RequestInfoMessage())
 
@@ -90,7 +90,7 @@ class MockExecutorRequestApproval(Executor):
         message: RequestResponse[RequestInfoMessage, ApprovalMessage],
         ctx: WorkflowContext[NumberMessage, int],
     ) -> None:
-        """A mock handler that processes the approval response."""
+        """承認レスポンスを処理するモックハンドラ。"""
         data = await ctx.get_shared_state(self.id)
         assert isinstance(data, int)
         assert isinstance(message.data, ApprovalMessage)
@@ -101,7 +101,7 @@ class MockExecutorRequestApproval(Executor):
 
 
 async def test_workflow_run_streaming() -> None:
-    """Test the workflow run stream."""
+    """ワークフロー実行ストリームのテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = IncrementExecutor(id="executor_b")
 
@@ -123,7 +123,7 @@ async def test_workflow_run_streaming() -> None:
 
 
 async def test_workflow_run_stream_not_completed():
-    """Test the workflow run stream."""
+    """ワークフロー実行ストリームのテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = IncrementExecutor(id="executor_b")
 
@@ -142,7 +142,7 @@ async def test_workflow_run_stream_not_completed():
 
 
 async def test_workflow_run():
-    """Test the workflow run."""
+    """ワークフロー実行のテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = IncrementExecutor(id="executor_b")
 
@@ -161,7 +161,7 @@ async def test_workflow_run():
 
 
 async def test_workflow_run_not_completed():
-    """Test the workflow run."""
+    """ワークフロー実行のテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = IncrementExecutor(id="executor_b")
 
@@ -179,7 +179,7 @@ async def test_workflow_run_not_completed():
 
 
 async def test_workflow_send_responses_streaming():
-    """Test the workflow run with approval."""
+    """承認付きワークフロー実行のテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = MockExecutorRequestApproval(id="executor_b")
     request_info_executor = RequestInfoExecutor(id="request_info")
@@ -212,11 +212,11 @@ async def test_workflow_send_responses_streaming():
 
     assert (
         completed and result is not None and result == 1
-    )  # The data should be incremented by 1 from the initial message
+    )  # データは初期メッセージから1増加しているべきである。
 
 
 async def test_workflow_send_responses():
-    """Test the workflow run with approval."""
+    """承認付きワークフロー実行のテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = MockExecutorRequestApproval(id="executor_b")
     request_info_executor = RequestInfoExecutor(id="request_info")
@@ -240,14 +240,14 @@ async def test_workflow_send_responses():
 
     assert result.get_final_state() == WorkflowRunState.IDLE
     outputs = result.get_outputs()
-    assert outputs[0] == 1  # The data should be incremented by 1 from the initial message
+    assert outputs[0] == 1  # データは初期メッセージから1増加しているべきである。
 
 
 async def test_fan_out():
-    """Test a fan-out workflow."""
+    """ファンアウトワークフローのテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = IncrementExecutor(id="executor_b", limit=1)
-    executor_c = IncrementExecutor(id="executor_c", limit=2)  # This executor will not complete the workflow
+    executor_c = IncrementExecutor(id="executor_c", limit=2)  # このExecutorはワークフローを完了しない。
 
     workflow = (
         WorkflowBuilder().set_start_executor(executor_a).add_fan_out_edges(executor_a, [executor_b, executor_c]).build()
@@ -255,8 +255,8 @@ async def test_fan_out():
 
     events = await workflow.run(NumberMessage(data=0))
 
-    # Each executor will emit two events: ExecutorInvokedEvent and ExecutorCompletedEvent
-    # executor_b will also emit a WorkflowOutputEvent (no WorkflowCompletedEvent anymore)
+    # 各Executorは2つのイベントを発行する：ExecutorInvokedEventとExecutorCompletedEvent
+    # executor_bはWorkflowOutputEventも発行する（もはやWorkflowCompletedEventは発行しない）
     assert len(events) == 7
 
     assert events.get_final_state() == WorkflowRunState.IDLE
@@ -265,7 +265,7 @@ async def test_fan_out():
 
 
 async def test_fan_out_multiple_completed_events():
-    """Test a fan-out workflow with multiple completed events."""
+    """複数の完了イベントを持つファンアウトワークフローのテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = IncrementExecutor(id="executor_b", limit=1)
     executor_c = IncrementExecutor(id="executor_c", limit=1)
@@ -276,17 +276,17 @@ async def test_fan_out_multiple_completed_events():
 
     events = await workflow.run(NumberMessage(data=0))
 
-    # Each executor will emit two events: ExecutorInvokedEvent and ExecutorCompletedEvent
-    # executor_b and executor_c will also emit a WorkflowOutputEvent (no WorkflowCompletedEvent anymore)
+    # 各Executorは2つのイベントを発行する：ExecutorInvokedEventとExecutorCompletedEvent
+    # executor_bとexecutor_cはWorkflowOutputEventも発行する（もはやWorkflowCompletedEventは発行しない）
     assert len(events) == 8
 
-    # Multiple outputs are expected from both executors
+    # 両Executorから複数の出力が期待される。
     outputs = events.get_outputs()
     assert len(outputs) == 2
 
 
 async def test_fan_in():
-    """Test a fan-in workflow."""
+    """ファンインワークフローのテスト。"""
     executor_a = IncrementExecutor(id="executor_a")
     executor_b = IncrementExecutor(id="executor_b")
     executor_c = IncrementExecutor(id="executor_c")
@@ -302,13 +302,13 @@ async def test_fan_in():
 
     events = await workflow.run(NumberMessage(data=0))
 
-    # Each executor will emit two events: ExecutorInvokedEvent and ExecutorCompletedEvent
-    # aggregator will also emit a WorkflowOutputEvent (no WorkflowCompletedEvent anymore)
+    # 各Executorは2つのイベントを発行する：ExecutorInvokedEventとExecutorCompletedEvent
+    # aggregatorはWorkflowOutputEventも発行する（もはやWorkflowCompletedEventは発行しない）
     assert len(events) == 9
 
     assert events.get_final_state() == WorkflowRunState.IDLE
     outputs = events.get_outputs()
-    assert outputs[0] == 4  # executor_a(0->1), both executor_b and executor_c(1->2), aggregator(2+2=4)
+    assert outputs[0] == 4  # executor_a(0->1)、executor_bとexecutor_c(1->2)、aggregator(2+2=4)
 
 
 @pytest.fixture
@@ -322,11 +322,11 @@ def simple_executor() -> Executor:
 
 
 async def test_workflow_with_checkpointing_enabled(simple_executor: Executor):
-    """Test that a workflow can be built with checkpointing enabled."""
+    """チェックポイント有効化でワークフローを構築できることをテストする。"""
     with tempfile.TemporaryDirectory() as temp_dir:
         storage = FileCheckpointStorage(temp_dir)
 
-        # Build workflow with checkpointing - should not raise any errors
+        # チェックポイント付きワークフローを構築 - エラーが発生しないはずである。
         workflow = (
             WorkflowBuilder()
             .add_edge(simple_executor, simple_executor)  # Self-loop to satisfy graph requirements
@@ -335,15 +335,15 @@ async def test_workflow_with_checkpointing_enabled(simple_executor: Executor):
             .build()
         )
 
-        # Verify workflow was created and can run
+        # ワークフローが作成され実行できることを検証する。
         test_message = Message(data="test message", source_id="test", target_id=None)
         result = await workflow.run(test_message)
         assert result is not None
 
 
 async def test_workflow_checkpointing_not_enabled_for_external_restore(simple_executor: Executor):
-    """Test that external checkpoint restoration fails when workflow doesn't support checkpointing."""
-    # Build workflow WITHOUT checkpointing
+    """ワークフローがチェックポイントをサポートしない場合に外部チェックポイント復元が失敗することをテストする。"""
+    # チェックポイントなしでワークフローを構築する。
     workflow = (
         WorkflowBuilder()
         .add_edge(simple_executor, simple_executor)  # Self-loop to satisfy graph requirements
@@ -351,7 +351,7 @@ async def test_workflow_checkpointing_not_enabled_for_external_restore(simple_ex
         .build()
     )
 
-    # Attempt to restore from checkpoint without providing external storage should fail
+    # 外部ストレージを提供せずにチェックポイントから復元しようとすると失敗するはずである。
     try:
         [event async for event in workflow.run_stream_from_checkpoint("fake-checkpoint-id")]
         raise AssertionError("Expected ValueError to be raised")
@@ -361,7 +361,7 @@ async def test_workflow_checkpointing_not_enabled_for_external_restore(simple_ex
 
 
 async def test_workflow_run_stream_from_checkpoint_no_checkpointing_enabled(simple_executor: Executor):
-    # Build workflow WITHOUT checkpointing
+    # チェックポイントなしでワークフローを構築する。
     workflow = (
         WorkflowBuilder()
         .add_edge(simple_executor, simple_executor)  # Self-loop to satisfy graph requirements
@@ -369,7 +369,7 @@ async def test_workflow_run_stream_from_checkpoint_no_checkpointing_enabled(simp
         .build()
     )
 
-    # Attempt to run from checkpoint should fail
+    # チェックポイントからの実行を試みると失敗するはずである。
     try:
         async for _ in workflow.run_stream_from_checkpoint("fake_checkpoint_id"):
             pass
@@ -380,11 +380,11 @@ async def test_workflow_run_stream_from_checkpoint_no_checkpointing_enabled(simp
 
 
 async def test_workflow_run_stream_from_checkpoint_invalid_checkpoint(simple_executor: Executor):
-    """Test that attempting to restore from a non-existent checkpoint fails appropriately."""
+    """存在しないチェックポイントからの復元試行が適切に失敗することをテストする。"""
     with tempfile.TemporaryDirectory() as temp_dir:
         storage = FileCheckpointStorage(temp_dir)
 
-        # Build workflow with checkpointing
+        # チェックポイント付きでワークフローを構築する。
         workflow = (
             WorkflowBuilder()
             .add_edge(simple_executor, simple_executor)  # Self-loop to satisfy graph requirements
@@ -393,7 +393,7 @@ async def test_workflow_run_stream_from_checkpoint_invalid_checkpoint(simple_exe
             .build()
         )
 
-        # Attempt to run from non-existent checkpoint should fail
+        # 存在しないチェックポイントからの実行試行が失敗するはずである。
         try:
             async for _ in workflow.run_stream_from_checkpoint("nonexistent_checkpoint_id"):
                 pass
@@ -403,11 +403,11 @@ async def test_workflow_run_stream_from_checkpoint_invalid_checkpoint(simple_exe
 
 
 async def test_workflow_run_stream_from_checkpoint_with_external_storage(simple_executor: Executor):
-    """Test that external checkpoint storage can be provided for restoration."""
+    """復元のために外部チェックポイントストレージを提供できることをテストする。"""
     with tempfile.TemporaryDirectory() as temp_dir:
         storage = FileCheckpointStorage(temp_dir)
 
-        # Create a test checkpoint manually in storage
+        # ストレージにテスト用チェックポイントを手動で作成する。
         from agent_framework import WorkflowCheckpoint
 
         test_checkpoint = WorkflowCheckpoint(
@@ -418,12 +418,12 @@ async def test_workflow_run_stream_from_checkpoint_with_external_storage(simple_
         )
         checkpoint_id = await storage.save_checkpoint(test_checkpoint)
 
-        # Create a workflow WITHOUT checkpointing
+        # チェックポイントなしでワークフローを作成する。
         workflow_without_checkpointing = (
             WorkflowBuilder().add_edge(simple_executor, simple_executor).set_start_executor(simple_executor).build()
         )
 
-        # Resume from checkpoint using external storage parameter
+        # 外部ストレージパラメータを使ってチェックポイントから再開する。
         try:
             events: list[WorkflowEvent] = []
             async for event in workflow_without_checkpointing.run_stream_from_checkpoint(
@@ -433,16 +433,16 @@ async def test_workflow_run_stream_from_checkpoint_with_external_storage(simple_
                 if len(events) >= 2:  # Limit to avoid infinite loops
                     break
         except Exception:
-            # Expected since we have minimal setup, but method should accept the parameters
+            # 最小限のセットアップなので予想されるが、メソッドはパラメータを受け入れるべきである。
             pass
 
 
 async def test_workflow_run_from_checkpoint_non_streaming(simple_executor: Executor):
-    """Test the non-streaming run_from_checkpoint method."""
+    """非ストリーミングのrun_from_checkpointメソッドをテストする。"""
     with tempfile.TemporaryDirectory() as temp_dir:
         storage = FileCheckpointStorage(temp_dir)
 
-        # Create a test checkpoint manually in storage
+        # ストレージにテスト用チェックポイントを手動で作成する。
         from agent_framework import WorkflowCheckpoint
 
         test_checkpoint = WorkflowCheckpoint(
@@ -453,7 +453,7 @@ async def test_workflow_run_from_checkpoint_non_streaming(simple_executor: Execu
         )
         checkpoint_id = await storage.save_checkpoint(test_checkpoint)
 
-        # Build workflow with checkpointing
+        # チェックポイント付きでワークフローを構築する。
         workflow = (
             WorkflowBuilder()
             .add_edge(simple_executor, simple_executor)
@@ -462,18 +462,18 @@ async def test_workflow_run_from_checkpoint_non_streaming(simple_executor: Execu
             .build()
         )
 
-        # Test non-streaming run_from_checkpoint method
+        # 非ストリーミングのrun_from_checkpointメソッドをテストする。
         result = await workflow.run_from_checkpoint(checkpoint_id)
-        assert isinstance(result, list)  # Should return WorkflowRunResult which extends list
-        assert hasattr(result, "get_outputs")  # Should have WorkflowRunResult methods
+        assert isinstance(result, list)  # WorkflowRunResult（リストを拡張したもの）を返すべきである。
+        assert hasattr(result, "get_outputs")  # WorkflowRunResultのメソッドを持つべきである。
 
 
 async def test_workflow_run_stream_from_checkpoint_with_responses(simple_executor: Executor):
-    """Test that run_stream_from_checkpoint accepts responses parameter."""
+    """run_stream_from_checkpointがresponsesパラメータを受け入れることをテストする。"""
     with tempfile.TemporaryDirectory() as temp_dir:
         storage = FileCheckpointStorage(temp_dir)
 
-        # Create a test checkpoint manually in storage
+        # ストレージにテスト用チェックポイントを手動で作成する。
         from agent_framework import WorkflowCheckpoint
 
         test_checkpoint = WorkflowCheckpoint(
@@ -484,7 +484,7 @@ async def test_workflow_run_stream_from_checkpoint_with_responses(simple_executo
         )
         checkpoint_id = await storage.save_checkpoint(test_checkpoint)
 
-        # Build workflow with checkpointing
+        # チェックポイント付きでワークフローを構築する。
         workflow = (
             WorkflowBuilder()
             .add_edge(simple_executor, simple_executor)
@@ -493,7 +493,7 @@ async def test_workflow_run_stream_from_checkpoint_with_responses(simple_executo
             .build()
         )
 
-        # Test that run_stream_from_checkpoint accepts responses parameter
+        # run_stream_from_checkpointがresponsesパラメータを受け入れることをテストする。
         responses = {"request_123": {"data": "test_response"}}
 
         try:
@@ -503,52 +503,52 @@ async def test_workflow_run_stream_from_checkpoint_with_responses(simple_executo
                 if len(events) >= 2:  # Limit to avoid infinite loops
                     break
         except Exception:
-            # Expected since we have minimal setup, but method should accept the parameters
+            # 最小限のセットアップなので予想されるが、メソッドはパラメータを受け入れるべきである
             pass
 
 
 @dataclass
 class StateTrackingMessage:
-    """A message that tracks state for testing context reset behavior."""
+    """コンテキストリセットの動作をテストするための状態を追跡するメッセージ。"""
 
     data: str
     run_id: str
 
 
 class StateTrackingExecutor(Executor):
-    """An executor that tracks state in shared state to test context reset behavior."""
+    """コンテキストリセットの動作をテストするために共有状態で状態を追跡するexecutor。"""
 
     @handler
     async def handle_message(
         self, message: StateTrackingMessage, ctx: WorkflowContext[StateTrackingMessage, list[str]]
     ) -> None:
-        """Handle the message and track it in shared state."""
-        # Get existing messages from shared state
+        """メッセージを処理し、共有状態で追跡する。"""
+        # 共有状態から既存のメッセージを取得する
         try:
             existing_messages = await ctx.get_shared_state("processed_messages")
         except KeyError:
             existing_messages = []
 
-        # Record this message
+        # このメッセージを記録する
         message_record = f"{message.run_id}:{message.data}"
         existing_messages.append(message_record)  # type: ignore
 
-        # Update shared state
+        # 共有状態を更新する
         await ctx.set_shared_state("processed_messages", existing_messages)
 
-        # Yield output
+        # 出力をyieldする
         await ctx.yield_output(existing_messages.copy())  # type: ignore
 
 
 async def test_workflow_multiple_runs_no_state_collision():
-    """Test that running the same workflow instance multiple times doesn't have state collision."""
+    """同じworkflowインスタンスを複数回実行しても状態の衝突が起きないことをテストする。"""
     with tempfile.TemporaryDirectory() as temp_dir:
         storage = FileCheckpointStorage(temp_dir)
 
-        # Create executor that tracks state in shared state
+        # 共有状態で状態を追跡するexecutorを作成する
         state_executor = StateTrackingExecutor(id="state_executor")
 
-        # Build workflow with checkpointing
+        # チェックポイント付きのworkflowを構築する
         workflow = (
             WorkflowBuilder()
             .add_edge(state_executor, state_executor)  # Self-loop to satisfy graph requirements
@@ -557,55 +557,53 @@ async def test_workflow_multiple_runs_no_state_collision():
             .build()
         )
 
-        # Run 1: Should only see messages from run 1
+        # 実行1：実行1のメッセージのみが見えるはず
         result1 = await workflow.run(StateTrackingMessage(data="message1", run_id="run1"))
         assert result1.get_final_state() == WorkflowRunState.IDLE
         outputs1 = result1.get_outputs()
         assert outputs1[0] == ["run1:message1"]
 
-        # Run 2: Should only see messages from run 2, not run 1
+        # 実行2：実行1ではなく実行2のメッセージのみが見えるはず
         result2 = await workflow.run(StateTrackingMessage(data="message2", run_id="run2"))
         assert result2.get_final_state() == WorkflowRunState.IDLE
         outputs2 = result2.get_outputs()
-        assert outputs2[0] == ["run2:message2"]  # Should NOT contain run1 data
+        assert outputs2[0] == ["run2:message2"]  # 実行1のデータを含んではいけない
 
-        # Run 3: Should only see messages from run 3
+        # 実行3：実行3のメッセージのみが見えるはず
         result3 = await workflow.run(StateTrackingMessage(data="message3", run_id="run3"))
         assert result3.get_final_state() == WorkflowRunState.IDLE
         outputs3 = result3.get_outputs()
-        assert outputs3[0] == ["run3:message3"]  # Should NOT contain run1 or run2 data
+        assert outputs3[0] == ["run3:message3"]  # 実行1および実行2のデータを含んではいけない
 
-        # Verify that each run only processed its own message
-        # This confirms that the checkpointable context properly resets between runs
+        # 各実行が自身のメッセージのみを処理したことを検証する これはチェックポイント可能なコンテキストが実行間で正しくリセットされていることを確認するものです
         assert outputs1[0] != outputs2[0]
         assert outputs2[0] != outputs3[0]
         assert outputs1[0] != outputs3[0]
 
 
 async def test_comprehensive_edge_groups_workflow():
-    """Test a workflow that uses SwitchCaseEdgeGroup, FanOutEdgeGroup, and FanInEdgeGroup."""
+    """SwitchCaseEdgeGroup、FanOutEdgeGroup、FanInEdgeGroupを使用するworkflowをテストする。"""
     from agent_framework import Case, Default
 
-    # Create 6 executors for different roles with different increment values
-    router = IncrementExecutor(id="router", limit=1000, increment=1)  # Increment by 1
-    processor_a = IncrementExecutor(id="proc_a", limit=1000, increment=1)  # Increment by 1
-    processor_b = IncrementExecutor(id="proc_b", limit=1000, increment=2)  # Increment by 2 (different from proc_a)
-    fanout_hub = IncrementExecutor(id="fanout_hub", limit=1000, increment=1)  # Increment by 1
-    parallel_1 = IncrementExecutor(id="parallel_1", limit=1000, increment=3)  # Increment by 3
+    # 異なるインクリメント値で異なる役割のexecutorを6つ作成する
+    router = IncrementExecutor(id="router", limit=1000, increment=1)  # 1ずつインクリメントする
+    processor_a = IncrementExecutor(id="proc_a", limit=1000, increment=1)  # 1ずつインクリメントする
+    processor_b = IncrementExecutor(id="proc_b", limit=1000, increment=2)  # 2ずつインクリメントする（proc_aとは異なる）
+    fanout_hub = IncrementExecutor(id="fanout_hub", limit=1000, increment=1)  # 1ずつインクリメントする
+    parallel_1 = IncrementExecutor(id="parallel_1", limit=1000, increment=3)  # 3ずつインクリメントする
     parallel_2 = IncrementExecutor(
         id="parallel_2", limit=1000, increment=5
-    )  # Increment by 5 (different from parallel_1)
-    aggregator = AggregatorExecutor(id="aggregator")  # Combines results from parallel processors
+    )  # 5ずつインクリメントする（parallel_1とは異なる）
+    aggregator = AggregatorExecutor(id="aggregator")  # 並列プロセッサからの結果を結合する
 
-    # Build workflow with different edge group types:
-    # 1. SwitchCase: router -> (proc_a if data < 5, else proc_b)
-    # 2. Direct edge: proc_a -> fanout_hub, proc_b -> fanout_hub
-    # 3. FanOut: fanout_hub -> [parallel_1, parallel_2]
-    # 4. FanIn: [parallel_1, parallel_2] -> aggregator
+    # 異なるエッジグループタイプでworkflowを構築する： 1. SwitchCase: router -> (data <
+    # 5ならproc_a、そうでなければproc_b) 2. 直接エッジ: proc_a -> fanout_hub, proc_b -> fanout_hub 3.
+    # FanOut: fanout_hub -> [parallel_1, parallel_2] 4. FanIn: [parallel_1, parallel_2]
+    # -> aggregator
     workflow = (
         WorkflowBuilder()
         .set_start_executor(router)
-        # Switch-case routing based on message data
+        # メッセージデータに基づくスイッチケースルーティング
         .add_switch_case_edge_group(
             router,
             [
@@ -613,47 +611,43 @@ async def test_comprehensive_edge_groups_workflow():
                 Default(target=processor_b),
             ],
         )
-        # Both processors send to fanout hub
+        # 両方のプロセッサがfanoutハブに送信する
         .add_edge(processor_a, fanout_hub)
         .add_edge(processor_b, fanout_hub)
-        # Fan out to parallel processors
+        # 並列プロセッサにファンアウトする
         .add_fan_out_edges(fanout_hub, [parallel_1, parallel_2])
-        # Fan in to aggregator
+        # aggregatorにファンインする
         .add_fan_in_edges([parallel_1, parallel_2], aggregator)
         .build()
     )
 
-    # Test with small number (should go through processor_a)
-    # router(2->3) -> switch routes to proc_a -> proc_a(3->4) -> fanout_hub(4->5)
-    # -> [parallel_1(5->8), parallel_2(5->10)] -> aggregator(8+10=18)
+    # 小さい数でテスト（processor_aを通るはず） router(2->3) -> switchがproc_aにルーティング -> proc_a(3->4) ->
+    # fanout_hub(4->5) -> [parallel_1(5->8), parallel_2(5->10)] -> aggregator(8+10=18)
     events_small = await workflow.run(NumberMessage(data=2))
     assert events_small.get_final_state() == WorkflowRunState.IDLE
     outputs_small = events_small.get_outputs()
-    assert outputs_small[0] == 18  # Exact expected result: 8+10 from parallel processors
+    assert outputs_small[0] == 18  # 正確な期待結果：並列プロセッサからの8+10
 
-    # Test with large number (should go through processor_b)
-    # router(8->9) -> switch routes to proc_b -> proc_b(9->11) -> fanout_hub(11->12)
-    # -> [parallel_1(12->15), parallel_2(12->17)] -> aggregator(15+17=32)
+    # 大きい数でテスト（processor_bを通るはず） router(8->9) -> switchがproc_bにルーティング -> proc_b(9->11)
+    # -> fanout_hub(11->12) -> [parallel_1(12->15), parallel_2(12->17)] ->
+    # aggregator(15+17=32)
     events_large = await workflow.run(NumberMessage(data=8))
     assert events_large.get_final_state() == WorkflowRunState.IDLE
     outputs_large = events_large.get_outputs()
-    assert outputs_large[0] == 32  # Exact expected result: 15+17 from parallel processors
+    assert outputs_large[0] == 32  # 正確な期待結果：並列プロセッサからの15+17
 
-    # The key verification is that we successfully executed a workflow using all three edge group types
-    # and that both switch-case paths work (small vs large numbers)
-
-    # Verify we had multiple events indicating complex execution path
-    assert len(events_small) >= 6  # Should have multiple executors involved
+    # 重要な検証は、3つのエッジグループタイプすべてを使用したworkflowを正常に実行し スイッチケースの両方のパス（小さい数と大きい数）が機能すること
+    # 複雑な実行パスを示す複数のイベントがあったことを確認すること
+    assert len(events_small) >= 6  # 複数のexecutorが関与しているはず
     assert len(events_large) >= 6
 
-    # Verify different paths were taken by checking exact results
+    # 正確な結果をチェックして異なるパスが通られたことを検証する
     assert outputs_small[0] == 18, f"Small number path should result in 18, got {outputs_small[0]}"
     assert outputs_large[0] == 32, f"Large number path should result in 32, got {outputs_large[0]}"
     assert outputs_small[0] != outputs_large[0], "Different paths should produce different results"
 
-    # Both tests should complete successfully, proving all edge group types work
-
-    # Additional verification: check that the workflow contains the expected edge group types
+    # 両方のテストが正常に完了し、すべてのエッジグループタイプが機能することを証明する
+    # 追加検証：workflowに期待されるエッジグループタイプが含まれていることを確認する
     edge_groups = workflow.edge_groups
     has_switch_case = any(edge_group.__class__.__name__ == "SwitchCaseEdgeGroup" for edge_group in edge_groups)
     has_fan_out = any(edge_group.__class__.__name__ == "FanOutEdgeGroup" for edge_group in edge_groups)
@@ -665,13 +659,13 @@ async def test_comprehensive_edge_groups_workflow():
 
 
 async def test_workflow_with_simple_cycle_and_exit_condition():
-    """Test a simpler workflow with a cycle that has a clear exit condition."""
+    """明確な終了条件を持つサイクルを含むより単純なworkflowをテストする。"""
 
-    # Create a simple cycle: A -> B -> A, with A having an exit condition
-    executor_a = IncrementExecutor(id="exec_a", limit=6, increment=2)  # Exit when data >= 6
-    executor_b = IncrementExecutor(id="exec_b", limit=1000, increment=1)  # Never exit, just increment
+    # 単純なサイクルを作成する：A -> B -> A、Aに終了条件を持たせる
+    executor_a = IncrementExecutor(id="exec_a", limit=6, increment=2)  # data >= 6で終了する
+    executor_b = IncrementExecutor(id="exec_b", limit=1000, increment=1)  # 終了せずにただインクリメントするだけ
 
-    # Simple cycle: A -> B -> A, A exits when limit reached
+    # 単純なサイクル：A -> B -> A、Aは制限に達したら終了する
     workflow = (
         WorkflowBuilder()
         .set_start_executor(executor_a)
@@ -680,15 +674,14 @@ async def test_workflow_with_simple_cycle_and_exit_condition():
         .build()
     )
 
-    # Test the cycle
-    # Expected: exec_a(2->4) -> exec_b(4->5) -> exec_a(5->7, completes because 7 >= 6)
+    # サイクルをテストする 期待される動作：exec_a(2->4) -> exec_b(4->5) -> exec_a(5->7、7 >= 6なので完了)
     events = await workflow.run(NumberMessage(data=2))
     assert events.get_final_state() == WorkflowRunState.IDLE
     outputs = events.get_outputs()
-    assert outputs[0] is not None and outputs[0] >= 6  # Should complete when executor_a reaches its limit
+    assert outputs[0] is not None and outputs[0] >= 6  # executor_aが制限に達したら完了するはず
 
-    # Verify cycling occurred (should have events from both executors)
-    # Check for ExecutorInvokedEvent and ExecutorCompletedEvent types that have executor_id
+    # サイクルが発生したことを検証する（両方のexecutorからのイベントがあるはず）
+    # executor_idを持つExecutorInvokedEventとExecutorCompletedEventタイプをチェックする
     from agent_framework import ExecutorCompletedEvent, ExecutorInvokedEvent
 
     executor_events = [e for e in events if isinstance(e, (ExecutorInvokedEvent, ExecutorCompletedEvent))]
@@ -696,79 +689,79 @@ async def test_workflow_with_simple_cycle_and_exit_condition():
     assert "exec_a" in executor_ids, "Should have events from executor A"
     assert "exec_b" in executor_ids, "Should have events from executor B"
 
-    # Should have multiple events due to cycling
+    # サイクルのため複数のイベントがあるはず
     assert len(events) >= 4, f"Expected at least 4 events due to cycling, got {len(events)}"
 
 
 async def test_workflow_concurrent_execution_prevention():
-    """Test that concurrent workflow executions are prevented."""
-    # Create a simple workflow that takes some time to execute
+    """同時実行されるworkflowの実行が防止されることをテストする。"""
+    # 実行に時間がかかる単純なworkflowを作成する
     executor = IncrementExecutor(id="slow_executor", limit=3, increment=1)
     workflow = WorkflowBuilder().set_start_executor(executor).build()
 
-    # Create a task that will run the workflow
+    # workflowを実行するタスクを作成する
     async def run_workflow():
         return await workflow.run(NumberMessage(data=0))
 
-    # Start the first workflow execution
+    # 最初のworkflow実行を開始する
     task1 = asyncio.create_task(run_workflow())
 
-    # Give it a moment to start
+    # 開始するまで少し待つ
     await asyncio.sleep(0.01)
 
-    # Try to start a second concurrent execution - this should fail
+    # 2回目の同時実行を試みる - これは失敗するはず
     with pytest.raises(RuntimeError, match="Workflow is already running. Concurrent executions are not allowed."):
         await workflow.run(NumberMessage(data=0))
 
-    # Wait for the first task to complete
+    # 最初のタスクが完了するまで待つ
     result = await task1
     assert result.get_final_state() == WorkflowRunState.IDLE
 
-    # After the first execution completes, we should be able to run again
+    # 最初の実行が完了した後、再度実行できるはず
     result2 = await workflow.run(NumberMessage(data=0))
     assert result2.get_final_state() == WorkflowRunState.IDLE
 
 
 async def test_workflow_concurrent_execution_prevention_streaming():
-    """Test that concurrent workflow streaming executions are prevented."""
-    # Create a simple workflow
+    """同時にworkflowのストリーミング実行が防止されることをテストする。"""
+    # 単純なworkflowを作成する
     executor = IncrementExecutor(id="slow_executor", limit=3, increment=1)
     workflow = WorkflowBuilder().set_start_executor(executor).build()
 
-    # Create an async generator that will consume the stream slowly
+    # ストリームをゆっくり消費する非同期ジェネレータを作成する
     async def consume_stream_slowly():
         result = []
         async for event in workflow.run_stream(NumberMessage(data=0)):
             result.append(event)
-            await asyncio.sleep(0.01)  # Slow consumption
+            await asyncio.sleep(0.01)  # ゆっくり消費する
         return result
 
-    # Start the first streaming execution
+    # 最初のストリーミング実行を開始する
     task1 = asyncio.create_task(consume_stream_slowly())
 
-    # Give it a moment to start
+    # 開始するまで少し待つ
     await asyncio.sleep(0.02)
 
-    # Try to start a second concurrent execution - this should fail
+    # 2回目の同時実行を試みる - これは失敗するはず
     with pytest.raises(RuntimeError, match="Workflow is already running. Concurrent executions are not allowed."):
         await workflow.run(NumberMessage(data=0))
 
-    # Wait for the first task to complete
+    # 最初のタスクが完了するまで待つ
     result = await task1
-    assert len(result) > 0  # Should have received some events
+    assert len(result) > 0  # いくつかのイベントを受信しているはず
 
-    # After the first execution completes, we should be able to run again
+    # 最初の実行が完了した後、再度実行できるはず
     result2 = await workflow.run(NumberMessage(data=0))
     assert result2.get_final_state() == WorkflowRunState.IDLE
 
 
 async def test_workflow_concurrent_execution_prevention_mixed_methods():
-    """Test that concurrent executions are prevented across different execution methods."""
-    # Create a simple workflow
+    """異なる実行方法間で同時実行が防止されることをテストする。"""
+    # 単純なworkflowを作成する
     executor = IncrementExecutor(id="slow_executor", limit=3, increment=1)
     workflow = WorkflowBuilder().set_start_executor(executor).build()
 
-    # Start a streaming execution
+    # ストリーミング実行を開始する
     async def consume_stream():
         result = []
         async for event in workflow.run_stream(NumberMessage(data=0)):
@@ -777,9 +770,9 @@ async def test_workflow_concurrent_execution_prevention_mixed_methods():
         return result
 
     task1 = asyncio.create_task(consume_stream())
-    await asyncio.sleep(0.02)  # Let it start
+    await asyncio.sleep(0.02)  # 開始させる
 
-    # Try different execution methods - all should fail
+    # 異なる実行方法を試みる - すべて失敗するはず
     with pytest.raises(RuntimeError, match="Workflow is already running. Concurrent executions are not allowed."):
         await workflow.run(NumberMessage(data=0))
 
@@ -790,16 +783,16 @@ async def test_workflow_concurrent_execution_prevention_mixed_methods():
     with pytest.raises(RuntimeError, match="Workflow is already running. Concurrent executions are not allowed."):
         await workflow.send_responses({"test": "data"})
 
-    # Wait for the original task to complete
+    # 元のタスクが完了するまで待つ
     await task1
 
-    # Now all methods should work again
+    # これで全ての方法が再び動作するはず
     result = await workflow.run(NumberMessage(data=0))
     assert result.get_final_state() == WorkflowRunState.IDLE
 
 
 class _StreamingTestAgent(BaseAgent):
-    """Test agent that supports both streaming and non-streaming modes."""
+    """ストリーミングモードと非ストリーミングモードの両方をサポートするAgentをテストする。"""
 
     def __init__(self, *, reply_text: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -812,7 +805,7 @@ class _StreamingTestAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Non-streaming run - returns complete response."""
+        """非ストリーミング実行 - 完全なResponseを返す。"""
         return AgentRunResponse(messages=[ChatMessage(role=Role.ASSISTANT, text=self._reply_text)])
 
     async def run_stream(
@@ -822,49 +815,49 @@ class _StreamingTestAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Streaming run - yields incremental updates."""
-        # Simulate streaming by yielding character by character
+        """ストリーミング実行 - 増分更新をyieldする。"""
+        # 文字ごとにyieldしてストリーミングをシミュレートする
         for char in self._reply_text:
             yield AgentRunResponseUpdate(contents=[TextContent(text=char)])
 
 
 async def test_agent_streaming_vs_non_streaming() -> None:
-    """Test that run() emits AgentRunEvent while run_stream() emits AgentRunUpdateEvent."""
+    """run()はAgentRunEventを、run_stream()はAgentRunUpdateEventを発行することをテストする。"""
     agent = _StreamingTestAgent(id="test_agent", name="TestAgent", reply_text="Hello World")
     agent_exec = AgentExecutor(agent, id="agent_exec")
 
     workflow = WorkflowBuilder().set_start_executor(agent_exec).build()
 
-    # Test non-streaming mode with run()
+    # 非ストリーミングモードでrun()をテストする
     result = await workflow.run("test message")
 
-    # Filter for agent events (result is a list of events)
+    # agentイベントでフィルタリングする（結果はイベントのリスト）
     agent_run_events = [e for e in result if isinstance(e, AgentRunEvent)]
     agent_update_events = [e for e in result if isinstance(e, AgentRunUpdateEvent)]
 
-    # In non-streaming mode, should have AgentRunEvent, no AgentRunUpdateEvent
+    # 非ストリーミングモードではAgentRunEventがあり、AgentRunUpdateEventはないはず
     assert len(agent_run_events) == 1, "Expected exactly one AgentRunEvent in non-streaming mode"
     assert len(agent_update_events) == 0, "Expected no AgentRunUpdateEvent in non-streaming mode"
     assert agent_run_events[0].executor_id == "agent_exec"
     assert agent_run_events[0].data.messages[0].text == "Hello World"
 
-    # Test streaming mode with run_stream()
+    # ストリーミングモードでrun_stream()をテストする
     stream_events: list[WorkflowEvent] = []
     async for event in workflow.run_stream("test message"):
         stream_events.append(event)
 
-    # Filter for agent events
+    # agentイベントでフィルタリングする
     stream_agent_run_events = [e for e in stream_events if isinstance(e, AgentRunEvent)]
     stream_agent_update_events = [e for e in stream_events if isinstance(e, AgentRunUpdateEvent)]
 
-    # In streaming mode, should have AgentRunUpdateEvent, no AgentRunEvent
+    # ストリーミングモードではAgentRunUpdateEventがあり、AgentRunEventはないはず
     assert len(stream_agent_run_events) == 0, "Expected no AgentRunEvent in streaming mode"
     assert len(stream_agent_update_events) > 0, "Expected AgentRunUpdateEvent events in streaming mode"
 
-    # Verify we got incremental updates (one per character in "Hello World")
+    # "Hello World"の各文字ごとに増分更新があったことを検証する
     assert len(stream_agent_update_events) == len("Hello World"), "Expected one update per character"
 
-    # Verify the updates build up to the full message
+    # 更新が完全なメッセージに積み上がっていることを検証する
     accumulated_text = "".join(
         e.data.contents[0].text for e in stream_agent_update_events if e.data.contents and e.data.contents[0].text
     )

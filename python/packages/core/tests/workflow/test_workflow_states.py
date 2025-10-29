@@ -27,7 +27,7 @@ from agent_framework import (
 
 
 class FailingExecutor(Executor):
-    """Executor that raises at runtime to test failure signaling."""
+    """実行時に例外を発生させて失敗シグナリングをテストするexecutor。"""
 
     @handler
     async def fail(self, msg: int, ctx: WorkflowContext) -> None:  # pragma: no cover - invoked via workflow
@@ -43,7 +43,7 @@ async def test_executor_failed_and_workflow_failed_events_streaming():
         async for ev in wf.run_stream(0):
             events.append(ev)
 
-    # Workflow-level failure and FAILED status should be surfaced
+    # workflowレベルの失敗とFAILEDステータスが表面化されるべきである
     failed_events = [e for e in events if isinstance(e, WorkflowFailedEvent)]
     assert failed_events
     assert all(e.origin is WorkflowEventSource.FRAMEWORK for e in failed_events)
@@ -70,7 +70,7 @@ async def test_executor_failed_event_emitted_on_direct_execute():
 
 
 class Requester(Executor):
-    """Executor that always requests external info to test idle-with-requests state."""
+    """常に外部情報を要求してidle-with-requests状態をテストするexecutor。"""
 
     @handler
     async def ask(self, _: str, ctx: WorkflowContext[RequestInfoMessage]) -> None:  # pragma: no cover
@@ -82,9 +82,9 @@ async def test_idle_with_pending_requests_status_streaming():
     rie = RequestInfoExecutor(id="rie")
     wf = WorkflowBuilder().set_start_executor(req).add_edge(req, rie).build()
 
-    events = [ev async for ev in wf.run_stream("start")]  # Consume stream fully
+    events = [ev async for ev in wf.run_stream("start")]  # ストリームを完全に消費する
 
-    # Ensure a request was emitted
+    # リクエストが発行されたことを確認する
     assert any(isinstance(e, RequestInfoEvent) for e in events)
     status_events = [e for e in events if isinstance(e, WorkflowStatusEvent)]
     assert len(status_events) >= 3
@@ -93,7 +93,7 @@ async def test_idle_with_pending_requests_status_streaming():
 
 
 class Completer(Executor):
-    """Executor that completes immediately with provided data for testing."""
+    """テスト用に提供されたデータで即座に完了するexecutor。"""
 
     @handler
     async def run(self, msg: str, ctx: WorkflowContext[Never, str]) -> None:  # pragma: no cover
@@ -103,8 +103,8 @@ class Completer(Executor):
 async def test_completed_status_streaming():
     c = Completer(id="c")
     wf = WorkflowBuilder().set_start_executor(c).build()
-    events = [ev async for ev in wf.run_stream("ok")]  # no raise
-    # Last status should be IDLE
+    events = [ev async for ev in wf.run_stream("ok")]  # 例外を発生させない
+    # 最後のステータスはIDLEであるべきである
     status = [e for e in events if isinstance(e, WorkflowStatusEvent)]
     assert status and status[-1].state == WorkflowRunState.IDLE
     assert all(e.origin is WorkflowEventSource.FRAMEWORK for e in status)
@@ -118,7 +118,7 @@ async def test_started_and_completed_event_origins():
     started = next(e for e in events if isinstance(e, WorkflowStartedEvent))
     assert started.origin is WorkflowEventSource.FRAMEWORK
 
-    # Check for IDLE status indicating completion
+    # 完了を示すIDLEステータスをチェックする
     idle_status = next(
         (e for e in events if isinstance(e, WorkflowStatusEvent) and e.state == WorkflowRunState.IDLE), None
     )
@@ -127,13 +127,13 @@ async def test_started_and_completed_event_origins():
 
 
 async def test_non_streaming_final_state_helpers():
-    # Completed case
+    # 完了ケース
     c = Completer(id="c")
     wf1 = WorkflowBuilder().set_start_executor(c).build()
     result1: WorkflowRunResult = await wf1.run("done")
     assert result1.get_final_state() == WorkflowRunState.IDLE
 
-    # Idle-with-pending-request case
+    # 保留中リクエストありのアイドルケース
     req = Requester(id="req")
     rie = RequestInfoExecutor(id="rie")
     wf2 = WorkflowBuilder().set_start_executor(req).add_edge(req, rie).build()
@@ -170,7 +170,7 @@ class SnapshotRequest(RequestInfoMessage):
 
 
 class SnapshotRequester(Executor):
-    """Executor that emits a rich RequestInfoMessage for persistence tests."""
+    """永続化テスト用に豊富なRequestInfoMessageを発行するexecutor。"""
 
     def __init__(self, id: str, prompt: str, draft: str) -> None:
         super().__init__(id=id)

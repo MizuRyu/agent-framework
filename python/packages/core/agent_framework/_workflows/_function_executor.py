@@ -1,18 +1,18 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Function-based Executor and decorator utilities.
+"""関数ベースのExecutorとデコレーターのユーティリティ。
 
-This module provides:
-- FunctionExecutor: an Executor subclass that wraps a standalone user-defined function
-  with signature (message) or (message, ctx: WorkflowContext[T]). Both sync and async functions are supported.
-  Synchronous functions are executed in a thread pool using asyncio.to_thread() to avoid blocking the event loop.
-- executor decorator: converts a standalone module-level function into a ready-to-use Executor instance
-  with proper type validation and handler registration.
+このモジュールは以下を提供する:
+- FunctionExecutor: 独立したユーザー定義関数をラップするExecutorのサブクラス。
+  シグネチャは(message)または(message, ctx: WorkflowContext[T])。同期関数と非同期関数の両方をサポート。
+  同期関数はasyncio.to_thread()を使ってスレッドプールで実行し、イベントループのブロックを回避。
+- executorデコレーター: 独立したモジュールレベルの関数を適切な型検証とハンドラー登録付きの
+  すぐに使えるExecutorインスタンスに変換。
 
-Design Pattern:
-  - Use @executor for standalone module-level or local functions
-  - Use Executor subclass with @handler for class-based executors with state/dependencies
-  - Do NOT use @executor with @staticmethod or @classmethod
+設計パターン:
+  - 独立したモジュールレベルまたはローカル関数には@executorを使用
+  - 状態や依存関係を持つクラスベースのExecutorにはExecutorサブクラスと@handlerを使用
+  - @executorは@staticmethodや@classmethodと一緒に使わないこと
 """
 
 import asyncio
@@ -24,41 +24,44 @@ from ._workflow_context import WorkflowContext, validate_function_signature
 
 
 class FunctionExecutor(Executor):
-    """Executor that wraps a user-defined function.
+    """ユーザー定義関数をラップするExecutor。
 
-    This executor allows users to define simple functions (both sync and async) and use them
-    as workflow executors without needing to create full executor classes.
+    このExecutorはユーザーがシンプルな関数（同期・非同期両方）を定義し、
+    フルのExecutorクラスを作成せずにワークフローExecutorとして使用できるようにする。
 
-    Synchronous functions are executed in a thread pool using asyncio.to_thread() to avoid
-    blocking the event loop.
+    同期関数はasyncio.to_thread()を使ってスレッドプールで実行し、
+    イベントループのブロックを回避する。
+
     """
 
     @staticmethod
     def _validate_function(func: Callable[..., Any]) -> tuple[type, Any, list[type[Any]], list[type[Any]]]:
-        """Validate that the function has the correct signature for an executor.
+        """関数がExecutorに適した正しい署名を持つか検証する。
 
         Args:
-            func: The function to validate (can be sync or async)
+            func: 検証対象の関数（同期または非同期）
 
         Returns:
-            Tuple of (message_type, ctx_annotation, output_types, workflow_output_types)
+            (message_type, ctx_annotation, output_types, workflow_output_types)のタプル
 
         Raises:
-            ValueError: If the function signature is incorrect
+            ValueError: 関数の署名が正しくない場合
+
         """
         return validate_function_signature(func, "Function")
 
     def __init__(self, func: Callable[..., Any], id: str | None = None):
-        """Initialize the FunctionExecutor with a user-defined function.
+        """ユーザー定義関数でFunctionExecutorを初期化する。
 
         Args:
-            func: The function to wrap as an executor (can be sync or async)
-            id: Optional executor ID. If None, uses the function name.
+            func: Executorとしてラップする関数（同期または非同期）
+            id: オプションのExecutor ID。Noneの場合は関数名を使用。
 
         Raises:
-            ValueError: If func is a staticmethod or classmethod (use @handler on instance methods instead)
+            ValueError: funcがstaticmethodまたはclassmethodの場合（インスタンスメソッドに@handlerを使うこと）
+
         """
-        # Detect misuse of @executor with staticmethod/classmethod
+        # @executorがstaticmethod/classmethodと誤用されているか検出する
         if isinstance(func, (staticmethod, classmethod)):
             descriptor_type = "staticmethod" if isinstance(func, staticmethod) else "classmethod"
             raise ValueError(
@@ -67,17 +70,16 @@ class FunctionExecutor(Executor):
                 f"or create an Executor subclass and use @handler on instance methods instead."
             )
 
-        # Validate function signature and extract types
+        # 関数の署名を検証し型を抽出する
         message_type, ctx_annotation, output_types, workflow_output_types = self._validate_function(func)
 
-        # Determine if function has WorkflowContext parameter
+        # 関数にWorkflowContextパラメータがあるか判定する
         has_context = ctx_annotation is not None
 
-        # Check if function is async
+        # 関数が非同期かどうかをチェックする
         is_async = asyncio.iscoroutinefunction(func)
 
-        # Initialize parent WITHOUT calling _discover_handlers yet
-        # We'll manually set up the attributes first
+        # 親クラスを初期化するがまだ_discover_handlersは呼ばない 属性は手動で設定する
         executor_id = str(id or getattr(func, "__name__", "FunctionExecutor"))
         kwargs = {"type": "FunctionExecutor"}
 
@@ -85,34 +87,34 @@ class FunctionExecutor(Executor):
         self._handlers = {}
         self._handler_specs = []
 
-        # Store the original function and whether it has context
+        # 元の関数とコンテキストの有無を保存する
         self._original_func = func
         self._has_context = has_context
         self._is_async = is_async
 
-        # Create a wrapper function that always accepts both message and context
+        # 常にmessageとcontextの両方を受け取るラッパー関数を作成する
         if has_context and is_async:
-            # Async function with context - already has the right signature
+            # コンテキスト付きの非同期関数 - すでに正しい署名を持つ
             wrapped_func: Callable[[Any, WorkflowContext[Any]], Awaitable[Any]] = func  # type: ignore
         elif has_context and not is_async:
-            # Sync function with context - wrap to make async using thread pool
+            # コンテキスト付きの同期関数 - スレッドプールを使い非同期にラップする
             async def wrapped_func(message: Any, ctx: WorkflowContext[Any]) -> Any:
-                # Call the sync function with both parameters in a thread
+                # 両方のパラメータで同期関数をスレッド内で呼び出す
                 return await asyncio.to_thread(func, message, ctx)  # type: ignore
 
         elif not has_context and is_async:
-            # Async function without context - wrap to ignore context
+            # コンテキストなしの非同期関数 - コンテキストを無視するようにラップする
             async def wrapped_func(message: Any, ctx: WorkflowContext[Any]) -> Any:
-                # Call the async function with just the message
+                # メッセージだけで非同期関数を呼び出す
                 return await func(message)  # type: ignore
 
         else:
-            # Sync function without context - wrap to make async and ignore context using thread pool
+            # コンテキストなしの同期関数 - スレッドプールを使い非同期かつコンテキスト無視でラップする
             async def wrapped_func(message: Any, ctx: WorkflowContext[Any]) -> Any:
-                # Call the sync function with just the message in a thread
+                # メッセージだけで同期関数をスレッド内で呼び出す
                 return await asyncio.to_thread(func, message)  # type: ignore
 
-        # Now register our instance handler
+        # インスタンスハンドラーを登録する
         self._register_instance_handler(
             name=func.__name__,
             func=wrapped_func,
@@ -122,7 +124,7 @@ class FunctionExecutor(Executor):
             workflow_output_types=workflow_output_types,
         )
 
-        # Now we can safely call _discover_handlers (it won't find any class-level handlers)
+        # これで安全に_discover_handlersを呼び出せる（クラスレベルのハンドラーは見つからない）
         self._discover_handlers()
 
         if not self._handlers:
@@ -142,36 +144,35 @@ def executor(*, id: str | None = None) -> Callable[[Callable[..., Any]], Functio
 def executor(
     func: Callable[..., Any] | None = None, *, id: str | None = None
 ) -> Callable[[Callable[..., Any]], FunctionExecutor] | FunctionExecutor:
-    """Decorator that converts a standalone function into a FunctionExecutor instance.
+    """独立した関数をFunctionExecutorインスタンスに変換するデコレーター。
 
-    The @executor decorator is designed for **standalone module-level functions only**.
-    For class-based executors, use the Executor base class with @handler on instance methods.
+    @executorデコレーターは**独立したモジュールレベル関数専用**に設計されている。
+    クラスベースのExecutorにはExecutor基底クラスとインスタンスメソッドへの@handlerを使うこと。
 
-    Supports both synchronous and asynchronous functions. Synchronous functions
-    are executed in a thread pool to avoid blocking the event loop.
+    同期関数と非同期関数の両方をサポート。同期関数はスレッドプールで実行しイベントループのブロックを回避。
 
-    Important:
-        - Use @executor for standalone functions (module-level or local functions)
-        - Do NOT use @executor with @staticmethod or @classmethod
-        - For class-based executors, subclass Executor and use @handler on instance methods
+    重要:
+        - 独立関数（モジュールレベルまたはローカル関数）には@executorを使う
+        - @executorは@staticmethodや@classmethodと一緒に使わない
+        - クラスベースのExecutorにはExecutorを継承しインスタンスメソッドに@handlerを使う
 
     Usage:
 
     .. code-block:: python
 
-        # Standalone async function (RECOMMENDED):
+        # 独立した非同期関数（推奨）:
         @executor(id="upper_case")
         async def to_upper(text: str, ctx: WorkflowContext[str]):
             await ctx.send_message(text.upper())
 
 
-        # Standalone sync function (runs in thread pool):
+        # 独立した同期関数（スレッドプールで実行）:
         @executor
         def process_data(data: str):
             return data.upper()
 
 
-        # For class-based executors, use @handler instead:
+        # クラスベースのExecutorには@handlerを使う:
         class MyExecutor(Executor):
             def __init__(self):
                 super().__init__(id="my_executor")
@@ -181,22 +182,23 @@ def executor(
                 await ctx.send_message(data.upper())
 
     Args:
-        func: The function to decorate (when used without parentheses)
-        id: Optional custom ID for the executor. If None, uses the function name.
+        func: デコレートする関数（括弧なしで使う場合）
+        id: オプションのカスタムID。Noneの場合は関数名を使用。
 
     Returns:
-        A FunctionExecutor instance that can be wired into a Workflow.
+        Workflowに組み込めるFunctionExecutorインスタンス。
 
     Raises:
-        ValueError: If used with @staticmethod or @classmethod (unsupported pattern)
+        ValueError: @staticmethodや@classmethodと一緒に使った場合（サポートされないパターン）
+
     """
 
     def wrapper(func: Callable[..., Any]) -> FunctionExecutor:
         return FunctionExecutor(func, id=id)
 
-    # If func is provided, this means @executor was used without parentheses
+    # funcが指定されている場合、@executorは括弧なしで使われたことを意味する
     if func is not None:
         return wrapper(func)
 
-    # Otherwise, return the wrapper for @executor() or @executor(id="...")
+    # それ以外の場合は@executor()や@executor(id="...")のラッパーを返す
     return wrapper

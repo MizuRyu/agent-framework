@@ -8,18 +8,18 @@ from azure.identity import AzureCliCredential
 
 
 def create_sample_image() -> str:
-    """Create a simple 1x1 pixel PNG image for testing."""
-    # This is a tiny red pixel in PNG format
+    """テスト用のシンプルな1x1ピクセルPNG画像を作成する。"""
+    # これはPNG形式の小さな赤いピクセルです。
     png_data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
     return f"data:image/png;base64,{png_data}"
 
 async def test_image() -> None:
-    """Test image analysis with Azure OpenAI."""
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option. Requires AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_CHAT_DEPLOYMENT_NAME
-    # environment variables to be set.
-    # Alternatively, you can pass deployment_name explicitly:
-    # client = AzureOpenAIChatClient(credential=AzureCliCredential(), deployment_name="your-deployment-name")
+    """Azure OpenAIを使った画像解析のテスト。"""
+    # 認証には、ターミナルで`az
+    # login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。AZURE_OPENAI_ENDPOINTとAZURE_OPENAI_CHAT_DEPLOYMENT_NAMEの環境変数が設定されている必要があります。
+    # または、deployment_nameを明示的に渡すこともできます： client =
+    # AzureOpenAIChatClient(credential=AzureCliCredential(),
+    # deployment_name="your-deployment-name")
     client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     image_uri = create_sample_image()

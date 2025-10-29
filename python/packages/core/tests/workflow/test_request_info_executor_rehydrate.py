@@ -25,7 +25,7 @@ PENDING_STATE_KEY = RequestInfoExecutor._PENDING_SHARED_STATE_KEY  # pyright: ig
 
 
 class _StubRunnerContext:
-    """Minimal runner context stub for exercising WorkflowContext helpers."""
+    """WorkflowContext ヘルパーを動作させるための最小限のランナースタブ。"""
 
     async def send_message(self, message: Message) -> None:  # pragma: no cover - unused in tests
         return None
@@ -96,10 +96,10 @@ class TimedApproval(RequestInfoMessage):
 
 
 async def test_rehydrate_falls_back_when_request_type_missing() -> None:
-    """Rehydration should succeed even if the original request type cannot be imported.
+    """元のリクエストタイプがインポートできなくてもリハイドレーションは成功すべきです。
 
-    This simulates resuming a workflow where the HumanApprovalRequest class is unavailable
-    in the current process (e.g., defined in __main__ during the original run).
+    これは HumanApprovalRequest クラスが現在のプロセスで利用できない場合のワークフロー再開をシミュレートします
+    （例：元の実行時に __main__ で定義されていた場合）。
     """
     request_id = "request-123"
     snapshot = PendingRequestSnapshot(
@@ -230,7 +230,7 @@ def test_snapshot_state_serializes_non_json_payloads() -> None:
 
     state = executor.snapshot_state()
 
-    # Should be JSON serializable despite datetime/slots
+    # datetime/slots を含んでいても JSON シリアライズ可能であるべき。
     serialized = json.dumps(state)
     assert "timed" in serialized
     timed_payload = state["request_events"][timed.request_id]["request_data"]["value"]
@@ -272,7 +272,7 @@ async def test_run_persists_pending_requests_in_runner_state() -> None:
 
     await executor.execute(approval, ctx.source_executor_ids, shared_state, runner_ctx)
 
-    # Runner state should include both pending snapshot and serialized request events
+    # ランナーの状態は保留中のスナップショットとシリアライズされたリクエストイベントの両方を含むべき。
     assert await shared_state.has(EXECUTOR_STATE_KEY)
     executor_state = await shared_state.get(EXECUTOR_STATE_KEY)
     assert executor.id in executor_state

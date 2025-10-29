@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Side-by-side group chat orchestrations for Agent Framework and Semantic Kernel."""
+"""Agent FrameworkとSemantic Kernelのグループチャットオーケストレーションを並べて示します。"""
 
 import asyncio
 import sys
@@ -35,9 +35,7 @@ else:
 DISCUSSION_TOPIC = "What are the essential steps for launching a community hackathon?"
 
 
-######################################################################
-# Semantic Kernel orchestration path
-######################################################################
+#  Semantic Kernelのオーケストレーションパス
 
 
 def build_semantic_kernel_agents() -> list[Agent]:
@@ -66,7 +64,7 @@ def build_semantic_kernel_agents() -> list[Agent]:
 
 
 class ChatCompletionGroupChatManager(GroupChatManager):
-    """Group chat manager that delegates orchestration decisions to an Azure OpenAI deployment."""
+    """Azure OpenAIデプロイメントにオーケストレーションの決定を委譲するグループチャットマネージャ。"""
 
     service: ChatCompletionClientBase
     topic: str
@@ -206,9 +204,7 @@ async def run_semantic_kernel_example(task: str) -> str:
         await runtime.stop_when_idle()
 
 
-######################################################################
-# Agent Framework orchestration path
-######################################################################
+#  Agent Frameworkのオーケストレーションパス
 
 
 async def run_agent_framework_example(task: str) -> str:

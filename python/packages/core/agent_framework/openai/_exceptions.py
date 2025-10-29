@@ -12,7 +12,7 @@ __all__ = ["ContentFilterResultSeverity", "OpenAIContentFilterException"]
 
 
 class ContentFilterResultSeverity(Enum):
-    """The severity of the content filter result."""
+    """コンテンツフィルター結果の重大度。"""
 
     HIGH = "high"
     MEDIUM = "medium"
@@ -22,7 +22,7 @@ class ContentFilterResultSeverity(Enum):
 
 @dataclass
 class ContentFilterResult:
-    """The result of a content filter check."""
+    """コンテンツフィルターのチェック結果。"""
 
     filtered: bool = False
     detected: bool = False
@@ -30,13 +30,14 @@ class ContentFilterResult:
 
     @classmethod
     def from_inner_error_result(cls, inner_error_results: dict[str, Any]) -> "ContentFilterResult":
-        """Creates a ContentFilterResult from the inner error results.
+        """内部のエラー結果からContentFilterResultを作成します。
 
-        Args:
-            inner_error_results: The inner error results.
+        引数:
+            inner_error_results: 内部のエラー結果。
 
-        Returns:
-            ContentFilterResult: The ContentFilterResult.
+        戻り値:
+            ContentFilterResult: ContentFilterResultオブジェクト。
+
         """
         return cls(
             filtered=inner_error_results.get("filtered", False),
@@ -48,22 +49,22 @@ class ContentFilterResult:
 
 
 class ContentFilterCodes(Enum):
-    """Content filter codes."""
+    """コンテンツフィルターコード。"""
 
     RESPONSIBLE_AI_POLICY_VIOLATION = "ResponsibleAIPolicyViolation"
 
 
 @dataclass
 class OpenAIContentFilterException(ServiceContentFilterException):
-    """AI exception for an error from Azure OpenAI's content filter."""
+    """Azure OpenAIのコンテンツフィルターからのエラーに対するAI例外。"""
 
-    # The parameter that caused the error.
+    # エラーを引き起こしたパラメータ。
     param: str | None
 
-    # The error code specific to the content filter.
+    # コンテンツフィルター固有のエラーコード。
     content_filter_code: ContentFilterCodes
 
-    # The results of the different content filter checks.
+    # 異なるコンテンツフィルターチェックの結果。
     content_filter_result: dict[str, ContentFilterResult]
 
     def __init__(
@@ -71,11 +72,12 @@ class OpenAIContentFilterException(ServiceContentFilterException):
         message: str,
         inner_exception: BadRequestError,
     ) -> None:
-        """Initializes a new instance of the ContentFilterAIException class.
+        """ContentFilterAIExceptionクラスの新しいインスタンスを初期化します。
 
-        Args:
-            message: The error message.
-            inner_exception: The inner exception.
+        引数:
+            message: エラーメッセージ。
+            inner_exception: 内部例外。
+
         """
         super().__init__(message)
 

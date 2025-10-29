@@ -60,7 +60,7 @@ logger = get_logger("agent_framework.openai")
 
 # region Base Client
 class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
-    """OpenAI Chat completion class."""
+    """OpenAI Chat completionクラス。"""
 
     async def _inner_get_response(
         self,
@@ -140,7 +140,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
     ) -> dict[str, Any] | None:
         for tool in tools:
             if isinstance(tool, HostedWebSearchTool):
-                # Web search tool requires special handling
+                # Web検索ツールは特別な処理が必要です。
                 return (
                     {
                         "user_location": {
@@ -155,7 +155,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
         return None
 
     def _prepare_options(self, messages: MutableSequence[ChatMessage], chat_options: ChatOptions) -> dict[str, Any]:
-        # Preprocess web search tool if it exists
+        # Web検索ツールが存在する場合の前処理。
         options_dict = chat_options.to_dict(
             exclude={
                 "type",
@@ -194,7 +194,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
         return options_dict
 
     def _create_chat_response(self, response: ChatCompletion, chat_options: ChatOptions) -> "ChatResponse":
-        """Create a chat message content object from a choice."""
+        """choiceからチャットメッセージコンテンツオブジェクトを作成します。"""
         response_metadata = self._get_metadata_from_chat_response(response)
         messages: list[ChatMessage] = []
         finish_reason: FinishReason | None = None
@@ -223,7 +223,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
         self,
         chunk: ChatCompletionChunk,
     ) -> ChatResponseUpdate:
-        """Create a streaming chat message content object from a choice."""
+        """choiceからストリーミングチャットメッセージコンテンツオブジェクトを作成します。"""
         chunk_metadata = self._get_metadata_from_streaming_chat_response(chunk)
         if chunk.usage:
             return ChatResponseUpdate(
@@ -279,7 +279,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
         return details
 
     def _parse_text_from_choice(self, choice: Choice | ChunkChoice) -> TextContent | None:
-        """Parse the choice into a TextContent object."""
+        """choiceをTextContentオブジェクトに解析します。"""
         message = choice.message if isinstance(choice, Choice) else choice.delta
         if message.content:
             return TextContent(text=message.content, raw_representation=choice)
@@ -288,31 +288,31 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
         return None
 
     def _get_metadata_from_chat_response(self, response: ChatCompletion) -> dict[str, Any]:
-        """Get metadata from a chat response."""
+        """チャットレスポンスからメタデータを取得します。"""
         return {
             "system_fingerprint": response.system_fingerprint,
         }
 
     def _get_metadata_from_streaming_chat_response(self, response: ChatCompletionChunk) -> dict[str, Any]:
-        """Get metadata from a streaming chat response."""
+        """ストリーミングチャットレスポンスからメタデータを取得します。"""
         return {
             "system_fingerprint": response.system_fingerprint,
         }
 
     def _get_metadata_from_chat_choice(self, choice: Choice | ChunkChoice) -> dict[str, Any]:
-        """Get metadata from a chat choice."""
+        """チャットchoiceからメタデータを取得します。"""
         return {
             "logprobs": getattr(choice, "logprobs", None),
         }
 
     def _get_tool_calls_from_chat_choice(self, choice: Choice | ChunkChoice) -> list[Contents]:
-        """Get tool calls from a chat choice."""
+        """チャットchoiceからツール呼び出しを取得します。"""
         resp: list[Contents] = []
         content = choice.message if isinstance(choice, Choice) else choice.delta
         if content and content.tool_calls:
             for tool in content.tool_calls:
                 if not isinstance(tool, ChatCompletionMessageCustomToolCall) and tool.function:
-                    # ignoring tool.custom
+                    # tool.customを無視します。
                     fcc = FunctionCallContent(
                         call_id=tool.id if tool.id else "",
                         name=tool.function.name if tool.function.name else "",
@@ -321,7 +321,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
                     )
                     resp.append(fcc)
 
-        # When you enable asynchronous content filtering in Azure OpenAI, you may receive empty deltas
+        # Azure OpenAIで非同期コンテンツフィルタリングを有効にすると、空のデルタが返されることがあります。
         return resp
 
     def _prepare_chat_history_for_request(
@@ -330,35 +330,36 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
         role_key: str = "role",
         content_key: str = "content",
     ) -> list[dict[str, Any]]:
-        """Prepare the chat history for a request.
+        """リクエストのためにチャット履歴を準備します。
 
-        Allowing customization of the key names for role/author, and optionally overriding the role.
+        role/authorのキー名のカスタマイズと、オプションでroleの上書きを許可します。
 
-        Role.TOOL messages need to be formatted different than system/user/assistant messages:
-            They require a "tool_call_id" and (function) "name" key, and the "metadata" key should
-            be removed. The "encoding" key should also be removed.
+        Role.TOOLメッセージはsystem/user/assistantメッセージとは異なるフォーマットが必要です：
+            "tool_call_id"と（functionの）"name"キーが必要で、"metadata"キーは削除されるべきです。
+            "encoding"キーも削除されるべきです。
 
-        Override this method to customize the formatting of the chat history for a request.
+        このメソッドをオーバーライドして、リクエスト用チャット履歴のフォーマットをカスタマイズできます。
 
         Args:
-            chat_messages: The chat history to prepare.
-            role_key: The key name for the role/author.
-            content_key: The key name for the content/message.
+            chat_messages: 準備するチャット履歴。
+            role_key: role/authorのキー名。
+            content_key: content/messageのキー名。
 
         Returns:
-            prepared_chat_history (Any): The prepared chat history for a request.
+            prepared_chat_history (Any): リクエスト用に準備されたチャット履歴。
+
         """
         list_of_list = [self._openai_chat_message_parser(message) for message in chat_messages]
-        # Flatten the list of lists into a single list
+        # リストのリストを単一のリストに平坦化します。
         return list(chain.from_iterable(list_of_list))
 
     # region Parsers
 
     def _openai_chat_message_parser(self, message: ChatMessage) -> list[dict[str, Any]]:
-        """Parse a chat message into the openai format."""
+        """チャットメッセージをopenaiフォーマットに解析します。"""
         all_messages: list[dict[str, Any]] = []
         for content in message.contents:
-            # Skip approval content - it's internal framework state, not for the LLM
+            # 承認コンテンツをスキップします - これは内部フレームワークのStateであり、LLM用ではありません。
             if isinstance(content, (FunctionApprovalRequestContent, FunctionApprovalResponseContent)):
                 continue
 
@@ -370,7 +371,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
             match content:
                 case FunctionCallContent():
                     if all_messages and "tool_calls" in all_messages[-1]:
-                        # If the last message already has tool calls, append to it
+                        # 最後のメッセージにすでにツール呼び出しがある場合は、それに追加します。
                         all_messages[-1]["tool_calls"].append(self._openai_content_parser(content))
                     else:
                         args["tool_calls"] = [self._openai_content_parser(content)]  # type: ignore
@@ -379,21 +380,20 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
                     if content.result is not None:
                         args["content"] = prepare_function_call_results(content.result)
                     elif content.exception is not None:
-                        # Send the exception message to the model
-                        # Otherwise we won't have any channels to talk to OpenAI
-                        # TODO(yuge): This should ideally be customizable
+                        # 例外メッセージをモデルに送信します。 そうしないとOpenAIと通信するチャネルがありません。 TODO(yuge):
+                        # これは理想的にはカスタマイズ可能であるべきです。
                         args["content"] = "Error: " + str(content.exception)
                 case _:
                     if "content" not in args:
                         args["content"] = []
-                    # this is a list to allow multi-modal content
+                    # これはマルチモーダルコンテンツを許可するためのリストです。
                     args["content"].append(self._openai_content_parser(content))  # type: ignore
             if "content" in args or "tool_calls" in args:
                 all_messages.append(args)
         return all_messages
 
     def _openai_content_parser(self, content: Contents) -> dict[str, Any]:
-        """Parse contents into the openai format."""
+        """内容をopenaiフォーマットに解析します。"""
         match content:
             case FunctionCallContent():
                 args = json.dumps(content.arguments) if isinstance(content.arguments, Mapping) else content.arguments
@@ -418,13 +418,13 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
                 elif content.media_type and "mp3" in content.media_type:
                     audio_format = "mp3"
                 else:
-                    # Fallback to default to_dict for unsupported audio formats
+                    # サポートされていないオーディオフォーマットの場合はデフォルトのto_dictにフォールバックします。
                     return content.to_dict(exclude_none=True)
 
-                # Extract base64 data from data URI
+                # データURIからbase64データを抽出します。
                 audio_data = content.uri
                 if audio_data.startswith("data:"):
-                    # Extract just the base64 part after "data:audio/format;base64,"
+                    # "data:audio/format;base64,"の後のbase64部分のみを抽出します。
                     audio_data = audio_data.split(",", 1)[-1]
 
                 return {
@@ -437,7 +437,7 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
             case DataContent() | UriContent() if content.has_top_level_media_type(
                 "application"
             ) and content.uri.startswith("data:"):
-                # All application/* media types should be treated as files for OpenAI
+                # すべてのapplication/*メディアタイプはOpenAI用にファイルとして扱うべきです。
                 filename = getattr(content, "filename", None) or (
                     content.additional_properties.get("filename")
                     if hasattr(content, "additional_properties") and content.additional_properties
@@ -451,15 +451,16 @@ class OpenAIBaseChatClient(OpenAIBase, BaseChatClient):
                     "file": file_obj,
                 }
             case _:
-                # Default fallback for all other content types
+                # その他すべてのコンテンツタイプのデフォルトフォールバックです。
                 return content.to_dict(exclude_none=True)
 
     @override
     def service_url(self) -> str:
-        """Get the URL of the service.
+        """サービスのURLを取得します。
 
-        Override this in the subclass to return the proper URL.
-        If the service does not have a URL, return None.
+        サブクラスでオーバーライドして適切なURLを返してください。
+        サービスにURLがない場合はNoneを返してください。
+
         """
         return str(self.client.base_url) if self.client else "Unknown"
 
@@ -473,7 +474,7 @@ TOpenAIChatClient = TypeVar("TOpenAIChatClient", bound="OpenAIChatClient")
 @use_observability
 @use_chat_middleware
 class OpenAIChatClient(OpenAIConfigMixin, OpenAIBaseChatClient):
-    """OpenAI Chat completion class."""
+    """OpenAI Chat completionクラスです。"""
 
     def __init__(
         self,
@@ -488,42 +489,40 @@ class OpenAIChatClient(OpenAIConfigMixin, OpenAIBaseChatClient):
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
     ) -> None:
-        """Initialize an OpenAI Chat completion client.
+        """OpenAI Chat completionクライアントを初期化します。
 
-        Keyword Args:
-            model_id: OpenAI model name, see https://platform.openai.com/docs/models.
-                Can also be set via environment variable OPENAI_CHAT_MODEL_ID.
-            api_key: The API key to use. If provided will override the env vars or .env file value.
-                Can also be set via environment variable OPENAI_API_KEY.
-            org_id: The org ID to use. If provided will override the env vars or .env file value.
-                Can also be set via environment variable OPENAI_ORG_ID.
-            default_headers: The default headers mapping of string keys to
-                string values for HTTP requests.
-            async_client: An existing client to use.
-            instruction_role: The role to use for 'instruction' messages, for example,
-                "system" or "developer". If not provided, the default is "system".
-            base_url: The base URL to use. If provided will override
-                the standard value for an OpenAI connector, the env vars or .env file value.
-                Can also be set via environment variable OPENAI_BASE_URL.
-            env_file_path: Use the environment settings file as a fallback
-                to environment variables.
-            env_file_encoding: The encoding of the environment settings file.
+        キーワード引数:
+            model_id: OpenAIモデル名。詳細はhttps://platform.openai.com/docs/modelsを参照してください。
+                環境変数OPENAI_CHAT_MODEL_IDでも設定可能です。
+            api_key: 使用するAPIキー。指定すると環境変数や.envファイルの値を上書きします。
+                環境変数OPENAI_API_KEYでも設定可能です。
+            org_id: 使用する組織ID。指定すると環境変数や.envファイルの値を上書きします。
+                環境変数OPENAI_ORG_IDでも設定可能です。
+            default_headers: HTTPリクエストのための文字列キーと文字列値のマッピングであるデフォルトヘッダー。
+            async_client: 既存のクライアントを使用します。
+            instruction_role: 'instruction'メッセージに使用する役割。例として"system"や"developer"。
+                指定しない場合のデフォルトは"system"です。
+            base_url: 使用するベースURL。指定するとOpenAIコネクタの標準値や環境変数、.envファイルの値を上書きします。
+                環境変数OPENAI_BASE_URLでも設定可能です。
+            env_file_path: 環境変数のフォールバックとして環境設定ファイルを使用します。
+            env_file_encoding: 環境設定ファイルのエンコーディング。
 
         Examples:
             .. code-block:: python
 
                 from agent_framework.openai import OpenAIChatClient
 
-                # Using environment variables
-                # Set OPENAI_API_KEY=sk-...
-                # Set OPENAI_CHAT_MODEL_ID=gpt-4
+                # 環境変数を使用する場合
+                # OPENAI_API_KEY=sk-... を設定
+                # OPENAI_CHAT_MODEL_ID=gpt-4 を設定
                 client = OpenAIChatClient()
 
-                # Or passing parameters directly
+                # またはパラメータを直接渡す場合
                 client = OpenAIChatClient(model_id="gpt-4", api_key="sk-...")
 
-                # Or loading from a .env file
+                # または.envファイルから読み込む場合
                 client = OpenAIChatClient(env_file_path="path/to/.env")
+
         """
         try:
             openai_settings = OpenAISettings(

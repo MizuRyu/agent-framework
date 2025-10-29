@@ -14,9 +14,9 @@ from agent_framework import (  # Core chat primitives used to build requests
     WorkflowContext,  # Per-run context and event bus
     executor,  # Decorator to declare a Python function as a workflow executor
 )
-from agent_framework.azure import AzureOpenAIChatClient  # Thin client wrapper for Azure OpenAI chat models
-from azure.identity import AzureCliCredential  # Uses your az CLI login for credentials
-from pydantic import BaseModel  # Structured outputs for safer parsing
+from agent_framework.azure import AzureOpenAIChatClient  # Azure OpenAI chatモデルの薄いクライアントラッパー
+from azure.identity import AzureCliCredential  # az CLIログインを資格情報として使用します
+from pydantic import BaseModel  # 安全な解析のための構造化された出力
 from typing_extensions import Never
 
 """
@@ -55,42 +55,40 @@ Notes:
 
 
 class DetectionResult(BaseModel):
-    """Represents the result of spam detection."""
+    """スパム検出の結果を表します。"""
 
-    # is_spam drives the routing decision taken by edge conditions
+    # is_spamはエッジ条件によるルーティング決定を駆動します
     is_spam: bool
-    # Human readable rationale from the detector
+    # 検出器からの人間が読める根拠
     reason: str
-    # The agent must include the original email so downstream agents can operate without reloading content
+    # エージェントは元のメールを含める必要があり、下流のエージェントはコンテンツを再読み込みせずに動作できます
     email_content: str
 
 
 class EmailResponse(BaseModel):
-    """Represents the response from the email assistant."""
+    """メールアシスタントからのレスポンスを表します。"""
 
-    # The drafted reply that a user could copy or send
+    # ユーザーがコピーまたは送信できるドラフト返信
     response: str
 
 
 def get_condition(expected_result: bool):
-    """Create a condition callable that routes based on DetectionResult.is_spam."""
+    """DetectionResult.is_spamに基づいてルーティングする条件呼び出し可能を作成します。"""
 
-    # The returned function will be used as an edge predicate.
-    # It receives whatever the upstream executor produced.
+    # 返される関数はエッジ述語として使用されます。 上流のexecutorが生成したものを受け取ります。
     def condition(message: Any) -> bool:
-        # Defensive guard. If a non AgentExecutorResponse appears, let the edge pass to avoid dead ends.
+        # 防御的ガード。AgentExecutorResponseでないものが現れた場合、デッドエンドを避けるためにエッジを通過させます。
         if not isinstance(message, AgentExecutorResponse):
             return True
 
         try:
-            # Prefer parsing a structured DetectionResult from the agent JSON text.
-            # Using model_validate_json ensures type safety and raises if the shape is wrong.
+            # エージェントのJSONテキストから構造化されたDetectionResultを解析することを優先します。
+            # model_validate_jsonを使うことで型安全が保証され、形状が間違っている場合は例外が発生します。
             detection = DetectionResult.model_validate_json(message.agent_run_response.text)
-            # Route only when the spam flag matches the expected path.
+            # スパムフラグが期待されるパスと一致する場合のみルーティングします。
             return detection.is_spam == expected_result
         except Exception:
-            # Fail closed on parse errors so we do not accidentally route to the wrong path.
-            # Returning False prevents this edge from activating.
+            # 解析エラー時は閉じる方向で失敗し、誤って間違ったパスにルーティングしないようにします。 Falseを返すことでこのエッジの活性化を防ぎます。
             return False
 
     return condition
@@ -98,19 +96,19 @@ def get_condition(expected_result: bool):
 
 @executor(id="send_email")
 async def handle_email_response(response: AgentExecutorResponse, ctx: WorkflowContext[Never, str]) -> None:
-    # Downstream of the email assistant. Parse a validated EmailResponse and yield the workflow output.
+    # メールアシスタントの下流。検証済みのEmailResponseを解析し、ワークフロー出力を生成します。
     email_response = EmailResponse.model_validate_json(response.agent_run_response.text)
     await ctx.yield_output(f"Email sent:\n{email_response.response}")
 
 
 @executor(id="handle_spam")
 async def handle_spam_classifier_response(response: AgentExecutorResponse, ctx: WorkflowContext[Never, str]) -> None:
-    # Spam path. Confirm the DetectionResult and yield the workflow output. Guard against accidental non spam input.
+    # スパムパス。DetectionResultを確認し、ワークフロー出力を生成します。誤って非スパム入力が来た場合に備えたガード。
     detection = DetectionResult.model_validate_json(response.agent_run_response.text)
     if detection.is_spam:
         await ctx.yield_output(f"Email marked as spam: {detection.reason}")
     else:
-        # This indicates the routing predicate and executor contract are out of sync.
+        # これはルーティング述語とexecutor契約が同期していないことを示します。
         raise RuntimeError("This executor should only handle spam messages.")
 
 
@@ -118,23 +116,23 @@ async def handle_spam_classifier_response(response: AgentExecutorResponse, ctx: 
 async def to_email_assistant_request(
     response: AgentExecutorResponse, ctx: WorkflowContext[AgentExecutorRequest]
 ) -> None:
-    """Transform detection result into an AgentExecutorRequest for the email assistant.
+    """検出結果をメールアシスタント用のAgentExecutorRequestに変換します。
 
-    Extracts DetectionResult.email_content and forwards it as a user message.
+    DetectionResult.email_contentを抽出し、ユーザーメッセージとして転送します。
+
     """
-    # Bridge executor. Converts a structured DetectionResult into a ChatMessage and forwards it as a new request.
+    # ブリッジexecutor。構造化されたDetectionResultをChatMessageに変換し、新しいリクエストとして転送します。
     detection = DetectionResult.model_validate_json(response.agent_run_response.text)
     user_msg = ChatMessage(Role.USER, text=detection.email_content)
     await ctx.send_message(AgentExecutorRequest(messages=[user_msg], should_respond=True))
 
 
 async def main() -> None:
-    # Create agents
-    # AzureCliCredential uses your current az login. This avoids embedding secrets in code.
+    # エージェントを作成します AzureCliCredentialは現在のazログインを使用します。これによりコードにSecretを埋め込む必要がなくなります。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
-    # Agent 1. Classifies spam and returns a DetectionResult object.
-    # response_format enforces that the LLM returns parsable JSON for the Pydantic model.
+    # エージェント1。スパムを分類し、DetectionResultオブジェクトを返します。
+    # response_formatはLLMがPydanticモデル用の解析可能なJSONを返すことを強制します。
     spam_detection_agent = AgentExecutor(
         chat_client.create_agent(
             instructions=(
@@ -147,7 +145,7 @@ async def main() -> None:
         id="spam_detection_agent",
     )
 
-    # Agent 2. Drafts a professional reply. Also uses structured JSON output for reliability.
+    # エージェント2。プロフェッショナルな返信をドラフトします。信頼性のために構造化JSON出力も使用します。
     email_assistant_agent = AgentExecutor(
         chat_client.create_agent(
             instructions=(
@@ -160,32 +158,29 @@ async def main() -> None:
         id="email_assistant_agent",
     )
 
-    # Build the workflow graph.
-    # Start at the spam detector.
-    # If not spam, hop to a transformer that creates a new AgentExecutorRequest,
-    # then call the email assistant, then finalize.
-    # If spam, go directly to the spam handler and finalize.
+    # ワークフローグラフを構築します。 スパム検出器から開始します。
+    # スパムでなければ、新しいAgentExecutorRequestを作成するトランスフォーマーに移動し、 その後メールアシスタントを呼び出し、最後に完了します。
+    # スパムの場合は直接スパムハンドラーに行き、完了します。
     workflow = (
         WorkflowBuilder()
         .set_start_executor(spam_detection_agent)
-        # Not spam path: transform response -> request for assistant -> assistant -> send email
+        # 非スパムパス：レスポンスを変換 -> アシスタントへのリクエスト -> アシスタント -> メール送信
         .add_edge(spam_detection_agent, to_email_assistant_request, condition=get_condition(False))
         .add_edge(to_email_assistant_request, email_assistant_agent)
         .add_edge(email_assistant_agent, handle_email_response)
-        # Spam path: send to spam handler
+        # スパムパス：スパムハンドラーに送信
         .add_edge(spam_detection_agent, handle_spam_classifier_response, condition=get_condition(True))
         .build()
     )
 
-    # Read Email content from the sample resource file.
-    # This keeps the sample deterministic since the model sees the same email every run.
+    # サンプルリソースファイルからメールコンテンツを読み込みます。 これにより、モデルが毎回同じメールを見るためサンプルが決定論的になります。
     email_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "resources", "email.txt")
 
     with open(email_path) as email_file:  # noqa: ASYNC230
         email = email_file.read()
 
-    # Execute the workflow. Since the start is an AgentExecutor, pass an AgentExecutorRequest.
-    # The workflow completes when it becomes idle (no more work to do).
+    # ワークフローを実行します。開始がAgentExecutorなのでAgentExecutorRequestを渡します。
+    # ワークフローはアイドル状態（作業なし）になると完了します。
     request = AgentExecutorRequest(messages=[ChatMessage(Role.USER, text=email)], should_respond=True)
     events = await workflow.run(request)
     outputs = events.get_outputs()

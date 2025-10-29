@@ -31,36 +31,37 @@ uv run --env-file=.env opentelemetry-instrument python advanced_zero_code.py
 async def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
-    await asyncio.sleep(randint(0, 10) / 10.0)  # Simulate a network call
+    """指定された場所の天気を取得します。"""
+    await asyncio.sleep(randint(0, 10) / 10.0)  # ネットワークコールをシミュレートする
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
 
 async def run_chat_client(client: "ChatClientProtocol", stream: bool = False) -> None:
-    """Run an AI service.
+    """AIサービスを実行します。
 
-    This function runs an AI service and prints the output.
-    Telemetry will be collected for the service execution behind the scenes,
-    and the traces will be sent to the configured telemetry backend.
+    この関数はAIサービスを実行し、出力を表示します。
+    サービス実行のテレメトリは裏で収集され、
+    トレースは設定されたテレメトリバックエンドに送信されます。
 
-    The telemetry will include information about the AI service execution.
+    テレメトリにはAIサービス実行に関する情報が含まれます。
 
     Args:
-        stream: Whether to use streaming for the plugin
+        stream: プラグインでストリーミングを使用するかどうか
 
     Remarks:
-        When function calling is outside the open telemetry loop
-        each of the call to the model is handled as a seperate span,
-        while when the open telemetry is put last, a single span
-        is shown, which might include one or more rounds of function calling.
+        関数呼び出しがOpenTelemetryループの外にある場合、
+        モデルへの各呼び出しは別々のスパンとして処理されます。
+        一方、OpenTelemetryが最後に配置される場合、
+        1つのスパンが表示され、1回以上の関数呼び出しラウンドを含むことがあります。
 
-        So for the scenario below, you should see the following:
+        以下のシナリオでは、次のように表示されるはずです：
 
-        2 spans with gen_ai.operation.name=chat
-            The first has finish_reason "tool_calls"
-            The second has finish_reason "stop"
-        2 spans with gen_ai.operation.name=execute_tool
+        gen_ai.operation.name=chat の2つのスパン
+            1つ目は finish_reason が "tool_calls"
+            2つ目は finish_reason が "stop"
+        gen_ai.operation.name=execute_tool の2つのスパン
+
 
     """
     message = "What's the weather in Amsterdam and in Paris?"

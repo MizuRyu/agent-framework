@@ -6,23 +6,23 @@ from pytest import fixture
 from agent_framework import ChatMessage
 
 
-# region: Connector Settings fixtures
+# region: コネクタ設定のフィクスチャです。
 @fixture
 def exclude_list(request: Any) -> list[str]:
-    """Fixture that returns a list of environment variables to exclude."""
+    """除外する環境変数のリストを返すフィクスチャです。"""
     return request.param if hasattr(request, "param") else []
 
 
 @fixture
 def override_env_param_dict(request: Any) -> dict[str, str]:
-    """Fixture that returns a dict of environment variables to override."""
+    """上書きする環境変数の辞書を返すフィクスチャです。"""
     return request.param if hasattr(request, "param") else {}
 
 
-# These two fixtures are used for multiple things, also non-connector tests
+# これら2つのフィクスチャは複数の用途に使われ、コネクタ以外のテストにも使用されます。
 @fixture()
 def azure_openai_unit_test_env(monkeypatch, exclude_list, override_env_param_dict):  # type: ignore
-    """Fixture to set environment variables for AzureOpenAISettings."""
+    """AzureOpenAISettings用の環境変数を設定するフィクスチャです。"""
 
     if exclude_list is None:
         exclude_list = []

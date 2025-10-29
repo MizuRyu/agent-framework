@@ -1,16 +1,15 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Redis Context Provider: Basic usage and agent integration
+"""Redis Context Provider: 基本的な使い方とAgent統合
 
-This example demonstrates how to use the Redis ChatMessageStoreProtocol to persist
-conversational details. Pass it as a constructor argument to create_agent.
+この例では、Redis ChatMessageStoreProtocolを使用して会話の詳細を永続化する方法を示します。create_agentのコンストラクタ引数として渡します。
 
-Requirements:
-  - A Redis instance with RediSearch enabled (e.g., Redis Stack)
-  - agent-framework with the Redis extra installed: pip install "agent-framework-redis"
-  - Optionally an OpenAI API key if enabling embeddings for hybrid search
+要件：
+  - RediSearchが有効なRedisインスタンス（例：Redis Stack）
+  - Redisエクストラがインストールされたagent-framework：pip install "agent-framework-redis"
+  - ハイブリッド検索のために埋め込みを有効にする場合はOpenAI APIキー（任意）
 
-Run:
+実行方法：
   python redis_conversation.py
 """
 
@@ -25,11 +24,12 @@ from redisvl.utils.vectorize import OpenAITextVectorizer
 
 
 async def main() -> None:
-    """Walk through provider and chat message store usage.
+    """providerとチャットメッセージストアの使用例を説明します。
 
-    Helpful debugging (uncomment when iterating):
+    デバッグに便利（繰り返し時にコメント解除してください）：
       - print(await provider.redis_index.info())
       - print(await provider.search_all())
+
     """
     vectorizer = OpenAITextVectorizer(
         model="text-embedding-ada-002",
@@ -59,10 +59,10 @@ async def main() -> None:
         max_messages=100,
     )
 
-    # Create chat client for the agent
+    # Agent用のチャットクライアントを作成します
     client = OpenAIChatClient(model_id=os.getenv("OPENAI_CHAT_MODEL_ID"), api_key=os.getenv("OPENAI_API_KEY"))
-    # Create agent wired to the Redis context provider. The provider automatically
-    # persists conversational details and surfaces relevant context on each turn.
+    # Redis context
+    # providerに接続されたAgentを作成します。providerは会話の詳細を自動的に永続化し、各ターンで関連コンテキストを提供します。
     agent = client.create_agent(
         name="MemoryEnhancedAssistant",
         instructions=(
@@ -74,13 +74,13 @@ async def main() -> None:
         chat_message_store_factory=chat_message_store_factory,
     )
 
-    # Teach a user preference; the agent writes this to the provider's memory
+    # ユーザーの好みを教えます。Agentはこれをproviderのメモリに書き込みます。
     query = "Remember that I enjoy gumbo"
     result = await agent.run(query)
     print("User: ", query)
     print("Agent: ", result)
 
-    # Ask the agent to recall the stored preference; it should retrieve from memory
+    # Agentに保存された好みを思い出させます。メモリから取得できるはずです。
     query = "What do I enjoy?"
     result = await agent.run(query)
     print("User: ", query)
@@ -105,7 +105,7 @@ async def main() -> None:
     result = await agent.run(query)
     print("User: ", query)
     print("Agent: ", result)
-    # Drop / delete the provider index in Redis
+    # Redisのproviderインデックスを削除します
     await provider.redis_index.delete()
 
 

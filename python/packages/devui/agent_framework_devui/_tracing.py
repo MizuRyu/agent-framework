@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Simplified tracing integration for Agent Framework Server."""
+"""Agent Framework Serverのための簡易トレース統合。"""
 
 import logging
 from collections.abc import Generator, Sequence
@@ -16,27 +16,29 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleTraceCollector(SpanExporter):
-    """Simple trace collector that captures spans for direct yielding."""
+    """直接yieldするためのスパンをキャプチャするシンプルトレースコレクター。"""
 
     def __init__(self, session_id: str | None = None, entity_id: str | None = None) -> None:
-        """Initialize trace collector.
+        """トレースコレクターを初期化する。
 
         Args:
-            session_id: Session identifier for context
-            entity_id: Entity identifier for context
+            session_id: コンテキスト用のセッション識別子
+            entity_id: コンテキスト用のエンティティ識別子
+
         """
         self.session_id = session_id
         self.entity_id = entity_id
         self.collected_events: list[ResponseTraceEvent] = []
 
     def export(self, spans: Sequence[Any]) -> SpanExportResult:
-        """Collect spans as trace events.
+        """スパンをトレースイベントとして収集する。
 
         Args:
-            spans: Sequence of OpenTelemetry spans
+            spans: OpenTelemetryのスパンのシーケンス
 
         Returns:
-            SpanExportResult indicating success
+            成功を示すSpanExportResult
+
         """
         logger.debug(f"SimpleTraceCollector received {len(spans)} spans")
 
@@ -54,34 +56,36 @@ class SimpleTraceCollector(SpanExporter):
             return SpanExportResult.FAILURE
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """Force flush spans (no-op for simple collection)."""
+        """スパンを強制フラッシュする（シンプルコレクションではno-op）。"""
         return True
 
     def get_pending_events(self) -> list[ResponseTraceEvent]:
-        """Get and clear pending trace events.
+        """保留中のトレースイベントを取得してクリアする。
 
         Returns:
-            List of collected trace events, clearing the internal list
+            収集されたトレースイベントのリスト（内部リストをクリア）
+
         """
         events = self.collected_events.copy()
         self.collected_events.clear()
         return events
 
     def _convert_span_to_trace_event(self, span: Any) -> ResponseTraceEvent | None:
-        """Convert OpenTelemetry span to ResponseTraceEvent.
+        """OpenTelemetryのスパンをResponseTraceEventに変換する。
 
         Args:
-            span: OpenTelemetry span
+            span: OpenTelemetryのスパン
 
         Returns:
-            ResponseTraceEvent or None if conversion fails
+            変換に成功すればResponseTraceEvent、失敗すればNone
+
         """
         try:
-            start_time = span.start_time / 1_000_000_000  # Convert from nanoseconds
+            start_time = span.start_time / 1_000_000_000  # ナノ秒から変換する
             end_time = span.end_time / 1_000_000_000 if span.end_time else None
             duration_ms = ((end_time - start_time) * 1000) if end_time else None
 
-            # Build trace data
+            # トレースデータを構築する
             trace_data = {
                 "type": "trace_span",
                 "span_id": str(span.context.span_id),
@@ -97,7 +101,7 @@ class SimpleTraceCollector(SpanExporter):
                 "entity_id": self.entity_id,
             }
 
-            # Add events if available
+            # 利用可能な場合にイベントを追加する
             if hasattr(span, "events") and span.events:
                 trace_data["events"] = [
                     {
@@ -108,7 +112,7 @@ class SimpleTraceCollector(SpanExporter):
                     for event in span.events
                 ]
 
-            # Add error information if span failed
+            # スパンが失敗した場合にエラー情報を追加する
             if hasattr(span, "status") and span.status.status_code.name == "ERROR":
                 trace_data["error"] = span.status.description or "Unknown error"
 
@@ -123,14 +127,15 @@ class SimpleTraceCollector(SpanExporter):
 def capture_traces(
     session_id: str | None = None, entity_id: str | None = None
 ) -> Generator[SimpleTraceCollector, None, None]:
-    """Context manager to capture traces during execution.
+    """実行中にトレースをキャプチャするためのコンテキストマネージャ。
 
     Args:
-        session_id: Session identifier for context
-        entity_id: Entity identifier for context
+        session_id: コンテキスト用のセッション識別子
+        entity_id: コンテキスト用のエンティティ識別子
 
     Yields:
-        SimpleTraceCollector instance to get trace events from
+        トレースイベントを取得するためのSimpleTraceCollectorインスタンス
+
     """
     collector = SimpleTraceCollector(session_id, entity_id)
 
@@ -139,11 +144,11 @@ def capture_traces(
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
-        # Get current tracer provider and add our collector
+        # 現在のtracer providerを取得し、当該コレクターを追加する
         provider = trace.get_tracer_provider()
         processor = SimpleSpanProcessor(collector)
 
-        # Check if this is a real TracerProvider (not the default NoOpTracerProvider)
+        # これは実際のTracerProviderかどうかをチェックします（デフォルトのNoOpTracerProviderではありません）
         if isinstance(provider, TracerProvider):
             provider.add_span_processor(processor)
             logger.debug(f"Added trace collector to TracerProvider for session: {session_id}, entity: {entity_id}")
@@ -151,7 +156,7 @@ def capture_traces(
             try:
                 yield collector
             finally:
-                # Clean up - shutdown processor
+                # クリーンアップ - プロセッサのシャットダウン
                 try:
                     processor.shutdown()
                 except Exception as e:

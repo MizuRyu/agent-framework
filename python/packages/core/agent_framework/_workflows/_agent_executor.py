@@ -20,12 +20,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AgentExecutorRequest:
-    """A request to an agent executor.
+    """AgentExecutorへのリクエスト。
 
     Attributes:
-        messages: A list of chat messages to be processed by the agent.
-        should_respond: A flag indicating whether the agent should respond to the messages.
-            If False, the messages will be saved to the executor's cache but not sent to the agent.
+        messages: Agentが処理するチャットメッセージのリスト。
+        should_respond: Agentがメッセージに応答すべきかを示すフラグ。
+            Falseの場合、メッセージはExecutorのキャッシュに保存されるがAgentには送信されない。
+
     """
 
     messages: list[ChatMessage]
@@ -34,14 +35,14 @@ class AgentExecutorRequest:
 
 @dataclass
 class AgentExecutorResponse:
-    """A response from an agent executor.
+    """AgentExecutorからのレスポンス。
 
     Attributes:
-        executor_id: The ID of the executor that generated the response.
-        agent_run_response: The underlying agent run response (unaltered from client).
-        full_conversation: The full conversation context (prior inputs + all assistant/tool outputs) that
-            should be used when chaining to another AgentExecutor. This prevents downstream agents losing
-            user prompts while keeping the emitted AgentRunEvent text faithful to the raw agent output.
+        executor_id: レスポンスを生成したExecutorのID。
+        agent_run_response: 基本となるAgentRunResponse（クライアントから変更なし）。
+        full_conversation: 別のAgentExecutorにチェーンする際に使用すべき完全な会話コンテキスト（過去の入力＋全てのアシスタント/ツール出力）。
+            これにより下流のAgentがユーザープロンプトを失わず、AgentRunEventのテキストは生のAgent出力に忠実に保たれる。
+
     """
 
     executor_id: str
@@ -50,13 +51,14 @@ class AgentExecutorResponse:
 
 
 class AgentExecutor(Executor):
-    """built-in executor that wraps an agent for handling messages.
+    """メッセージ処理のためにAgentをラップする組み込みExecutor。
 
-    AgentExecutor adapts its behavior based on the workflow execution mode:
-    - run_stream(): Emits incremental AgentRunUpdateEvent events as the agent produces tokens
-    - run(): Emits a single AgentRunEvent containing the complete response
+    AgentExecutorはワークフロー実行モードに応じて動作を適応する:
+    - run_stream(): Agentがトークンを生成するたびに増分のAgentRunUpdateEventイベントを発行
+    - run(): 完全なレスポンスを含む単一のAgentRunEventを発行
 
-    The executor automatically detects the mode via WorkflowContext.is_streaming().
+    ExecutorはWorkflowContext.is_streaming()でモードを自動検出する。
+
     """
 
     def __init__(
@@ -67,15 +69,16 @@ class AgentExecutor(Executor):
         output_response: bool = False,
         id: str | None = None,
     ):
-        """Initialize the executor with a unique identifier.
+        """一意の識別子でExecutorを初期化する。
 
         Args:
-            agent: The agent to be wrapped by this executor.
-            agent_thread: The thread to use for running the agent. If None, a new thread will be created.
-            output_response: Whether to yield an AgentRunResponse as a workflow output when the agent completes.
-            id: A unique identifier for the executor. If None, the agent's name will be used if available.
+            agent: このExecutorがラップするAgent。
+            agent_thread: Agentを実行するためのスレッド。Noneの場合は新しいスレッドを作成。
+            output_response: Agent完了時にAgentRunResponseをワークフロー出力としてyieldするか。
+            id: Executorの一意識別子。Noneの場合はagentのnameを使用（存在すれば）。
+
         """
-        # Prefer provided id; else use agent.name if present; else generate deterministic prefix
+        # 提供されたidを優先；なければagent.nameを使用（存在すれば）；それもなければ決定論的なプレフィックスを生成
         exec_id = id or agent.name
         if not exec_id:
             raise ValueError("Agent must have a name or an explicit id must be provided.")
@@ -87,19 +90,19 @@ class AgentExecutor(Executor):
 
     @property
     def workflow_output_types(self) -> list[type[Any]]:
-        # Override to declare AgentRunResponse as a possible output type only if enabled.
+        # 有効な場合にのみAgentRunResponseを可能な出力タイプとして宣言するためにオーバーライド。
         if self._output_response:
             return [AgentRunResponse]
         return []
 
     async def _run_agent_and_emit(self, ctx: WorkflowContext[AgentExecutorResponse, AgentRunResponse]) -> None:
-        """Execute the underlying agent, emit events, and enqueue response.
+        """基盤となるAgentを実行し、イベントを発行し、レスポンスをキューに入れる。
 
-        Checks ctx.is_streaming() to determine whether to emit incremental AgentRunUpdateEvent
-        events (streaming mode) or a single AgentRunEvent (non-streaming mode).
+        ctx.is_streaming()をチェックして増分のAgentRunUpdateEventイベント（ストリーミングモード）か単一のAgentRunEvent（非ストリーミングモード）を発行するか決定する。
+
         """
         if ctx.is_streaming():
-            # Streaming mode: emit incremental updates
+            # ストリーミングモード：増分更新を発行する
             updates: list[AgentRunResponseUpdate] = []
             async for update in self._agent.run_stream(
                 self._cache,
@@ -117,7 +120,7 @@ class AgentExecutor(Executor):
             else:
                 response = AgentRunResponse.from_agent_run_response_updates(updates)
         else:
-            # Non-streaming mode: use run() and emit single event
+            # 非ストリーミングモード：run()を使い単一イベントを発行する
             response = await self._agent.run(
                 self._cache,
                 thread=self._agent_thread,
@@ -127,9 +130,8 @@ class AgentExecutor(Executor):
         if self._output_response:
             await ctx.yield_output(response)
 
-        # Always construct a full conversation snapshot from inputs (cache)
-        # plus agent outputs (agent_run_response.messages). Do not mutate
-        # response.messages so AgentRunEvent remains faithful to the raw output.
+        # 常に入力（キャッシュ）とAgent出力（agent_run_response.messages）から完全な会話スナップショットを構築する。
+        # response.messagesを変更しないことでAgentRunEventが生の出力に忠実であることを保証する。
         full_conversation: list[ChatMessage] = list(self._cache) + list(response.messages)
 
         agent_response = AgentExecutorResponse(self.id, response, full_conversation=full_conversation)
@@ -140,10 +142,10 @@ class AgentExecutor(Executor):
     async def run(
         self, request: AgentExecutorRequest, ctx: WorkflowContext[AgentExecutorResponse, AgentRunResponse]
     ) -> None:
-        """Handle an AgentExecutorRequest (canonical input).
+        """AgentExecutorRequest（標準入力）を処理する。
 
-        This is the standard path: extend cache with provided messages; if should_respond
-        run the agent and emit an AgentExecutorResponse downstream.
+        これは標準パスであり、提供されたメッセージでキャッシュを拡張し、should_respondがTrueならAgentを実行してAgentExecutorResponseを下流に発行する。
+
         """
         self._cache.extend(request.messages)
         if request.should_respond:
@@ -153,12 +155,12 @@ class AgentExecutor(Executor):
     async def from_response(
         self, prior: AgentExecutorResponse, ctx: WorkflowContext[AgentExecutorResponse, AgentRunResponse]
     ) -> None:
-        """Enable seamless chaining: accept a prior AgentExecutorResponse as input.
+        """シームレスなチェーンを可能にする：前のAgentExecutorResponseを入力として受け入れる。
 
-        Strategy: treat the prior response's messages as the conversation state and
-        immediately run the agent to produce a new response.
+        戦略：前のレスポンスのメッセージを会話状態として扱い、即座にAgentを実行して新しいレスポンスを生成する。
+
         """
-        # Replace cache with full conversation if available, else fall back to agent_run_response messages.
+        # 利用可能なら完全な会話でキャッシュを置き換え、なければagent_run_responseのメッセージにフォールバックする。
         if prior.full_conversation is not None:
             self._cache = list(prior.full_conversation)
         else:
@@ -167,7 +169,7 @@ class AgentExecutor(Executor):
 
     @handler
     async def from_str(self, text: str, ctx: WorkflowContext[AgentExecutorResponse, AgentRunResponse]) -> None:
-        """Accept a raw user prompt string and run the agent (one-shot)."""
+        """生のユーザープロンプト文字列を受け入れてAgentを実行（一回限り）。"""
         self._cache = normalize_messages_input(text)
         await self._run_agent_and_emit(ctx)
 
@@ -177,7 +179,7 @@ class AgentExecutor(Executor):
         message: ChatMessage,
         ctx: WorkflowContext[AgentExecutorResponse, AgentRunResponse],
     ) -> None:
-        """Accept a single ChatMessage as input."""
+        """単一のChatMessageを入力として受け入れる。"""
         self._cache = normalize_messages_input(message)
         await self._run_agent_and_emit(ctx)
 
@@ -187,15 +189,16 @@ class AgentExecutor(Executor):
         messages: list[str | ChatMessage],
         ctx: WorkflowContext[AgentExecutorResponse, AgentRunResponse],
     ) -> None:
-        """Accept a list of chat inputs (strings or ChatMessage) as conversation context."""
+        """チャット入力（文字列またはChatMessage）のリストを会話コンテキストとして受け入れる。"""
         self._cache = normalize_messages_input(messages)
         await self._run_agent_and_emit(ctx)
 
     def snapshot_state(self) -> dict[str, Any]:
-        """Capture current executor state for checkpointing.
+        """チェックポイント用に現在のExecutor状態をキャプチャする。
 
         Returns:
-            Dict containing serialized cache state
+            シリアライズされたキャッシュ状態を含む辞書
+
         """
         from ._conversation_state import encode_chat_messages
 
@@ -204,10 +207,11 @@ class AgentExecutor(Executor):
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        """Restore executor state from checkpoint.
+        """チェックポイントからExecutor状態を復元する。
 
         Args:
-            state: Checkpoint data dict
+            state: チェックポイントデータの辞書
+
         """
         from ._conversation_state import decode_chat_messages
 
@@ -222,6 +226,6 @@ class AgentExecutor(Executor):
             self._cache = []
 
     def reset(self) -> None:
-        """Reset the internal cache of the executor."""
+        """Executorの内部キャッシュをリセットする。"""
         logger.debug("AgentExecutor %s: Resetting cache", self.id)
         self._cache.clear()

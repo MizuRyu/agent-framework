@@ -9,7 +9,7 @@ from azure.identity.aio import AzureCliCredential
 
 
 def get_user_preferences(user_id: str) -> str:
-    """Mock function to get user preferences."""
+    """ユーザーの好みを取得するモック関数。"""
     preferences = {
         "user123": "Prefers concise responses and technical details",
         "user456": "Likes detailed explanations with examples",
@@ -18,7 +18,7 @@ def get_user_preferences(user_id: str) -> str:
 
 
 async def example_global_thread_scope() -> None:
-    """Example 1: Global thread_id scope (memories shared across all operations)."""
+    """例1: グローバルthread_idスコープ（すべての操作でメモリを共有）。"""
     print("1. Global Thread Scope Example:")
     print("-" * 40)
 
@@ -38,13 +38,13 @@ async def example_global_thread_scope() -> None:
             ),
         ) as global_agent,
     ):
-        # Store some preferences in the global scope
+        # グローバルスコープにいくつかの好みを保存する
         query = "Remember that I prefer technical responses with code examples when discussing programming."
         print(f"User: {query}")
         result = await global_agent.run(query)
         print(f"Agent: {result}\n")
 
-        # Create a new thread - but memories should still be accessible due to global scope
+        # 新しいスレッドを作成する - しかしグローバルスコープのためメモリは引き続きアクセス可能
         new_thread = global_agent.get_new_thread()
         query = "What do you know about my preferences?"
         print(f"User (new thread): {query}")
@@ -53,10 +53,11 @@ async def example_global_thread_scope() -> None:
 
 
 async def example_per_operation_thread_scope() -> None:
-    """Example 2: Per-operation thread scope (memories isolated per thread).
+    """例2: 操作ごとのthreadスコープ（スレッドごとにメモリが分離される）。
 
-    Note: When scope_to_per_operation_thread_id=True, the provider is bound to a single thread
-    throughout its lifetime. Use the same thread object for all operations with that provider.
+    注意: scope_to_per_operation_thread_id=Trueの場合、プロバイダーはその生涯を通じて単一のスレッドにバインドされます
+    そのプロバイダーでのすべての操作に同じスレッドオブジェクトを使用してください。
+
     """
     print("2. Per-Operation Thread Scope Example:")
     print("-" * 40)
@@ -75,28 +76,28 @@ async def example_per_operation_thread_scope() -> None:
             ),
         ) as scoped_agent,
     ):
-        # Create a specific thread for this scoped provider
+        # このスコープ付きプロバイダー用の特定のスレッドを作成する
         dedicated_thread = scoped_agent.get_new_thread()
 
-        # Store some information in the dedicated thread
+        # 専用スレッドにいくつかの情報を保存する
         query = "Remember that for this conversation, I'm working on a Python project about data analysis."
         print(f"User (dedicated thread): {query}")
         result = await scoped_agent.run(query, thread=dedicated_thread)
         print(f"Agent: {result}\n")
 
-        # Test memory retrieval in the same dedicated thread
+        # 同じ専用スレッドでメモリ取得をテストする
         query = "What project am I working on?"
         print(f"User (same dedicated thread): {query}")
         result = await scoped_agent.run(query, thread=dedicated_thread)
         print(f"Agent: {result}\n")
 
-        # Store more information in the same thread
+        # 同じスレッドにさらに情報を保存する
         query = "Also remember that I prefer using pandas and matplotlib for this project."
         print(f"User (same dedicated thread): {query}")
         result = await scoped_agent.run(query, thread=dedicated_thread)
         print(f"Agent: {result}\n")
 
-        # Test comprehensive memory retrieval
+        # 包括的なメモリ取得をテストする
         query = "What do you know about my current project and preferences?"
         print(f"User (same dedicated thread): {query}")
         result = await scoped_agent.run(query, thread=dedicated_thread)
@@ -104,7 +105,7 @@ async def example_per_operation_thread_scope() -> None:
 
 
 async def example_multiple_agents() -> None:
-    """Example 3: Multiple agents with different thread configurations."""
+    """例3: 異なるスレッド構成を持つ複数のエージェント。"""
     print("3. Multiple Agents with Different Thread Configurations:")
     print("-" * 40)
 
@@ -128,19 +129,19 @@ async def example_multiple_agents() -> None:
             ),
         ) as work_agent,
     ):
-        # Store personal information
+        # 個人情報を保存する
         query = "Remember that I like to exercise at 6 AM and prefer outdoor activities."
         print(f"User to Personal Agent: {query}")
         result = await personal_agent.run(query)
         print(f"Personal Agent: {result}\n")
 
-        # Store work information
+        # 仕事情報を保存する
         query = "Remember that I have team meetings every Tuesday at 2 PM."
         print(f"User to Work Agent: {query}")
         result = await work_agent.run(query)
         print(f"Work Agent: {result}\n")
 
-        # Test memory isolation
+        # メモリの分離をテストする
         query = "What do you know about my schedule?"
         print(f"User to Personal Agent: {query}")
         result = await personal_agent.run(query)
@@ -152,7 +153,7 @@ async def example_multiple_agents() -> None:
 
 
 async def main() -> None:
-    """Run all Mem0 thread management examples."""
+    """すべてのMem0スレッド管理例を実行する。"""
     print("=== Mem0 Thread Management Example ===\n")
 
     await example_global_thread_scope()

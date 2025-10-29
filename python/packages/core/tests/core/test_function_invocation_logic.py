@@ -119,7 +119,7 @@ async def test_base_client_with_streaming_function_calling(chat_client_base: Cha
     updates = []
     async for update in chat_client_base.get_streaming_response("hello", tool_choice="auto", tools=[ai_func]):
         updates.append(update)
-    assert len(updates) == 4  # two updates with the function call, the function result and the final text
+    assert len(updates) == 4  # 関数呼び出しによる2回の更新、関数結果、最終テキスト。
     assert updates[0].contents[0].call_id == "1"
     assert updates[1].contents[0].call_id == "1"
     assert updates[2].contents[0].call_id == "1"
@@ -151,21 +151,22 @@ async def test_function_invocation_scenarios(
     approval_required: bool | str,
     num_functions: int,
 ):
-    """Comprehensive test for function invocation scenarios.
+    """関数呼び出しシナリオの包括的なテスト。
 
-    This test covers:
-    - Single function without approval: 3 messages (call, result, final)
-    - Single function with approval: 2 messages (call, approval request)
-    - Two functions with mixed approval: varies based on approval flow
-    - All scenarios tested with both streaming and non-streaming
-    - Thread scenarios: no thread, local thread (in-memory), and service thread (conversation_id)
+    このテストは以下をカバーします:
+    - 承認なしの単一関数: 3つのメッセージ（呼び出し、結果、最終）
+    - 承認ありの単一関数: 2つのメッセージ（呼び出し、承認要求）
+    - 混合承認の2つの関数: 承認フローに基づき変動
+    - すべてのシナリオをストリーミングと非ストリーミングでテスト
+    - Threadシナリオ: スレッドなし、ローカルスレッド（インメモリ）、サービススレッド（conversation_id）
+
     """
     exec_counter = 0
 
-    # Setup thread based on parameters
+    # パラメータに基づいてthreadをセットアップします。
     conversation_id = None
     if thread_type == "service":
-        # Simulate a service-side thread with conversation_id
+        # conversation_idを持つサービス側のthreadをシミュレートします。
         conversation_id = "test-thread-123"
 
     @ai_function(name="no_approval_func")
@@ -180,12 +181,12 @@ async def test_function_invocation_scenarios(
         exec_counter += 1
         return f"Approved {arg1}"
 
-    # Setup tools and responses based on the scenario
+    # シナリオに基づいてツールとレスポンスをセットアップします。
     if num_functions == 1:
         tools = [func_with_approval if approval_required else func_no_approval]
         function_name = "approval_func" if approval_required else "no_approval_func"
 
-        # Single function call content
+        # 単一関数呼び出しの内容。
         func_call = FunctionCallContent(call_id="1", name=function_name, arguments='{"arg1": "value1"}')
         completion = ChatMessage(role="assistant", text="done")
 
@@ -209,7 +210,7 @@ async def test_function_invocation_scenarios(
     else:  # num_functions == 2
         tools = [func_no_approval, func_with_approval]
 
-        # Two function calls content
+        # 2つの関数呼び出しの内容。
         func_calls = [
             FunctionCallContent(call_id="1", name="no_approval_func", arguments='{"arg1": "value1"}'),
             FunctionCallContent(call_id="2", name="approval_func", arguments='{"arg1": "value2"}'),
@@ -224,10 +225,10 @@ async def test_function_invocation_scenarios(
             ]
         ]
 
-    # Execute the test
+    # テストを実行します。
     chat_options = ChatOptions(tool_choice="auto", tools=tools)
     if thread_type == "service":
-        # For service threads, we need to pass conversation_id via ChatOptions
+        # サービススレッドの場合、ChatOptions経由でconversation_idを渡す必要があります。
         chat_options.store = True
         chat_options.conversation_id = conversation_id
 
@@ -240,37 +241,36 @@ async def test_function_invocation_scenarios(
             updates.append(update)
         messages = updates
 
-    # Service threads have different message management behavior (server-side storage)
-    # so we skip detailed message assertions for those scenarios
+    # サービススレッドはメッセージ管理動作が異なり（サーバー側ストレージ）、 そのため詳細なメッセージのアサーションはスキップします。
     if thread_type == "service":
-        # Just verify the function was executed or not based on approval
+        # 承認に基づいて関数が実行されたかどうかだけを検証します。
         if not approval_required or approval_required == "mixed":
-            # For service threads, the execution counter check is still valid
+            # サービススレッドの場合でも実行カウンターのチェックは有効です。
             pass
         return
 
-    # Verify based on scenario (for no thread and local thread cases)
+    # シナリオに基づいて検証します（スレッドなしとローカルスレッドの場合）。
     if num_functions == 1:
         if approval_required:
-            # Single function with approval: assistant message contains both call + approval request
+            # 承認ありの単一関数: assistantメッセージは呼び出しと承認要求の両方を含みます。
             if not streaming:
                 assert len(messages) == 1
-                # Assistant message should have FunctionCallContent + FunctionApprovalRequestContent
+                # AssistantメッセージはFunctionCallContentとFunctionApprovalRequestContentを持つべきです。
                 assert len(messages[0].contents) == 2
                 assert isinstance(messages[0].contents[0], FunctionCallContent)
                 assert isinstance(messages[0].contents[1], FunctionApprovalRequestContent)
                 assert messages[0].contents[1].function_call.name == "approval_func"
-                assert exec_counter == 0  # Function not executed yet
+                assert exec_counter == 0  # 関数はまだ実行されていません。
             else:
-                # Streaming: 2 function call chunks + 1 approval request update (same assistant message)
+                # ストリーミング: 2つの関数呼び出しチャンクと1つの承認要求更新（同じassistantメッセージ）。
                 assert len(messages) == 3
                 assert isinstance(messages[0].contents[0], FunctionCallContent)
                 assert isinstance(messages[1].contents[0], FunctionCallContent)
                 assert isinstance(messages[2].contents[0], FunctionApprovalRequestContent)
                 assert messages[2].contents[0].function_call.name == "approval_func"
-                assert exec_counter == 0  # Function not executed yet
+                assert exec_counter == 0  # 関数はまだ実行されていません。
         else:
-            # Single function without approval: call + result + final
+            # 承認なしの単一関数: 呼び出し、結果、最終。
             if not streaming:
                 assert len(messages) == 3
                 assert isinstance(messages[0].contents[0], FunctionCallContent)
@@ -280,7 +280,7 @@ async def test_function_invocation_scenarios(
                 assert messages[2].text == "done"
                 assert exec_counter == 1
             else:
-                # Streaming has: 2 function call updates + 1 result update + 1 final update
+                # ストリーミングには: 2つの関数呼び出し更新、1つの結果更新、1つの最終更新があります。
                 assert len(messages) == 4
                 assert isinstance(messages[0].contents[0], FunctionCallContent)
                 assert isinstance(messages[1].contents[0], FunctionCallContent)
@@ -288,32 +288,32 @@ async def test_function_invocation_scenarios(
                 assert messages[3].text == "done"
                 assert exec_counter == 1
     else:  # num_functions == 2
-        # Two functions with mixed approval
+        # 混合承認の2つの関数。
         if not streaming:
-            # Mixed: assistant message has both calls + approval requests (4 items total)
-            # (because when one requires approval, all are batched for approval)
+            # 混合: assistantメッセージは両方の呼び出しと承認要求を含みます（合計4項目）
+            # （1つが承認を必要とすると、すべてが承認のためにバッチ処理されるため）。
             assert len(messages) == 1
-            # Should have: 2 FunctionCallContent + 2 FunctionApprovalRequestContent
+            # 2つのFunctionCallContentと2つのFunctionApprovalRequestContentがあるべきです。
             assert len(messages[0].contents) == 4
             assert isinstance(messages[0].contents[0], FunctionCallContent)
             assert isinstance(messages[0].contents[1], FunctionCallContent)
-            # Both should result in approval requests
+            # 両方とも承認要求になります。
             approval_requests = [c for c in messages[0].contents if isinstance(c, FunctionApprovalRequestContent)]
             assert len(approval_requests) == 2
-            assert exec_counter == 0  # Neither function executed yet
+            assert exec_counter == 0  # どちらの関数もまだ実行されていません。
         else:
-            # Streaming: 2 function call updates + 1 approval request with 2 contents
+            # ストリーミング: 2つの関数呼び出し更新と2つの内容を持つ1つの承認要求。
             assert len(messages) == 3
             assert isinstance(messages[0].contents[0], FunctionCallContent)
             assert isinstance(messages[1].contents[0], FunctionCallContent)
-            # The approval request message contains both approval requests
+            # 承認要求メッセージは両方の承認要求を含みます。
             assert len(messages[2].contents) == 2
             assert all(isinstance(c, FunctionApprovalRequestContent) for c in messages[2].contents)
-            assert exec_counter == 0  # Neither function executed yet
+            assert exec_counter == 0  # どちらの関数もまだ実行されていません。
 
 
 async def test_rejected_approval(chat_client_base: ChatClientProtocol):
-    """Test that rejecting an approval alongside an approved one is handled correctly."""
+    """承認されたものと一緒に拒否された承認が正しく処理されることをテストします。"""
     from agent_framework import FunctionApprovalResponseContent
 
     exec_counter_approved = 0
@@ -331,7 +331,7 @@ async def test_rejected_approval(chat_client_base: ChatClientProtocol):
         exec_counter_rejected += 1
         return f"Rejected {arg1}"
 
-    # Setup: two function calls that require approval
+    # セットアップ: 承認が必要な2つの関数呼び出し。
     chat_client_base.run_responses = [
         ChatResponse(
             messages=ChatMessage(
@@ -345,16 +345,16 @@ async def test_rejected_approval(chat_client_base: ChatClientProtocol):
         ChatResponse(messages=ChatMessage(role="assistant", text="done")),
     ]
 
-    # Get the response with approval requests
+    # 承認要求を含むレスポンスを取得します。
     response = await chat_client_base.get_response("hello", tool_choice="auto", tools=[func_approved, func_rejected])
-    # Approval requests are now added to the assistant message, not a separate message
+    # 承認要求は別のメッセージではなく、現在はassistantメッセージに追加されます。
     assert len(response.messages) == 1
-    # Assistant message should have: 2 FunctionCallContent + 2 FunctionApprovalRequestContent
+    # Assistantメッセージは2つのFunctionCallContentと2つのFunctionApprovalRequestContentを持つべきです。
     assert len(response.messages[0].contents) == 4
     approval_requests = [c for c in response.messages[0].contents if isinstance(c, FunctionApprovalRequestContent)]
     assert len(approval_requests) == 2
 
-    # Approve one and reject the other
+    # 1つを承認し、もう1つを拒否します。
     approval_req_1 = approval_requests[0]
     approval_req_2 = approval_requests[1]
 
@@ -369,14 +369,13 @@ async def test_rejected_approval(chat_client_base: ChatClientProtocol):
         approved=False,
     )
 
-    # Continue conversation with one approved and one rejected
+    # 1つ承認、1つ拒否の状態で会話を続けます。
     all_messages = response.messages + [ChatMessage(role="user", contents=[approved_response, rejected_response])]
 
-    # Call get_response which will process the approvals
+    # 承認を処理するget_responseを呼び出します。
     await chat_client_base.get_response(all_messages, tool_choice="auto", tools=[func_approved, func_rejected])
 
-    # Verify the approval/rejection was processed correctly
-    # Find the results in the input messages (modified in-place)
+    # 承認/拒否が正しく処理されたことを検証します 結果は入力メッセージ（インプレースで修正）にあります。
     approved_result = None
     rejected_result = None
     for msg in all_messages:
@@ -387,18 +386,18 @@ async def test_rejected_approval(chat_client_base: ChatClientProtocol):
                 elif content.call_id == "2":
                     rejected_result = content
 
-    # The approved function should have been executed and have a result
+    # 承認された関数は実行され、結果を持つべきです。
     assert approved_result is not None, "Should have found result for approved function"
     assert approved_result.result == "Approved value1"
     assert exec_counter_approved == 1
 
-    # The rejected function should have a "not approved" result and NOT have been executed
+    # 拒否された関数は「not approved」の結果を持ち、実行されていないべきです。
     assert rejected_result is not None, "Should have found result for rejected function"
     assert rejected_result.result == "Error: Tool call invocation was rejected by user."
     assert exec_counter_rejected == 0
 
-    # Verify that messages with FunctionResultContent have role="tool"
-    # This ensures the message format is correct for OpenAI's API
+    # FunctionResultContentを持つメッセージはrole="tool"であることを検証します
+    # これはOpenAIのAPIに対してメッセージ形式が正しいことを保証します。
     for msg in all_messages:
         for content in msg.contents:
             if isinstance(content, FunctionResultContent):
@@ -408,7 +407,7 @@ async def test_rejected_approval(chat_client_base: ChatClientProtocol):
 
 
 async def test_approval_requests_in_assistant_message(chat_client_base: ChatClientProtocol):
-    """Approval requests should be added to the assistant message that contains the function call."""
+    """承認要求は関数呼び出しを含むassistantメッセージに追加されるべきです。"""
     exec_counter = 0
 
     @ai_function(name="test_func", approval_mode="always_require")
@@ -430,7 +429,7 @@ async def test_approval_requests_in_assistant_message(chat_client_base: ChatClie
 
     response = await chat_client_base.get_response("hello", tool_choice="auto", tools=[func_with_approval])
 
-    # Should have one assistant message containing both the call and approval request
+    # 呼び出しと承認要求の両方を含む1つのassistantメッセージがあるべきです。
     assert len(response.messages) == 1
     assert response.messages[0].role == Role.ASSISTANT
     assert len(response.messages[0].contents) == 2
@@ -440,7 +439,7 @@ async def test_approval_requests_in_assistant_message(chat_client_base: ChatClie
 
 
 async def test_persisted_approval_messages_replay_correctly(chat_client_base: ChatClientProtocol):
-    """Approval flow should work when messages are persisted and sent back (thread scenario)."""
+    """メッセージが永続化されて返送される場合でも承認フローが機能するべきです（threadシナリオ）。"""
     from agent_framework import FunctionApprovalResponseContent
 
     exec_counter = 0
@@ -463,16 +462,16 @@ async def test_persisted_approval_messages_replay_correctly(chat_client_base: Ch
         ChatResponse(messages=ChatMessage(role="assistant", text="done")),
     ]
 
-    # Get approval request
+    # 承認要求を取得します。
     response1 = await chat_client_base.get_response("hello", tool_choice="auto", tools=[func_with_approval])
 
-    # Store messages (like a thread would)
+    # メッセージを保存します（threadのように）。
     persisted_messages = [
         ChatMessage(role="user", contents=[TextContent(text="hello")]),
         *response1.messages,
     ]
 
-    # Send approval
+    # 承認を送信します。
     approval_req = [c for c in response1.messages[0].contents if isinstance(c, FunctionApprovalRequestContent)][0]
     approval_response = FunctionApprovalResponseContent(
         id=approval_req.id,
@@ -481,17 +480,17 @@ async def test_persisted_approval_messages_replay_correctly(chat_client_base: Ch
     )
     persisted_messages.append(ChatMessage(role="user", contents=[approval_response]))
 
-    # Continue with all persisted messages
+    # すべての永続化されたメッセージで続行します。
     response2 = await chat_client_base.get_response(persisted_messages, tool_choice="auto", tools=[func_with_approval])
 
-    # Should execute successfully
+    # 正常に実行されるべきです。
     assert response2 is not None
     assert exec_counter == 1
     assert response2.messages[-1].text == "done"
 
 
 async def test_no_duplicate_function_calls_after_approval_processing(chat_client_base: ChatClientProtocol):
-    """Processing approval should not create duplicate function calls in messages."""
+    """承認処理はメッセージ内に重複した関数呼び出しを作成しないべきです。"""
     from agent_framework import FunctionApprovalResponseContent
 
     @ai_function(name="test_func", approval_mode="always_require")
@@ -522,7 +521,7 @@ async def test_no_duplicate_function_calls_after_approval_processing(chat_client
     all_messages = response1.messages + [ChatMessage(role="user", contents=[approval_response])]
     await chat_client_base.get_response(all_messages, tool_choice="auto", tools=[func_with_approval])
 
-    # Count function calls with the same call_id
+    # 同じcall_idを持つ関数呼び出しの数を数えます。
     function_call_count = sum(
         1
         for msg in all_messages
@@ -534,7 +533,7 @@ async def test_no_duplicate_function_calls_after_approval_processing(chat_client
 
 
 async def test_rejection_result_uses_function_call_id(chat_client_base: ChatClientProtocol):
-    """Rejection error result should use the function call's call_id, not the approval's id."""
+    """拒否エラー結果は承認のIDではなく関数呼び出しのcall_idを使うべきです。"""
     from agent_framework import FunctionApprovalResponseContent
 
     @ai_function(name="test_func", approval_mode="always_require")
@@ -565,7 +564,7 @@ async def test_rejection_result_uses_function_call_id(chat_client_base: ChatClie
     all_messages = response1.messages + [ChatMessage(role="user", contents=[rejection_response])]
     await chat_client_base.get_response(all_messages, tool_choice="auto", tools=[func_with_approval])
 
-    # Find the rejection result
+    # 拒否結果を見つけます。
     rejection_result = next(
         (content for msg in all_messages for content in msg.contents if isinstance(content, FunctionResultContent)),
         None,
@@ -577,7 +576,7 @@ async def test_rejection_result_uses_function_call_id(chat_client_base: ChatClie
 
 
 async def test_max_iterations_limit(chat_client_base: ChatClientProtocol):
-    """Test that MAX_ITERATIONS in additional_properties limits function call loops."""
+    """additional_propertiesのMAX_ITERATIONSが関数呼び出しループを制限することをテストします。"""
     exec_counter = 0
 
     @ai_function(name="test_function")
@@ -586,7 +585,7 @@ async def test_max_iterations_limit(chat_client_base: ChatClientProtocol):
         exec_counter += 1
         return f"Processed {arg1}"
 
-    # Set up multiple function call responses to create a loop
+    # ループを作成するために複数の関数呼び出しレスポンスをセットアップします。
     chat_client_base.run_responses = [
         ChatResponse(
             messages=ChatMessage(
@@ -600,18 +599,16 @@ async def test_max_iterations_limit(chat_client_base: ChatClientProtocol):
                 contents=[FunctionCallContent(call_id="2", name="test_function", arguments='{"arg1": "value2"}')],
             )
         ),
-        # Failsafe response when tool_choice is set to "none"
+        # tool_choiceが"none"に設定された場合のフェイルセーフレスポンス。
         ChatResponse(messages=ChatMessage(role="assistant", text="giving up on tools")),
     ]
 
-    # Set max_iterations to 1 in additional_properties
+    # additional_propertiesでmax_iterationsを1に設定します。
     chat_client_base.additional_properties = {"max_iterations": 1}
 
     response = await chat_client_base.get_response("hello", tool_choice="auto", tools=[ai_func])
 
-    # With max_iterations=1, we should:
-    # 1. Execute first function call (exec_counter=1)
-    # 2. Try to make second call but hit iteration limit
-    # 3. Fall back to asking for a plain answer with tool_choice="none"
-    assert exec_counter == 1  # Only first function executed
-    assert response.messages[-1].text == "I broke out of the function invocation loop..."  # Failsafe response
+    # max_iterations=1の場合、以下を行うべきです: 1. 最初の関数呼び出しを実行する（exec_counter=1） 2.
+    # 2回目の呼び出しを試みるがイテレーション制限に達する 3. tool_choice="none"で単純な回答を求めるフォールバックに切り替える
+    assert exec_counter == 1  # 最初の関数だけが実行されます。
+    assert response.messages[-1].text == "I broke out of the function invocation loop..."  # フェイルセーフレスポンス。

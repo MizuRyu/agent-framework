@@ -48,7 +48,7 @@ def chat_history() -> list[ChatMessage]:
 
 @fixture
 def ai_tool() -> ToolProtocol:
-    """Returns a generic ToolProtocol."""
+    """一般的な ToolProtocol を返す。"""
 
     class GenericTool(BaseModel):
         name: str
@@ -56,7 +56,7 @@ def ai_tool() -> ToolProtocol:
         additional_properties: dict[str, Any] | None = None
 
         def parameters(self) -> dict[str, Any]:
-            """Return the parameters of the tool as a JSON schema."""
+            """ツールのパラメータを JSON スキーマとして返す。"""
             return {
                 "name": {"type": "string"},
             }
@@ -66,11 +66,11 @@ def ai_tool() -> ToolProtocol:
 
 @fixture
 def ai_function_tool() -> ToolProtocol:
-    """Returns a executable ToolProtocol."""
+    """実行可能な ToolProtocol を返す。"""
 
     @ai_function
     def simple_function(x: int, y: int) -> int:
-        """A simple function that adds two numbers."""
+        """2つの数字を加算するシンプルな関数。"""
         return x + y
 
     return simple_function
@@ -78,7 +78,7 @@ def ai_function_tool() -> ToolProtocol:
 
 # region Chat Clients
 class MockChatClient:
-    """Simple implementation of a chat client."""
+    """チャットクライアントのシンプルな実装。"""
 
     def __init__(self) -> None:
         self.additional_properties: dict[str, Any] = {}
@@ -114,7 +114,7 @@ class MockChatClient:
 
 @use_chat_middleware
 class MockBaseChatClient(BaseChatClient):
-    """Mock implementation of the BaseChatClient."""
+    """BaseChatClient のモック実装。"""
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
@@ -130,15 +130,16 @@ class MockBaseChatClient(BaseChatClient):
         chat_options: ChatOptions,
         **kwargs: Any,
     ) -> ChatResponse:
-        """Send a chat request to the AI service.
+        """AI サービスにチャットリクエストを送信する。
 
         Args:
-            messages: The chat messages to send.
-            chat_options: The options for the request.
-            kwargs: Any additional keyword arguments.
+            messages: 送信するチャットメッセージ。
+            chat_options: リクエストのオプション。
+            kwargs: その他のキーワード引数。
 
         Returns:
-            The chat response contents representing the response(s).
+            レスポンスを表すチャットレスポンスの内容。
+
         """
         logger.debug(f"Running base chat client inner, with: {messages=}, {chat_options=}, {kwargs=}")
         self.call_count += 1
@@ -210,7 +211,7 @@ class MockAgentThread(AgentThread):
     pass
 
 
-# Mock Agent implementation for testing
+# テスト用のモック Agent 実装
 class MockAgent(AgentProtocol):
     @property
     def id(self) -> str:
@@ -218,12 +219,12 @@ class MockAgent(AgentProtocol):
 
     @property
     def name(self) -> str | None:
-        """Returns the name of the agent."""
+        """Agent の名前を返す。"""
         return "Name"
 
     @property
     def display_name(self) -> str:
-        """Returns the name of the agent."""
+        """Agent の名前を返す。"""
         return "Display Name"
 
     @property

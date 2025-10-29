@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+# 著作権 (c) Microsoft。無断転載を禁じます。
 
 import asyncio
 
@@ -17,11 +17,10 @@ for Python code execution and mathematical problem solving.
 
 
 async def main() -> None:
-    """Example showing how to use the HostedCodeInterpreterTool with Azure OpenAI Responses."""
+    """HostedCodeInterpreterToolをAzure OpenAI Responsesで使用する方法の例です。"""
     print("=== Azure OpenAI Responses Agent with Code Interpreter Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     agent = ChatAgent(
         chat_client=AzureOpenAIResponsesClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant that can write and execute Python code to solve problems.",

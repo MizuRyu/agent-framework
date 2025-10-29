@@ -44,16 +44,14 @@ TASK = (
     "risks, and communication cadence."
 )
 
-# Dedicated folder for captured checkpoints. Keeping it under the sample directory
-# makes it easy to inspect the JSON blobs produced by each run.
+# キャプチャされたチェックポイント用の専用フォルダ。サンプルディレクトリ内に置くことで 各実行で生成されるJSONデータを簡単に検査できます。
 CHECKPOINT_DIR = Path(__file__).parent / "tmp" / "magentic_checkpoints"
 
 
 def build_workflow(checkpoint_storage: FileCheckpointStorage):
-    """Construct the Magentic workflow graph with checkpointing enabled."""
+    """チェックポイント機能を有効にしてMagenticワークフローグラフを構築します。"""
 
-    # Two vanilla ChatAgents act as participants in the orchestration. They do not need
-    # extra state handling because their inputs/outputs are fully described by chat messages.
+    # 2つの標準的なChatAgentがオーケストレーションの参加者として動作します。入力/出力はチャットメッセージで完全に記述されるため、 追加の状態管理は不要です。
     researcher = ChatAgent(
         name="ResearcherAgent",
         description="Collects background facts and references for the project.",
@@ -68,8 +66,8 @@ def build_workflow(checkpoint_storage: FileCheckpointStorage):
         chat_client=OpenAIChatClient(),
     )
 
-    # The builder wires in the Magentic orchestrator, sets the plan review path, and
-    # stores the checkpoint backend so the runtime knows where to persist snapshots.
+    # ビルダーはMagenticオーケストレーターを組み込み、プランレビューのパスを設定し、
+    # チェックポイントのバックエンドを保存してランタイムがスナップショットの永続化先を認識できるようにします。
     return (
         MagenticBuilder()
         .participants(researcher=researcher, writer=writer)
@@ -85,9 +83,8 @@ def build_workflow(checkpoint_storage: FileCheckpointStorage):
 
 
 async def main() -> None:
-    # Stage 0: make sure the checkpoint folder is empty so we inspect only checkpoints
-    # written by this invocation. This prevents stale files from previous runs from
-    # confusing the analysis.
+    # ステージ0: チェックポイントフォルダを空にして、この呼び出しで書き込まれたチェックポイントのみを検査します。
+    # これにより前回実行の古いファイルが分析を混乱させるのを防ぎます。
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
     for file in CHECKPOINT_DIR.glob("*.json"):
         file.unlink()
@@ -97,9 +94,8 @@ async def main() -> None:
     print("\n=== Stage 1: run until plan review request (checkpointing active) ===")
     workflow = build_workflow(checkpoint_storage)
 
-    # Run the workflow until the first RequestInfoEvent is surfaced. The event carries the
-    # request_id we must reuse on resume. In a real system this is where the UI would present
-    # the plan for human review.
+    # 最初のRequestInfoEventが現れるまでワークフローを実行します。このイベントは再開時に再利用すべきrequest_idを含みます。
+    # 実際のシステムではここでUIがプランを人間に提示します。
     plan_review_request_id: str | None = None
     async for event in workflow.run_stream(TASK):
         if isinstance(event, RequestInfoEvent) and event.request_type is MagenticPlanReviewRequest:
@@ -124,7 +120,7 @@ async def main() -> None:
     )
     print(f"Using checkpoint {resume_checkpoint.checkpoint_id} at iteration {resume_checkpoint.iteration_count}")
 
-    # Show that the checkpoint JSON indeed contains the pending plan-review request record.
+    # チェックポイントJSONに保留中のプランレビューリクエストレコードが確かに含まれていることを示します。
     checkpoint_path = checkpoint_storage.storage_path / f"{resume_checkpoint.checkpoint_id}.json"
     if checkpoint_path.exists():
         with checkpoint_path.open() as f:
@@ -136,10 +132,9 @@ async def main() -> None:
     resumed_workflow = build_workflow(checkpoint_storage)
 
     approval = MagenticPlanReviewReply(decision=MagenticPlanReviewDecision.APPROVE)
-    # Resume execution and supply the recorded approval in a single call.
-    # `run_stream_from_checkpoint` rebuilds executor state, applies the provided responses,
-    # and then continues the workflow. Because we only captured the initial plan review
-    # checkpoint, the resumed run should complete almost immediately.
+    # 実行を再開し、記録された承認を単一の呼び出しで提供します。
+    # `run_stream_from_checkpoint`はexecutorの状態を再構築し、提供されたレスポンスを適用し、
+    # その後ワークフローを継続します。初期プランレビューのチェックポイントのみをキャプチャしているため、 再開後の実行はほぼ即座に完了するはずです。
     final_event: WorkflowOutputEvent | None = None
     async for event in resumed_workflow.run_stream_from_checkpoint(
         resume_checkpoint.checkpoint_id,
@@ -152,8 +147,7 @@ async def main() -> None:
         print("Workflow did not complete after resume.")
         return
 
-    # Final sanity check: display the assistant's answer as proof the orchestration reached
-    # a natural completion after resuming from the checkpoint.
+    # 最終的な整合性チェック: チェックポイントから再開後にオーケストレーションが正常に完了した証拠として アシスタントの回答を表示します。
     result = final_event.data
     if not result:
         print("No result data from workflow.")
@@ -162,8 +156,8 @@ async def main() -> None:
     print("\n=== Final Answer ===")
     print(text)
 
-    # ------------------------------------------------------------------
-    # Stage 3: demonstrate resuming from a later checkpoint (post-plan)
+    # ------------------------------------------------------------------ ステージ3:
+    # 後のチェックポイント（プラン後）からの再開を示します
     # ------------------------------------------------------------------
 
     def _pending_message_count(cp: WorkflowCheckpoint) -> int:

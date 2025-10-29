@@ -41,7 +41,7 @@ from agent_framework.exceptions import AdditionItemMismatch, ContentError
 
 @fixture
 def ai_tool() -> ToolProtocol:
-    """Returns a generic ToolProtocol."""
+    """汎用のToolProtocolを返します。"""
 
     class GenericTool(BaseModel):
         name: str
@@ -49,7 +49,7 @@ def ai_tool() -> ToolProtocol:
         additional_properties: dict[str, Any] | None = None
 
         def parameters(self) -> dict[str, Any]:
-            """Return the parameters of the tool as a JSON schema."""
+            """ツールのパラメータをJSONスキーマとして返します。"""
             return {
                 "name": {"type": "string"},
             }
@@ -59,11 +59,11 @@ def ai_tool() -> ToolProtocol:
 
 @fixture
 def ai_function_tool() -> ToolProtocol:
-    """Returns a executable ToolProtocol."""
+    """実行可能なToolProtocolを返します。"""
 
     @ai_function
     def simple_function(x: int, y: int) -> int:
-        """A simple function that adds two numbers."""
+        """2つの数値を加算する単純な関数です。"""
         return x + y
 
     return simple_function
@@ -73,95 +73,93 @@ def ai_function_tool() -> ToolProtocol:
 
 
 def test_text_content_positional():
-    """Test the TextContent class to ensure it initializes correctly and inherits from BaseContent."""
-    # Create an instance of TextContent
+    """TextContentクラスが正しく初期化され、BaseContentから継承していることをテストします。"""
+    # TextContentのインスタンスを作成します。
     content = TextContent("Hello, world!", raw_representation="Hello, world!", additional_properties={"version": 1})
 
-    # Check the type and content
+    # 型と内容をチェックします。
     assert content.type == "text"
     assert content.text == "Hello, world!"
     assert content.raw_representation == "Hello, world!"
     assert content.additional_properties["version"] == 1
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContentの型であることを確認します。
     assert isinstance(content, BaseContent)
-    # Note: No longer using Pydantic validation, so type assignment should work
-    content.type = "text"  # This should work fine now
+    # 注：もはやPydanticのバリデーションを使用していないため、型の割り当ては動作するはずです。
+    content.type = "text"  # これで問題なく動作するはずです。
 
 
 def test_text_content_keyword():
-    """Test the TextContent class to ensure it initializes correctly and inherits from BaseContent."""
-    # Create an instance of TextContent
+    """TextContentクラスが正しく初期化され、BaseContentから継承していることをテストします。"""
+    # TextContentのインスタンスを作成します。
     content = TextContent(
         text="Hello, world!", raw_representation="Hello, world!", additional_properties={"version": 1}
     )
 
-    # Check the type and content
+    # 型と内容をチェックします。
     assert content.type == "text"
     assert content.text == "Hello, world!"
     assert content.raw_representation == "Hello, world!"
     assert content.additional_properties["version"] == 1
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContentの型であることを確認します。
     assert isinstance(content, BaseContent)
-    # Note: No longer using Pydantic validation, so type assignment should work
-    content.type = "text"  # This should work fine now
+    # 注意: もはやPydanticのバリデーションを使用していないため、型の割り当ては機能するはずです
+    content.type = "text"  # これで問題なく動作するはずです
 
 
 # region DataContent
 
 
 def test_data_content_bytes():
-    """Test the DataContent class to ensure it initializes correctly."""
-    # Create an instance of DataContent
+    """DataContentクラスが正しく初期化されることをテストします。"""
+    # DataContentのインスタンスを作成する
     content = DataContent(data=b"test", media_type="application/octet-stream", additional_properties={"version": 1})
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "data"
     assert content.uri == "data:application/octet-stream;base64,dGVzdA=="
     assert content.has_top_level_media_type("application") is True
     assert content.has_top_level_media_type("image") is False
     assert content.additional_properties["version"] == 1
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, BaseContent)
 
 
 def test_data_content_uri():
-    """Test the DataContent class to ensure it initializes correctly with a URI."""
-    # Create an instance of DataContent with a URI
+    """URIで正しく初期化されることをDataContentクラスでテストします。"""
+    # URIを使ってDataContentのインスタンスを作成する
     content = DataContent(uri="data:application/octet-stream;base64,dGVzdA==", additional_properties={"version": 1})
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "data"
     assert content.uri == "data:application/octet-stream;base64,dGVzdA=="
-    # media_type is extracted from URI now
+    # media_typeは現在URIから抽出される
     assert content.media_type == "application/octet-stream"
     assert content.has_top_level_media_type("application") is True
     assert content.additional_properties["version"] == 1
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, BaseContent)
 
 
 def test_data_content_invalid():
-    """Test the DataContent class to ensure it raises an error for invalid initialization."""
-    # Attempt to create an instance of DataContent with invalid data
-    # not a proper uri
+    """無効な初期化でエラーが発生することをDataContentクラスでテストします。"""
+    # 無効なデータでDataContentのインスタンス作成を試みる 正しいURIではない
     with raises(ValueError):
         DataContent(uri="invalid_uri")
-    # unknown media type
+    # 不明なメディアタイプ
     with raises(ValueError):
         DataContent(uri="data:application/random;base64,dGVzdA==")
-    # not valid base64 data would still be accepted by our basic validation
-    # but it's not a critical issue for now
+    # 有効なbase64データでないものも基本的なバリデーションでは受け入れられるが 現時点では重大な問題ではない
 
 
 def test_data_content_empty():
-    """Test the DataContent class to ensure it raises an error for empty data."""
-    # Attempt to create an instance of DataContent with empty data
+    """空のデータでエラーが発生することをDataContentクラスでテストします。"""
+    # 空のデータでDataContentのインスタンス作成を試みる
     with raises(ValueError):
         DataContent(data=b"", media_type="application/octet-stream")
 
-    # Attempt to create an instance of DataContent with empty URI
+    # 空のURIでDataContentのインスタンス作成を試みる
     with raises(ValueError):
         DataContent(uri="")
 
@@ -170,10 +168,10 @@ def test_data_content_empty():
 
 
 def test_uri_content():
-    """Test the UriContent class to ensure it initializes correctly."""
+    """UriContentクラスが正しく初期化されることをテストします。"""
     content = UriContent(uri="http://example.com", media_type="image/jpg", additional_properties={"version": 1})
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "uri"
     assert content.uri == "http://example.com"
     assert content.media_type == "image/jpg"
@@ -181,7 +179,7 @@ def test_uri_content():
     assert content.has_top_level_media_type("application") is False
     assert content.additional_properties["version"] == 1
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, BaseContent)
 
 
@@ -189,29 +187,29 @@ def test_uri_content():
 
 
 def test_hosted_file_content():
-    """Test the HostedFileContent class to ensure it initializes correctly."""
+    """HostedFileContentクラスが正しく初期化されることをテストします。"""
     content = HostedFileContent(file_id="file-123", additional_properties={"version": 1})
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "hosted_file"
     assert content.file_id == "file-123"
     assert content.additional_properties["version"] == 1
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, BaseContent)
 
 
 def test_hosted_file_content_minimal():
-    """Test the HostedFileContent class with minimal parameters."""
+    """最小限のパラメータでHostedFileContentクラスをテストします。"""
     content = HostedFileContent(file_id="file-456")
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "hosted_file"
     assert content.file_id == "file-456"
     assert content.additional_properties == {}
     assert content.raw_representation is None
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, BaseContent)
 
 
@@ -219,30 +217,30 @@ def test_hosted_file_content_minimal():
 
 
 def test_hosted_vector_store_content():
-    """Test the HostedVectorStoreContent class to ensure it initializes correctly."""
+    """HostedVectorStoreContentクラスが正しく初期化されることをテストします。"""
     content = HostedVectorStoreContent(vector_store_id="vs-789", additional_properties={"version": 1})
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "hosted_vector_store"
     assert content.vector_store_id == "vs-789"
     assert content.additional_properties["version"] == 1
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, HostedVectorStoreContent)
     assert isinstance(content, BaseContent)
 
 
 def test_hosted_vector_store_content_minimal():
-    """Test the HostedVectorStoreContent class with minimal parameters."""
+    """最小限のパラメータでHostedVectorStoreContentクラスをテストします。"""
     content = HostedVectorStoreContent(vector_store_id="vs-101112")
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "hosted_vector_store"
     assert content.vector_store_id == "vs-101112"
     assert content.additional_properties == {}
     assert content.raw_representation is None
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, HostedVectorStoreContent)
     assert isinstance(content, BaseContent)
 
@@ -251,15 +249,15 @@ def test_hosted_vector_store_content_minimal():
 
 
 def test_function_call_content():
-    """Test the FunctionCallContent class to ensure it initializes correctly."""
+    """FunctionCallContentクラスが正しく初期化されることをテストします。"""
     content = FunctionCallContent(call_id="1", name="example_function", arguments={"param1": "value1"})
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "function_call"
     assert content.name == "example_function"
     assert content.arguments == {"param1": "value1"}
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, BaseContent)
 
 
@@ -273,25 +271,25 @@ def test_function_call_content_parse_arguments():
 
 
 def test_function_call_content_add_merging_and_errors():
-    # str + str concatenation
+    # str + strの連結
     a = FunctionCallContent(call_id="1", name="f", arguments="abc")
     b = FunctionCallContent(call_id="1", name="f", arguments="def")
     c = a + b
     assert isinstance(c.arguments, str) and c.arguments == "abcdef"
 
-    # dict + dict merge
+    # dict + dictのマージ
     a = FunctionCallContent(call_id="1", name="f", arguments={"x": 1})
     b = FunctionCallContent(call_id="1", name="f", arguments={"y": 2})
     c = a + b
     assert c.arguments == {"x": 1, "y": 2}
 
-    # incompatible argument types
+    # 互換性のない引数の型
     a = FunctionCallContent(call_id="1", name="f", arguments="abc")
     b = FunctionCallContent(call_id="1", name="f", arguments={"y": 2})
     with raises(TypeError):
         _ = a + b
 
-    # incompatible call ids
+    # 互換性のないcall id
     a = FunctionCallContent(call_id="1", name="f", arguments="abc")
     b = FunctionCallContent(call_id="2", name="f", arguments="def")
 
@@ -303,14 +301,14 @@ def test_function_call_content_add_merging_and_errors():
 
 
 def test_function_result_content():
-    """Test the FunctionResultContent class to ensure it initializes correctly."""
+    """FunctionResultContentクラスが正しく初期化されることをテストします。"""
     content = FunctionResultContent(call_id="1", result={"param1": "value1"})
 
-    # Check the type and content
+    # 型と内容を確認する
     assert content.type == "function_result"
     assert content.result == {"param1": "value1"}
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(content, BaseContent)
 
 
@@ -362,14 +360,14 @@ def test_usage_details_additional_counts():
 
 def test_usage_details_add_with_none_and_type_errors():
     u = UsageDetails(input_token_count=1)
-    # __add__ with None returns self (no change)
+    # __add__にNoneを渡すとselfを返す（変更なし）
     v = u + None
     assert v is u
-    # __iadd__ with None leaves unchanged
+    # __iadd__にNoneを渡すと変更なし
     u2 = UsageDetails(input_token_count=2)
     u2 += None
     assert u2.input_token_count == 2
-    # wrong type raises
+    # 型が間違っていると例外を発生させる
     with raises(ValueError):
         _ = u + 42  # type: ignore[arg-type]
     with raises(ValueError):
@@ -380,7 +378,7 @@ def test_usage_details_add_with_none_and_type_errors():
 
 
 def test_function_approval_request_and_response_creation():
-    """Test creating a FunctionApprovalRequestContent and producing a response."""
+    """FunctionApprovalRequestContentの作成とレスポンス生成をテストします。"""
     fc = FunctionCallContent(call_id="call-1", name="do_something", arguments={"a": 1})
     req = FunctionApprovalRequestContent(id="req-1", function_call=fc)
 
@@ -404,15 +402,14 @@ def test_function_approval_serialization_roundtrip():
     dumped = req.to_dict()
     loaded = FunctionApprovalRequestContent.from_dict(dumped)
 
-    # Test that the basic properties match
+    # 基本的なプロパティが一致することをテストします
     assert loaded.id == req.id
     assert loaded.additional_properties == req.additional_properties
     assert loaded.function_call.call_id == req.function_call.call_id
     assert loaded.function_call.name == req.function_call.name
     assert loaded.function_call.arguments == req.function_call.arguments
 
-    # Skip the BaseModel validation test since we're no longer using Pydantic
-    # The Contents union will need to be handled differently when we fully migrate
+    # Pydanticを使わなくなったためBaseModelのバリデーションテストはスキップします Contentsのunionは完全移行時に別の方法で扱う必要があります
 
 
 # region BaseContent Serialization
@@ -434,61 +431,56 @@ def test_ai_content_serialization(content_type: type[BaseContent], args: dict):
     content = content_type(**args)
     serialized = content.to_dict()
     deserialized = content_type.from_dict(serialized)
-    # Note: Since we're no longer using Pydantic, we can't do direct equality comparison
-    # Instead, let's check that the deserialized object has the same attributes
-
-    # Special handling for DataContent which doesn't expose the original 'data' parameter
+    # 注意: Pydanticを使わなくなったため直接の等価比較はできません 代わりにデシリアライズしたオブジェクトが同じ属性を持つか確認します
+    # 元の'data'パラメータを公開しないDataContentは特別扱いします
     if content_type == DataContent and "data" in args:
-        # For DataContent created with data, check uri and media_type instead
+        # dataで作成されたDataContentは代わりにuriとmedia_typeをチェックします
         assert hasattr(deserialized, "uri")
         assert hasattr(deserialized, "media_type")
         assert deserialized.media_type == args["media_type"]  # type: ignore
-        # Skip checking the 'data' attribute since it's converted to uri
+        # 'data'属性はuriに変換されるためチェックをスキップします
         for key, value in args.items():
             if key != "data":  # Skip the 'data' key for DataContent
                 assert getattr(deserialized, key) == value
     else:
-        # Normal attribute checking for other content types
+        # 他のコンテンツタイプは通常の属性チェックを行います
         for key, value in args.items():
             if value:
                 assert getattr(deserialized, key) == value
 
-    # For now, skip the TestModel validation since it still uses Pydantic
-    # This would need to be updated when we migrate more classes
-    # class TestModel(BaseModel):
-    #     content: Contents
-    #
-    # test_item = TestModel.model_validate({"content": serialized})
-    # assert isinstance(test_item.content, content_type)
+    # 現時点ではTestModelのバリデーションはスキップします（まだPydanticを使用しているため） 移行時に更新が必要です class
+    # TestModel(BaseModel): content: Contents  test_item =
+    # TestModel.model_validate({"content": serialized}) assert
+    # isinstance(test_item.content, content_type)
 
 
 # region ChatMessage
 
 
 def test_chat_message_text():
-    """Test the ChatMessage class to ensure it initializes correctly with text content."""
-    # Create a ChatMessage with a role and text content
+    """ChatMessageクラスがテキストコンテンツで正しく初期化されることをテストします。"""
+    # 役割とテキストコンテンツでChatMessageを作成する
     message = ChatMessage(role="user", text="Hello, how are you?")
 
-    # Check the type and content
+    # 型と内容を確認する
     assert message.role == Role.USER
     assert len(message.contents) == 1
     assert isinstance(message.contents[0], TextContent)
     assert message.contents[0].text == "Hello, how are you?"
     assert message.text == "Hello, how are you?"
 
-    # Ensure the instance is of type BaseContent
+    # インスタンスがBaseContent型であることを確認する
     assert isinstance(message.contents[0], BaseContent)
 
 
 def test_chat_message_contents():
-    """Test the ChatMessage class to ensure it initializes correctly with contents."""
-    # Create a ChatMessage with a role and multiple contents
+    """ChatMessageクラスが複数のコンテンツで正しく初期化されることをテストします。"""
+    # 役割と複数のコンテンツでChatMessageを作成する
     content1 = TextContent("Hello, how are you?")
     content2 = TextContent("I'm fine, thank you!")
     message = ChatMessage(role="user", contents=[content1, content2])
 
-    # Check the type and content
+    # 型と内容を確認する
     assert message.role == Role.USER
     assert len(message.contents) == 2
     assert isinstance(message.contents[0], TextContent)
@@ -508,18 +500,18 @@ def test_chat_message_with_chatrole_instance():
 
 
 def test_chat_response():
-    """Test the ChatResponse class to ensure it initializes correctly with a message."""
-    # Create a ChatMessage
+    """ChatResponseクラスがメッセージで正しく初期化されることをテストします。"""
+    # ChatMessageを作成する
     message = ChatMessage(role="assistant", text="I'm doing well, thank you!")
 
-    # Create a ChatResponse with the message
+    # メッセージでChatResponseを作成する
     response = ChatResponse(messages=message)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert response.messages[0].role == Role.ASSISTANT
     assert response.messages[0].text == "I'm doing well, thank you!"
     assert isinstance(response.messages[0], ChatMessage)
-    # __str__ returns text
+    # __str__はテキストを返す
     assert str(response) == response.text
 
 
@@ -528,14 +520,14 @@ class OutputModel(BaseModel):
 
 
 def test_chat_response_with_format():
-    """Test the ChatResponse class to ensure it initializes correctly with a message."""
-    # Create a ChatMessage
+    """ChatResponseクラスがメッセージで正しく初期化されることをテストします。"""
+    # ChatMessageを作成する
     message = ChatMessage(role="assistant", text='{"response": "Hello"}')
 
-    # Create a ChatResponse with the message
+    # メッセージでChatResponseを作成する
     response = ChatResponse(messages=message)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert response.messages[0].role == Role.ASSISTANT
     assert response.messages[0].text == '{"response": "Hello"}'
     assert isinstance(response.messages[0], ChatMessage)
@@ -547,14 +539,14 @@ def test_chat_response_with_format():
 
 
 def test_chat_response_with_format_init():
-    """Test the ChatResponse class to ensure it initializes correctly with a message."""
-    # Create a ChatMessage
+    """ChatResponseクラスがメッセージで正しく初期化されることをテストします。"""
+    # ChatMessageを作成する
     message = ChatMessage(role="assistant", text='{"response": "Hello"}')
 
-    # Create a ChatResponse with the message
+    # メッセージでChatResponseを作成する
     response = ChatResponse(messages=message, response_format=OutputModel)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert response.messages[0].role == Role.ASSISTANT
     assert response.messages[0].text == '{"response": "Hello"}'
     assert isinstance(response.messages[0], ChatMessage)
@@ -567,35 +559,35 @@ def test_chat_response_with_format_init():
 
 
 def test_chat_response_update():
-    """Test the ChatResponseUpdate class to ensure it initializes correctly with a message."""
-    # Create a ChatMessage
+    """ChatResponseUpdateクラスがメッセージで正しく初期化されることをテストします。"""
+    # ChatMessageを作成する
     message = TextContent(text="I'm doing well, thank you!")
 
-    # Create a ChatResponseUpdate with the message
+    # メッセージでChatResponseUpdateを作成する
     response_update = ChatResponseUpdate(contents=[message])
 
-    # Check the type and content
+    # 型と内容を確認する
     assert response_update.contents[0].text == "I'm doing well, thank you!"
     assert isinstance(response_update.contents[0], TextContent)
     assert response_update.text == "I'm doing well, thank you!"
 
 
 def test_chat_response_updates_to_chat_response_one():
-    """Test converting ChatResponseUpdate to ChatResponse."""
-    # Create a ChatMessage
+    """ChatResponseUpdateをChatResponseに変換することをテストします。"""
+    # ChatMessageを作成する
     message1 = TextContent("I'm doing well, ")
     message2 = TextContent("thank you!")
 
-    # Create a ChatResponseUpdate with the message
+    # メッセージでChatResponseUpdateを作成する
     response_updates = [
         ChatResponseUpdate(text=message1, message_id="1"),
         ChatResponseUpdate(text=message2, message_id="1"),
     ]
 
-    # Convert to ChatResponse
+    # ChatResponseに変換する
     chat_response = ChatResponse.from_chat_response_updates(response_updates)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert len(chat_response.messages) == 1
     assert chat_response.text == "I'm doing well, thank you!"
     assert isinstance(chat_response.messages[0], ChatMessage)
@@ -604,21 +596,21 @@ def test_chat_response_updates_to_chat_response_one():
 
 
 def test_chat_response_updates_to_chat_response_two():
-    """Test converting ChatResponseUpdate to ChatResponse."""
-    # Create a ChatMessage
+    """ChatResponseUpdateをChatResponseに変換することをテストします。"""
+    # ChatMessageを作成する
     message1 = TextContent("I'm doing well, ")
     message2 = TextContent("thank you!")
 
-    # Create a ChatResponseUpdate with the message
+    # メッセージでChatResponseUpdateを作成する
     response_updates = [
         ChatResponseUpdate(text=message1, message_id="1"),
         ChatResponseUpdate(text=message2, message_id="2"),
     ]
 
-    # Convert to ChatResponse
+    # ChatResponseに変換する
     chat_response = ChatResponse.from_chat_response_updates(response_updates)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert len(chat_response.messages) == 2
     assert chat_response.text == "I'm doing well, \nthank you!"
     assert isinstance(chat_response.messages[0], ChatMessage)
@@ -628,22 +620,22 @@ def test_chat_response_updates_to_chat_response_two():
 
 
 def test_chat_response_updates_to_chat_response_multiple():
-    """Test converting ChatResponseUpdate to ChatResponse."""
-    # Create a ChatMessage
+    """ChatResponseUpdateをChatResponseに変換することをテストします。"""
+    # ChatMessageを作成する
     message1 = TextContent("I'm doing well, ")
     message2 = TextContent("thank you!")
 
-    # Create a ChatResponseUpdate with the message
+    # メッセージでChatResponseUpdateを作成する
     response_updates = [
         ChatResponseUpdate(text=message1, message_id="1"),
         ChatResponseUpdate(contents=[TextReasoningContent(text="Additional context")], message_id="1"),
         ChatResponseUpdate(text=message2, message_id="1"),
     ]
 
-    # Convert to ChatResponse
+    # ChatResponseに変換する
     chat_response = ChatResponse.from_chat_response_updates(response_updates)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert len(chat_response.messages) == 1
     assert chat_response.text == "I'm doing well,  thank you!"
     assert isinstance(chat_response.messages[0], ChatMessage)
@@ -652,12 +644,12 @@ def test_chat_response_updates_to_chat_response_multiple():
 
 
 def test_chat_response_updates_to_chat_response_multiple_multiple():
-    """Test converting ChatResponseUpdate to ChatResponse."""
-    # Create a ChatMessage
+    """ChatResponseUpdateをChatResponseに変換することをテストします。"""
+    # ChatMessageを作成する
     message1 = TextContent("I'm doing well, ", raw_representation="I'm doing well, ")
     message2 = TextContent("thank you!")
 
-    # Create a ChatResponseUpdate with the message
+    # メッセージでChatResponseUpdateを作成する
     response_updates = [
         ChatResponseUpdate(text=message1, message_id="1"),
         ChatResponseUpdate(text=message2, message_id="1"),
@@ -666,10 +658,10 @@ def test_chat_response_updates_to_chat_response_multiple_multiple():
         ChatResponseUpdate(text="Final part", message_id="1"),
     ]
 
-    # Convert to ChatResponse
+    # ChatResponseに変換する
     chat_response = ChatResponse.from_chat_response_updates(response_updates)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert len(chat_response.messages) == 1
     assert isinstance(chat_response.messages[0], ChatMessage)
     assert chat_response.messages[0].message_id == "1"
@@ -723,14 +715,14 @@ async def test_chat_response_from_async_generator_output_format_in_method():
 
 
 def test_chat_tool_mode():
-    """Test the ToolMode class to ensure it initializes correctly."""
-    # Create instances of ToolMode
+    """ToolModeクラスが正しく初期化されることをテストします。"""
+    # ToolModeのインスタンスを作成する
     auto_mode = ToolMode.AUTO
     required_any = ToolMode.REQUIRED_ANY
     required_mode = ToolMode.REQUIRED("example_function")
     none_mode = ToolMode.NONE
 
-    # Check the type and content
+    # 型と内容を確認する
     assert auto_mode.mode == "auto"
     assert auto_mode.required_function_name is None
     assert required_any.mode == "required"
@@ -740,27 +732,27 @@ def test_chat_tool_mode():
     assert none_mode.mode == "none"
     assert none_mode.required_function_name is None
 
-    # Ensure the instances are of type ToolMode
+    # インスタンスがToolMode型であることを確認する
     assert isinstance(auto_mode, ToolMode)
     assert isinstance(required_any, ToolMode)
     assert isinstance(required_mode, ToolMode)
     assert isinstance(none_mode, ToolMode)
 
     assert ToolMode.REQUIRED("example_function") == ToolMode.REQUIRED("example_function")
-    # serializer returns just the mode
+    # serializerはmodeのみを返す
     assert ToolMode.REQUIRED_ANY.serialize_model() == "required"
 
 
 def test_chat_tool_mode_from_dict():
-    """Test creating ToolMode from a dictionary."""
+    """辞書からToolModeを作成することをテストします。"""
     mode_dict = {"mode": "required", "required_function_name": "example_function"}
     mode = ToolMode(**mode_dict)
 
-    # Check the type and content
+    # 型と内容を確認する
     assert mode.mode == "required"
     assert mode.required_function_name == "example_function"
 
-    # Ensure the instance is of type ToolMode
+    # インスタンスがToolMode型であることを確認する
     assert isinstance(mode, ToolMode)
 
 
@@ -895,14 +887,14 @@ def test_error_content_str():
     assert str(e3) == "Unknown error"
 
 
-# region Annotations
+# region アノテーション
 
 
 def test_annotations_models_and_roundtrip():
     span = TextSpanRegion(start_index=0, end_index=5)
     cit = CitationAnnotation(title="Doc", url="http://example.com", snippet="Snippet", annotated_regions=[span])
 
-    # Attach to content
+    # コンテンツにアタッチ
     content = TextContent(text="hello", additional_properties={"v": 1})
     content.annotations = [cit]
 
@@ -910,15 +902,15 @@ def test_annotations_models_and_roundtrip():
     loaded = TextContent.from_dict(dumped)
     assert isinstance(loaded.annotations, list)
     assert len(loaded.annotations) == 1
-    # After migration from Pydantic, annotations should be properly reconstructed as objects
+    # Pydanticからの移行後、アノテーションはオブジェクトとして適切に再構築されるべきです
     assert isinstance(loaded.annotations[0], CitationAnnotation)
-    # Check the annotation properties
+    # アノテーションのプロパティをチェック
     loaded_cit = loaded.annotations[0]
     assert loaded_cit.type == "citation"
     assert loaded_cit.title == "Doc"
     assert loaded_cit.url == "http://example.com"
     assert loaded_cit.snippet == "Snippet"
-    # Check the annotated_regions
+    # annotated_regionsをチェック
     assert isinstance(loaded_cit.annotated_regions, list)
     assert len(loaded_cit.annotated_regions) == 1
     assert isinstance(loaded_cit.annotated_regions[0], TextSpanRegion)
@@ -928,10 +920,10 @@ def test_annotations_models_and_roundtrip():
 
 
 def test_function_call_merge_in_process_update_and_usage_aggregation():
-    # Two function call chunks with same call_id should merge
+    # 同じcall_idを持つ2つの関数呼び出しチャンクはマージされるべきです
     u1 = ChatResponseUpdate(contents=[FunctionCallContent(call_id="c1", name="f", arguments="{")], message_id="m")
     u2 = ChatResponseUpdate(contents=[FunctionCallContent(call_id="c1", name="f", arguments="}")], message_id="m")
-    # plus usage
+    # plusの使用法
     u3 = ChatResponseUpdate(contents=[UsageContent(UsageDetails(input_token_count=1, output_token_count=2))])
 
     resp = ChatResponse.from_chat_response_updates([u1, u2, u3])
@@ -955,7 +947,7 @@ def test_function_call_incompatible_ids_are_not_merged():
     assert len(fcs) == 2
 
 
-# region Role & FinishReason basics
+# region Role & FinishReasonの基本
 
 
 def test_chat_role_str_and_repr():
@@ -998,7 +990,7 @@ def test_text_coalescing_preserves_first_properties():
     upd1 = ChatResponseUpdate(text=t1, message_id="x")
     upd2 = ChatResponseUpdate(text=t2, message_id="x")
     resp = ChatResponse.from_chat_response_updates([upd1, upd2])
-    # After coalescing there should be a single TextContent with merged text and preserved props from first
+    # 結合後は、テキストがマージされ、最初のものからプロパティが保持された単一のTextContentが存在するべきです
     items = [c for c in resp.messages[0].contents if isinstance(c, TextContent)]
     assert len(items) >= 1
     assert items[0].text == "AB"
@@ -1034,13 +1026,13 @@ async def test_agent_run_response_from_async_generator():
     assert r.text == "AB"
 
 
-# region Additional Coverage Tests for Serialization and Arithmetic Methods
+# シリアライズおよび算術メソッドの追加カバレッジテストのregion
 
 
 def test_text_content_add_comprehensive_coverage():
-    """Test TextContent __add__ method with various combinations to improve coverage."""
+    """カバレッジ向上のため、さまざまな組み合わせでTextContentの__add__メソッドをテスト。"""
 
-    # Test with None raw_representation
+    # Noneのraw_representationでテスト
     t1 = TextContent("Hello", raw_representation=None, annotations=None)
     t2 = TextContent(" World", raw_representation=None, annotations=None)
     result = t1 + t2
@@ -1048,42 +1040,42 @@ def test_text_content_add_comprehensive_coverage():
     assert result.raw_representation is None
     assert result.annotations is None
 
-    # Test first has raw_representation, second has None
+    # 最初はraw_representationを持ち、2番目はNoneでテスト
     t1 = TextContent("Hello", raw_representation="raw1", annotations=None)
     t2 = TextContent(" World", raw_representation=None, annotations=None)
     result = t1 + t2
     assert result.text == "Hello World"
     assert result.raw_representation == "raw1"
 
-    # Test first has None, second has raw_representation
+    # 最初はNone、2番目はraw_representationを持つ場合のテスト
     t1 = TextContent("Hello", raw_representation=None, annotations=None)
     t2 = TextContent(" World", raw_representation="raw2", annotations=None)
     result = t1 + t2
     assert result.text == "Hello World"
     assert result.raw_representation == "raw2"
 
-    # Test both have raw_representation (non-list)
+    # 両方がraw_representation（リストでない）を持つ場合のテスト
     t1 = TextContent("Hello", raw_representation="raw1", annotations=None)
     t2 = TextContent(" World", raw_representation="raw2", annotations=None)
     result = t1 + t2
     assert result.text == "Hello World"
     assert result.raw_representation == ["raw1", "raw2"]
 
-    # Test first has list raw_representation, second has single
+    # 最初がリストのraw_representation、2番目が単一のテスト
     t1 = TextContent("Hello", raw_representation=["raw1", "raw2"], annotations=None)
     t2 = TextContent(" World", raw_representation="raw3", annotations=None)
     result = t1 + t2
     assert result.text == "Hello World"
     assert result.raw_representation == ["raw1", "raw2", "raw3"]
 
-    # Test both have list raw_representation
+    # 両方がリストのraw_representationを持つ場合のテスト
     t1 = TextContent("Hello", raw_representation=["raw1", "raw2"], annotations=None)
     t2 = TextContent(" World", raw_representation=["raw3", "raw4"], annotations=None)
     result = t1 + t2
     assert result.text == "Hello World"
     assert result.raw_representation == ["raw1", "raw2", "raw3", "raw4"]
 
-    # Test first has single raw_representation, second has list
+    # 最初が単一のraw_representation、2番目がリストのテスト
     t1 = TextContent("Hello", raw_representation="raw1", annotations=None)
     t2 = TextContent(" World", raw_representation=["raw2", "raw3"], annotations=None)
     result = t1 + t2
@@ -1092,7 +1084,7 @@ def test_text_content_add_comprehensive_coverage():
 
 
 def test_text_content_iadd_coverage():
-    """Test TextContent __iadd__ method for better coverage."""
+    """カバレッジ向上のためTextContentの__iadd__メソッドをテスト。"""
 
     t1 = TextContent("Hello", raw_representation="raw1", additional_properties={"key1": "val1"})
     t2 = TextContent(" World", raw_representation="raw2", additional_properties={"key2": "val2"})
@@ -1100,7 +1092,7 @@ def test_text_content_iadd_coverage():
     original_id = id(t1)
     t1 += t2
 
-    # Should modify in place
+    # インプレースで変更されるべき
     assert id(t1) == original_id
     assert t1.text == "Hello World"
     assert t1.raw_representation == ["raw1", "raw2"]
@@ -1108,7 +1100,7 @@ def test_text_content_iadd_coverage():
 
 
 def test_text_reasoning_content_add_coverage():
-    """Test TextReasoningContent __add__ method for better coverage."""
+    """カバレッジ向上のためTextReasoningContentの__add__メソッドをテスト。"""
 
     t1 = TextReasoningContent("Thinking 1")
     t2 = TextReasoningContent(" Thinking 2")
@@ -1118,7 +1110,7 @@ def test_text_reasoning_content_add_coverage():
 
 
 def test_text_reasoning_content_iadd_coverage():
-    """Test TextReasoningContent __iadd__ method for better coverage."""
+    """カバレッジ向上のためTextReasoningContentの__iadd__メソッドをテスト。"""
 
     t1 = TextReasoningContent("Thinking 1")
     t2 = TextReasoningContent(" Thinking 2")
@@ -1131,26 +1123,26 @@ def test_text_reasoning_content_iadd_coverage():
 
 
 def test_comprehensive_to_dict_exclude_options():
-    """Test to_dict methods with various exclude options for better coverage."""
+    """さまざまなexcludeオプションでto_dictメソッドをテストし、カバレッジを向上。"""
 
-    # Test TextContent with exclude_none
+    # exclude_noneを使ったTextContentのテスト
     text_content = TextContent("Hello", raw_representation=None, additional_properties={"prop": "val"})
     text_dict = text_content.to_dict(exclude_none=True)
     assert "raw_representation" not in text_dict
     assert text_dict["prop"] == "val"
 
-    # Test with custom exclude set
+    # カスタムexcludeセットでのテスト
     text_dict_exclude = text_content.to_dict(exclude={"additional_properties"})
     assert "additional_properties" not in text_dict_exclude
     assert "text" in text_dict_exclude
 
-    # Test UsageDetails with additional counts
+    # 追加カウントを持つUsageDetailsのテスト
     usage = UsageDetails(input_token_count=5, custom_count=10)
     usage_dict = usage.to_dict()
     assert usage_dict["input_token_count"] == 5
     assert usage_dict["custom_count"] == 10
 
-    # Test UsageDetails exclude_none
+    # UsageDetailsのexclude_noneテスト
     usage_none = UsageDetails(input_token_count=5, output_token_count=None)
     usage_dict_no_none = usage_none.to_dict(exclude_none=True)
     assert "output_token_count" not in usage_dict_no_none
@@ -1158,9 +1150,9 @@ def test_comprehensive_to_dict_exclude_options():
 
 
 def test_usage_details_iadd_edge_cases():
-    """Test UsageDetails __iadd__ with edge cases for better coverage."""
+    """エッジケースでUsageDetailsの__iadd__をテストし、カバレッジ向上。"""
 
-    # Test with None values
+    # None値でのテスト
     u1 = UsageDetails(input_token_count=None, output_token_count=5, custom1=10)
     u2 = UsageDetails(input_token_count=3, output_token_count=None, custom2=20)
 
@@ -1170,7 +1162,7 @@ def test_usage_details_iadd_edge_cases():
     assert u1.additional_counts["custom1"] == 10
     assert u1.additional_counts["custom2"] == 20
 
-    # Test merging additional counts
+    # 追加カウントのマージをテスト
     u3 = UsageDetails(input_token_count=1, shared_count=5)
     u4 = UsageDetails(input_token_count=2, shared_count=15)
 
@@ -1180,7 +1172,7 @@ def test_usage_details_iadd_edge_cases():
 
 
 def test_chat_message_from_dict_with_mixed_content():
-    """Test ChatMessage from_dict with mixed content types for better coverage."""
+    """混合コンテンツタイプでChatMessageのfrom_dictをテストし、カバレッジ向上。"""
 
     message_data = {
         "role": "assistant",
@@ -1192,31 +1184,31 @@ def test_chat_message_from_dict_with_mixed_content():
     }
 
     message = ChatMessage.from_dict(message_data)
-    assert len(message.contents) == 3  # Unknown type is ignored
+    assert len(message.contents) == 3  # 不明なタイプは無視される
     assert isinstance(message.contents[0], TextContent)
     assert isinstance(message.contents[1], FunctionCallContent)
     assert isinstance(message.contents[2], FunctionResultContent)
 
-    # Test round-trip
+    # ラウンドトリップテスト
     message_dict = message.to_dict()
     assert len(message_dict["contents"]) == 3
 
 
 def test_chat_options_edge_cases():
-    """Test ChatOptions with edge cases for better coverage."""
+    """エッジケースでChatOptionsをテストし、カバレッジ向上。"""
 
-    # Test with tools conversion
+    # ツール変換でのテスト
     def sample_tool():
         return "test"
 
     options = ChatOptions(tools=[sample_tool], tool_choice="auto")
     assert options.tool_choice == ToolMode.AUTO
 
-    # Test to_dict with ToolMode
+    # ToolModeでのto_dictテスト
     options_dict = options.to_dict()
     assert "tool_choice" in options_dict
 
-    # Test from_dict with tool_choice dict
+    # tool_choice辞書でのfrom_dictテスト
     data_with_dict_tool_choice = {
         "model_id": "gpt-4",
         "tool_choice": {"mode": "required", "required_function_name": "test_func"},
@@ -1227,7 +1219,7 @@ def test_chat_options_edge_cases():
 
 
 def test_text_content_add_type_error():
-    """Test TextContent __add__ raises TypeError for incompatible types."""
+    """互換性のない型でTextContentの__add__がTypeErrorを発生させるテスト。"""
     t1 = TextContent("Hello")
 
     with raises(TypeError, match="Incompatible type"):
@@ -1235,9 +1227,9 @@ def test_text_content_add_type_error():
 
 
 def test_comprehensive_serialization_methods():
-    """Test from_dict and to_dict methods for various content types."""
+    """さまざまなコンテンツタイプでfrom_dictおよびto_dictメソッドをテスト。"""
 
-    # Test TextContent with all fields
+    # 全フィールドを持つTextContentのテスト
     text_data = {
         "text": "Hello world",
         "raw_representation": {"key": "value"},
@@ -1249,17 +1241,15 @@ def test_comprehensive_serialization_methods():
     assert text_content.raw_representation == {"key": "value"}
     assert text_content.additional_properties == {"prop": "val"}
 
-    # Test round-trip
+    # ラウンドトリップテスト
     text_dict = text_content.to_dict()
     assert text_dict["text"] == "Hello world"
     assert text_dict["prop"] == "val"
-    # Note: raw_representation is always excluded from to_dict() output
-
-    # Test with exclude_none
+    # 注意: raw_representationはto_dict()出力から常に除外されます exclude_noneでのテスト
     text_dict_no_none = text_content.to_dict(exclude_none=True)
     assert "annotations" not in text_dict_no_none
 
-    # Test FunctionResultContent
+    # FunctionResultContentのテスト
     result_data = {"call_id": "call123", "result": "success", "additional_properties": {"meta": "data"}}
     result_content = FunctionResultContent.from_dict(result_data)
     assert result_content.call_id == "call123"
@@ -1267,14 +1257,14 @@ def test_comprehensive_serialization_methods():
 
 
 def test_chat_options_tool_choice_variations():
-    """Test ChatOptions from_dict and to_dict with various tool_choice values."""
+    """さまざまなtool_choice値でChatOptionsのfrom_dictおよびto_dictをテスト。"""
 
-    # Test with string tool_choice
+    # 文字列tool_choiceでのテスト
     data = {"model_id": "gpt-4", "tool_choice": "auto", "temperature": 0.7}
     options = ChatOptions.from_dict(data)
     assert options.tool_choice == ToolMode.AUTO
 
-    # Test with dict tool_choice
+    # 辞書tool_choiceでのテスト
     data_dict = {
         "model_id": "gpt-4",
         "tool_choice": {"mode": "required", "required_function_name": "test_func"},
@@ -1284,16 +1274,16 @@ def test_chat_options_tool_choice_variations():
     assert options_dict.tool_choice.mode == "required"
     assert options_dict.tool_choice.required_function_name == "test_func"
 
-    # Test to_dict with ToolMode
+    # ToolModeでのto_dictテスト
     options_dict_serialized = options_dict.to_dict()
     assert "tool_choice" in options_dict_serialized
     assert isinstance(options_dict_serialized["tool_choice"], dict)
 
 
 def test_chat_message_complex_content_serialization():
-    """Test ChatMessage serialization with various content types."""
+    """さまざまなコンテンツタイプでChatMessageのシリアライズをテスト。"""
 
-    # Create a message with multiple content types
+    # 複数のコンテンツタイプを持つメッセージを作成
     contents = [
         TextContent("Hello"),
         FunctionCallContent(call_id="call1", name="func", arguments={"arg": "val"}),
@@ -1302,14 +1292,14 @@ def test_chat_message_complex_content_serialization():
 
     message = ChatMessage(role=Role.ASSISTANT, contents=contents)
 
-    # Test to_dict
+    # to_dictのテスト
     message_dict = message.to_dict()
     assert len(message_dict["contents"]) == 3
     assert message_dict["contents"][0]["type"] == "text"
     assert message_dict["contents"][1]["type"] == "function_call"
     assert message_dict["contents"][2]["type"] == "function_result"
 
-    # Test from_dict round-trip
+    # from_dictのラウンドトリップテスト
     reconstructed = ChatMessage.from_dict(message_dict)
     assert len(reconstructed.contents) == 3
     assert isinstance(reconstructed.contents[0], TextContent)
@@ -1318,9 +1308,9 @@ def test_chat_message_complex_content_serialization():
 
 
 def test_usage_content_serialization_with_details():
-    """Test UsageContent from_dict and to_dict with UsageDetails conversion."""
+    """UsageDetails変換を伴うUsageContentのfrom_dictおよびto_dictのテスト。"""
 
-    # Test from_dict with details as dict
+    # 辞書としてのdetailsでのfrom_dictテスト
     usage_data = {
         "type": "usage",
         "details": {
@@ -1336,16 +1326,16 @@ def test_usage_content_serialization_with_details():
     assert usage_content.details.input_token_count == 10
     assert usage_content.details.additional_counts["custom_count"] == 5
 
-    # Test to_dict with UsageDetails object
+    # UsageDetailsオブジェクトでのto_dictテスト
     usage_dict = usage_content.to_dict()
     assert isinstance(usage_dict["details"], dict)
     assert usage_dict["details"]["input_token_count"] == 10
 
 
 def test_function_approval_response_content_serialization():
-    """Test FunctionApprovalResponseContent from_dict and to_dict with function_call conversion."""
+    """function_call変換を伴うFunctionApprovalResponseContentのfrom_dictおよびto_dictのテスト。"""
 
-    # Test from_dict with function_call as dict
+    # 辞書としてのfunction_callでのfrom_dictテスト
     response_data = {
         "type": "function_approval_response",
         "id": "response123",
@@ -1361,16 +1351,16 @@ def test_function_approval_response_content_serialization():
     assert isinstance(response_content.function_call, FunctionCallContent)
     assert response_content.function_call.call_id == "call123"
 
-    # Test to_dict with FunctionCallContent object
+    # FunctionCallContentオブジェクトでのto_dictテスト
     response_dict = response_content.to_dict()
     assert isinstance(response_dict["function_call"], dict)
     assert response_dict["function_call"]["call_id"] == "call123"
 
 
 def test_chat_response_complex_serialization():
-    """Test ChatResponse from_dict and to_dict with complex nested objects."""
+    """複雑なネストオブジェクトを伴うChatResponseのfrom_dictおよびto_dictのテスト。"""
 
-    # Test from_dict with messages, finish_reason, and usage_details as dicts
+    # 辞書としてのmessages、finish_reason、usage_detailsでのfrom_dictテスト
     response_data = {
         "messages": [
             {"role": "user", "contents": [{"type": "text", "text": "Hello"}]},
@@ -1391,19 +1381,19 @@ def test_chat_response_complex_serialization():
     assert isinstance(response.messages[0], ChatMessage)
     assert isinstance(response.finish_reason, FinishReason)
     assert isinstance(response.usage_details, UsageDetails)
-    assert response.model_id == "gpt-4"  # Should be stored as model_id
+    assert response.model_id == "gpt-4"  # model_idとして保存されるべき
 
-    # Test to_dict with complex objects
+    # 複雑なオブジェクトでのto_dictテスト
     response_dict = response.to_dict()
     assert len(response_dict["messages"]) == 2
     assert isinstance(response_dict["messages"][0], dict)
     assert isinstance(response_dict["finish_reason"], dict)
     assert isinstance(response_dict["usage_details"], dict)
-    assert response_dict["model_id"] == "gpt-4"  # Should serialize as model_id
+    assert response_dict["model_id"] == "gpt-4"  # model_idとしてシリアライズされるべき
 
 
 def test_chat_response_update_all_content_types():
-    """Test ChatResponseUpdate from_dict with all supported content types."""
+    """すべてのサポートされるコンテンツタイプでのChatResponseUpdateのfrom_dictテスト。"""
 
     update_data = {
         "contents": [
@@ -1432,7 +1422,7 @@ def test_chat_response_update_all_content_types():
     }
 
     update = ChatResponseUpdate.from_dict(update_data)
-    assert len(update.contents) == 12  # unknown_type is skipped with warning
+    assert len(update.contents) == 12  # unknown_typeは警告と共にスキップされる
     assert isinstance(update.contents[0], TextContent)
     assert isinstance(update.contents[1], DataContent)
     assert isinstance(update.contents[2], UriContent)
@@ -1448,7 +1438,7 @@ def test_chat_response_update_all_content_types():
 
 
 def test_agent_run_response_complex_serialization():
-    """Test AgentRunResponse from_dict and to_dict with messages and usage_details."""
+    """messagesおよびusage_detailsを伴うAgentRunResponseのfrom_dictおよびto_dictのテスト。"""
 
     response_data = {
         "messages": [
@@ -1468,7 +1458,7 @@ def test_agent_run_response_complex_serialization():
     assert isinstance(response.messages[0], ChatMessage)
     assert isinstance(response.usage_details, UsageDetails)
 
-    # Test to_dict
+    # to_dictのテスト
     response_dict = response.to_dict()
     assert len(response_dict["messages"]) == 2
     assert isinstance(response_dict["messages"][0], dict)
@@ -1476,7 +1466,7 @@ def test_agent_run_response_complex_serialization():
 
 
 def test_agent_run_response_update_all_content_types():
-    """Test AgentRunResponseUpdate from_dict with all content types and role handling."""
+    """すべてのコンテンツタイプとrole処理を伴うAgentRunResponseUpdateのfrom_dictテスト。"""
 
     update_data = {
         "contents": [
@@ -1506,16 +1496,16 @@ def test_agent_run_response_update_all_content_types():
     }
 
     update = AgentRunResponseUpdate.from_dict(update_data)
-    assert len(update.contents) == 12  # unknown_type is logged and ignored
+    assert len(update.contents) == 12  # unknown_typeはログに記録され無視される
     assert isinstance(update.role, Role)
     assert update.role.value == "assistant"
 
-    # Test to_dict with role conversion
+    # role変換を伴うto_dictのテスト
     update_dict = update.to_dict()
-    assert len(update_dict["contents"]) == 12  # unknown_type was ignored during from_dict
+    assert len(update_dict["contents"]) == 12  # from_dict中にunknown_typeは無視された
     assert isinstance(update_dict["role"], dict)
 
-    # Test role as string conversion
+    # 文字列変換としてのroleのテスト
     update_data_str_role = update_data.copy()
     update_data_str_role["role"] = "user"
     update_str = AgentRunResponseUpdate.from_dict(update_data_str_role)
@@ -1523,7 +1513,7 @@ def test_agent_run_response_update_all_content_types():
     assert update_str.role.value == "user"
 
 
-# region Serialization
+# region シリアライズ
 
 
 @mark.parametrize(
@@ -1741,64 +1731,64 @@ def test_agent_run_response_update_all_content_types():
     ],
 )
 def test_content_roundtrip_serialization(content_class: type[BaseContent], init_kwargs: dict[str, Any]):
-    """Test to_dict/from_dict roundtrip for all content types."""
-    # Create instance
+    """すべてのコンテンツタイプのto_dict/from_dictラウンドトリップテスト。"""
+    # インスタンスを作成
     content = content_class(**init_kwargs)
 
-    # Serialize to dict
+    # 辞書にシリアライズ
     content_dict = content.to_dict()
 
-    # Verify type key is in serialized dict
+    # シリアライズされた辞書にtypeキーがあることを検証
     assert "type" in content_dict
     if hasattr(content, "type"):
         assert content_dict["type"] == content.type  # type: ignore[attr-defined]
 
-    # Deserialize from dict
+    # 辞書からデシリアライズ
     reconstructed = content_class.from_dict(content_dict)
 
-    # Verify type
+    # typeを検証
     assert isinstance(reconstructed, content_class)
-    # Check type attribute dynamically
+    # 動的にtype属性をチェック
     if hasattr(content, "type"):
         assert reconstructed.type == content.type  # type: ignore[attr-defined]
 
-    # Verify key attributes (excluding raw_representation which is not serialized)
+    # 主要属性を検証（raw_representationはシリアライズされないため除外）
     for key, value in init_kwargs.items():
         if key == "type":
             continue
         if key == "raw_representation":
-            # raw_representation is intentionally excluded from serialization
+            # raw_representationは意図的にシリアライズから除外される
             continue
 
-        # Special handling for DataContent created with 'data' parameter
+        # 'data'パラメータで作成されたDataContentの特別な処理
         if content_class == DataContent and key == "data":
-            # DataContent converts 'data' to 'uri', so we skip checking 'data' attribute
-            # Instead we verify that uri and media_type are set correctly
+            # DataContentは'data'を'uri'に変換するため、'data'属性のチェックはスキップ
+            # 代わりにuriとmedia_typeが正しく設定されていることを検証
             assert hasattr(reconstructed, "uri")
             assert hasattr(reconstructed, "media_type")
             assert reconstructed.media_type == init_kwargs.get("media_type")
-            # Verify the uri contains the encoded data
+            # uriにエンコードされたデータが含まれていることを検証
             assert reconstructed.uri.startswith(f"data:{init_kwargs.get('media_type')};base64,")
             continue
 
         reconstructed_value = getattr(reconstructed, key)
 
-        # Special handling for nested SerializationMixin objects
+        # ネストされたSerializationMixinオブジェクトの特別な処理
         if hasattr(value, "to_dict"):
-            # Compare the serialized forms
+            # シリアライズされた形式を比較
             assert reconstructed_value.to_dict() == value.to_dict()
-        # Special handling for lists that may contain dicts converted to objects
+        # 辞書がオブジェクトに変換される可能性のあるリストの特別な処理
         elif isinstance(value, list) and value and isinstance(reconstructed_value, list):
-            # Check if this is a list of objects that were created from dicts
+            # これは辞書から作成されたオブジェクトのリストかどうかをチェック
             if isinstance(value[0], dict) and hasattr(reconstructed_value[0], "to_dict"):
-                # Compare each item by serializing the reconstructed object
+                # 再構築されたオブジェクトをシリアライズして各アイテムを比較
                 assert len(reconstructed_value) == len(value)
 
             else:
                 assert reconstructed_value == value
-        # Special handling for dicts that get converted to objects (like UsageDetails, FunctionCallContent)
+        # UsageDetailsやFunctionCallContentのようにオブジェクトに変換される辞書の特別な処理
         elif isinstance(value, dict) and hasattr(reconstructed_value, "to_dict"):
-            # Compare the dict with the serialized form of the object, excluding 'type' key
+            # 'type'キーを除外してオブジェクトのシリアライズ形式と辞書を比較
             reconstructed_dict = reconstructed_value.to_dict()
             if value:
                 assert len(reconstructed_dict) == len(value)
@@ -1807,11 +1797,11 @@ def test_content_roundtrip_serialization(content_class: type[BaseContent], init_
 
 
 def test_text_content_with_annotations_serialization():
-    """Test TextContent with CitationAnnotation and TextSpanRegion roundtrip serialization."""
-    # Create TextSpanRegion
+    """CitationAnnotationとTextSpanRegionを伴うTextContentのラウンドトリップシリアライズをテスト。"""
+    # TextSpanRegionを作成
     region = TextSpanRegion(start_index=0, end_index=5)
 
-    # Create CitationAnnotation with region
+    # regionを持つCitationAnnotationを作成
     citation = CitationAnnotation(
         title="Test Citation",
         url="http://example.com/citation",
@@ -1822,21 +1812,21 @@ def test_text_content_with_annotations_serialization():
         additional_properties={"custom": "value"},
     )
 
-    # Create TextContent with annotation
+    # アノテーション付きTextContentを作成
     content = TextContent(
         text="Hello world", annotations=[citation], additional_properties={"content_key": "content_val"}
     )
 
-    # Serialize to dict
+    # 辞書にシリアライズ
     content_dict = content.to_dict()
 
-    # Verify structure
+    # 構造を検証
     assert content_dict["type"] == "text"
     assert content_dict["text"] == "Hello world"
     assert content_dict["content_key"] == "content_val"
     assert len(content_dict["annotations"]) == 1
 
-    # Verify annotation structure
+    # アノテーション構造を検証
     annotation_dict = content_dict["annotations"][0]
     assert annotation_dict["type"] == "citation"
     assert annotation_dict["title"] == "Test Citation"
@@ -1846,23 +1836,23 @@ def test_text_content_with_annotations_serialization():
     assert annotation_dict["snippet"] == "This is a test snippet"
     assert annotation_dict["custom"] == "value"
 
-    # Verify region structure
+    # region構造を検証
     assert len(annotation_dict["annotated_regions"]) == 1
     region_dict = annotation_dict["annotated_regions"][0]
     assert region_dict["type"] == "text_span"
     assert region_dict["start_index"] == 0
     assert region_dict["end_index"] == 5
 
-    # Deserialize from dict
+    # 辞書からデシリアライズ
     reconstructed = TextContent.from_dict(content_dict)
 
-    # Verify reconstructed content
+    # 再構築されたコンテンツを検証
     assert isinstance(reconstructed, TextContent)
     assert reconstructed.text == "Hello world"
     assert reconstructed.type == "text"
     assert reconstructed.additional_properties == {"content_key": "content_val"}
 
-    # Verify reconstructed annotation
+    # 再構築されたアノテーションを検証
     assert len(reconstructed.annotations) == 1  # type: ignore[arg-type]
     recon_annotation = reconstructed.annotations[0]  # type: ignore[index]
     assert isinstance(recon_annotation, CitationAnnotation)
@@ -1873,7 +1863,7 @@ def test_text_content_with_annotations_serialization():
     assert recon_annotation.snippet == "This is a test snippet"
     assert recon_annotation.additional_properties == {"custom": "value"}
 
-    # Verify reconstructed region
+    # 再構築されたregionを検証
     assert len(recon_annotation.annotated_regions) == 1  # type: ignore[arg-type]
     recon_region = recon_annotation.annotated_regions[0]  # type: ignore[index]
     assert isinstance(recon_region, TextSpanRegion)
@@ -1883,31 +1873,31 @@ def test_text_content_with_annotations_serialization():
 
 
 def test_text_content_with_multiple_annotations_serialization():
-    """Test TextContent with multiple annotations roundtrip serialization."""
-    # Create multiple regions
+    """複数のアノテーションを持つTextContentのラウンドトリップシリアライズをテスト。"""
+    # 複数のregionを作成
     region1 = TextSpanRegion(start_index=0, end_index=5)
     region2 = TextSpanRegion(start_index=6, end_index=11)
 
-    # Create multiple citations
+    # 複数のcitationを作成
     citation1 = CitationAnnotation(title="Citation 1", url="http://example.com/1", annotated_regions=[region1])
 
     citation2 = CitationAnnotation(title="Citation 2", url="http://example.com/2", annotated_regions=[region2])
 
-    # Create TextContent with multiple annotations
+    # 複数のアノテーションを持つTextContentを作成
     content = TextContent(text="Hello world", annotations=[citation1, citation2])
 
-    # Serialize
+    # シリアライズ
     content_dict = content.to_dict()
 
-    # Verify we have 2 annotations
+    # 2つのアノテーションがあることを検証
     assert len(content_dict["annotations"]) == 2
     assert content_dict["annotations"][0]["title"] == "Citation 1"
     assert content_dict["annotations"][1]["title"] == "Citation 2"
 
-    # Deserialize
+    # デシリアライズ
     reconstructed = TextContent.from_dict(content_dict)
 
-    # Verify reconstruction
+    # 再構築を検証
     assert len(reconstructed.annotations) == 2
     assert all(isinstance(ann, CitationAnnotation) for ann in reconstructed.annotations)
     assert reconstructed.annotations[0].title == "Citation 1"

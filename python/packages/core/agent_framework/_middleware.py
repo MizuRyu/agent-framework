@@ -43,9 +43,10 @@ TContext = TypeVar("TContext")
 
 
 class MiddlewareType(str, Enum):
-    """Enum representing the type of middleware.
+    """ミドルウェアの種類を表すEnumです。
 
-    Used internally to identify and categorize middleware types.
+    内部的にミドルウェアの種類を識別および分類するために使用されます。
+
     """
 
     AGENT = "agent"
@@ -54,24 +55,23 @@ class MiddlewareType(str, Enum):
 
 
 class AgentRunContext(SerializationMixin):
-    """Context object for agent middleware invocations.
+    """Agentミドルウェア呼び出しのためのContextオブジェクトです。
 
-    This context is passed through the agent middleware pipeline and contains all information
-    about the agent invocation.
+    このコンテキストはAgentミドルウェアパイプラインを通過し、Agent呼び出しに関するすべての情報を含みます。
 
     Attributes:
-        agent: The agent being invoked.
-        messages: The messages being sent to the agent.
-        thread: The agent thread for this invocation, if any.
-        is_streaming: Whether this is a streaming invocation.
-        metadata: Metadata dictionary for sharing data between agent middleware.
-        result: Agent execution result. Can be observed after calling ``next()``
-                to see the actual execution result or can be set to override the execution result.
-                For non-streaming: should be AgentRunResponse.
-                For streaming: should be AsyncIterable[AgentRunResponseUpdate].
-        terminate: A flag indicating whether to terminate execution after current middleware.
-                When set to True, execution will stop as soon as control returns to framework.
-        kwargs: Additional keyword arguments passed to the agent run method.
+        agent: 呼び出されるAgent。
+        messages: Agentに送信されるメッセージ。
+        thread: この呼び出しのAgentスレッド（あれば）。
+        is_streaming: ストリーミング呼び出しかどうか。
+        metadata: Agentミドルウェア間でデータを共有するためのメタデータ辞書。
+        result: Agent実行結果。``next()``呼び出し後に実際の実行結果を観察できるか、
+                実行結果を上書きするために設定可能。
+                非ストリーミングの場合はAgentRunResponseであるべき。
+                ストリーミングの場合はAsyncIterable[AgentRunResponseUpdate]であるべき。
+        terminate: 現在のミドルウェア後に実行を終了するかどうかのフラグ。
+                Trueに設定されると、制御がフレームワークに戻るとすぐに実行が停止します。
+        kwargs: Agent実行メソッドに渡される追加のキーワード引数。
 
     Examples:
         .. code-block:: python
@@ -86,14 +86,15 @@ class AgentRunContext(SerializationMixin):
                     print(f"Thread: {context.thread}")
                     print(f"Streaming: {context.is_streaming}")
 
-                    # Store metadata
+                    # メタデータを保存
                     context.metadata["start_time"] = time.time()
 
-                    # Continue execution
+                    # 実行を継続
                     await next(context)
 
-                    # Access result after execution
+                    # 実行後に結果にアクセス
                     print(f"Result: {context.result}")
+
     """
 
     INJECTABLE: ClassVar[set[str]] = {"agent", "thread", "result"}
@@ -109,17 +110,18 @@ class AgentRunContext(SerializationMixin):
         terminate: bool = False,
         kwargs: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize the AgentRunContext.
+        """AgentRunContextを初期化します。
 
         Args:
-            agent: The agent being invoked.
-            messages: The messages being sent to the agent.
-            thread: The agent thread for this invocation, if any.
-            is_streaming: Whether this is a streaming invocation.
-            metadata: Metadata dictionary for sharing data between agent middleware.
-            result: Agent execution result.
-            terminate: A flag indicating whether to terminate execution after current middleware.
-            kwargs: Additional keyword arguments passed to the agent run method.
+            agent: 呼び出されるAgent。
+            messages: Agentに送信されるメッセージ。
+            thread: この呼び出しのAgentスレッド（あれば）。
+            is_streaming: ストリーミング呼び出しかどうか。
+            metadata: Agentミドルウェア間でデータを共有するためのメタデータ辞書。
+            result: Agent実行結果。
+            terminate: 現在のミドルウェア後に実行を終了するかどうかのフラグ。
+            kwargs: Agent実行メソッドに渡される追加のキーワード引数。
+
         """
         self.agent = agent
         self.messages = messages
@@ -132,20 +134,19 @@ class AgentRunContext(SerializationMixin):
 
 
 class FunctionInvocationContext(SerializationMixin):
-    """Context object for function middleware invocations.
+    """関数ミドルウェア呼び出しのためのContextオブジェクトです。
 
-    This context is passed through the function middleware pipeline and contains all information
-    about the function invocation.
+    このコンテキストは関数ミドルウェアパイプラインを通過し、関数呼び出しに関するすべての情報を含みます。
 
     Attributes:
-        function: The function being invoked.
-        arguments: The validated arguments for the function.
-        metadata: Metadata dictionary for sharing data between function middleware.
-        result: Function execution result. Can be observed after calling ``next()``
-                to see the actual execution result or can be set to override the execution result.
-        terminate: A flag indicating whether to terminate execution after current middleware.
-                When set to True, execution will stop as soon as control returns to framework.
-        kwargs: Additional keyword arguments passed to the chat method that invoked this function.
+        function: 呼び出される関数。
+        arguments: 関数の検証済み引数。
+        metadata: 関数ミドルウェア間でデータを共有するためのメタデータ辞書。
+        result: 関数実行結果。``next()``呼び出し後に実際の実行結果を観察できるか、
+                実行結果を上書きするために設定可能。
+        terminate: 現在のミドルウェア後に実行を終了するかどうかのフラグ。
+                Trueに設定されると、制御がフレームワークに戻るとすぐに実行が停止します。
+        kwargs: この関数を呼び出したチャットメソッドに渡される追加のキーワード引数。
 
     Examples:
         .. code-block:: python
@@ -158,14 +159,15 @@ class FunctionInvocationContext(SerializationMixin):
                     print(f"Function: {context.function.name}")
                     print(f"Arguments: {context.arguments}")
 
-                    # Validate arguments
+                    # 引数を検証
                     if not self.validate(context.arguments):
                         context.result = {"error": "Validation failed"}
                         context.terminate = True
                         return
 
-                    # Continue execution
+                    # 実行を継続
                     await next(context)
+
     """
 
     INJECTABLE: ClassVar[set[str]] = {"function", "arguments", "result"}
@@ -179,15 +181,16 @@ class FunctionInvocationContext(SerializationMixin):
         terminate: bool = False,
         kwargs: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize the FunctionInvocationContext.
+        """FunctionInvocationContextを初期化します。
 
         Args:
-            function: The function being invoked.
-            arguments: The validated arguments for the function.
-            metadata: Metadata dictionary for sharing data between function middleware.
-            result: Function execution result.
-            terminate: A flag indicating whether to terminate execution after current middleware.
-            kwargs: Additional keyword arguments passed to the chat method that invoked this function.
+            function: 呼び出される関数。
+            arguments: 関数の検証済み引数。
+            metadata: 関数ミドルウェア間でデータを共有するためのメタデータ辞書。
+            result: 関数実行結果。
+            terminate: 現在のミドルウェア後に実行を終了するかどうかのフラグ。
+            kwargs: この関数を呼び出したチャットメソッドに渡される追加のキーワード引数。
+
         """
         self.function = function
         self.arguments = arguments
@@ -238,6 +241,7 @@ class ChatContext(SerializationMixin):
                     # Access result and count output tokens
                     if context.result:
                         context.metadata["output_tokens"] = self.count_tokens(context.result)
+     (mock)
     """
 
     INJECTABLE: ClassVar[set[str]] = {"chat_client", "result"}
@@ -264,6 +268,7 @@ class ChatContext(SerializationMixin):
             result: Chat execution result.
             terminate: A flag indicating whether to terminate execution after current middleware.
             kwargs: Additional keyword arguments passed to the chat client.
+         (mock)
         """
         self.chat_client = chat_client
         self.messages = messages
@@ -306,6 +311,7 @@ class AgentMiddleware(ABC):
 
             # Use with an agent
             agent = ChatAgent(chat_client=client, name="assistant", middleware=RetryMiddleware())
+     (mock)
     """
 
     @abstractmethod
@@ -330,6 +336,7 @@ class AgentMiddleware(ABC):
             Middleware should not return anything. All data manipulation should happen
             within the context object. Set context.result to override execution,
             or observe context.result after calling next() for actual results.
+         (mock)
         """
         ...
 
@@ -374,6 +381,7 @@ class FunctionMiddleware(ABC):
 
             # Use with an agent
             agent = ChatAgent(chat_client=client, name="assistant", middleware=CachingMiddleware())
+     (mock)
     """
 
     @abstractmethod
@@ -585,13 +593,12 @@ def chat_middleware(func: ChatMiddlewareCallable) -> ChatMiddlewareCallable:
 
 
 class MiddlewareWrapper(Generic[TContext]):
-    """Generic wrapper to convert pure functions into middleware protocol objects.
+    """純粋関数をmiddlewareプロトコルオブジェクトに変換するための汎用ラッパー。
 
-    This wrapper allows function-based middleware to be used alongside class-based middleware
-    by providing a unified interface.
+    このラッパーにより、関数ベースのmiddlewareをクラスベースのmiddlewareと共に使用できるようにし、統一されたインターフェースを提供します。
 
     Type Parameters:
-        TContext: The type of context object this middleware operates on.
+        TContext: このmiddlewareが操作するコンテキストオブジェクトの型。
     """
 
     def __init__(self, func: Callable[[TContext, Callable[[TContext], Awaitable[None]]], Awaitable[None]]) -> None:
@@ -602,32 +609,32 @@ class MiddlewareWrapper(Generic[TContext]):
 
 
 class BaseMiddlewarePipeline(ABC):
-    """Base class for middleware pipeline execution.
+    """middlewareパイプライン実行のための基底クラス。
 
-    Provides common functionality for building and executing middleware chains.
+    middlewareチェーンの構築と実行のための共通機能を提供します。
     """
 
     def __init__(self) -> None:
-        """Initialize the base middleware pipeline."""
+        """基底middlewareパイプラインを初期化します。"""
         self._middlewares: list[Any] = []
 
     @abstractmethod
     def _register_middleware(self, middleware: Any) -> None:
-        """Register a middleware item.
+        """middlewareアイテムを登録します。
 
-        Must be implemented by subclasses.
+        サブクラスで実装する必要があります。
 
         Args:
-            middleware: The middleware to register.
+            middleware: 登録するmiddleware。
         """
         ...
 
     @property
     def has_middlewares(self) -> bool:
-        """Check if there are any middlewares registered.
+        """登録されているmiddlewareがあるかどうかをチェックします。
 
         Returns:
-            True if middlewares are registered, False otherwise.
+            middlewareが登録されていればTrue、そうでなければFalse。
         """
         return bool(self._middlewares)
 
@@ -636,13 +643,13 @@ class BaseMiddlewarePipeline(ABC):
         middleware: Any,
         expected_type: type,
     ) -> None:
-        """Generic middleware registration with automatic wrapping.
+        """自動ラッピングによる汎用middleware登録。
 
-        Wraps callable middleware in a MiddlewareWrapper if needed.
+        必要に応じて呼び出し可能なmiddlewareをMiddlewareWrapperでラップします。
 
         Args:
-            middleware: The middleware instance or callable to register.
-            expected_type: The expected middleware base class type.
+            middleware: 登録するmiddlewareインスタンスまたは呼び出し可能オブジェクト。
+            expected_type: 期待されるmiddlewareの基底クラスの型。
         """
         if isinstance(middleware, expected_type):
             self._middlewares.append(middleware)
@@ -655,22 +662,22 @@ class BaseMiddlewarePipeline(ABC):
         result_container: dict[str, Any],
         result_key: str = "result",
     ) -> Callable[[Any], Awaitable[None]]:
-        """Create a chain of middleware handlers.
+        """middlewareハンドラのチェーンを作成します。
 
         Args:
-            final_handler: The final handler to execute.
-            result_container: Container to store the result.
-            result_key: Key to use in the result container.
+            final_handler: 実行する最終ハンドラ。
+            result_container: 結果を格納するコンテナ。
+            result_key: 結果コンテナで使用するキー。
 
         Returns:
-            The first handler in the chain.
+            チェーンの最初のハンドラ。
         """
 
         def create_next_handler(index: int) -> Callable[[Any], Awaitable[None]]:
             if index >= len(self._middlewares):
 
                 async def final_wrapper(c: Any) -> None:
-                    # Execute actual handler and populate context for observability
+                    # 実際のハンドラを実行し、観測性のためにコンテキストを設定します。
                     result = await final_handler(c)
                     result_container[result_key] = result
                     c.result = result
@@ -693,31 +700,31 @@ class BaseMiddlewarePipeline(ABC):
         result_container: dict[str, Any],
         result_key: str = "result_stream",
     ) -> Callable[[Any], Awaitable[None]]:
-        """Create a chain of middleware handlers for streaming operations.
+        """ストリーミング操作のためのmiddlewareハンドラチェーンを作成します。
 
         Args:
-            final_handler: The final handler to execute.
-            result_container: Container to store the result.
-            result_key: Key to use in the result container.
+            final_handler: 実行する最終ハンドラ。
+            result_container: 結果を格納するコンテナ。
+            result_key: 結果コンテナで使用するキー。
 
         Returns:
-            The first handler in the chain.
+            チェーンの最初のハンドラ。
         """
 
         def create_next_handler(index: int) -> Callable[[Any], Awaitable[None]]:
             if index >= len(self._middlewares):
 
                 async def final_wrapper(c: Any) -> None:
-                    # If terminate was set, skip execution
+                    # terminateが設定されていれば、実行をスキップします。
                     if c.terminate:
                         return
 
-                    # Execute actual handler and populate context for observability
-                    # Note: final_handler might not be awaitable for streaming cases
+                    # 実際のハンドラを実行し、観測性のためにコンテキストを設定します。 注意:
+                    # final_handlerはストリーミングの場合、awaitableでない可能性があります。
                     try:
                         result = await final_handler(c)
                     except TypeError:
-                        # Handle non-awaitable case (e.g., generator functions)
+                        # 非awaitableケース（例：ジェネレータ関数）を処理します。
                         result = final_handler(c)
                     result_container[result_key] = result
                     c.result = result
@@ -729,7 +736,7 @@ class BaseMiddlewarePipeline(ABC):
 
             async def current_handler(c: Any) -> None:
                 await middleware.process(c, next_handler)
-                # If terminate is set, don't continue the pipeline
+                # terminateが設定されていれば、パイプラインを継続しません。
                 if c.terminate:
                     return
 
@@ -739,17 +746,17 @@ class BaseMiddlewarePipeline(ABC):
 
 
 class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
-    """Executes agent middleware in a chain.
+    """Agent middlewareをチェーンで実行します。
 
-    Manages the execution of multiple agent middleware in sequence, allowing each middleware
-    to process the agent invocation and pass control to the next middleware in the chain.
+    複数のagent middlewareを順に実行し、それぞれのmiddlewareがagentの呼び出しを処理し、
+    次のmiddlewareに制御を渡すことを可能にします。
     """
 
     def __init__(self, middlewares: list[AgentMiddleware | AgentMiddlewareCallable] | None = None):
-        """Initialize the agent middleware pipeline.
+        """agent middlewareパイプラインを初期化します。
 
         Args:
-            middlewares: The list of agent middleware to include in the pipeline.
+            middlewares: パイプラインに含めるagent middlewareのリスト。
         """
         super().__init__()
         self._middlewares: list[AgentMiddleware] = []
@@ -759,10 +766,10 @@ class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
                 self._register_middleware(middleware)
 
     def _register_middleware(self, middleware: AgentMiddleware | AgentMiddlewareCallable) -> None:
-        """Register an agent middleware item.
+        """agent middlewareアイテムを登録します。
 
         Args:
-            middleware: The agent middleware to register.
+            middleware: 登録するagent middleware。
         """
         self._register_middleware_with_wrapper(middleware, AgentMiddleware)
 
@@ -773,18 +780,18 @@ class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
         context: AgentRunContext,
         final_handler: Callable[[AgentRunContext], Awaitable[AgentRunResponse]],
     ) -> AgentRunResponse | None:
-        """Execute the agent middleware pipeline for non-streaming.
+        """非ストリーミング用のagent middlewareパイプラインを実行します。
 
         Args:
-            agent: The agent being invoked.
-            messages: The messages to send to the agent.
-            context: The agent invocation context.
-            final_handler: The final handler that performs the actual agent execution.
+            agent: 呼び出されるagent。
+            messages: agentに送信するメッセージ。
+            context: agent呼び出しのコンテキスト。
+            final_handler: 実際のagent実行を行う最終ハンドラ。
 
         Returns:
-            The agent response after processing through all middleware.
+            全middlewareを通過した後のagentのレスポンス。
         """
-        # Update context with agent and messages
+        # contextをagentとmessagesで更新します。
         context.agent = agent
         context.messages = messages
         context.is_streaming = False
@@ -792,27 +799,27 @@ class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
         if not self._middlewares:
             return await final_handler(context)
 
-        # Store the final result
+        # 最終結果を格納します。
         result_container: dict[str, AgentRunResponse | None] = {"result": None}
 
-        # Custom final handler that handles termination and result override
+        # 終了と結果の上書きを処理するカスタム最終ハンドラ。
         async def agent_final_handler(c: AgentRunContext) -> AgentRunResponse:
-            # If terminate was set, return the result (which might be None)
+            # terminateが設定されていれば、結果（Noneの場合もあり）を返します。
             if c.terminate:
                 if c.result is not None and isinstance(c.result, AgentRunResponse):
                     return c.result
                 return AgentRunResponse()
-            # Execute actual handler and populate context for observability
+            # 実際のハンドラを実行し、観測性のためにコンテキストを設定します。
             return await final_handler(c)
 
         first_handler = self._create_handler_chain(agent_final_handler, result_container, "result")
         await first_handler(context)
 
-        # Return the result from result container or overridden result
+        # 結果コンテナまたは上書きされた結果から結果を返します。
         if context.result is not None and isinstance(context.result, AgentRunResponse):
             return context.result
 
-        # If no result was set (next() not called), return empty AgentRunResponse
+        # 結果が設定されていない場合（next()が呼ばれていない場合）、空のAgentRunResponseを返します。
         response = result_container.get("result")
         if response is None:
             return AgentRunResponse()
@@ -825,18 +832,18 @@ class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
         context: AgentRunContext,
         final_handler: Callable[[AgentRunContext], AsyncIterable[AgentRunResponseUpdate]],
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Execute the agent middleware pipeline for streaming.
+        """ストリーミング用のagent middlewareパイプラインを実行します。
 
         Args:
-            agent: The agent being invoked.
-            messages: The messages to send to the agent.
-            context: The agent invocation context.
-            final_handler: The final handler that performs the actual agent streaming execution.
+            agent: 呼び出されるagent。
+            messages: agentに送信するメッセージ。
+            context: agent呼び出しのコンテキスト。
+            final_handler: 実際のagentストリーミング実行を行う最終ハンドラ。
 
         Yields:
-            Agent response updates after processing through all middleware.
+            全middlewareを通過した後のagentレスポンスの更新。
         """
-        # Update context with agent and messages
+        # contextをagentとmessagesで更新します。
         context.agent = agent
         context.messages = messages
         context.is_streaming = True
@@ -846,13 +853,13 @@ class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
                 yield update
             return
 
-        # Store the final result
+        # 最終結果を格納します。
         result_container: dict[str, AsyncIterable[AgentRunResponseUpdate] | None] = {"result_stream": None}
 
         first_handler = self._create_streaming_handler_chain(final_handler, result_container, "result_stream")
         await first_handler(context)
 
-        # Yield from the result stream in result container or overridden result
+        # 結果コンテナまたは上書きされた結果のストリームからyieldします。
         if context.result is not None and hasattr(context.result, "__aiter__"):
             async for update in context.result:  # type: ignore
                 yield update
@@ -860,7 +867,7 @@ class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
 
         result_stream = result_container["result_stream"]
         if result_stream is None:
-            # If no result stream was set (next() not called), yield nothing
+            # 結果ストリームが設定されていない場合（next()が呼ばれていない場合）、何もyieldしません。
             return
 
         async for update in result_stream:
@@ -868,17 +875,17 @@ class AgentMiddlewarePipeline(BaseMiddlewarePipeline):
 
 
 class FunctionMiddlewarePipeline(BaseMiddlewarePipeline):
-    """Executes function middleware in a chain.
+    """function middlewareをチェーンで実行します。
 
-    Manages the execution of multiple function middleware in sequence, allowing each middleware
-    to process the function invocation and pass control to the next middleware in the chain.
+    複数のfunction middlewareを順に実行し、それぞれのmiddlewareがfunctionの呼び出しを処理し、
+    次のmiddlewareに制御を渡すことを可能にします。
     """
 
     def __init__(self, middlewares: list[FunctionMiddleware | FunctionMiddlewareCallable] | None = None):
-        """Initialize the function middleware pipeline.
+        """function middlewareパイプラインを初期化します。
 
         Args:
-            middlewares: The list of function middleware to include in the pipeline.
+            middlewares: パイプラインに含めるfunction middlewareのリスト。
         """
         super().__init__()
         self._middlewares: list[FunctionMiddleware] = []
@@ -888,10 +895,10 @@ class FunctionMiddlewarePipeline(BaseMiddlewarePipeline):
                 self._register_middleware(middleware)
 
     def _register_middleware(self, middleware: FunctionMiddleware | FunctionMiddlewareCallable) -> None:
-        """Register a function middleware item.
+        """function middlewareアイテムを登録します。
 
         Args:
-            middleware: The function middleware to register.
+            middleware: 登録するfunction middleware。
         """
         self._register_middleware_with_wrapper(middleware, FunctionMiddleware)
 
@@ -902,56 +909,56 @@ class FunctionMiddlewarePipeline(BaseMiddlewarePipeline):
         context: FunctionInvocationContext,
         final_handler: Callable[[FunctionInvocationContext], Awaitable[Any]],
     ) -> Any:
-        """Execute the function middleware pipeline.
+        """function middlewareパイプラインを実行します。
 
         Args:
-            function: The function being invoked.
-            arguments: The validated arguments for the function.
-            context: The function invocation context.
-            final_handler: The final handler that performs the actual function execution.
+            function: 呼び出されるfunction。
+            arguments: functionの検証済み引数。
+            context: function呼び出しのコンテキスト。
+            final_handler: 実際のfunction実行を行う最終ハンドラ。
 
         Returns:
-            The function result after processing through all middleware.
+            全middlewareを通過した後のfunctionの結果。
         """
-        # Update context with function and arguments
+        # contextをfunctionとargumentsで更新します。
         context.function = function
         context.arguments = arguments
 
         if not self._middlewares:
             return await final_handler(context)
 
-        # Store the final result
+        # 最終結果を格納します。
         result_container: dict[str, Any] = {"result": None}
 
-        # Custom final handler that handles pre-existing results
+        # 既存の結果を処理するカスタム最終ハンドラ。
         async def function_final_handler(c: FunctionInvocationContext) -> Any:
-            # If terminate was set, skip execution and return the result (which might be None)
+            # terminateが設定されていれば、実行をスキップし結果（Noneの場合もあり）を返します。
             if c.terminate:
                 return c.result
-            # Execute actual handler and populate context for observability
+            # 実際のハンドラを実行し、観測性のためにコンテキストを設定します。
             return await final_handler(c)
 
         first_handler = self._create_handler_chain(function_final_handler, result_container, "result")
         await first_handler(context)
 
-        # Return the result from result container or overridden result
+        # 結果コンテナまたは上書きされた結果から結果を返します。
         if context.result is not None:
             return context.result
         return result_container["result"]
 
 
 class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
-    """Executes chat middleware in a chain.
+    """chat middlewareをチェーンで実行します。
 
-    Manages the execution of multiple chat middleware in sequence, allowing each middleware
-    to process the chat request and pass control to the next middleware in the chain.
+    複数のchat middlewareを順に実行し、それぞれのmiddlewareがchatリクエストを処理し、
+    次のmiddlewareに制御を渡すことを可能にします。
     """
 
     def __init__(self, middlewares: list[ChatMiddleware | ChatMiddlewareCallable] | None = None):
-        """Initialize the chat middleware pipeline.
+        """chat middlewareパイプラインを初期化します。
 
         Args:
-            middlewares: The list of chat middleware to include in the pipeline.
+            middlewares: パイプラインに含めるchat middlewareのリスト。
         """
         super().__init__()
         self._middlewares: list[ChatMiddleware] = []
@@ -961,10 +968,10 @@ class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
                 self._register_middleware(middleware)
 
     def _register_middleware(self, middleware: ChatMiddleware | ChatMiddlewareCallable) -> None:
-        """Register a chat middleware item.
+        """chat middlewareアイテムを登録します。
 
         Args:
-            middleware: The chat middleware to register.
+            middleware: 登録するchat middleware。
         """
         self._register_middleware_with_wrapper(middleware, ChatMiddleware)
 
@@ -977,20 +984,20 @@ class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
         final_handler: Callable[[ChatContext], Awaitable["ChatResponse"]],
         **kwargs: Any,
     ) -> "ChatResponse":
-        """Execute the chat middleware pipeline.
+        """chat middlewareパイプラインを実行します。
 
         Args:
-            chat_client: The chat client being invoked.
-            messages: The messages being sent to the chat client.
-            chat_options: The options for the chat request.
-            context: The chat invocation context.
-            final_handler: The final handler that performs the actual chat execution.
-            **kwargs: Additional keyword arguments.
+            chat_client: 呼び出されるchat client。
+            messages: chat clientに送信するメッセージ。
+            chat_options: chatリクエストのオプション。
+            context: chat呼び出しのコンテキスト。
+            final_handler: 実際のchat実行を行う最終ハンドラ。
+            **kwargs: 追加のキーワード引数。
 
         Returns:
-            The chat response after processing through all middleware.
+            全middlewareを通過した後のchatレスポンス。
         """
-        # Update context with chat client, messages, and options
+        # contextをchat client、messages、およびoptionsで更新します。
         context.chat_client = chat_client
         context.messages = messages
         context.chat_options = chat_options
@@ -998,21 +1005,21 @@ class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
         if not self._middlewares:
             return await final_handler(context)
 
-        # Store the final result
+        # 最終結果を格納します。
         result_container: dict[str, Any] = {"result": None}
 
-        # Custom final handler that handles pre-existing results
+        # 既存の結果を処理するカスタム最終ハンドラ。
         async def chat_final_handler(c: ChatContext) -> "ChatResponse":
-            # If terminate was set, skip execution and return the result (which might be None)
+            # terminateが設定されていれば、実行をスキップし結果（Noneの場合もあり）を返します。
             if c.terminate:
                 return c.result  # type: ignore
-            # Execute actual handler and populate context for observability
+            # 実際のハンドラを実行し、観測性のためにコンテキストを設定します。
             return await final_handler(c)
 
         first_handler = self._create_handler_chain(chat_final_handler, result_container, "result")
         await first_handler(context)
 
-        # Return the result from result container or overridden result
+        # 結果コンテナまたは上書きされた結果から結果を返します。
         if context.result is not None:
             return context.result  # type: ignore
         return result_container["result"]  # type: ignore
@@ -1026,20 +1033,20 @@ class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
         final_handler: Callable[[ChatContext], AsyncIterable["ChatResponseUpdate"]],
         **kwargs: Any,
     ) -> AsyncIterable["ChatResponseUpdate"]:
-        """Execute the chat middleware pipeline for streaming.
+        """ストリーミング用のchat middlewareパイプラインを実行します。
 
         Args:
-            chat_client: The chat client being invoked.
-            messages: The messages being sent to the chat client.
-            chat_options: The options for the chat request.
-            context: The chat invocation context.
-            final_handler: The final handler that performs the actual streaming chat execution.
-            **kwargs: Additional keyword arguments.
+            chat_client: 呼び出されるchat client。
+            messages: chat clientに送信するメッセージ。
+            chat_options: chatリクエストのオプション。
+            context: chat呼び出しのコンテキスト。
+            final_handler: 実際のストリーミングchat実行を行う最終ハンドラ。
+            **kwargs: 追加のキーワード引数。
 
         Yields:
-            Chat response updates after processing through all middleware.
+            全middlewareを通過した後のchatレスポンスの更新。
         """
-        # Update context with chat client, messages, and options
+        # contextをchat client、messages、およびoptionsで更新します。
         context.chat_client = chat_client
         context.messages = messages
         context.chat_options = chat_options
@@ -1050,13 +1057,13 @@ class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
                 yield update
             return
 
-        # Store the final result stream
+        # 最終結果のストリームを格納します。
         result_container: dict[str, Any] = {"result_stream": None}
 
         first_handler = self._create_streaming_handler_chain(final_handler, result_container, "result_stream")
         await first_handler(context)
 
-        # Yield from the result stream in result container or overridden result
+        # 結果コンテナまたは上書きされた結果のストリームからyieldします。
         if context.result is not None and hasattr(context.result, "__aiter__"):
             async for update in context.result:  # type: ignore
                 yield update
@@ -1064,7 +1071,7 @@ class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
 
         result_stream = result_container["result_stream"]
         if result_stream is None:
-            # If no result stream was set (next() not called), yield nothing
+            # 結果ストリームが設定されていない場合（next()が呼ばれていない場合）、何もyieldしません。
             return
 
         async for update in result_stream:
@@ -1072,27 +1079,27 @@ class ChatMiddlewarePipeline(BaseMiddlewarePipeline):
 
 
 def _determine_middleware_type(middleware: Any) -> MiddlewareType:
-    """Determine middleware type using decorator and/or parameter type annotation.
+    """デコレータおよび/またはパラメータ型注釈を使用してmiddlewareの種類を判定します。
 
     Args:
-        middleware: The middleware function to analyze.
+        middleware: 分析するmiddleware関数。
 
     Returns:
-        MiddlewareType.AGENT, MiddlewareType.FUNCTION, or MiddlewareType.CHAT indicating the middleware type.
+        MiddlewareType.AGENT、MiddlewareType.FUNCTION、またはMiddlewareType.CHATのいずれかでmiddlewareの種類を示します。
 
     Raises:
-        MiddlewareException: When middleware type cannot be determined or there's a mismatch.
+        MiddlewareException: middlewareの種類が判定できない場合や不一致がある場合。
     """
-    # Check for decorator marker
+    # デコレータマーカーをチェックします。
     decorator_type: MiddlewareType | None = getattr(middleware, "_middleware_type", None)
 
-    # Check for parameter type annotation
+    # パラメータ型注釈をチェックします。
     param_type: MiddlewareType | None = None
     try:
         sig = inspect.signature(middleware)
         params = list(sig.parameters.values())
 
-        # Must have at least 2 parameters (context and next)
+        # 少なくとも2つのパラメータ（contextとnext）を持つ必要があります。
         if len(params) >= 2:
             first_param = params[0]
             if hasattr(first_param.annotation, "__name__"):
@@ -1104,7 +1111,7 @@ def _determine_middleware_type(middleware: Any) -> MiddlewareType:
                 elif annotation_name == "ChatContext":
                     param_type = MiddlewareType.CHAT
         else:
-            # Not enough parameters - can't be valid middleware
+            # パラメータが不足しているため、有効なmiddlewareではありません。
             raise MiddlewareException(
                 f"Middleware function must have at least 2 parameters (context, next), "
                 f"but {middleware.__name__} has {len(params)}"
@@ -1112,11 +1119,11 @@ def _determine_middleware_type(middleware: Any) -> MiddlewareType:
     except Exception as e:
         if isinstance(e, MiddlewareException):
             raise
-        # Signature inspection failed - continue with other checks
+        # シグネチャの検査に失敗しました - 他のチェックを続行します。
         pass
 
     if decorator_type and param_type:
-        # Both decorator and parameter type specified - they must match
+        # デコレータとパラメータ型の両方が指定されている場合、それらは一致している必要があります。
         if decorator_type != param_type:
             raise MiddlewareException(
                 f"Middleware type mismatch: decorator indicates '{decorator_type.value}' "
@@ -1125,14 +1132,14 @@ def _determine_middleware_type(middleware: Any) -> MiddlewareType:
         return decorator_type
 
     if decorator_type:
-        # Just decorator specified - rely on decorator
+        # デコレータのみが指定されている場合は、デコレータに依存します。
         return decorator_type
 
     if param_type:
-        # Just parameter type specified - rely on types
+        # パラメータ型のみが指定されている場合は、型に依存します。
         return param_type
 
-    # Neither decorator nor parameter type specified - throw exception
+    # デコレータもパラメータ型も指定されていない場合は例外をスローします。
     raise MiddlewareException(
         f"Cannot determine middleware type for function {middleware.__name__}. "
         f"Please either use @agent_middleware/@function_middleware/@chat_middleware decorators "
@@ -1140,26 +1147,25 @@ def _determine_middleware_type(middleware: Any) -> MiddlewareType:
     )
 
 
-# Decorator for adding middleware support to agent classes
+# agentクラスにmiddlewareサポートを追加するためのデコレータ。
 def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
-    """Class decorator that adds middleware support to an agent class.
+    """agentクラスにmiddlewareサポートを追加するクラスデコレータ。
 
-    This decorator adds middleware functionality to any agent class.
-    It wraps the ``run()`` and ``run_stream()`` methods to provide middleware execution.
+    このデコレータは任意のagentクラスにmiddleware機能を追加します。
+    ``run()``および``run_stream()``メソッドをラップしてmiddleware実行を提供します。
 
-    The middleware execution can be terminated at any point by setting the
-    ``context.terminate`` property to True. Once set, the pipeline will stop executing
-    further middleware as soon as control returns to the pipeline.
+    middleware実行は、``context.terminate``プロパティをTrueに設定することで任意の時点で終了できます。
+    一度設定されると、パイプラインは制御がパイプラインに戻った時点でそれ以上のmiddlewareの実行を停止します。
 
     Note:
-        This decorator is already applied to built-in agent classes. You only need to use
-        it if you're creating custom agent implementations.
+        このデコレータは組み込みのagentクラスには既に適用されています。
+        カスタムagent実装を作成する場合にのみ使用してください。
 
     Args:
-        agent_class: The agent class to add middleware support to.
+        agent_class: middlewareサポートを追加するagentクラス。
 
     Returns:
-        The modified agent class with middleware support.
+        middlewareサポートが追加された修正済みのagentクラス。
 
     Examples:
         .. code-block:: python
@@ -1170,14 +1176,15 @@ def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
             @use_agent_middleware
             class CustomAgent:
                 async def run(self, messages, **kwargs):
-                    # Agent implementation
+                    # Agentの実装
                     pass
 
                 async def run_stream(self, messages, **kwargs):
-                    # Streaming implementation
+                    # ストリーミング実装
                     pass
+
     """
-    # Store original methods
+    # 元のメソッドを保存します。
     original_run = agent_class.run  # type: ignore[attr-defined]
     original_run_stream = agent_class.run_stream  # type: ignore[attr-defined]
 
@@ -1185,11 +1192,12 @@ def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
         agent_level_middlewares: Middleware | list[Middleware] | None,
         run_level_middlewares: Middleware | list[Middleware] | None = None,
     ) -> tuple[AgentMiddlewarePipeline, FunctionMiddlewarePipeline, list[ChatMiddleware | ChatMiddlewareCallable]]:
-        """Build fresh agent and function middleware pipelines from the provided middleware lists.
+        """提供されたmiddlewareリストから新しいagentおよびfunction middlewareパイプラインを構築します。
 
         Args:
-            agent_level_middlewares: Agent-level middleware (executed first)
-            run_level_middlewares: Run-level middleware (executed after agent middleware)
+            agent_level_middlewares: Agentレベルのmiddleware（最初に実行されます）
+            run_level_middlewares: Runレベルのmiddleware（agent middlewareの後に実行されます）
+
         """
         middleware = categorize_middleware(agent_level_middlewares, run_level_middlewares)
 
@@ -1207,23 +1215,23 @@ def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
         middleware: Middleware | list[Middleware] | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Middleware-enabled run method."""
-        # Build fresh middleware pipelines from current middleware collection and run-level middleware
+        """Middleware対応のrunメソッド。"""
+        # 現在のmiddlewareコレクションとrunレベルmiddlewareから新しいmiddlewareパイプラインを構築します。
         agent_middleware = getattr(self, "middleware", None)
 
         agent_pipeline, function_pipeline, chat_middlewares = _build_middleware_pipelines(agent_middleware, middleware)
 
-        # Add function middleware pipeline to kwargs if available
+        # 利用可能な場合、function middlewareパイプラインをkwargsに追加します。
         if function_pipeline.has_middlewares:
             kwargs["_function_middleware_pipeline"] = function_pipeline
 
-        # Pass chat middleware through kwargs for run-level application
+        # runレベル適用のためにchat middlewareをkwargs経由で渡します。
         if chat_middlewares:
             kwargs["middleware"] = chat_middlewares
 
         normalized_messages = self._normalize_messages(messages)
 
-        # Execute with middleware if available
+        # middlewareが利用可能な場合はmiddleware付きで実行します。
         if agent_pipeline.has_middlewares:
             context = AgentRunContext(
                 agent=self,  # type: ignore[arg-type]
@@ -1245,7 +1253,7 @@ def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
 
             return result if result else AgentRunResponse()
 
-        # No middleware, execute directly
+        # middlewareがない場合は直接実行します。
         return await original_run(self, normalized_messages, thread=thread, **kwargs)  # type: ignore[return-value]
 
     def middleware_enabled_run_stream(
@@ -1256,22 +1264,22 @@ def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
         middleware: Middleware | list[Middleware] | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Middleware-enabled run_stream method."""
-        # Build fresh middleware pipelines from current middleware collection and run-level middleware
+        """Middleware対応のrun_streamメソッド。"""
+        # 現在のmiddlewareコレクションとrunレベルmiddlewareから新しいmiddlewareパイプラインを構築します。
         agent_middleware = getattr(self, "middleware", None)
         agent_pipeline, function_pipeline, chat_middlewares = _build_middleware_pipelines(agent_middleware, middleware)
 
-        # Add function middleware pipeline to kwargs if available
+        # 利用可能な場合、function middlewareパイプラインをkwargsに追加します。
         if function_pipeline.has_middlewares:
             kwargs["_function_middleware_pipeline"] = function_pipeline
 
-        # Pass chat middleware through kwargs for run-level application
+        # runレベル適用のためにchat middlewareをkwargs経由で渡します。
         if chat_middlewares:
             kwargs["middleware"] = chat_middlewares
 
         normalized_messages = self._normalize_messages(messages)
 
-        # Execute with middleware if available
+        # middlewareが利用可能な場合はmiddleware付きで実行します。
         if agent_pipeline.has_middlewares:
             context = AgentRunContext(
                 agent=self,  # type: ignore[arg-type]
@@ -1296,7 +1304,7 @@ def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
 
             return _stream_generator()
 
-        # No middleware, execute directly
+        # middlewareがない場合は直接実行します。
         return original_run_stream(self, normalized_messages, thread=thread, **kwargs)  # type: ignore
 
     agent_class.run = update_wrapper(middleware_enabled_run, original_run)  # type: ignore
@@ -1306,20 +1314,20 @@ def use_agent_middleware(agent_class: type[TAgent]) -> type[TAgent]:
 
 
 def use_chat_middleware(chat_client_class: type[TChatClient]) -> type[TChatClient]:
-    """Class decorator that adds middleware support to a chat client class.
+    """chat clientクラスにmiddlewareサポートを追加するクラスデコレータ。
 
-    This decorator adds middleware functionality to any chat client class.
-    It wraps the ``get_response()`` and ``get_streaming_response()`` methods to provide middleware execution.
+    このデコレータは任意のchat clientクラスにmiddleware機能を追加します。
+    ``get_response()``および``get_streaming_response()``メソッドをラップしてmiddlewareの実行を提供します。
 
-    Note:
-        This decorator is already applied to built-in chat client classes. You only need to use
-        it if you're creating custom chat client implementations.
+    注意:
+        このデコレータは組み込みのchat clientクラスにはすでに適用されています。
+        カスタムchat client実装を作成する場合にのみ使用してください。
 
     Args:
-        chat_client_class: The chat client class to add middleware support to.
+        chat_client_class: middlewareサポートを追加するchat clientクラス。
 
     Returns:
-        The modified chat client class with middleware support.
+        middlewareサポートが追加された修正済みのchat clientクラス。
 
     Examples:
         .. code-block:: python
@@ -1330,14 +1338,15 @@ def use_chat_middleware(chat_client_class: type[TChatClient]) -> type[TChatClien
             @use_chat_middleware
             class CustomChatClient:
                 async def get_response(self, messages, **kwargs):
-                    # Chat client implementation
+                    # Chat clientの実装
                     pass
 
                 async def get_streaming_response(self, messages, **kwargs):
-                    # Streaming implementation
+                    # Streamingの実装
                     pass
+
     """
-    # Store original methods
+    # 元のメソッドを保存します。
     original_get_response = chat_client_class.get_response
     original_get_streaming_response = chat_client_class.get_streaming_response
 
@@ -1346,30 +1355,30 @@ def use_chat_middleware(chat_client_class: type[TChatClient]) -> type[TChatClien
         messages: Any,
         **kwargs: Any,
     ) -> Any:
-        """Middleware-enabled get_response method."""
-        # Check if middleware is provided at call level or instance level
+        """Middleware対応のget_responseメソッド。"""
+        # 呼び出しレベルまたはインスタンスレベルでmiddlewareが提供されているか確認します。
         call_middleware = kwargs.pop("middleware", None)
         instance_middleware = getattr(self, "middleware", None)
 
-        # Merge all middleware and separate by type
+        # すべてのmiddlewareをマージし、タイプ別に分類します。
         middleware = categorize_middleware(instance_middleware, call_middleware)
         chat_middleware_list = middleware["chat"]  # type: ignore[assignment]
 
-        # Extract function middleware for the function invocation pipeline
+        # function呼び出しパイプライン用にfunction middlewareを抽出します。
         function_middleware_list = middleware["function"]
 
-        # Pass function middleware to function invocation system if present
+        # 存在する場合、function呼び出しシステムにfunction middlewareを渡します。
         if function_middleware_list:
             kwargs["_function_middleware_pipeline"] = FunctionMiddlewarePipeline(function_middleware_list)  # type: ignore[arg-type]
 
-        # If no chat middleware, use original method
+        # chat middlewareがない場合は元のメソッドを使用します。
         if not chat_middleware_list:
             return await original_get_response(self, messages, **kwargs)
 
-        # Create pipeline and execute with middleware
+        # パイプラインを作成し、middleware付きで実行します。
         from ._types import ChatOptions
 
-        # Extract chat_options or create default
+        # chat_optionsを抽出するか、デフォルトを作成します。
         chat_options = kwargs.pop("chat_options", ChatOptions())
 
         pipeline = ChatMiddlewarePipeline(chat_middleware_list)  # type: ignore[arg-type]
@@ -1398,28 +1407,28 @@ def use_chat_middleware(chat_client_class: type[TChatClient]) -> type[TChatClien
         messages: Any,
         **kwargs: Any,
     ) -> Any:
-        """Middleware-enabled get_streaming_response method."""
+        """Middleware対応のget_streaming_responseメソッド。"""
 
         async def _stream_generator() -> Any:
-            # Check if middleware is provided at call level or instance level
+            # 呼び出しレベルまたはインスタンスレベルでmiddlewareが提供されているか確認します。
             call_middleware = kwargs.pop("middleware", None)
             instance_middleware = getattr(self, "middleware", None)
 
-            # Merge middleware from both sources, filtering for chat middleware only
+            # 両方のソースからmiddlewareをマージし、chat middlewareのみをフィルタリングします。
             all_middleware: list[ChatMiddleware | ChatMiddlewareCallable] = _merge_and_filter_chat_middleware(
                 instance_middleware, call_middleware
             )
 
-            # If no middleware, use original method
+            # middlewareがない場合は元のメソッドを使用します。
             if not all_middleware:
                 async for update in original_get_streaming_response(self, messages, **kwargs):
                     yield update
                 return
 
-            # Create pipeline and execute with middleware
+            # パイプラインを作成し、middleware付きで実行します。
             from ._types import ChatOptions
 
-            # Extract chat_options or create default
+            # chat_optionsを抽出するか、デフォルトを作成します。
             chat_options = kwargs.pop("chat_options", ChatOptions())
 
             pipeline = ChatMiddlewarePipeline(all_middleware)  # type: ignore[arg-type]
@@ -1448,7 +1457,7 @@ def use_chat_middleware(chat_client_class: type[TChatClient]) -> type[TChatClien
 
         return _stream_generator()
 
-    # Replace methods
+    # メソッドを置き換えます。
     chat_client_class.get_response = update_wrapper(middleware_enabled_get_response, original_get_response)  # type: ignore
     chat_client_class.get_streaming_response = update_wrapper(  # type: ignore
         middleware_enabled_get_streaming_response, original_get_streaming_response
@@ -1460,17 +1469,18 @@ def use_chat_middleware(chat_client_class: type[TChatClient]) -> type[TChatClien
 def categorize_middleware(
     *middleware_sources: Any | list[Any] | None,
 ) -> dict[str, list[Any]]:
-    """Categorize middleware from multiple sources into agent, function, and chat types.
+    """複数のソースからのmiddlewareをagent、function、chatタイプに分類します。
 
     Args:
-        *middleware_sources: Variable number of middleware sources to categorize.
+        *middleware_sources: 分類する可変数のmiddlewareソース。
 
     Returns:
-        Dict with keys "agent", "function", "chat" containing lists of categorized middleware.
+        "agent"、"function"、"chat"キーを持つ辞書で、分類されたmiddlewareのリストを含みます。
+
     """
     result: dict[str, list[Any]] = {"agent": [], "function": [], "chat": []}
 
-    # Merge all middleware sources into a single list
+    # すべてのmiddlewareソースを単一のリストにマージします。
     all_middleware: list[Any] = []
     for source in middleware_sources:
         if source:
@@ -1479,7 +1489,7 @@ def categorize_middleware(
             else:
                 all_middleware.append(source)
 
-    # Categorize each middleware item
+    # 各middlewareアイテムを分類します。
     for middleware in all_middleware:
         if isinstance(middleware, AgentMiddleware):
             result["agent"].append(middleware)
@@ -1488,7 +1498,7 @@ def categorize_middleware(
         elif isinstance(middleware, ChatMiddleware):
             result["chat"].append(middleware)
         elif callable(middleware):
-            # Always call _determine_middleware_type to ensure proper validation
+            # 常に_determine_middleware_typeを呼び出して適切な検証を保証します。
             middleware_type = _determine_middleware_type(middleware)
             if middleware_type == MiddlewareType.AGENT:
                 result["agent"].append(middleware)
@@ -1497,7 +1507,7 @@ def categorize_middleware(
             elif middleware_type == MiddlewareType.CHAT:
                 result["chat"].append(middleware)
         else:
-            # Fallback to agent middleware for unknown types
+            # 不明なタイプの場合はagent middlewareにフォールバックします。
             result["agent"].append(middleware)
 
     return result
@@ -1506,13 +1516,14 @@ def categorize_middleware(
 def create_function_middleware_pipeline(
     *middleware_sources: list[Middleware] | None,
 ) -> FunctionMiddlewarePipeline | None:
-    """Create a function middleware pipeline from multiple middleware sources.
+    """複数のmiddlewareソースからfunction middlewareパイプラインを作成します。
 
     Args:
-        *middleware_sources: Variable number of middleware sources.
+        *middleware_sources: 可変数のmiddlewareソース。
 
     Returns:
-        A FunctionMiddlewarePipeline if function middleware is found, None otherwise.
+        function middlewareが見つかった場合はFunctionMiddlewarePipeline、そうでなければNone。
+
     """
     middleware = categorize_middleware(*middleware_sources)
     function_middlewares = middleware["function"]
@@ -1523,37 +1534,39 @@ def _merge_and_filter_chat_middleware(
     instance_middleware: Any | list[Any] | None,
     call_middleware: Any | list[Any] | None,
 ) -> list[ChatMiddleware | ChatMiddlewareCallable]:
-    """Merge instance-level and call-level middleware, filtering for chat middleware only.
+    """インスタンスレベルと呼び出しレベルのmiddlewareをマージし、chat middlewareのみをフィルタリングします。
 
     Args:
-        instance_middleware: Middleware defined at the instance level.
-        call_middleware: Middleware provided at the call level.
+        instance_middleware: インスタンスレベルで定義されたmiddleware。
+        call_middleware: 呼び出しレベルで提供されたmiddleware。
 
     Returns:
-        A merged list of chat middleware only.
+        chat middlewareのみを含むマージ済みリスト。
+
     """
     middleware = categorize_middleware(instance_middleware, call_middleware)
     return middleware["chat"]  # type: ignore[return-value]
 
 
 def extract_and_merge_function_middleware(chat_client: Any, **kwargs: Any) -> None:
-    """Extract function middleware from chat client and merge with existing pipeline in kwargs.
+    """chat clientからfunction middlewareを抽出し、kwargs内の既存パイプラインとマージします。
 
     Args:
-        chat_client: The chat client instance to extract middleware from.
+        chat_client: middlewareを抽出するchat clientインスタンス。
 
     Keyword Args:
-        **kwargs: Dictionary containing middleware and pipeline information.
+        **kwargs: middlewareおよびパイプライン情報を含む辞書。
+
     """
-    # Get middleware sources
+    # middlewareソースを取得します。
     client_middleware = getattr(chat_client, "middleware", None) if hasattr(chat_client, "middleware") else None
     run_level_middleware = kwargs.get("middleware")
     existing_pipeline = kwargs.get("_function_middleware_pipeline")
 
-    # Extract existing pipeline middlewares if present
+    # 存在する場合は既存のパイプラインmiddlewareを抽出します。
     existing_middlewares = existing_pipeline._middlewares if existing_pipeline else None
 
-    # Create combined pipeline from all sources using existing helper
+    # 既存のヘルパーを使ってすべてのソースから結合パイプラインを作成します。
     combined_pipeline = create_function_middleware_pipeline(
         client_middleware, run_level_middleware, existing_middlewares
     )

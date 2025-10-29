@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Shared participant helpers for orchestration builders."""
+"""オーケストレーションビルダーのための共有参加者ヘルパー。"""
 
 import re
 from collections.abc import Callable, Iterable, Mapping
@@ -14,15 +14,16 @@ from ._executor import Executor
 
 @dataclass
 class GroupChatParticipantSpec:
-    """Metadata describing a single participant in group chat orchestrations.
+    """グループチャットオーケストレーションにおける単一参加者を記述するメタデータ。
 
-    Used by multiple orchestration patterns (GroupChat, Handoff, Magentic) to describe
-    participants with consistent structure across different workflow types.
+    GroupChat、Handoff、Magenticの複数のオーケストレーションパターンで使用され、
+    異なるworkflowタイプ間で一貫した構造で参加者を記述します。
 
     Attributes:
-        name: Unique identifier for the participant used by managers for selection
-        participant: AgentProtocol or Executor instance representing the participant
-        description: Human-readable description provided to managers for selection context
+        name: マネージャーが選択に使用する参加者の一意識別子
+        participant: 参加者を表すAgentProtocolまたはExecutorインスタンス
+        description: マネージャーが選択コンテキストのために提供する人間可読の説明
+
     """
 
     name: str
@@ -34,7 +35,7 @@ _SANITIZE_PATTERN = re.compile(r"[^0-9a-zA-Z]+")
 
 
 def sanitize_identifier(value: str, *, default: str = "agent") -> str:
-    """Return a deterministic, lowercase identifier derived from `value`."""
+    """`value`から決定的で小文字の識別子を返します。"""
     cleaned = _SANITIZE_PATTERN.sub("_", value).strip("_")
     if not cleaned:
         cleaned = default
@@ -44,7 +45,7 @@ def sanitize_identifier(value: str, *, default: str = "agent") -> str:
 
 
 def wrap_participant(participant: AgentProtocol | Executor, *, executor_id: str | None = None) -> Executor:
-    """Represent `participant` as an `Executor`."""
+    """`participant`を`Executor`として表現します。"""
     if isinstance(participant, Executor):
         return participant
     if not isinstance(participant, AgentProtocol):
@@ -60,7 +61,7 @@ def wrap_participant(participant: AgentProtocol | Executor, *, executor_id: str 
 
 
 def participant_description(participant: AgentProtocol | Executor, fallback: str) -> str:
-    """Produce a human-readable description for manager context."""
+    """マネージャーコンテキストのための人間可読の説明を生成します。"""
     if isinstance(participant, Executor):
         description = getattr(participant, "description", None)
         if isinstance(description, str) and description.strip():
@@ -73,7 +74,7 @@ def participant_description(participant: AgentProtocol | Executor, fallback: str
 
 
 def build_alias_map(participant: AgentProtocol | Executor, executor: Executor) -> dict[str, str]:
-    """Collect canonical and sanitised aliases that should resolve to `executor`."""
+    """`executor`に解決されるべき正規化およびサニタイズされたエイリアスを収集します。"""
     aliases: dict[str, str] = {}
 
     def _register(values: Iterable[str | None]) -> None:
@@ -101,7 +102,7 @@ def build_alias_map(participant: AgentProtocol | Executor, executor: Executor) -
 
 
 def merge_alias_maps(maps: Iterable[Mapping[str, str]]) -> dict[str, str]:
-    """Merge alias mappings, preserving the first occurrence of each alias."""
+    """エイリアスマッピングをマージし、各エイリアスの最初の出現を保持します。"""
     merged: dict[str, str] = {}
     for mapping in maps:
         for key, value in mapping.items():
@@ -115,7 +116,7 @@ def prepare_participant_metadata(
     executor_id_factory: Callable[[str, AgentProtocol | Executor], str | None] | None = None,
     description_factory: Callable[[str, AgentProtocol | Executor], str] | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Return metadata dicts for participants keyed by participant name."""
+    """参加者名をキーとした参加者のメタデータ辞書を返します。"""
     executors: dict[str, Executor] = {}
     descriptions: dict[str, str] = {}
     alias_maps: list[Mapping[str, str]] = []

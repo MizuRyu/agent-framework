@@ -27,7 +27,7 @@ from agent_framework import (
 
 
 class _SimpleAgent(BaseAgent):
-    """Agent that returns a single assistant message (non-streaming path)."""
+    """単一の assistant メッセージを返す Agent（非ストリーミングパス）。"""
 
     def __init__(self, *, reply_text: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -49,17 +49,17 @@ class _SimpleAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        # This agent does not support streaming; yield a single complete response
+        # この Agent はストリーミングをサポートしない。単一の完全なレスポンスを yield する。
         yield AgentRunResponseUpdate(contents=[TextContent(text=self._reply_text)])
 
 
 class _CaptureFullConversation(Executor):
-    """Captures AgentExecutorResponse.full_conversation and completes the workflow."""
+    """AgentExecutorResponse.full_conversation をキャプチャし、ワークフローを完了させる。"""
 
     @handler
     async def capture(self, response: AgentExecutorResponse, ctx: WorkflowContext[Never, dict]) -> None:
         full = response.full_conversation
-        # The AgentExecutor contract guarantees full_conversation is populated.
+        # AgentExecutor の契約により full_conversation が必ず設定されることを保証。
         assert full is not None
         payload = {
             "length": len(full),
@@ -71,22 +71,22 @@ class _CaptureFullConversation(Executor):
 
 
 async def test_agent_executor_populates_full_conversation_non_streaming() -> None:
-    # Arrange: AgentExecutor will be non-streaming when using workflow.run()
+    # 準備: workflow.run() 使用時に AgentExecutor が非ストリーミングになる。
     agent = _SimpleAgent(id="agent1", name="A", reply_text="agent-reply")
     agent_exec = AgentExecutor(agent, id="agent1-exec")
     capturer = _CaptureFullConversation(id="capture")
 
     wf = WorkflowBuilder().set_start_executor(agent_exec).add_edge(agent_exec, capturer).build()
 
-    # Act: use run() instead of run_stream() to test non-streaming mode
+    # 実行: 非ストリーミングモードをテストするために run_stream() ではなく run() を使用。
     result = await wf.run("hello world")
 
-    # Extract output from run result
+    # run の結果から出力を抽出。
     outputs = result.get_outputs()
     assert len(outputs) == 1
     payload = outputs[0]
 
-    # Assert: full_conversation contains [user("hello world"), assistant("agent-reply")]
+    # 検証: full_conversation に [user("hello world"), assistant("agent-reply")] が含まれていること。
     assert isinstance(payload, dict)
     assert payload["length"] == 2
     assert payload["roles"][0] == Role.USER and "hello world" in (payload["texts"][0] or "")
@@ -94,7 +94,7 @@ async def test_agent_executor_populates_full_conversation_non_streaming() -> Non
 
 
 class _CaptureAgent(BaseAgent):
-    """Streaming-capable agent that records the messages it received."""
+    """受信したメッセージを記録するストリーミング対応 Agent。"""
 
     _last_messages: list[ChatMessage] = PrivateAttr(default_factory=list)  # type: ignore
 
@@ -109,7 +109,7 @@ class _CaptureAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        # Normalize and record messages for verification when running non-streaming
+        # 非ストリーミング実行時に検証用にメッセージを正規化して記録。
         norm: list[ChatMessage] = []
         if messages:
             for m in messages:  # type: ignore[iteration-over-optional]
@@ -127,7 +127,7 @@ class _CaptureAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        # Normalize and record messages for verification when running streaming
+        # ストリーミング実行時に検証用にメッセージを正規化して記録。
         norm: list[ChatMessage] = []
         if messages:
             for m in messages:  # type: ignore[iteration-over-optional]
@@ -140,18 +140,18 @@ class _CaptureAgent(BaseAgent):
 
 
 async def test_sequential_adapter_uses_full_conversation() -> None:
-    # Arrange: two streaming agents; the second records what it receives
+    # 準備: 2つのストリーミング Agent。2番目は受信したものを記録する。
     a1 = _CaptureAgent(id="agent1", name="A1", reply_text="A1 reply")
     a2 = _CaptureAgent(id="agent2", name="A2", reply_text="A2 reply")
 
     wf = SequentialBuilder().participants([a1, a2]).build()
 
-    # Act
+    # 実行。
     async for ev in wf.run_stream("hello seq"):
         if isinstance(ev, WorkflowStatusEvent) and ev.state == WorkflowRunState.IDLE:
             break
 
-    # Assert: second agent should have seen the user prompt and A1's assistant reply
+    # 検証: 2番目の Agent はユーザープロンプトと A1 の assistant の返信を見ているはず。
     seen = a2._last_messages  # pyright: ignore[reportPrivateUsage]
     assert len(seen) == 2
     assert seen[0].role == Role.USER and "hello seq" in (seen[0].text or "")

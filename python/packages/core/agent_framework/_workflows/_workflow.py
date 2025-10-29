@@ -46,23 +46,23 @@ logger = logging.getLogger(__name__)
 
 
 class WorkflowRunResult(list[WorkflowEvent]):
-    """Container for events generated during non-streaming workflow execution.
+    """非ストリーミングワークフロー実行中に生成されたイベントのコンテナ。
 
-    ## Overview
-    Represents the complete execution results of a workflow run, containing all events
-    generated from start to idle state. Workflows produce outputs incrementally through
-    ctx.yield_output() calls during execution.
+    ## 概要
+    ワークフロー実行の完全な結果を表し、開始からアイドル状態までに生成されたすべてのイベントを含みます。
+    ワークフローは実行中にctx.yield_output()呼び出しを通じて出力を段階的に生成します。
 
-    ## Event Structure
-    Maintains separation between data-plane and control-plane events:
-    - Data-plane events: Executor invocations, completions, outputs, and requests (in main list)
-    - Control-plane events: Status timeline accessible via status_timeline() method
+    ## イベント構造
+    データプレーンイベントとコントロールプレーンイベントを分離して管理します:
+    - データプレーンイベント: Executorの呼び出し、完了、出力、リクエスト（メインリスト内）
+    - コントロールプレーンイベント: status_timeline()メソッドでアクセス可能なステータスタイムライン
 
-    ## Key Methods
-    - get_outputs(): Extract all workflow outputs from the execution
-    - get_request_info_events(): Retrieve external input requests made during execution
-    - get_final_state(): Get the final workflow state (IDLE, IDLE_WITH_PENDING_REQUESTS, etc.)
-    - status_timeline(): Access the complete status event history
+    ## 主なメソッド
+    - get_outputs(): 実行からすべてのワークフロー出力を抽出
+    - get_request_info_events(): 実行中に行われた外部入力リクエストを取得
+    - get_final_state(): 最終的なワークフローステート（IDLE、IDLE_WITH_PENDING_REQUESTSなど）を取得
+    - status_timeline(): 完全なステータスイベント履歴にアクセス
+
     """
 
     def __init__(self, events: list[WorkflowEvent], status_events: list[WorkflowStatusEvent] | None = None) -> None:
@@ -70,25 +70,28 @@ class WorkflowRunResult(list[WorkflowEvent]):
         self._status_events: list[WorkflowStatusEvent] = status_events or []
 
     def get_outputs(self) -> list[Any]:
-        """Get all outputs from the workflow run result.
+        """ワークフロー実行結果からすべての出力を取得します。
 
         Returns:
-            A list of outputs produced by the workflow during its execution.
+            実行中にワークフローが生成した出力のリスト。
+
         """
         return [event.data for event in self if isinstance(event, WorkflowOutputEvent)]
 
     def get_request_info_events(self) -> list[RequestInfoEvent]:
-        """Get all request info events from the workflow run result.
+        """ワークフロー実行結果からすべてのRequestInfoEventを取得します。
 
         Returns:
-            A list of RequestInfoEvent instances found in the workflow run result.
+            ワークフロー実行結果に含まれるRequestInfoEventインスタンスのリスト。
+
         """
         return [event for event in self if isinstance(event, RequestInfoEvent)]
 
     def get_final_state(self) -> WorkflowRunState:
-        """Return the final run state based on explicit status events.
+        """明示的なステータスイベントに基づいて最終実行状態を返します。
 
-        Returns the last WorkflowStatusEvent.state observed. Raises if none were emitted.
+        観測された最後のWorkflowStatusEvent.stateを返します。イベントが発行されていない場合は例外を発生させます。
+
         """
         if self._status_events:
             return self._status_events[-1].state  # type: ignore[return-value]
@@ -99,7 +102,7 @@ class WorkflowRunResult(list[WorkflowEvent]):
         )
 
     def status_timeline(self) -> list[WorkflowStatusEvent]:
-        """Return the list of status events emitted during the run (control-plane)."""
+        """実行中に発行されたステータスイベントのリストを返します（コントロールプレーン）。"""
         return list(self._status_events)
 
 

@@ -18,34 +18,34 @@ from agent_framework import (
 )
 
 
-# Test message types
+# メッセージタイプのテスト
 @dataclass
 class EmailValidationRequest:
-    """Request to validate an email address."""
+    """メールアドレスの検証をリクエストする。"""
 
     email: str
 
 
 @dataclass
 class DomainCheckRequest(RequestInfoMessage):
-    """Request to check if a domain is approved."""
+    """ドメインが承認されているかをチェックするリクエスト。"""
 
     domain: str = ""
-    email: str = ""  # Include original email for correlation
+    email: str = ""  # 相関のために元のメールを含める
 
 
 @dataclass
 class ValidationResult:
-    """Result of email validation."""
+    """メール検証の結果。"""
 
     email: str
     is_valid: bool
     reason: str
 
 
-# Test helper functions
+# ヘルパー関数のテスト
 def create_email_validation_workflow() -> Workflow:
-    """Create a standard email validation workflow."""
+    """標準的なメール検証workflowを作成する。"""
     email_validator = EmailValidator()
     email_request_info = RequestInfoExecutor(id="email_request_info")
 
@@ -59,7 +59,7 @@ def create_email_validation_workflow() -> Workflow:
 
 
 class BasicParent(Executor):
-    """Basic parent executor for simple sub-workflow tests."""
+    """シンプルなサブワークフローテスト用の基本的な親executor。"""
 
     def __init__(self, cache: dict[str, bool] | None = None) -> None:
         super().__init__(id="basic_parent")
@@ -77,17 +77,17 @@ class BasicParent(Executor):
         request: DomainCheckRequest,
         ctx: WorkflowContext[RequestResponse[DomainCheckRequest, Any] | DomainCheckRequest],
     ) -> None:
-        """Handle requests from sub-workflows with optional caching."""
+        """オプションのキャッシュを使ってサブワークフローからのリクエストを処理する。"""
         domain_request = request
 
         if domain_request.domain in self.cache:
-            # Return cached result
+            # キャッシュされた結果を返す
             response = RequestResponse(
                 data=self.cache[domain_request.domain], original_request=request, request_id=request.request_id
             )
             await ctx.send_message(response, target_id=request.source_executor_id)
         else:
-            # Not in cache, forward to external
+            # キャッシュにない場合は外部に転送する
             await ctx.send_message(request)
 
     @handler
@@ -95,9 +95,9 @@ class BasicParent(Executor):
         self.result = result
 
 
-# Test executors
+# executorsのテスト
 class EmailValidator(Executor):
-    """Validates email addresses in a sub-workflow."""
+    """サブワークフロー内でメールアドレスを検証する。"""
 
     def __init__(self):
         super().__init__(id="email_validator")
@@ -106,8 +106,8 @@ class EmailValidator(Executor):
     async def validate_request(
         self, request: EmailValidationRequest, ctx: WorkflowContext[DomainCheckRequest, ValidationResult]
     ) -> None:
-        """Validate an email address."""
-        # Extract domain and check if it's approved
+        """メールアドレスを検証する。"""
+        # ドメインを抽出し承認されているかをチェックする
         domain = request.email.split("@")[1] if "@" in request.email else ""
 
         if not domain:
@@ -115,7 +115,7 @@ class EmailValidator(Executor):
             await ctx.yield_output(result)
             return
 
-        # Request domain check from external source
+        # 外部ソースにドメインチェックをリクエストする
         domain_check = DomainCheckRequest(domain=domain, email=request.email)
         await ctx.send_message(domain_check)
 
@@ -123,8 +123,8 @@ class EmailValidator(Executor):
     async def handle_domain_response(
         self, response: RequestResponse[DomainCheckRequest, bool], ctx: WorkflowContext[Never, ValidationResult]
     ) -> None:
-        """Handle domain check response with correlation."""
-        # Use the original email from the correlated response
+        """相関付きのレスポンスでドメインチェックを処理する。"""
+        # 相関レスポンスから元のメールを使用する
         result = ValidationResult(
             email=response.original_request.email,
             is_valid=response.data or False,
@@ -134,7 +134,7 @@ class EmailValidator(Executor):
 
 
 class ParentOrchestrator(Executor):
-    """Parent workflow orchestrator with domain knowledge."""
+    """ドメイン知識を持つ親workflowオーケストレーター。"""
 
     def __init__(self, approved_domains: set[str] | None = None) -> None:
         super().__init__(id="parent_orchestrator")
@@ -145,7 +145,7 @@ class ParentOrchestrator(Executor):
 
     @handler
     async def start(self, emails: list[str], ctx: WorkflowContext[EmailValidationRequest]) -> None:
-        """Start processing emails."""
+        """メールの処理を開始する。"""
         for email in emails:
             request = EmailValidationRequest(email=email)
             await ctx.send_message(request, target_id="email_workflow")
@@ -156,30 +156,30 @@ class ParentOrchestrator(Executor):
         request: DomainCheckRequest,
         ctx: WorkflowContext[RequestResponse[DomainCheckRequest, Any] | DomainCheckRequest],
     ) -> None:
-        """Handle requests from sub-workflows."""
+        """サブワークフローからのリクエストを処理する。"""
         domain_request = request
 
-        # Check if we know this domain
+        # このドメインを知っているかチェックする
         if domain_request.domain in self.approved_domains:
-            # Send response back to sub-workflow
+            # レスポンスをサブワークフローに返す
             response = RequestResponse(data=True, original_request=request, request_id=request.request_id)
             await ctx.send_message(response, target_id=request.source_executor_id)
         else:
-            # We don't know this domain, forward to external
+            # このドメインは知らないので外部に転送する
             await ctx.send_message(request)
 
     @handler
     async def collect_result(self, result: ValidationResult, ctx: WorkflowContext) -> None:
-        """Collect validation results."""
+        """検証結果を収集します。"""
         self.results.append(result)
 
 
 async def test_basic_sub_workflow() -> None:
-    """Test basic sub-workflow execution without interception."""
-    # Create sub-workflow
+    """インターセプトなしで基本的なサブワークフローの実行をテストします。"""
+    # サブワークフローを作成します。
     validation_workflow = create_email_validation_workflow()
 
-    # Create parent workflow without interception
+    # インターセプトなしで親ワークフローを作成します。
     parent = BasicParent()
     workflow_executor = WorkflowExecutor(validation_workflow, "email_workflow")
     main_request_info = RequestInfoExecutor(id="main_request_info")
@@ -194,32 +194,32 @@ async def test_basic_sub_workflow() -> None:
         .build()
     )
 
-    # Run workflow with mocked external response
+    # モックされた外部レスポンスでワークフローを実行します。
     result = await main_workflow.run("test@example.com")
 
-    # Get request event and respond
+    # リクエストイベントを取得して応答します。
     request_events = result.get_request_info_events()
     assert len(request_events) == 1
     assert isinstance(request_events[0].data, DomainCheckRequest)
     assert request_events[0].data.domain == "example.com"
 
-    # Send response through the main workflow
+    # メインワークフローを通じてレスポンスを送信します。
     await main_workflow.send_responses({
         request_events[0].request_id: True  # Domain is approved
     })
 
-    # Check result
+    # 結果を確認します。
     assert parent.result is not None
     assert parent.result.email == "test@example.com"
     assert parent.result.is_valid is True
 
 
 async def test_sub_workflow_with_interception():
-    """Test sub-workflow with parent interception and conditional forwarding."""
-    # Create sub-workflow
+    """親のインターセプトと条件付き転送を伴うサブワークフローをテストします。"""
+    # サブワークフローを作成します。
     validation_workflow = create_email_validation_workflow()
 
-    # Create parent workflow with interception cache
+    # インターセプトキャッシュ付きの親ワークフローを作成します。
     parent = BasicParent(cache={"example.com": True, "internal.org": True})
     workflow_executor = WorkflowExecutor(validation_workflow, "email_workflow")
     parent_request_info = RequestInfoExecutor(id="request_info")
@@ -234,23 +234,23 @@ async def test_sub_workflow_with_interception():
         .build()
     )
 
-    # Test 1: Email with cached domain (intercepted)
+    # テスト1: キャッシュされたドメインのメール（インターセプト済み）
     result = await main_workflow.run("user@example.com")
     request_events = result.get_request_info_events()
-    assert len(request_events) == 0  # No external requests, handled from cache
+    assert len(request_events) == 0  # 外部リクエストなし、キャッシュから処理されます。
     assert parent.result is not None
     assert parent.result.email == "user@example.com"
     assert parent.result.is_valid is True
 
-    # Test 2: Email with unknown domain (forwarded to external)
+    # テスト2: 不明なドメインのメール（外部に転送）
     parent.result = None
     result = await main_workflow.run("user@unknown.com")
     request_events = result.get_request_info_events()
-    assert len(request_events) == 1  # Forwarded to external
+    assert len(request_events) == 1  # 外部に転送されました。
     assert isinstance(request_events[0].data, DomainCheckRequest)
     assert request_events[0].data.domain == "unknown.com"
 
-    # Send external response
+    # 外部レスポンスを送信します。
     await main_workflow.send_responses({
         request_events[0].request_id: False  # Domain not approved
     })
@@ -258,20 +258,20 @@ async def test_sub_workflow_with_interception():
     assert parent.result.email == "user@unknown.com"
     assert parent.result.is_valid is False
 
-    # Test 3: Another cached domain
+    # テスト3: 別のキャッシュされたドメイン
     parent.result = None
     result = await main_workflow.run("user@internal.org")
     request_events = result.get_request_info_events()
-    assert len(request_events) == 0  # Handled from cache
+    assert len(request_events) == 0  # キャッシュから処理されました。
     assert parent.result is not None
     assert parent.result.is_valid is True
 
 
 async def test_workflow_scoped_interception() -> None:
-    """Test interception scoped to specific sub-workflows."""
+    """特定のサブワークフローにスコープされたインターセプトをテストします。"""
 
     class MultiWorkflowParent(Executor):
-        """Parent handling multiple sub-workflows."""
+        """複数のサブワークフローを処理する親。"""
 
         def __init__(self) -> None:
             super().__init__(id="multi_parent")
@@ -279,7 +279,7 @@ async def test_workflow_scoped_interception() -> None:
 
         @handler
         async def start(self, data: dict[str, str], ctx: WorkflowContext[EmailValidationRequest]) -> None:
-            # Send to different sub-workflows
+            # 異なるサブワークフローに送信します。
             await ctx.send_message(EmailValidationRequest(email=data["email1"]), target_id="workflow_a")
             await ctx.send_message(EmailValidationRequest(email=data["email2"]), target_id="workflow_b")
 
@@ -292,30 +292,30 @@ async def test_workflow_scoped_interception() -> None:
             domain_request = request
 
             if request.source_executor_id == "workflow_a":
-                # Strict rules for workflow A
+                # ワークフローAの厳格なルール。
                 if domain_request.domain == "strict.com":
                     response = RequestResponse(data=True, original_request=request, request_id=request.request_id)
                     await ctx.send_message(response, target_id=request.source_executor_id)
                 else:
-                    # Forward to external
+                    # 外部に転送します。
                     await ctx.send_message(request)
             elif request.source_executor_id == "workflow_b":
-                # Lenient rules for workflow B
+                # ワークフローBの寛容なルール。
                 if domain_request.domain.endswith(".com"):
                     response = RequestResponse(data=True, original_request=request, request_id=request.request_id)
                     await ctx.send_message(response, target_id=request.source_executor_id)
                 else:
-                    # Forward to external
+                    # 外部に転送します。
                     await ctx.send_message(request)
             else:
-                # Unknown source, forward to external
+                # 不明なソース、外部に転送します。
                 await ctx.send_message(request)
 
         @handler
         async def collect(self, result: ValidationResult, ctx: WorkflowContext) -> None:
             self.results[result.email] = result
 
-    # Create two identical sub-workflows
+    # 2つの同一サブワークフローを作成します。
     workflow_a = create_email_validation_workflow()
     workflow_b = create_email_validation_workflow()
 
@@ -337,13 +337,12 @@ async def test_workflow_scoped_interception() -> None:
         .build()
     )
 
-    # Run test
+    # テストを実行します。
     result = await main_workflow.run({"email1": "user@strict.com", "email2": "user@random.com"})
 
-    # Workflow A should handle strict.com
-    # Workflow B should handle any .com domain
+    # ワークフローAはstrict.comを処理し、ワークフローBは任意の.comドメインを処理します。
     request_events = result.get_request_info_events()
-    assert len(request_events) == 0  # Both handled internally
+    assert len(request_events) == 0  # 両方とも内部で処理されました。
 
     assert len(parent.results) == 2
     assert parent.results["user@strict.com"].is_valid is True
@@ -351,10 +350,10 @@ async def test_workflow_scoped_interception() -> None:
 
 
 async def test_concurrent_sub_workflow_execution() -> None:
-    """Test that WorkflowExecutor can handle multiple concurrent invocations properly."""
+    """WorkflowExecutorが複数の同時呼び出しを適切に処理できることをテストします。"""
 
     class ConcurrentProcessor(Executor):
-        """Processor that sends multiple concurrent requests to the same sub-workflow."""
+        """同じサブワークフローに複数の同時リクエストを送信するプロセッサ。"""
 
         def __init__(self) -> None:
             super().__init__(id="concurrent_processor")
@@ -362,21 +361,21 @@ async def test_concurrent_sub_workflow_execution() -> None:
 
         @handler
         async def start(self, emails: list[str], ctx: WorkflowContext[EmailValidationRequest]) -> None:
-            """Send multiple concurrent requests to the same sub-workflow."""
-            # Send all requests concurrently to the same workflow executor
+            """同じサブワークフローに複数の同時リクエストを送信します。"""
+            # すべてのリクエストを同時に同じworkflow executorに送信します。
             for email in emails:
                 request = EmailValidationRequest(email=email)
                 await ctx.send_message(request, target_id="email_workflow")
 
         @handler
         async def collect_result(self, result: ValidationResult, ctx: WorkflowContext) -> None:
-            """Collect results from concurrent executions."""
+            """同時実行の結果を収集します。"""
             self.results.append(result)
 
-    # Create sub-workflow for email validation
+    # メール検証用のサブワークフローを作成します。
     validation_workflow = create_email_validation_workflow()
 
-    # Create parent workflow
+    # 親ワークフローを作成します。
     processor = ConcurrentProcessor()
     workflow_executor = WorkflowExecutor(validation_workflow, "email_workflow")
     parent_request_info = RequestInfoExecutor(id="request_info")
@@ -391,7 +390,7 @@ async def test_concurrent_sub_workflow_execution() -> None:
         .build()
     )
 
-    # Test concurrent execution with multiple emails
+    # 複数のメールでの同時実行をテストします。
     emails = [
         "user1@domain1.com",
         "user2@domain2.com",
@@ -402,31 +401,30 @@ async def test_concurrent_sub_workflow_execution() -> None:
 
     result = await main_workflow.run(emails)
 
-    # Each email should generate one external request
+    # 各メールは1つの外部リクエストを生成するはずです。
     request_events = result.get_request_info_events()
     assert len(request_events) == len(emails)
 
-    # Verify each request corresponds to the correct domain
+    # 各リクエストが正しいドメインに対応していることを検証します。
     domains_requested = {event.data.domain for event in request_events}  # type: ignore[union-attr]
     expected_domains = {f"domain{i}.com" for i in range(1, 6)}
     assert domains_requested == expected_domains
 
-    # Send responses for all requests (approve all domains)
+    # すべてのリクエストに対してレスポンスを送信します（すべてのドメインを承認）。
     responses = {event.request_id: True for event in request_events}
     await main_workflow.send_responses(responses)
 
-    # All results should be collected
+    # すべての結果が収集されるはずです。
     assert len(processor.results) == len(emails)
 
-    # Verify each email was processed correctly
+    # 各メールが正しく処理されたことを検証します。
     result_emails = {result.email for result in processor.results}
     expected_emails = set(emails)
     assert result_emails == expected_emails
 
-    # All should be valid since we approved all domains
+    # すべてのドメインを承認したため、すべて有効であるはずです。
     for result_obj in processor.results:
         assert result_obj.is_valid is True
         assert result_obj.reason == "Domain approved"
 
-    # Verify that concurrent executions were properly isolated
-    # (This is implicitly tested by the fact that we got correct results for all emails)
+    # 同時実行が適切に分離されていたことを検証します（これはすべてのメールで正しい結果が得られたことで暗黙的にテストされています）。

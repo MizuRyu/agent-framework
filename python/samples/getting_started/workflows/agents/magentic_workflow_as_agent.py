@@ -37,9 +37,8 @@ async def main() -> None:
         instructions=(
             "You are a Researcher. You find information without additional computation or quantitative analysis."
         ),
-        # This agent requires the gpt-4o-search-preview model to perform web searches.
-        # Feel free to explore with other agents that support web search, for example,
-        # the `OpenAIResponseAgent` or `AzureAgentProtocol` with bing grounding.
+        # このAgentはweb検索を実行するためにgpt-4o-search-previewモデルを必要とします。 web検索をサポートする他のAgent、例えば
+        # `OpenAIResponseAgent`やbing groundingを使った`AzureAgentProtocol`なども自由に試してください。
         chat_client=OpenAIChatClient(model_id="gpt-4o-search-preview"),
     )
 
@@ -120,7 +119,7 @@ async def main() -> None:
         if final_output is not None:
             print(f"\nWorkflow completed with result:\n\n{final_output}\n")
 
-        # Wrap the workflow as an agent for composition scenarios
+        # ワークフローをAgentとしてラップし、コンポジションシナリオに対応します。
         workflow_agent = workflow.as_agent(name="MagenticWorkflowAgent")
         agent_result = await workflow_agent.run(task)
 

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""FastAPI server implementation."""
+"""FastAPIサーバーの実装。"""
 
 import inspect
 import json
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class DevServer:
-    """Development Server - OpenAI compatible API server for debugging agents."""
+    """開発サーバー - Agentのデバッグ用OpenAI互換APIサーバー。"""
 
     def __init__(
         self,
@@ -34,14 +34,15 @@ class DevServer:
         cors_origins: list[str] | None = None,
         ui_enabled: bool = True,
     ) -> None:
-        """Initialize the development server.
+        """開発サーバーを初期化する。
 
         Args:
-            entities_dir: Directory to scan for entities
-            port: Port to run server on
-            host: Host to bind server to
-            cors_origins: List of allowed CORS origins
-            ui_enabled: Whether to enable the UI
+            entities_dir: エンティティをスキャンするディレクトリ
+            port: サーバーを起動するポート
+            host: サーバーをバインドするホスト
+            cors_origins: 許可するCORSオリジンのリスト
+            ui_enabled: UIを有効にするかどうか
+
         """
         self.entities_dir = entities_dir
         self.port = port
@@ -53,20 +54,20 @@ class DevServer:
         self._pending_entities: list[Any] | None = None
 
     async def _ensure_executor(self) -> AgentFrameworkExecutor:
-        """Ensure executor is initialized."""
+        """executorが初期化されていることを保証する。"""
         if self.executor is None:
             logger.info("Initializing Agent Framework executor...")
 
-            # Create components directly
+            # コンポーネントを直接作成する
             entity_discovery = EntityDiscovery(self.entities_dir)
             message_mapper = MessageMapper()
             self.executor = AgentFrameworkExecutor(entity_discovery, message_mapper)
 
-            # Discover entities from directory
+            # ディレクトリからエンティティを発見する
             discovered_entities = await self.executor.discover_entities()
             logger.info(f"Discovered {len(discovered_entities)} entities from directory")
 
-            # Register any pending in-memory entities
+            # 保留中のインメモリエンティティを登録する
             if self._pending_entities:
                 discovery = self.executor.entity_discovery
                 for entity in self._pending_entities:
@@ -76,16 +77,16 @@ class DevServer:
                         logger.info(f"Registered in-memory entity: {entity_info.id}")
                     except Exception as e:
                         logger.error(f"Failed to register in-memory entity: {e}")
-                self._pending_entities = None  # Clear after registration
+                self._pending_entities = None  # 登録後にクリアする
 
-            # Get the final entity count after all registration
+            # すべての登録後の最終的なエンティティ数を取得する
             all_entities = self.executor.entity_discovery.list_entities()
             logger.info(f"Total entities available: {len(all_entities)}")
 
         return self.executor
 
     async def _cleanup_entities(self) -> None:
-        """Cleanup entity resources (close clients, MCP tools, credentials, etc.)."""
+        """エンティティリソースをクリーンアップする（クライアント、MCPツール、資格情報などを閉じる）。"""
         if not self.executor:
             return
 
@@ -99,11 +100,11 @@ class DevServer:
             try:
                 entity_obj = self.executor.entity_discovery.get_entity_object(entity_info.id)
 
-                # Close chat clients and their credentials
+                # チャットクライアントとその資格情報を閉じる
                 if entity_obj and hasattr(entity_obj, "chat_client"):
                     client = entity_obj.chat_client
 
-                    # Close the chat client itself
+                    # チャットクライアント自体を閉じる
                     if hasattr(client, "close") and callable(client.close):
                         if inspect.iscoroutinefunction(client.close):
                             await client.close()
@@ -112,7 +113,7 @@ class DevServer:
                         closed_count += 1
                         logger.debug(f"Closed client for entity: {entity_info.id}")
 
-                    # Close credentials attached to chat clients (e.g., AzureCliCredential)
+                    # チャットクライアントに付随する資格情報を閉じる（例：AzureCliCredential）
                     credential_attrs = ["credential", "async_credential", "_credential", "_async_credential"]
                     for attr in credential_attrs:
                         if hasattr(client, attr):
@@ -128,7 +129,7 @@ class DevServer:
                                 except Exception as e:
                                     logger.warning(f"Error closing credential for {entity_info.id}: {e}")
 
-                # Close MCP tools (framework tracks them in _local_mcp_tools)
+                # MCPツールを閉じる（フレームワークは_local_mcp_toolsで追跡）
                 if entity_obj and hasattr(entity_obj, "_local_mcp_tools"):
                     for mcp_tool in entity_obj._local_mcp_tools:
                         if hasattr(mcp_tool, "close") and callable(mcp_tool.close):
@@ -154,18 +155,18 @@ class DevServer:
             logger.info(f"Closed {mcp_tools_closed} MCP tool(s)")
 
     def create_app(self) -> FastAPI:
-        """Create the FastAPI application."""
+        """FastAPIアプリケーションを作成する。"""
 
         @asynccontextmanager
         async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-            # Startup
+            # 起動処理
             logger.info("Starting Agent Framework Server")
             await self._ensure_executor()
             yield
-            # Shutdown
+            # シャットダウン処理
             logger.info("Shutting down Agent Framework Server")
 
-            # Cleanup entity resources (e.g., close credentials, clients)
+            # エンティティリソースをクリーンアップする（例：資格情報、クライアントを閉じる）
             if self.executor:
                 await self._cleanup_entities()
 
@@ -176,7 +177,7 @@ class DevServer:
             lifespan=lifespan,
         )
 
-        # Add CORS middleware
+        # CORSミドルウェアを追加する
         app.add_middleware(
             CORSMiddleware,
             allow_origins=self.cors_origins,
@@ -191,23 +192,23 @@ class DevServer:
         return app
 
     def _register_routes(self, app: FastAPI) -> None:
-        """Register API routes."""
+        """APIルートを登録する。"""
 
         @app.get("/health")
         async def health_check() -> dict[str, Any]:
-            """Health check endpoint."""
+            """ヘルスチェックエンドポイント。"""
             executor = await self._ensure_executor()
-            # Use list_entities() to avoid re-discovering and re-registering entities
+            # list_entities()を使用してエンティティの再発見と再登録を避ける
             entities = executor.entity_discovery.list_entities()
 
             return {"status": "healthy", "entities_count": len(entities), "framework": "agent_framework"}
 
         @app.get("/v1/entities", response_model=DiscoveryResponse)
         async def discover_entities() -> DiscoveryResponse:
-            """List all registered entities."""
+            """登録されているすべてのエンティティをリストする。"""
             try:
                 executor = await self._ensure_executor()
-                # Use list_entities() instead of discover_entities() to get already-registered entities
+                # discover_entities()の代わりにlist_entities()を使用して既に登録されたエンティティを取得する
                 entities = executor.entity_discovery.list_entities()
                 return DiscoveryResponse(entities=entities)
             except Exception as e:
@@ -216,7 +217,7 @@ class DevServer:
 
         @app.get("/v1/entities/{entity_id}/info", response_model=EntityInfo)
         async def get_entity_info(entity_id: str) -> EntityInfo:
-            """Get detailed information about a specific entity (triggers lazy loading)."""
+            """特定のエンティティの詳細情報を取得する（遅延ロードをトリガー）。"""
             try:
                 executor = await self._ensure_executor()
                 entity_info = executor.get_entity_info(entity_id)
@@ -224,17 +225,15 @@ class DevServer:
                 if not entity_info:
                     raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
 
-                # Trigger lazy loading if entity not yet loaded
-                # This will import the module and enrich metadata
+                # エンティティがまだロードされていない場合に遅延ロードをトリガーする これによりモジュールがインポートされ、メタデータが充実する
                 entity_obj = await executor.entity_discovery.load_entity(entity_id)
 
-                # Get updated entity info (may have been enriched during load)
+                # 更新されたエンティティ情報を取得する（ロード中に充実されている可能性あり）
                 entity_info = executor.get_entity_info(entity_id) or entity_info
 
-                # For workflows, populate additional detailed information
+                # ワークフローの場合、追加の詳細情報を補完する
                 if entity_info.type == "workflow" and entity_obj:
-                    # Entity object already loaded by load_entity() above
-                    # Get workflow structure
+                    # エンティティオブジェクトは上記のload_entity()で既にロード済み ワークフロー構造を取得する
                     workflow_dump = None
                     if hasattr(entity_obj, "to_dict") and callable(getattr(entity_obj, "to_dict", None)):
                         try:
@@ -264,7 +263,7 @@ class DevServer:
                     elif hasattr(entity_obj, "__dict__"):
                         workflow_dump = {k: v for k, v in entity_obj.__dict__.items() if not k.startswith("_")}
 
-                    # Get input schema information
+                    # 入力スキーマ情報を取得する
                     input_schema = {}
                     input_type_name = "Unknown"
                     start_executor_id = ""
@@ -291,7 +290,7 @@ class DevServer:
                             if input_type:
                                 input_type_name = getattr(input_type, "__name__", str(input_type))
 
-                                # Generate schema using comprehensive schema generation
+                                # 包括的なスキーマ生成を用いてスキーマを生成する
                                 input_schema = generate_input_schema(input_type)
 
                     if not input_schema:
@@ -299,12 +298,12 @@ class DevServer:
                         if input_type_name == "Unknown":
                             input_type_name = "string"
 
-                    # Get executor list
+                    # executorリストを取得する
                     executor_list = []
                     if hasattr(entity_obj, "executors") and entity_obj.executors:
                         executor_list = [getattr(ex, "executor_id", str(ex)) for ex in entity_obj.executors]
 
-                    # Create copy of entity info and populate workflow-specific fields
+                    # エンティティ情報のコピーを作成し、ワークフロー固有のフィールドを補完する
                     update_payload: dict[str, Any] = {
                         "workflow_dump": workflow_dump,
                         "input_schema": input_schema,
@@ -315,7 +314,7 @@ class DevServer:
                         update_payload["executors"] = executor_list
                     return entity_info.model_copy(update=update_payload)
 
-                # For non-workflow entities, return as-is
+                # ワークフロー以外のエンティティはそのまま返す
                 return entity_info
 
             except HTTPException:
@@ -326,20 +325,21 @@ class DevServer:
 
         @app.post("/v1/entities/{entity_id}/reload")
         async def reload_entity(entity_id: str) -> dict[str, Any]:
-            """Hot reload entity (clears cache, will reimport on next access).
+            """エンティティをホットリロードする（キャッシュをクリアし、次回アクセス時に再インポートされる）。
 
-            This enables hot reload during development - edit entity code, call this endpoint,
-            and the next execution will use the updated code without server restart.
+            これは開発中のホットリロードを可能にします - エンティティコードを編集し、このエンドポイントを呼び出すと、
+            次の実行でサーバー再起動なしに更新されたコードが使用されます。
+
             """
             try:
                 executor = await self._ensure_executor()
 
-                # Check if entity exists
+                # エンティティが存在するか確認する
                 entity_info = executor.get_entity_info(entity_id)
                 if not entity_info:
                     raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
 
-                # Invalidate cache
+                # キャッシュを無効化する
                 executor.entity_discovery.invalidate_entity(entity_id)
 
                 return {
@@ -355,13 +355,13 @@ class DevServer:
 
         @app.post("/v1/responses")
         async def create_response(request: AgentFrameworkRequest, raw_request: Request) -> Any:
-            """OpenAI Responses API endpoint."""
+            """OpenAI Responses APIエンドポイント。"""
             try:
                 raw_body = await raw_request.body()
                 logger.info(f"Raw request body: {raw_body.decode()}")
                 logger.info(f"Parsed request: model={request.model}, extra_body={request.extra_body}")
 
-                # Get entity_id using the new method
+                # 新しい方法でentity_idを取得する
                 entity_id = request.get_entity_id()
                 logger.info(f"Extracted entity_id: {entity_id}")
 
@@ -369,7 +369,7 @@ class DevServer:
                     error = OpenAIError.create(f"Missing entity_id. Request extra_body: {request.extra_body}")
                     return JSONResponse(status_code=400, content=error.to_dict())
 
-                # Get executor and validate entity exists
+                # executorを取得し、エンティティの存在を検証する
                 executor = await self._ensure_executor()
                 try:
                     entity_info = executor.get_entity_info(entity_id)
@@ -378,7 +378,7 @@ class DevServer:
                     error = OpenAIError.create(f"Entity not found: {entity_id}")
                     return JSONResponse(status_code=404, content=error.to_dict())
 
-                # Execute request
+                # リクエストを実行する
                 if request.stream:
                     return StreamingResponse(
                         self._stream_execution(executor, request),
@@ -396,13 +396,12 @@ class DevServer:
                 error = OpenAIError.create(f"Execution failed: {e!s}")
                 return JSONResponse(status_code=500, content=error.to_dict())
 
-        # ========================================
-        # OpenAI Conversations API (Standard)
+        # ======================================== OpenAI Conversations API (Standard)
         # ========================================
 
         @app.post("/v1/conversations")
         async def create_conversation(request_data: dict[str, Any]) -> dict[str, Any]:
-            """Create a new conversation - OpenAI standard."""
+            """新しい会話を作成する - OpenAI標準。"""
             try:
                 metadata = request_data.get("metadata")
                 executor = await self._ensure_executor()
@@ -416,16 +415,16 @@ class DevServer:
 
         @app.get("/v1/conversations")
         async def list_conversations(agent_id: str | None = None) -> dict[str, Any]:
-            """List conversations, optionally filtered by agent_id."""
+            """会話をリストし、オプションでagent_idでフィルタリングする。"""
             try:
                 executor = await self._ensure_executor()
 
                 if agent_id:
-                    # Filter by agent_id metadata
+                    # agent_idメタデータでフィルタリングする
                     conversations = executor.conversation_store.list_conversations_by_metadata({"agent_id": agent_id})
                 else:
-                    # Return all conversations (for InMemoryStore, list all)
-                    # Note: This assumes list_conversations_by_metadata({}) returns all
+                    # すべての会話を返す（InMemoryStoreの場合はすべてをリスト） 注意:
+                    # これはlist_conversations_by_metadata({})がすべてを返すことを前提としています
                     conversations = executor.conversation_store.list_conversations_by_metadata({})
 
                 return {
@@ -441,7 +440,7 @@ class DevServer:
 
         @app.get("/v1/conversations/{conversation_id}")
         async def retrieve_conversation(conversation_id: str) -> dict[str, Any]:
-            """Get conversation - OpenAI standard."""
+            """会話を取得する - OpenAI標準。"""
             try:
                 executor = await self._ensure_executor()
                 conversation = executor.conversation_store.get_conversation(conversation_id)
@@ -456,7 +455,7 @@ class DevServer:
 
         @app.post("/v1/conversations/{conversation_id}")
         async def update_conversation(conversation_id: str, request_data: dict[str, Any]) -> dict[str, Any]:
-            """Update conversation metadata - OpenAI standard."""
+            """会話のメタデータを更新する - OpenAI標準。"""
             try:
                 executor = await self._ensure_executor()
                 metadata = request_data.get("metadata", {})
@@ -472,7 +471,7 @@ class DevServer:
 
         @app.delete("/v1/conversations/{conversation_id}")
         async def delete_conversation(conversation_id: str) -> dict[str, Any]:
-            """Delete conversation - OpenAI standard."""
+            """会話を削除する - OpenAI標準。"""
             try:
                 executor = await self._ensure_executor()
                 result = executor.conversation_store.delete_conversation(conversation_id)
@@ -487,7 +486,7 @@ class DevServer:
 
         @app.post("/v1/conversations/{conversation_id}/items")
         async def create_conversation_items(conversation_id: str, request_data: dict[str, Any]) -> dict[str, Any]:
-            """Add items to conversation - OpenAI standard."""
+            """会話にアイテムを追加する - OpenAI標準。"""
             try:
                 executor = await self._ensure_executor()
                 items = request_data.get("items", [])
@@ -505,7 +504,7 @@ class DevServer:
         async def list_conversation_items(
             conversation_id: str, limit: int = 100, after: str | None = None, order: str = "asc"
         ) -> dict[str, Any]:
-            """List conversation items - OpenAI standard."""
+            """会話アイテムをリストする - OpenAI標準。"""
             try:
                 executor = await self._ensure_executor()
                 items, has_more = await executor.conversation_store.list_items(
@@ -526,7 +525,7 @@ class DevServer:
 
         @app.get("/v1/conversations/{conversation_id}/items/{item_id}")
         async def retrieve_conversation_item(conversation_id: str, item_id: str) -> dict[str, Any]:
-            """Get specific conversation item - OpenAI standard."""
+            """特定の会話アイテムを取得する - OpenAI標準。"""
             try:
                 executor = await self._ensure_executor()
                 item = executor.conversation_store.get_item(conversation_id, item_id)
@@ -542,25 +541,25 @@ class DevServer:
     async def _stream_execution(
         self, executor: AgentFrameworkExecutor, request: AgentFrameworkRequest
     ) -> AsyncGenerator[str, None]:
-        """Stream execution directly through executor."""
+        """executorを通じて直接ストリーム実行する。"""
         try:
-            # Collect events for final response.completed event
+            # 最終的なresponse.completedイベントのためにイベントを収集する
             events = []
 
-            # Stream all events
+            # すべてのイベントをストリームする
             async for event in executor.execute_streaming(request):
                 events.append(event)
 
-                # IMPORTANT: Check model_dump_json FIRST because to_json() can have newlines (pretty-printing)
-                # which breaks SSE format. model_dump_json() returns single-line JSON.
+                # 重要: model_dump_jsonを最初にチェックする。to_json()は改行を含む可能性があり（整形表示）、
+                # SSEフォーマットを破壊する。model_dump_json()は単一行のJSONを返す。
                 if hasattr(event, "model_dump_json"):
                     payload = event.model_dump_json()  # type: ignore[attr-defined]
                 elif hasattr(event, "to_json") and callable(getattr(event, "to_json", None)):
                     payload = event.to_json()  # type: ignore[attr-defined]
-                    # Strip newlines from pretty-printed JSON for SSE compatibility
+                    # SSE互換性のために整形表示されたJSONから改行を除去する
                     payload = payload.replace("\n", "").replace("\r", "")
                 elif isinstance(event, dict):
-                    # Handle plain dict events (e.g., error events from executor)
+                    # プレーンなdictイベントを処理する（例：executorからのエラーイベント）
                     payload = json.dumps(event)
                 elif hasattr(event, "to_dict") and callable(getattr(event, "to_dict", None)):
                     payload = json.dumps(event.to_dict())  # type: ignore[attr-defined]
@@ -568,7 +567,7 @@ class DevServer:
                     payload = json.dumps(str(event))
                 yield f"data: {payload}\n\n"
 
-            # Aggregate to final response and emit response.completed event (OpenAI standard)
+            # 最終応答に集約し、response.completedイベントを発行する（OpenAI標準）
             from .models import ResponseCompletedEvent
 
             final_response = await executor.message_mapper.aggregate_to_response(events, request)
@@ -579,7 +578,7 @@ class DevServer:
             )
             yield f"data: {completed_event.model_dump_json()}\n\n"
 
-            # Send final done event
+            # 最終のdoneイベントを送信する
             yield "data: [DONE]\n\n"
 
         except Exception as e:
@@ -588,7 +587,7 @@ class DevServer:
             yield f"data: {json.dumps(error_event)}\n\n"
 
     def _mount_ui(self, app: FastAPI) -> None:
-        """Mount the UI as static files."""
+        """UIを静的ファイルとしてマウントする。"""
         from pathlib import Path
 
         ui_dir = Path(__file__).parent / "ui"
@@ -596,17 +595,18 @@ class DevServer:
             app.mount("/", StaticFiles(directory=str(ui_dir), html=True), name="ui")
 
     def register_entities(self, entities: list[Any]) -> None:
-        """Register entities to be discovered when server starts.
+        """サーバー起動時に発見されるエンティティを登録する。
 
         Args:
-            entities: List of entity objects to register
+            entities: 登録するエンティティオブジェクトのリスト
+
         """
         if self._pending_entities is None:
             self._pending_entities = []
         self._pending_entities.extend(entities)
 
     def get_app(self) -> FastAPI:
-        """Get the FastAPI application instance."""
+        """FastAPIアプリケーションインスタンスを取得する。"""
         if self._app is None:
             self._app = self.create_app()
         return self._app

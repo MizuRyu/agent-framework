@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+# Microsoftの著作権表示。すべての権利を保有します。
 
 from collections.abc import Iterable
 from typing import Any, cast
@@ -17,7 +17,7 @@ such as pickling.
 
 
 def encode_chat_messages(messages: Iterable[ChatMessage]) -> list[dict[str, Any]]:
-    """Serialize chat messages into checkpoint-safe payloads."""
+    """チャットメッセージをチェックポイント安全なペイロードにシリアライズします。"""
     encoded: list[dict[str, Any]] = []
     for message in messages:
         encoded.append({
@@ -33,7 +33,7 @@ def encode_chat_messages(messages: Iterable[ChatMessage]) -> list[dict[str, Any]
 
 
 def decode_chat_messages(payload: Iterable[dict[str, Any]]) -> list[ChatMessage]:
-    """Restore chat messages from checkpoint-safe payloads."""
+    """チェックポイント安全なペイロードからチャットメッセージを復元します。"""
     restored: list[ChatMessage] = []
     for item in payload:
         if not isinstance(item, dict):

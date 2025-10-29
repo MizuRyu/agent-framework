@@ -16,7 +16,7 @@ servers, including user approval workflows for function call security.
 
 
 async def handle_approvals_with_thread(query: str, agent: "AgentProtocol", thread: "AgentThread"):
-    """Here we let the thread deal with the previous responses, and we just rerun with the approval."""
+    """ここではスレッドに前のレスポンスの処理を任せ、承認後に再実行します。"""
     from agent_framework import ChatMessage
 
     result = await agent.run(query, thread=thread, store=True)
@@ -39,12 +39,12 @@ async def handle_approvals_with_thread(query: str, agent: "AgentProtocol", threa
 
 
 async def main() -> None:
-    """Example showing Hosted MCP tools for a Azure AI Agent."""
+    """Azure AI Agent用のHosted MCPツールを示す例です。"""
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential) as chat_client,
     ):
-        # enable azure-ai observability
+        # azure-aiのオブザーバビリティを有効にします。
         await chat_client.setup_azure_ai_observability()
         agent = chat_client.create_agent(
             name="DocsAgent",
@@ -55,13 +55,13 @@ async def main() -> None:
             ),
         )
         thread = agent.get_new_thread()
-        # First query
+        # 最初のクエリ。
         query1 = "How to create an Azure storage account using az cli?"
         print(f"User: {query1}")
         result1 = await handle_approvals_with_thread(query1, agent, thread)
         print(f"{agent.name}: {result1}\n")
         print("\n=======================================\n")
-        # Second query
+        # 2番目のクエリ。
         query2 = "What is Microsoft Agent Framework?"
         print(f"User: {query2}")
         result2 = await handle_approvals_with_thread(query2, agent, thread)

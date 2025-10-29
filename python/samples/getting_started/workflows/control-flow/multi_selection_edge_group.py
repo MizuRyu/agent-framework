@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Step 06b — Multi-Selection Edge Group sample."""
+"""ステップ06b — マルチセレクションエッジグループのサンプル。"""
 
 import asyncio
 import os
@@ -131,7 +131,7 @@ async def finalize_and_send(response: AgentExecutorResponse, ctx: WorkflowContex
 
 @executor(id="summarize_email")
 async def summarize_email(analysis: AnalysisResult, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-    # Only called for long NotSpam emails by selection_func
+    # selection_funcによって長いNotSpamメールにのみ呼ばれます
     email: Email = await ctx.get_shared_state(f"{EMAIL_STATE_PREFIX}{analysis.email_id}")
     await ctx.send_message(
         AgentExecutorRequest(messages=[ChatMessage(Role.USER, text=email.email_content)], should_respond=True)
@@ -143,7 +143,7 @@ async def merge_summary(response: AgentExecutorResponse, ctx: WorkflowContext[An
     summary = EmailSummaryModel.model_validate_json(response.agent_run_response.text)
     email_id: str = await ctx.get_shared_state(CURRENT_EMAIL_ID_KEY)
     email: Email = await ctx.get_shared_state(f"{EMAIL_STATE_PREFIX}{email_id}")
-    # Build an AnalysisResult mirroring to_analysis_result but with summary
+    # to_analysis_resultを模倣したAnalysisResultをsummary付きで構築する
     await ctx.send_message(
         AnalysisResult(
             spam_decision="NotSpam",
@@ -176,13 +176,13 @@ async def handle_uncertain(analysis: AnalysisResult, ctx: WorkflowContext[Never,
 
 @executor(id="database_access")
 async def database_access(analysis: AnalysisResult, ctx: WorkflowContext[Never, str]) -> None:
-    # Simulate DB writes for email and analysis (and summary if present)
+    # メールと分析（および存在すればsummary）のDB書き込みをシミュレートする
     await asyncio.sleep(0.05)
     await ctx.add_event(DatabaseEvent(f"Email {analysis.email_id} saved to database."))
 
 
 async def main() -> None:
-    # Agents
+    # エージェント
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     email_analysis_agent = AgentExecutor(
@@ -215,9 +215,10 @@ async def main() -> None:
         id="email_summary_agent",
     )
 
-    # Build the workflow
+    # ワークフローを構築する
     def select_targets(analysis: AnalysisResult, target_ids: list[str]) -> list[str]:
-        # Order: [handle_spam, submit_to_email_assistant, summarize_email, handle_uncertain]
+        # 順序: [handle_spam, submit_to_email_assistant, summarize_email,
+        # handle_uncertain]
         handle_spam_id, submit_to_email_assistant_id, summarize_email_id, handle_uncertain_id = target_ids
         if analysis.spam_decision == "Spam":
             return [handle_spam_id]
@@ -242,14 +243,14 @@ async def main() -> None:
         .add_edge(email_assistant_agent, finalize_and_send)
         .add_edge(summarize_email, email_summary_agent)
         .add_edge(email_summary_agent, merge_summary)
-        # Save to DB if short (no summary path)
+        # 短い場合はDBに保存（summaryパスなし）
         .add_edge(to_analysis_result, database_access, condition=lambda r: r.email_length <= LONG_EMAIL_THRESHOLD)
-        # Save to DB with summary when long
+        # 長い場合はsummary付きでDBに保存
         .add_edge(merge_summary, database_access)
         .build()
     )
 
-    # Read an email sample
+    # メールサンプルを読み込む
     resources_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
         "resources",
@@ -262,7 +263,7 @@ async def main() -> None:
         print("Unable to find resource file, using default text.")
         email = "Hello team, here are the updates for this week..."
 
-    # Print outputs and database events from streaming
+    # ストリーミングからの出力とDBイベントを表示する
     async for event in workflow.run_stream(email):
         if isinstance(event, DatabaseEvent):
             print(f"{event}")

@@ -9,19 +9,19 @@ from microsoft_agents.copilotstudio.client import CopilotClient
 
 @pytest.fixture
 def exclude_list(request: Any) -> list[str]:
-    """Fixture that returns a list of environment variables to exclude."""
+    """除外する環境変数のリストを返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else []
 
 
 @pytest.fixture
 def override_env_param_dict(request: Any) -> dict[str, str]:
-    """Fixture that returns a dict of environment variables to override."""
+    """上書きする環境変数の辞書を返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else {}
 
 
 @pytest.fixture()
 def copilot_studio_unit_test_env(monkeypatch, exclude_list, override_env_param_dict):  # type: ignore
-    """Fixture to set environment variables for CopilotStudioSettings."""
+    """CopilotStudioSettings用の環境変数を設定するフィクスチャ。"""
 
     if exclude_list is None:
         exclude_list = []
@@ -49,16 +49,16 @@ def copilot_studio_unit_test_env(monkeypatch, exclude_list, override_env_param_d
 
 @pytest.fixture
 def mock_copilot_client() -> MagicMock:
-    """Mock CopilotClient for testing."""
+    """テスト用のMock CopilotClient。"""
     return MagicMock(spec=CopilotClient)
 
 
 @pytest.fixture
 def mock_pca() -> MagicMock:
-    """Mock PublicClientApplication for testing."""
+    """テスト用のMock PublicClientApplication。"""
     mock_pca = MagicMock()
 
-    # Mock successful token response
+    # 成功したトークンレスポンスのモック。
     mock_token_response = {
         "access_token": "test-access-token-12345",
         "token_type": "Bearer",
@@ -74,7 +74,7 @@ def mock_pca() -> MagicMock:
 
 @pytest.fixture
 def mock_activity() -> MagicMock:
-    """Mock Activity for testing."""
+    """テスト用のMock Activity。"""
     mock_activity = MagicMock()
     mock_activity.text = "Test response"
     mock_activity.type = "message"
@@ -85,7 +85,7 @@ def mock_activity() -> MagicMock:
 
 @pytest.fixture
 def mock_conversation() -> MagicMock:
-    """Mock conversation for testing."""
+    """テスト用のMock conversation。"""
     mock_conversation = MagicMock()
     mock_conversation.id = "test-conversation-id"
     return mock_conversation

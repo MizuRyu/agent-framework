@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Side-by-side sample comparing Semantic Kernel Process Framework and Agent Framework workflows."""
+"""Semantic Kernel Process FrameworkとAgent Frameworkのワークフローを比較するサンプルを並べて示します。"""
 
 import asyncio
 import logging
@@ -8,15 +8,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, cast
 
-######################################################################
-# region Agent Framework imports
-######################################################################
+#  region Agent Frameworkのインポート
 from agent_framework import Executor, WorkflowBuilder, WorkflowContext, WorkflowOutputEvent, handler
 from pydantic import BaseModel, Field
 
-######################################################################
-# region Semantic Kernel imports
-######################################################################
+#  region Semantic Kernelのインポート
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.functions import kernel_function
@@ -52,7 +48,7 @@ logging.basicConfig(level=logging.WARNING)
 
 
 class CommonEvents(Enum):
-    """Common events for both samples."""
+    """両サンプル共通のイベント。"""
 
     USER_INPUT_RECEIVED = "UserInputReceived"
     COMPLETION_RESPONSE_GENERATED = "CompletionResponseGenerated"
@@ -66,9 +62,7 @@ class CommonEvents(Enum):
     START_PROCESS = "StartProcess"
 
 
-######################################################################
-# region Semantic Kernel Process Framework path
-######################################################################
+#  region Semantic Kernel Process Frameworkパス
 
 
 class KickOffStep(KernelProcessStep[None]):
@@ -155,9 +149,7 @@ async def run_semantic_kernel_process_example() -> None:
         print(f"Final State Check: CStepState current cycle: {c_step_state.state.current_cycle}")
 
 
-######################################################################
-# region Agent Framework workflow path
-######################################################################
+#  region Agent Frameworkワークフローパス
 
 
 @dataclass

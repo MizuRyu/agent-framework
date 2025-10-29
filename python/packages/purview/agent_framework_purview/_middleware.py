@@ -17,21 +17,21 @@ logger = get_logger("agent_framework.purview")
 
 
 class PurviewPolicyMiddleware(AgentMiddleware):
-    """Agent middleware that enforces Purview policies on prompt and response.
+    """Purviewポリシーをプロンプトとレスポンスに適用するAgent middleware。
 
-    Accepts either a synchronous TokenCredential or an AsyncTokenCredential.
+    同期のTokenCredentialまたはAsyncTokenCredentialのいずれかを受け入れます。
 
-    Usage:
+    使用例:
 
     .. code-block:: python
-        from agent_framework.microsoft import PurviewPolicyMiddleware, PurviewSettings
-        from agent_framework import ChatAgent
+    from agent_framework.microsoft import PurviewPolicyMiddleware, PurviewSettings
+    from agent_framework import ChatAgent
 
-        credential = ...  # TokenCredential or AsyncTokenCredential
-        settings = PurviewSettings(app_name="My App")
-        agent = ChatAgent(
-            chat_client=client, instructions="...", middleware=[PurviewPolicyMiddleware(credential, settings)]
-        )
+    credential = ...  # TokenCredential または AsyncTokenCredential
+    settings = PurviewSettings(app_name="My App")
+    agent = ChatAgent(
+        chat_client=client, instructions="...", middleware=[PurviewPolicyMiddleware(credential, settings)]
+    )
     """
 
     def __init__(
@@ -50,7 +50,7 @@ class PurviewPolicyMiddleware(AgentMiddleware):
     ) -> None:  # type: ignore[override]
         resolved_user_id: str | None = None
         try:
-            # Pre (prompt) check
+            # 事前（プロンプト）チェック
             should_block_prompt, resolved_user_id = await self._processor.process_messages(
                 context.messages, Activity.UPLOAD_TEXT
             )
@@ -63,14 +63,14 @@ class PurviewPolicyMiddleware(AgentMiddleware):
                 context.terminate = True
                 return
         except Exception as ex:
-            # Log and continue if there's an error in the pre-check
+            # 事前チェックでエラーがあってもログを記録して継続します。
             logger.error(f"Error in Purview policy pre-check: {ex}")
 
         await next(context)
 
         try:
-            # Post (response) check only if we have a normal AgentRunResponse
-            # Use the same user_id from the request for the response evaluation
+            # 通常のAgentRunResponseがある場合のみ事後（レスポンス）チェックを行います。
+            # レスポンス評価にはリクエストと同じuser_idを使用します。
             if context.result and not context.is_streaming:
                 should_block_response, _ = await self._processor.process_messages(
                     context.result.messages,  # type: ignore[union-attr]
@@ -84,34 +84,32 @@ class PurviewPolicyMiddleware(AgentMiddleware):
                         messages=[ChatMessage(role=Role.SYSTEM, text=self._settings.blocked_response_message)]
                     )
             else:
-                # Streaming responses are not supported for post-checks
+                # 事後チェックではストリーミングレスポンスはサポートされていません。
                 logger.debug("Streaming responses are not supported for Purview policy post-checks")
         except Exception as ex:
-            # Log and continue if there's an error in the post-check
+            # 事後チェックでエラーがあってもログを記録して継続します。
             logger.error(f"Error in Purview policy post-check: {ex}")
 
 
 class PurviewChatPolicyMiddleware(ChatMiddleware):
-    """Chat middleware variant for Purview policy evaluation.
+    """Purviewポリシー評価用のChat middlewareバリアント。
 
-    This allows users to attach Purview enforcement directly to a chat client
+    これによりユーザーはPurviewの強制をチャットクライアントに直接アタッチできます。
 
-    Behavior:
-      * Pre-chat: evaluates outgoing (user + context) messages as an upload activity
-        and can terminate execution if blocked.
-      * Post-chat: evaluates the received response messages (streaming is not presently supported)
-        and can replace them with a blocked message. Uses the same user_id from the request
-        to ensure consistent user identity throughout the evaluation.
+    動作:
+    * チャット前: 送信される（ユーザー＋コンテキスト）メッセージをアップロードアクティビティとして評価し、ブロックされた場合は実行を終了できます。
+    * チャット後: 受信したレスポンスメッセージを評価します（現在ストリーミングはサポートされていません）。
+    ブロックされたメッセージに置き換えることができます。評価中はリクエストと同じuser_idを使用し、一貫したユーザー識別を保証します。
 
-    Usage:
+    使用例:
 
     .. code-block:: python
-        from agent_framework.microsoft import PurviewChatPolicyMiddleware, PurviewSettings
-        from agent_framework import ChatClient
+    from agent_framework.microsoft import PurviewChatPolicyMiddleware, PurviewSettings
+    from agent_framework import ChatClient
 
-        credential = ...  # TokenCredential or AsyncTokenCredential
-        settings = PurviewSettings(app_name="My App")
-        client = ChatClient(..., middleware=[PurviewChatPolicyMiddleware(credential, settings)])
+    credential = ...  # TokenCredential または AsyncTokenCredential
+    settings = PurviewSettings(app_name="My App")
+    client = ChatClient(..., middleware=[PurviewChatPolicyMiddleware(credential, settings)])
     """
 
     def __init__(
@@ -147,8 +145,8 @@ class PurviewChatPolicyMiddleware(ChatMiddleware):
         await next(context)
 
         try:
-            # Post (response) evaluation only if non-streaming and we have messages result shape
-            # Use the same user_id from the request for the response evaluation
+            # 非ストリーミングでメッセージ結果の形状がある場合のみ事後（レスポンス）評価を行います。
+            # レスポンス評価にはリクエストと同じuser_idを使用します。
             if context.result and not context.is_streaming:
                 result_obj = context.result
                 messages = getattr(result_obj, "messages", None)

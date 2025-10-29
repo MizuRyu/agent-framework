@@ -34,7 +34,7 @@ Key behaviors demonstrated:
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     from random import randint
 
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
@@ -45,7 +45,7 @@ async def thread_tracking_middleware(
     context: AgentRunContext,
     next: Callable[[AgentRunContext], Awaitable[None]],
 ) -> None:
-    """Middleware that tracks and logs thread behavior across runs."""
+    """複数回の実行にわたるスレッドの動作を追跡・ログするミドルウェア。"""
     thread_messages = []
     if context.thread and context.thread.message_store:
         thread_messages = await context.thread.message_store.list_messages()
@@ -53,10 +53,10 @@ async def thread_tracking_middleware(
     print(f"[Middleware pre-execution] Current input messages: {len(context.messages)}")
     print(f"[Middleware pre-execution] Thread history messages: {len(thread_messages)}")
 
-    # Call next to execute the agent
+    # Agentを実行するために次を呼び出す
     await next(context)
 
-    # Check thread state after agent execution
+    # Agent実行後のスレッド状態を確認する
     updated_thread_messages = []
     if context.thread and context.thread.message_store:
         updated_thread_messages = await context.thread.message_store.list_messages()
@@ -65,21 +65,20 @@ async def thread_tracking_middleware(
 
 
 async def main() -> None:
-    """Example demonstrating thread behavior in middleware across multiple runs."""
+    """複数回の実行にわたるミドルウェア内のスレッド動作を示す例。"""
     print("=== Thread Behavior Middleware Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     agent = AzureOpenAIChatClient(credential=AzureCliCredential()).create_agent(
         name="WeatherAgent",
         instructions="You are a helpful weather assistant.",
         tools=get_weather,
         middleware=thread_tracking_middleware,
-        # Configure agent with message store factory to persist conversation history
+        # 会話履歴を永続化するためのメッセージストアファクトリでAgentを構成する
         chat_message_store_factory=ChatMessageStore,
     )
 
-    # Create a thread that will persist messages between runs
+    # 実行間でメッセージを永続化するスレッドを作成する
     thread = agent.get_new_thread()
 
     print("\nFirst Run:")

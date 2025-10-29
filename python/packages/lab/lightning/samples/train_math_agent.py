@@ -1,11 +1,11 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""This sample demonstrates the basic usage pattern of agent-framework-lab-lightning.
+"""このサンプルはagent-framework-lab-lightningの基本的な使用パターンを示します。
 
-It trains a math agent using a dataset in `data/math/` to solve mathematical problems
-using an MCP calculator tool.
+`data/math/`のデータセットを使って数学エージェントをトレーニングし、
+MCP計算機ツールを用いて数学問題を解きます。
 
-One GPU with 40GB of memory is sufficient for this sample.
+40GBメモリのGPU1台で十分です。
 """
 
 import argparse
@@ -26,37 +26,37 @@ from agentlightning.algorithm.verl import VERL
 
 
 class MathProblem(TypedDict):
-    """This TypedDict defines the structure of each training sample.
+    """このTypedDictは各トレーニングサンプルの構造を定義します。
 
-    Your task structure should contain all the information needed for:
+    タスク構造には以下の情報が含まれている必要があります:
 
-    - The agent to process the task (e.g., 'question')
-    - Evaluation (e.g., 'result' for ground truth)
+    - エージェントがタスクを処理するための情報（例：'question'）
+    - 評価用の情報（例：正解の'result'）
 
-    This type is optional. Not necessary to make the example work.
+    この型はオプションであり、例を動作させるために必須ではありません。
+
     """
 
-    # The fields come from the dataset
+    # フィールドはデータセットから取得されます
     id: str
-    question: str  # The math problem for the agent to solve
-    chain: str  # Step-by-step solution (not used in training)
-    result: str  # Ground truth answer for evaluation
+    question: str  # エージェントが解く数学問題
+    chain: str  # ステップバイステップの解答（トレーニングでは使用しません）
+    result: str  # 評価用の正解
     source: str
 
 
 def _load_jsonl(file_path: str) -> Dataset[MathProblem]:
-    """Load your dataset as a list of task samples.
+    """データセットをタスクサンプルのリストとしてロードします。
 
-    Each sample should match your task structure (MathProblem in this case).
+    各サンプルはタスク構造（この場合はMathProblem）に一致している必要があります。
+
     """
     with open(file_path) as f:
         raw_data = [MathProblem(**json.loads(line)) for line in f]
     return cast(Dataset[MathProblem], raw_data)
 
 
-# Evaluation logic
-# These functions evaluate whether the agent's answer matches the ground truth.
-# Robust evaluation is crucial for RL training - the reward signal guides learning.
+# 評価ロジック これらの関数はエージェントの答えが正解と一致するかを評価します。 堅牢な評価はRLトレーニングに不可欠で、報酬信号が学習を導きます。
 
 
 def _normalize_option(option: str) -> str:
@@ -82,12 +82,12 @@ def _scalar_are_results_same(pred_result: str, true_result: str, rel_tol: float)
         return True
 
     if _is_option_result(true_result):
-        # The task is to select correct option
+        # タスクは正しい選択肢を選ぶことです
         true_result = _normalize_option(true_result)
         pred_result = _normalize_option(pred_result)
         return pred_result == true_result
 
-    # The task is to calculate the result as a number
+    # タスクは結果を数値として計算することです
     try:
         pred_float = _float_eval(pred_result)
         true_float = _float_eval(true_result)
@@ -103,38 +103,36 @@ def _is_result_correct(prediction: str, ground_truth: str) -> float:
 
 
 def evaluate(result: AgentRunResponse, ground_truth: str) -> float:
-    """Main evaluation function that extracts the agent's answer and compares with ground truth.
+    """エージェントの答えを抽出し正解と比較するメイン評価関数。
 
-    This function:
-    1. Extracts the final answer from the agent's response (after ###)
-    2. Compares it with the ground truth using mathematical equivalence
-    3. Returns a reward score (0.0 or 1.0) for RL training
+    この関数は:
+    1. エージェントの応答から最終答えを抽出する（###以降）
+    2. 数学的同値性を用いて正解と比較する
+    3. RLトレーニング用に報酬スコア（通常0.0か1.0）を返す
 
-    The reward signal is critical - it directly influences what the model learns.
+    報酬信号は重要で、モデルの学習内容に直接影響します。
+
     """
-    # Check if agent provided any response
+    # エージェントが応答を提供したかをチェックする
     if len(result.messages) == 0:
         print("No response from agent. Assuming incorrect.")
         return 0.0
     final_message = result.messages[-1].text
 
-    # Extract answer after ### marker (as specified in agent instructions)
+    # ###マーカー以降の答えを抽出する（エージェントの指示に従う）
     answer = re.search(r"###\s*(.+?)(\s*###|$)", final_message)
     if answer is None:
         print("No answer can be extracted from agent's response. Assuming incorrect.")
         return 0.0
     answer = answer.group(1)
 
-    # Compare extracted answer with ground truth
+    # 抽出した答えを正解と比較する
     reward = _is_result_correct(answer, ground_truth)
     print(f"Reward: {reward}")
     return reward
 
 
-# Agent Logic
-
-# Clear instructions are important for consistent agent behavior
-# The ### format helps with reliable answer extraction during evaluation
+# エージェントロジック 一貫したエージェント動作のために明確な指示が重要です ###フォーマットは評価時の答え抽出を確実にします
 AGENT_INSTRUCTION = """
 Solve the following math problem. Use the calculator tool to help you calculate math expressions.
 
@@ -142,26 +140,26 @@ Output the answer when you are ready. The answer should be after three sharps (`
 """.strip()  # noqa: E501
 
 
-# The @rollout decorator is the key integration point with agent-lightning.
-# It tells the training system that this function defines a trainable agent.
+# @rolloutデコレータはagent-lightningとの統合の重要なポイントです。
+# この関数がトレーニング可能なエージェントを定義していることをトレーニングシステムに伝えます。
 @rollout
 async def math_agent(task: MathProblem, llm: LLM) -> float:
-    """This is your trainable agent function.
+    """これはあなたのトレーニング可能なエージェント関数です。
 
-    Key points:
+    重要なポイント:
 
-    1. Must be decorated with @rollout
-    2. Takes a task sample and LLM object as parameters
-    3. Returns a float reward score (0.0 to 1.0 typically)
-    4. The LLM object contains the model being trained and its configuration
+    1. @rolloutデコレータで装飾する必要があります
+    2. タスクサンプルとLLMオブジェクトをパラメータに取ります
+    3. 浮動小数点の報酬スコア（通常0.0から1.0）を返します
+    4. LLMオブジェクトはトレーニング中のモデルとその設定を含みます
 
-    During training:
-    - llm.model: The model checkpoint being trained
-    - llm.endpoint: vLLM server endpoint for inference
-    - llm.sampling_parameters: Temperature, etc.
+    トレーニング中:
+    - llm.model: トレーニング中のモデルチェックポイント
+    - llm.endpoint: 推論用のvLLMサーバーエンドポイント
+    - llm.sampling_parameters: Temperatureなど
+
     """
-    # Create the Agent Framework components
-    # MCPStdioTool provides calculator functionality via MCP protocol
+    # Agent Frameworkコンポーネントを作成する MCPStdioToolはMCPプロトコルを通じて計算機能を提供します
     async with (
         MCPStdioTool(name="calculator", command="uvx", args=["mcp-server-calculator"]) as mcp_server,
         ChatAgent(
@@ -176,109 +174,105 @@ async def math_agent(task: MathProblem, llm: LLM) -> float:
         ) as agent,
     ):
         print(f"Task: {task['question'][:10]}...")
-        # Run the agent on the task
+        # タスクでエージェントを実行する
         result = await agent.run(task["question"], tools=mcp_server)
         print(f"Agent responses: {result}")
 
-        # Evaluate and return reward - this is what drives RL training
+        # 評価して報酬を返す - これがRLトレーニングを駆動します
         return evaluate(result, task["result"])
 
 
 def main():
-    """Main entrypoint."""
-    # Configure RL training
-    # This configuration controls all aspects of the RL training process.
-    # Key sections: algorithm, data, rollout, actor, trainer
+    """メインエントリポイント。"""
+    # RLトレーニングを設定する この設定はRLトレーニングプロセスのすべての側面を制御します。 主なセクション：algorithm, data, rollout,
+    # actor, trainer
     rl_training_config = {
         "algorithm": {
-            # Advantage estimator type: "gae", "grpo", "reinforce_plus_plus", etc.
+            # アドバンテージ推定器のタイプ："gae", "grpo", "reinforce_plus_plus"など
             "adv_estimator": "grpo"
         },
         "data": {
-            # Uses this many tasks from the dataset to perform rollouts
+            # ロールアウトに使用するデータセットからのタスク数
             "train_batch_size": 8,
-            # Used to filter out the over-long prompt-response pairs
+            # 過度に長いプロンプト-レスポンスペアをフィルタリングするために使用
             "max_prompt_length": 4096,
             "max_response_length": 1024,
         },
         "actor_rollout_ref": {
-            # Controls the rollout process
+            # ロールアウトプロセスを制御する
             "rollout": {
-                # Set to 1 unless you want to use TP in multiple GPUs
+                # 複数GPUでTPを使わない限り1に設定する
                 "tensor_model_parallel_size": 1,
-                # Repeat each task N many times. Required by G(rouped)RPO
+                # 各タスクをN回繰り返す。G(rouped)RPOで必要
                 "n": 4,
-                # Controls the batch size per GPU when computing the log-prob
+                # ログ確率計算時のGPUごとのバッチサイズを制御する
                 "log_prob_micro_batch_size_per_gpu": 2,
-                # Controls the multi-turn format (this is binded to the LLM used)
-                # See https://docs.vllm.ai/en/stable/features/tool_calling.html
+                # マルチターンフォーマットを制御する（使用するLLMにバインドされています） 詳細は
+                # https://docs.vllm.ai/en/stable/features/tool_calling.html を参照してください
                 "multi_turn": {"format": "hermes"},
-                # Only vllm is supported for now
+                # 現在はvllmのみサポートされています
                 "name": "vllm",
-                # Controls the GPU memory utilization of vLLM
-                # You might want to set this to under 0.8 to prevent OOM
+                # vLLMのGPUメモリ使用率を制御する OOMを防ぐために0.8未満に設定することを推奨します
                 "gpu_memory_utilization": 0.7,
             },
             "actor": {
-                # Split each sample into sub-batches of this size for PPO
+                # PPO用に各サンプルをこのサイズのサブバッチに分割する
                 "ppo_mini_batch_size": 8,
-                # Local per-GPU micro batch size
+                # GPUごとのローカルマイクロバッチサイズ
                 "ppo_micro_batch_size_per_gpu": 2,
-                # Optimizer configuration
+                # Optimizerの設定
                 "optim": {"lr": 1e-6},
-                # Whether to use KL loss during training
+                # トレーニング中にKL lossを使用するかどうか
                 "use_kl_loss": False,
-                # PPO clipping ratios for policy updates
+                # ポリシー更新のためのPPOクリッピング比率
                 "clip_ratio_low": 0.2,
                 "clip_ratio_high": 0.3,
-                # FSDP (Fully Sharded Data Parallel) configuration for memory efficiency
-                # Useful when you don't have enough GPU memory
+                # メモリ効率のためのFSDP（Fully Sharded Data Parallel）設定 GPUメモリが不足している場合に有用
                 "fsdp_config": {
-                    # Whether to offload parameters to CPU
+                    # パラメータをCPUにオフロードするかどうか
                     "param_offload": True,
-                    # Whether to offload optimizer state to CPU
+                    # Optimizerの状態をCPUにオフロードするかどうか
                     "optimizer_offload": True,
                 },
             },
-            # Reference model config
+            # Referenceモデルの設定
             "ref": {
-                # Controls the batch size per GPU when computing log-prob for reference model
+                # Referenceモデルのlog-prob計算時のGPUあたりのバッチサイズを制御
                 "log_prob_micro_batch_size_per_gpu": 2,
                 "fsdp_config": {"param_offload": True},
             },
-            # Common configs for the model
+            # モデルの共通設定
             "model": {
-                # Huggingface model path.
-                # If you want to train a different model, change the path here.
+                # Huggingfaceモデルのパス。 別のモデルをトレーニングしたい場合はここでパスを変更してください。
                 "path": "Qwen/Qwen2.5-1.5B-Instruct",
-                # Whether to remove padding tokens in inputs during training
+                # トレーニング中に入力のパディングトークンを削除するかどうか
                 "use_remove_padding": True,
-                # Enable gradient checkpointing for memory efficiency
+                # メモリ効率のために勾配チェックポイントを有効にする
                 "enable_gradient_checkpointing": True,
             },
         },
-        # Config for the trainer
+        # トレーナーの設定
         "trainer": {
-            # Number of GPUs per node
+            # ノードあたりのGPU数
             "n_gpus_per_node": 1,
-            # Whether to run validation before training begins
+            # トレーニング開始前にバリデーションを実行するかどうか
             "val_before_train": True,
-            # Logging backends to use: "console", "wandb", etc.
+            # 使用するログバックエンド："console"、"wandb"など
             "logger": ["console"],
-            # Number of nodes used in the training
+            # トレーニングに使用するノード数
             "nnodes": 1,
-            # Validation frequency (in training iterations)
+            # バリデーションの頻度（トレーニングイテレーション単位）
             "test_freq": 4,
-            # Number of epochs in training
+            # トレーニングのエポック数
             "total_epochs": 2,
         },
     }
 
-    # Load your datasets
+    # データセットをロードする
     train_dataset = _load_jsonl("data/math/train.jsonl")
     val_dataset = _load_jsonl("data/math/test.jsonl")
 
-    # Preview the data to ensure it's loaded correctly
+    # データが正しくロードされているかプレビューする
     print("First 5 rows of train dataset:")
     for i in range(5):
         print(train_dataset[i])
@@ -286,26 +280,24 @@ def main():
     for i in range(5):
         print(val_dataset[i])
 
-    # Create trainer with VERL algorithm and start training
-    # n_workers: Number of rollout workers (processes) for parallel data collection
+    # VERLアルゴリズムでトレーナーを作成しトレーニングを開始する n_workers: 並列データ収集のためのロールアウトワーカー（プロセス）数
     trainer = Trainer(algorithm=VERL(rl_training_config), tracer=AgentFrameworkTracer(), n_workers=2)
 
-    # This starts the actual RL training loop:
-    # 1. Collect rollouts using current model
-    # 2. Compute advantages and train the model
-    # 3. Repeat for specified number of epochs
+    # 実際のRLトレーニングループを開始する： 1. 現在のモデルを使ってロールアウトを収集 2. アドバンテージを計算しモデルをトレーニング 3.
+    # 指定されたエポック数だけ繰り返す
     trainer.fit(math_agent, train_dataset, val_dataset=val_dataset)
 
 
 def debug():
-    """Debug mode allows you to test your agent function before training.
+    """デバッグモードではトレーニング前にAgent関数をテストできます。
 
-    Always run debug mode first before starting expensive RL training!
+    高価なRLトレーニングを始める前に必ずデバッグモードを最初に実行してください！
+
     """
     train_dataset = _load_jsonl("data/math/train.jsonl")
     train_sample = train_dataset[0]
 
-    # Use a known good model for debugging (not the one being trained)
+    # デバッグ用に既知の良好なモデルを使用（トレーニング中のモデルではない）
     model = "gpt-4o-mini"
     base_url = os.getenv("OPENAI_BASE_URL")
     api_key = os.getenv("OPENAI_API_KEY")
@@ -314,7 +306,7 @@ def debug():
     if base_url is None:
         raise ValueError("OPENAI_BASE_URL must be set")
 
-    # Test your agent function with a sample task
+    # サンプルタスクでAgent関数をテストする
     asyncio.run(math_agent(train_sample, LLM(model=model, endpoint=base_url)))  # type: ignore
 
 

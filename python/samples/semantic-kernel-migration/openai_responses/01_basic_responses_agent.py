@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Issue a basic Responses API call using SK and Agent Framework."""
+"""SKとAgent Frameworkを使って基本的なResponses API呼び出しを行います。"""
 
 import asyncio
 
@@ -12,7 +12,7 @@ async def run_semantic_kernel() -> None:
     credential = AzureCliCredential()
     try:
         client = AzureResponsesAgent.create_client(credential=credential)
-        # SK response agents wrap Azure OpenAI's hosted Responses API.
+        # SKのレスポンスAgentはAzure OpenAIのホストされたResponses APIをラップします。
         agent = AzureResponsesAgent(
             ai_model_id=AzureOpenAISettings().responses_deployment_name,
             client=client,
@@ -29,7 +29,7 @@ async def run_agent_framework() -> None:
     from agent_framework import ChatAgent
     from agent_framework.openai import OpenAIResponsesClient
 
-    # AF ChatAgent can swap in an OpenAIResponsesClient directly.
+    # AFのChatAgentはOpenAIResponsesClientを直接差し替え可能です。
     chat_agent = ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="Answer in one concise sentence.",

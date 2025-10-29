@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Unified Purview model definitions and public export surface."""
+"""Purviewの統一モデル定義と公開エクスポートサーフェス。"""
 
 from __future__ import annotations
 
@@ -16,12 +16,12 @@ from agent_framework._serialization import SerializationMixin
 logger = get_logger("agent_framework.purview")
 
 # --------------------------------------------------------------------------------------
-# Enums & flag helpers
+# 列挙型＆フラグヘルパー
 # --------------------------------------------------------------------------------------
 
 
 class Activity(str, Enum):
-    """High-level activity types representing user or agent operations."""
+    """ユーザーまたはAgentの操作を表す高レベルのアクティビティタイプ。"""
 
     UNKNOWN = "unknown"
     UPLOAD_TEXT = "uploadText"
@@ -31,7 +31,7 @@ class Activity(str, Enum):
 
 
 class ProtectionScopeActivities(Flag):
-    """Flag enumeration of activities used in policy protection scopes."""
+    """ポリシー保護スコープで使用されるアクティビティのフラグ列挙。"""
 
     NONE = 0
     UPLOAD_TEXT = auto()
@@ -65,7 +65,7 @@ _PROTECTION_SCOPE_ACTIVITIES_SERIALIZE_ORDER: list[tuple[str, ProtectionScopeAct
 def deserialize_flag(
     value: object, mapping: Mapping[str, FlagT], enum_cls: type[FlagT]
 ) -> FlagT | None:  # pragma: no cover
-    """Deserialize arbitrary input into a flag enum instance."""
+    """任意の入力をフラグ列挙のインスタンスにデシリアライズします。"""
     if value is None:
         return None
     if isinstance(value, enum_cls):
@@ -113,7 +113,7 @@ def deserialize_flag(
 def serialize_flag(
     flag_value: Flag | int | None, ordered_parts: Sequence[tuple[str, Flag]]
 ) -> str | None:  # pragma: no cover
-    """Serialize a flag enum (or int) into a stable, comma-separated string."""
+    """フラグ列挙（またはint）を安定したカンマ区切り文字列にシリアライズします。"""
     if flag_value is None:
         return None
     if isinstance(flag_value, int):
@@ -176,24 +176,23 @@ def translate_activity(activity: Activity) -> ProtectionScopeActivities:
 
 
 # --------------------------------------------------------------------------------------
-# Simple value models
+# シンプルな値モデル
 # --------------------------------------------------------------------------------------
 
 
 class _AliasSerializable(SerializationMixin):
-    """Base class adding alias mapping + pydantic-compat helpers.
+    """エイリアスマッピング＋pydantic互換ヘルパーを追加する基本クラス。
 
-    Each subclass can define ``_ALIASES`` mapping internal attribute name -> external serialized key.
-    ``to_dict`` will emit external keys; ``from_dict`` (via ``__init__`` preprocessing) accepts either form.
+    各サブクラスは内部属性名 -> 外部シリアライズキーの``_ALIASES``マッピングを定義できます。
+    ``to_dict``は外部キーを出力し、``from_dict``（``__init__``の前処理経由）はどちらの形式も受け入れます。
 
-    Provides light-weight compatibility helpers ``model_dump`` / ``model_validate``
+    軽量の互換ヘルパー``model_dump`` / ``model_validate``を提供します。
     """
 
     _ALIASES: ClassVar[dict[str, str]] = {}
 
     def __init__(self, **kwargs: Any) -> None:
-        # Normalize alias keys -> internal names across the entire class hierarchy
-        # Collect all aliases from parent classes too
+        # クラス階層全体でエイリアスキー -> 内部名を正規化します。 親クラスからのすべてのエイリアスも収集します。
         all_aliases: dict[str, str] = {}
         for cls in type(self).__mro__:
             if hasattr(cls, "_ALIASES") and isinstance(cls._ALIASES, dict):
@@ -201,23 +200,21 @@ class _AliasSerializable(SerializationMixin):
                     if external not in all_aliases:
                         all_aliases[external] = internal
 
-        # Normalize all aliased keys in kwargs
+        # kwargs内のすべてのエイリアスキーを正規化します。
         for external, internal in all_aliases.items():
             if external in kwargs and internal not in kwargs:
                 kwargs[internal] = kwargs.pop(external)
 
-        # Set normalized kwargs as attributes
-        # This will overwrite any None values that child __init__ may have set from default params
+        # 正規化されたkwargsを属性として設定します。 これにより子の__init__がデフォルトパラメータから設定したNone値は上書きされます。
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    # ------------------------------------------------------------------
-    # Compatibility helpers
+    # ------------------------------------------------------------------ 互換ヘルパー
     # ------------------------------------------------------------------
     def model_dump(self, *, by_alias: bool = True, exclude_none: bool = True, **_: Any) -> dict[str, Any]:
-        # Use self.to_dict() to get alias translation
+        # self.to_dict()を使ってエイリアス変換を取得します。
         d = self.to_dict(exclude_none=exclude_none)
-        # If by_alias=False, translate external -> internal (rarely needed; default True)
+        # by_alias=Falseの場合、外部 -> 内部に変換します（ほとんど不要；デフォルトはTrue）。
         if not by_alias and self._ALIASES:
             reverse = {v: k for k, v in self._ALIASES.items()}
             translated: dict[str, Any] = {}
@@ -236,20 +233,20 @@ class _AliasSerializable(SerializationMixin):
         return cls(**value)
 
     # ------------------------------------------------------------------
-    # Override to handle alias emission
+    # エイリアス出力を処理するためのオーバーライド
     # ------------------------------------------------------------------
     def to_dict(self, *, exclude: set[str] | None = None, exclude_none: bool = True) -> dict[str, Any]:  # type: ignore[override]
         base = SerializationMixin.to_dict(self, exclude=exclude, exclude_none=exclude_none)
 
-        # For Graph API models, remove the auto-generated 'type' field if it's in DEFAULT_EXCLUDE
+        # Graph APIモデルの場合、DEFAULT_EXCLUDEにある自動生成の'type'フィールドを削除します。
         if "type" in self.DEFAULT_EXCLUDE:
             base.pop("type", None)
 
-        # Collect all aliases from class hierarchy
+        # クラス階層からすべてのエイリアスを収集します。
         all_aliases: dict[str, str] = {}
         for cls in type(self).__mro__:
             if hasattr(cls, "_ALIASES") and isinstance(cls._ALIASES, dict):
-                # Parent aliases first (will be overridden by child if same key)
+                # 親のエイリアスを先に（同じキーがあれば子が上書きします）。
                 for internal, external in cls._ALIASES.items():
                     if internal not in all_aliases:
                         all_aliases[internal] = external
@@ -257,7 +254,7 @@ class _AliasSerializable(SerializationMixin):
         if not all_aliases:
             return base
 
-        # Translate internal -> external keys (except 'type' reserved)
+        # 内部 -> 外部キーに変換します（'type'は予約済みのため除く）。
         translated: dict[str, Any] = {}
         for k, v in base.items():
             if k == "type":
@@ -270,14 +267,14 @@ class _AliasSerializable(SerializationMixin):
 
 class PolicyLocation(_AliasSerializable):
     _ALIASES: ClassVar[dict[str, str]] = {"data_type": "@odata.type"}
-    DEFAULT_EXCLUDE: ClassVar[set[str]] = {"type"}  # Exclude auto-generated type field for Graph API
+    DEFAULT_EXCLUDE: ClassVar[set[str]] = {"type"}  # Graph API用に自動生成されたtypeフィールドを除外します。
 
     def __init__(self, data_type: str | None = None, value: str | None = None, **kwargs: Any) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "@odata.type" in kwargs:
             data_type = kwargs["@odata.type"]
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.data_type = data_type
         self.value = value
@@ -303,13 +300,13 @@ class OperatingSystemSpecifications(_AliasSerializable):
         operating_system_version: str | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "operatingSystemPlatform" in kwargs:
             operating_system_platform = kwargs["operatingSystemPlatform"]
         if "operatingSystemVersion" in kwargs:
             operating_system_version = kwargs["operatingSystemVersion"]
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.operating_system_platform = operating_system_platform
         self.operating_system_version = operating_system_version
@@ -327,17 +324,17 @@ class DeviceMetadata(_AliasSerializable):
         operating_system_specifications: OperatingSystemSpecifications | MutableMapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "ipAddress" in kwargs:
             ip_address = kwargs["ipAddress"]
         if "operatingSystemSpecifications" in kwargs:
             operating_system_specifications = kwargs["operatingSystemSpecifications"]
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         if isinstance(operating_system_specifications, MutableMapping):
             operating_system_specifications = OperatingSystemSpecifications(**operating_system_specifications)
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.ip_address = ip_address
         self.operating_system_specifications = operating_system_specifications
@@ -360,15 +357,15 @@ class ProtectedAppMetadata(_AliasSerializable):
         application_location: PolicyLocation | MutableMapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "applicationLocation" in kwargs:
             application_location = kwargs["applicationLocation"]
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         if isinstance(application_location, MutableMapping):
             application_location = PolicyLocation(**application_location)
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.name = name
         self.version = version
@@ -384,11 +381,11 @@ class DlpActionInfo(_AliasSerializable):
         restriction_action: RestrictionAction | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "restrictionAction" in kwargs:
             restriction_action = kwargs["restrictionAction"]
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.action = action
         self.restriction_action = restriction_action
@@ -412,7 +409,7 @@ class AccessedResourceDetails(_AliasSerializable):
         is_cross_prompt_injection_detected: bool | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "labelId" in kwargs:
             label_id = kwargs["labelId"]
         if "accessType" in kwargs:
@@ -420,7 +417,7 @@ class AccessedResourceDetails(_AliasSerializable):
         if "isCrossPromptInjectionDetected" in kwargs:
             is_cross_prompt_injection_detected = kwargs["isCrossPromptInjectionDetected"]
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.identifier = identifier
         self.name = name
@@ -460,13 +457,13 @@ class AiAgentInfo(_AliasSerializable):
 
 
 # --------------------------------------------------------------------------------------
-# Content models
+# コンテンツモデル
 # --------------------------------------------------------------------------------------
 
 
 class GraphDataTypeBase(_AliasSerializable):
     _ALIASES: ClassVar[dict[str, str]] = {"data_type": "@odata.type"}
-    # Exclude the auto-generated 'type' field - Graph API uses @odata.type instead
+    # 自動生成された'type'フィールドを除外します - Graph APIでは代わりに@odata.typeを使用します。
     DEFAULT_EXCLUDE: ClassVar[set[str]] = {"type"}
 
     def __init__(self, data_type: str, **kwargs: Any) -> None:
@@ -493,7 +490,7 @@ class PurviewBinaryContent(ContentBase):
         import base64
 
         base = super().to_dict(exclude=exclude, exclude_none=exclude_none)
-        # Ensure bytes encoded as base64 string like pydantic
+        # bytesをpydanticのようにbase64文字列としてエンコードすることを保証します。
         data_bytes = getattr(self, "data", b"") or b""
         base["data"] = base64.b64encode(data_bytes).decode("utf-8")
         return base
@@ -528,7 +525,7 @@ class ProcessConversationMetadata(GraphDataTypeBase):
         agents: list[AiAgentInfo | MutableMapping[str, Any]] | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "correlationId" in kwargs:
             correlation_id = kwargs["correlationId"]
         if "sequenceNumber" in kwargs:
@@ -544,9 +541,9 @@ class ProcessConversationMetadata(GraphDataTypeBase):
         if "accessedResources_v2" in kwargs:
             accessed_resources = kwargs["accessedResources_v2"]
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         if isinstance(content, MutableMapping):
-            # determine by type? fall back to text content
+            # タイプで判定？テキストコンテンツにフォールバックします。
             c_type = content.get("@odata.type") or content.get("data_type")
             if c_type and "binary" in str(c_type):
                 content = PurviewBinaryContent(**content)  # type: ignore[arg-type]
@@ -565,7 +562,7 @@ class ProcessConversationMetadata(GraphDataTypeBase):
         if agents:
             agent_list = [a if isinstance(a, AiAgentInfo) else AiAgentInfo(**a) for a in agents]
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(data_type=data_type, **kwargs)
         self.identifier = identifier
         self.content = content  # type: ignore[assignment]
@@ -600,7 +597,7 @@ class ContentToProcess(_AliasSerializable):
         protected_app_metadata: ProtectedAppMetadata | MutableMapping[str, Any],
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "contentEntries" in kwargs:
             content_entries = kwargs["contentEntries"]
         if "activityMetadata" in kwargs:
@@ -612,7 +609,7 @@ class ContentToProcess(_AliasSerializable):
         if "protectedAppMetadata" in kwargs:
             protected_app_metadata = kwargs["protectedAppMetadata"]
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         entries = [
             e if isinstance(e, ProcessConversationMetadata) else ProcessConversationMetadata(**e)
             for e in content_entries
@@ -626,7 +623,7 @@ class ContentToProcess(_AliasSerializable):
         if isinstance(protected_app_metadata, MutableMapping):
             protected_app_metadata = ProtectedAppMetadata(**protected_app_metadata)
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.content_entries = entries
         self.activity_metadata = activity_metadata  # type: ignore[assignment]
@@ -636,7 +633,7 @@ class ContentToProcess(_AliasSerializable):
 
 
 # --------------------------------------------------------------------------------------
-# Request models
+# リクエストモデル
 # --------------------------------------------------------------------------------------
 
 
@@ -653,15 +650,15 @@ class ProcessContentRequest(_AliasSerializable):
         process_inline: bool | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "contentToProcess" in kwargs:
             content_to_process = kwargs["contentToProcess"]
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         if isinstance(content_to_process, MutableMapping):
             content_to_process = ContentToProcess(**content_to_process)
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.content_to_process = content_to_process  # type: ignore[assignment]
         self.user_id = user_id
@@ -691,7 +688,7 @@ class ProtectionScopesRequest(_AliasSerializable):
         scope_identifier: str | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "pivotOn" in kwargs:
             pivot_on = kwargs["pivotOn"]
         if "deviceMetadata" in kwargs:
@@ -699,11 +696,11 @@ class ProtectionScopesRequest(_AliasSerializable):
         if "integratedAppMetadata" in kwargs:
             integrated_app_metadata = kwargs["integratedAppMetadata"]
 
-        # Deserialize activities flag
+        # アクティビティフラグをデシリアライズします。
         if not isinstance(activities, ProtectionScopeActivities) and activities is not None:
             activities = deserialize_flag(activities, _PROTECTION_SCOPE_ACTIVITIES_MAP, ProtectionScopeActivities)
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         if locations:
             locations = [loc if isinstance(loc, PolicyLocation) else PolicyLocation(**loc) for loc in locations]
         if isinstance(device_metadata, MutableMapping):
@@ -711,7 +708,7 @@ class ProtectionScopesRequest(_AliasSerializable):
         if isinstance(integrated_app_metadata, MutableMapping):
             integrated_app_metadata = IntegratedAppMetadata(**integrated_app_metadata)
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.user_id = user_id
         self.tenant_id = tenant_id
@@ -724,10 +721,10 @@ class ProtectionScopesRequest(_AliasSerializable):
         self.scope_identifier = scope_identifier
 
     def to_dict(self, *, exclude: set[str] | None = None, exclude_none: bool = True) -> dict[str, Any]:  # type: ignore[override]
-        # Get base dict (activities will be missing because Flag isn't JSON-serializable)
+        # 基本のdictを取得します（FlagはJSONシリアライズ不可のためactivitiesは欠落します）。
         base = super().to_dict(exclude=exclude, exclude_none=exclude_none)
 
-        # Manually serialize activities flag if present and not excluded
+        # activitiesフラグが存在し除外されていなければ手動でシリアライズします。
         if self.activities is not None or not exclude_none:
             if self.activities is not None:
                 base["activities"] = serialize_flag(self.activities, _PROTECTION_SCOPE_ACTIVITIES_SERIALIZE_ORDER)
@@ -755,7 +752,7 @@ class ContentActivitiesRequest(_AliasSerializable):
         correlation_id: str | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "userId" in kwargs:
             user_id = kwargs["userId"]
         if "scopeIdentifier" in kwargs:
@@ -763,11 +760,11 @@ class ContentActivitiesRequest(_AliasSerializable):
         if "contentMetadata" in kwargs:
             content_to_process = kwargs["contentMetadata"]
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         if isinstance(content_to_process, MutableMapping):
             content_to_process = ContentToProcess(**content_to_process)
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.id = id or str(uuid4())
         self.user_id = user_id
@@ -778,7 +775,7 @@ class ContentActivitiesRequest(_AliasSerializable):
 
 
 # --------------------------------------------------------------------------------------
-# Response models
+# レスポンスモデル
 # --------------------------------------------------------------------------------------
 
 
@@ -815,7 +812,7 @@ class ProcessContentResponse(_AliasSerializable):
         processing_errors: list[ProcessingError | MutableMapping[str, Any]] | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "protectionScopeState" in kwargs:
             protection_scope_state = kwargs["protectionScopeState"]
         if "policyActions" in kwargs:
@@ -823,7 +820,7 @@ class ProcessContentResponse(_AliasSerializable):
         if "processingErrors" in kwargs:
             processing_errors = kwargs["processingErrors"]
 
-        # Convert to objects
+        # オブジェクトに変換します。
         converted_policy_actions: list[DlpActionInfo] | None = None
         if policy_actions is not None:
             converted_policy_actions = cast(
@@ -838,7 +835,7 @@ class ProcessContentResponse(_AliasSerializable):
                 [pe if isinstance(pe, ProcessingError) else ProcessingError(**pe) for pe in processing_errors],
             )
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.id = id
         self.protection_scope_state = protection_scope_state
@@ -862,17 +859,17 @@ class PolicyScope(_AliasSerializable):
         execution_mode: ExecutionMode | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs
+        # kwargsからエイリアス値を抽出します。
         if "policyActions" in kwargs:
             policy_actions = kwargs["policyActions"]
         if "executionMode" in kwargs:
             execution_mode = kwargs["executionMode"]
 
-        # Deserialize activities flag
+        # アクティビティフラグをデシリアライズします。
         if not isinstance(activities, ProtectionScopeActivities) and activities is not None:
             activities = deserialize_flag(activities, _PROTECTION_SCOPE_ACTIVITIES_MAP, ProtectionScopeActivities)
 
-        # Convert nested objects
+        # ネストされたオブジェクトを変換します。
         converted_locations: list[PolicyLocation] | None = None
         if locations is not None:
             converted_locations = cast(
@@ -887,7 +884,7 @@ class PolicyScope(_AliasSerializable):
                 [p if isinstance(p, DlpActionInfo) else DlpActionInfo(**p) for p in policy_actions],
             )
 
-        # Call parent without explicit params with aliases
+        # エイリアス付きで明示的なパラメータなしで親を呼び出します。
         super().__init__(**kwargs)
         self.activities = activities  # type: ignore[assignment]
         self.locations = converted_locations
@@ -895,10 +892,10 @@ class PolicyScope(_AliasSerializable):
         self.execution_mode = execution_mode
 
     def to_dict(self, *, exclude: set[str] | None = None, exclude_none: bool = True) -> dict[str, Any]:  # type: ignore[override]
-        # Get base dict (activities will be missing because Flag isn't JSON-serializable)
+        # 基本のdictを取得します（FlagはJSONシリアライズ不可のためactivitiesは欠落します）。
         base = super().to_dict(exclude=exclude, exclude_none=exclude_none)
 
-        # Manually serialize activities flag if present and not excluded
+        # activitiesフラグが存在し除外されていなければ手動でシリアライズします。
         if self.activities is not None or not exclude_none:
             if self.activities is not None:
                 base["activities"] = serialize_flag(self.activities, _PROTECTION_SCOPE_ACTIVITIES_SERIALIZE_ORDER)
@@ -920,7 +917,7 @@ class ProtectionScopesResponse(_AliasSerializable):
         scopes: list[PolicyScope | MutableMapping[str, Any]] | None = None,
         **kwargs: Any,
     ) -> None:
-        # Extract aliased values from kwargs before they're normalized by parent
+        # 親によって正規化される前にkwargsからエイリアス値を抽出します。
         if "scopeIdentifier" in kwargs:
             scope_identifier = kwargs["scopeIdentifier"]
         if "value" in kwargs:
@@ -932,7 +929,7 @@ class ProtectionScopesResponse(_AliasSerializable):
                 list[PolicyScope], [s if isinstance(s, PolicyScope) else PolicyScope(**s) for s in scopes]
             )
 
-        # Don't pass parameters that have aliases - let parent normalize them
+        # エイリアスを持つパラメータは渡さず、親に正規化を任せます。
         super().__init__(**kwargs)
         self.scope_identifier = scope_identifier
         self.scopes = converted_scopes

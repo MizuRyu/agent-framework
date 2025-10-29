@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Request structured JSON output from the Responses API in SK and AF."""
+"""SKとAFでResponses APIから構造化JSON出力を要求します。"""
 
 import asyncio
 
@@ -20,7 +20,7 @@ async def run_semantic_kernel() -> None:
     credential = AzureCliCredential()
     try:
         client = AzureResponsesAgent.create_client(credential=credential)
-        # response_format requests schema-constrained output from the model.
+        # response_formatはモデルからスキーマ制約された出力を要求します。
         agent = AzureResponsesAgent(
             ai_model_id=AzureOpenAISettings().responses_deployment_name,
             client=client,
@@ -46,7 +46,7 @@ async def run_agent_framework() -> None:
         instructions="Return launch briefs as structured JSON.",
         name="ProductMarketer",
     )
-    # AF forwards the same response_format payload at invocation time.
+    # AFは呼び出し時に同じresponse_formatペイロードを転送します。
     reply = await chat_agent.run(
         "Draft a launch brief for the Contoso Note app.",
         response_format=ReleaseBrief,

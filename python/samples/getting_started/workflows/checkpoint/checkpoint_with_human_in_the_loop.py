@@ -29,10 +29,9 @@ from agent_framework import (
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
 
-# NOTE: the Azure client imports above are real dependencies. When running this
-# sample outside of Azure-enabled environments you may wish to swap in the
-# `agent_framework.builtin` chat client or mock the writer executor. We keep the
-# concrete import here so readers can see an end-to-end configuration.
+# 注意: 上記のAzureクライアントのImportは実際の依存関係です。Azure対応環境外でこのサンプルを実行する場合は、
+# `agent_framework.builtin`のチャットクライアントに切り替えるか、writer executorをモックすることを検討してください。
+# ここではエンドツーエンドの構成を示すために具体的なImportを残しています。
 
 if TYPE_CHECKING:
     from agent_framework import Workflow
@@ -68,20 +67,16 @@ Typical pause/resume flow
    re-emit the same `RequestInfoEvent`.
 """
 
-# Directory used for the sample's temporary checkpoint files. We isolate the
-# demo artefacts so that repeated runs do not collide with other samples and so
-# the clean-up step at the end of the script can simply delete the directory.
+# サンプルの一時的なチェックポイントファイル用ディレクトリ。デモの成果物を分離し、繰り返し実行時に他のサンプルと衝突しないようにし、スクリプト終了時のクリーンアップでディレクトリを削除できるようにします。
 TEMP_DIR = Path(__file__).with_suffix("").parent / "tmp" / "checkpoints_hitl"
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class BriefPreparer(Executor):
-    """Normalises the user brief and sends a single AgentExecutorRequest."""
+    """ユーザーの概要を正規化し、単一のAgentExecutorRequestを送信します。"""
 
-    # The first executor in the workflow. By keeping it tiny we make it easier
-    # to reason about the state that will later be captured in the checkpoint.
-    # It is responsible for tidying the human-provided brief and kicking off the
-    # agent run with a deterministic prompt structure.
+    # ワークフローの最初のExecutor。小さく保つことで、後でチェックポイントにキャプチャされるStateを理解しやすくします。
+    # 人間が提供した概要を整理し、決定論的なプロンプト構造でAgentの実行を開始する役割を担います。
 
     def __init__(self, id: str, agent_id: str) -> None:
         super().__init__(id=id)
@@ -89,20 +84,19 @@ class BriefPreparer(Executor):
 
     @handler
     async def prepare(self, brief: str, ctx: WorkflowContext[AgentExecutorRequest, str]) -> None:
-        # Collapse errant whitespace so the prompt is stable between runs.
+        # 余分な空白を折りたたんで、プロンプトが実行間で安定するようにします。
         normalized = " ".join(brief.split()).strip()
         if not normalized.endswith("."):
             normalized += "."
-        # Persist the cleaned brief in shared state so downstream executors and
-        # future checkpoints can recover the original intent.
+        # 整理された概要を共有Stateに永続化し、下流のExecutorや将来のチェックポイントが元の意図を復元できるようにします。
         await ctx.set_shared_state("brief", normalized)
         prompt = (
             "You are drafting product release notes. Summarise the brief below in two sentences. "
             "Keep it positive and end with a call to action.\n\n"
             f"BRIEF: {normalized}"
         )
-        # Hand the prompt to the writer agent. We always route through the
-        # workflow context so the runtime can capture messages for checkpointing.
+        # プロンプトをwriter
+        # Agentに渡します。常にワークフローContextを経由してルーティングし、ランタイムがメッセージをチェックポイント用にキャプチャできるようにします。
         await ctx.send_message(
             AgentExecutorRequest(messages=[ChatMessage(Role.USER, text=prompt)], should_respond=True),
             target_id=self._agent_id,
@@ -111,18 +105,17 @@ class BriefPreparer(Executor):
 
 @dataclass
 class HumanApprovalRequest(RequestInfoMessage):
-    """Message sent to the human reviewer via RequestInfoExecutor."""
+    """RequestInfoExecutorを通じて人間のレビュアーに送信されるメッセージ。"""
 
-    # These fields are intentionally simple because they are serialised into
-    # checkpoints. Keeping them primitive types guarantees the new
-    # `pending_requests_from_checkpoint` helper can reconstruct them on resume.
+    # これらのフィールドは意図的にシンプルにしています。チェックポイントにシリアライズされるためです。
+    # プリミティブ型を保つことで、新しい`pending_requests_from_checkpoint`ヘルパーが再開時にそれらを再構築できることを保証します。
     prompt: str = ""
     draft: str = ""
     iteration: int = 0
 
 
 class ReviewGateway(Executor):
-    """Routes agent drafts to humans and optionally back for revisions."""
+    """Agentのドラフトを人間にルーティングし、必要に応じて修正のために戻す。"""
 
     def __init__(self, id: str, reviewer_id: str, writer_id: str, finalize_id: str) -> None:
         super().__init__(id=id)
@@ -136,15 +129,11 @@ class ReviewGateway(Executor):
         response: AgentExecutorResponse,
         ctx: WorkflowContext[HumanApprovalRequest, str],
     ) -> None:
-        # Capture the agent output so we can surface it to the reviewer and
-        # persist iterations. The `RequestInfoExecutor` relies on this state to
-        # rehydrate when checkpoints are restored.
+        # Agentの出力をキャプチャし、レビュアーに提示し、反復を永続化します。`RequestInfoExecutor`はチェックポイント復元時にこのStateを再構築します。
         draft = response.agent_run_response.text or ""
         iteration = int((await ctx.get_executor_state() or {}).get("iteration", 0)) + 1
         await ctx.set_executor_state({"iteration": iteration, "last_draft": draft})
-        # Emit a human approval request. Because this flows through
-        # RequestInfoExecutor it will pause the workflow until an answer is
-        # supplied either interactively or via pre-supplied responses.
+        # 人間の承認リクエストを発行します。これがRequestInfoExecutorを通るため、回答が対話的にまたは事前提供されたレスポンスで供給されるまでワークフローは一時停止します。
         await ctx.send_message(
             HumanApprovalRequest(
                 prompt="Review the draft. Reply 'approve' or provide edit instructions.",
@@ -160,19 +149,17 @@ class ReviewGateway(Executor):
         feedback: RequestResponse[HumanApprovalRequest, str],
         ctx: WorkflowContext[AgentExecutorRequest | str, str],
     ) -> None:
-        # The RequestResponse wrapper gives us both the human data and the
-        # original request message, even when resuming from checkpoints.
+        # RequestResponseラッパーは、人間のデータと元のRequestメッセージの両方を提供します。チェックポイントからの再開時でも同様です。
         reply = (feedback.data or "").strip()
         state = await ctx.get_executor_state() or {}
         draft = state.get("last_draft") or (feedback.original_request.draft if feedback.original_request else "")
 
         if reply.lower() == "approve":
-            # When the human signs off we can short-circuit the workflow and
-            # send the approved draft to the final executor.
+            # 人間が承認すると、ワークフローをショートサーキットし、承認済みドラフトを最終Executorに送信できます。
             await ctx.send_message(draft, target_id=self._finalize_id)
             return
 
-        # Any other response loops us back to the writer with fresh guidance.
+        # その他のレスポンスは新たな指示を伴ってwriterに戻します。
         guidance = reply or "Tighten the copy and emphasise customer benefit."
         iteration = int(state.get("iteration", 1)) + 1
         await ctx.set_executor_state({"iteration": iteration, "last_draft": draft})
@@ -188,22 +175,21 @@ class ReviewGateway(Executor):
 
 
 class FinaliseExecutor(Executor):
-    """Publishes the approved text."""
+    """承認済みテキストを公開します。"""
 
     @handler
     async def publish(self, text: str, ctx: WorkflowContext[Any, str]) -> None:
-        # Store the output so diagnostics or a UI could fetch the final copy.
+        # 出力を保存し、診断やUIが最終コピーを取得できるようにします。
         await ctx.set_executor_state({"published_text": text})
-        # Yield the final output so the workflow completes cleanly.
+        # 最終出力をyieldし、ワークフローを正常に完了させます。
         await ctx.yield_output(text)
 
 
 def create_workflow(*, checkpoint_storage: FileCheckpointStorage | None = None) -> "Workflow":
-    """Assemble the workflow graph used by both the initial run and resume."""
+    """初回実行と再開の両方で使用されるワークフローグラフを組み立てます。"""
 
-    # The Azure client is created once so our agent executor can issue calls to
-    # the hosted model. The agent id is stable across runs which keeps
-    # checkpoints deterministic.
+    # Azureクライアントは一度作成され、AgentExecutorがホストされたモデルに呼び出しを発行できます。Agent
+    # IDは実行間で安定しており、チェックポイントの決定論性を保ちます。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
     writer = AgentExecutor(
         chat_client.create_agent(
@@ -211,8 +197,7 @@ def create_workflow(*, checkpoint_storage: FileCheckpointStorage | None = None) 
         ),
         id="writer",
     )
-    # RequestInfoExecutor is the lynchpin for human-in-the-loop: every draft is
-    # routed through it so checkpoints can pause while waiting for responses.
+    # RequestInfoExecutorはhuman-in-the-loopの要です。すべてのドラフトがここを通るため、チェックポイントは回答待ちで一時停止できます。
     review = RequestInfoExecutor(id="request_info")
     finalise = FinaliseExecutor(id="finalise")
     gateway = ReviewGateway(
@@ -223,9 +208,8 @@ def create_workflow(*, checkpoint_storage: FileCheckpointStorage | None = None) 
     )
     prepare = BriefPreparer(id="prepare_brief", agent_id=writer.id)
 
-    # Wire the workflow DAG. Edges mirror the numbered steps described in the
-    # module docstring. Because `WorkflowBuilder` is declarative, reading these
-    # edges is often the quickest way to understand execution order.
+    # ワークフローDAGを配線します。エッジはモジュールドキュメント文字列で説明された番号付きステップを反映しています。
+    # `WorkflowBuilder`は宣言的なので、これらのエッジを読むことが実行順序を理解する最速の方法です。
     builder = (
         WorkflowBuilder(max_iterations=6)
         .set_start_executor(prepare)
@@ -236,20 +220,18 @@ def create_workflow(*, checkpoint_storage: FileCheckpointStorage | None = None) 
         .add_edge(gateway, writer)  # revisions
         .add_edge(gateway, finalise)
     )
-    # Opt-in to persistence when the caller provides storage. The workflow
-    # object itself is identical whether or not checkpointing is enabled.
+    # 呼び出し元がストレージを提供した場合に永続化をオプトインします。チェックポイントの有無にかかわらず、ワークフローオブジェクト自体は同一です。
     if checkpoint_storage:
         builder = builder.with_checkpointing(checkpoint_storage=checkpoint_storage)
     return builder.build()
 
 
 def _render_checkpoint_summary(checkpoints: list["WorkflowCheckpoint"]) -> None:
-    """Pretty-print saved checkpoints with the new framework summaries."""
+    """新しいフレームワークのサマリーで保存されたチェックポイントを整形表示します。"""
 
     print("\nCheckpoint summary:")
     for summary in [get_checkpoint_summary(cp) for cp in sorted(checkpoints, key=lambda c: c.timestamp)]:
-        # Compose a single line per checkpoint so the user can scan the output
-        # and pick the resume point that still has outstanding human work.
+        # チェックポイントごとに1行で構成し、ユーザーが出力をスキャンして未処理の人間作業がある再開ポイントを選べるようにします。
         line = (
             f"- {summary.checkpoint_id} | iter={summary.iteration_count} "
             f"| targets={summary.targets} | states={summary.executor_ids}"
@@ -264,7 +246,7 @@ def _render_checkpoint_summary(checkpoints: list["WorkflowCheckpoint"]) -> None:
 
 
 def _print_events(events: list[Any]) -> tuple[str | None, list[tuple[str, HumanApprovalRequest]]]:
-    """Echo workflow events to the console and collect outstanding requests."""
+    """ワークフローイベントをコンソールにエコーし、未処理のリクエストを収集します。"""
 
     completed_output: str | None = None
     requests: list[tuple[str, HumanApprovalRequest]] = []
@@ -274,8 +256,7 @@ def _print_events(events: list[Any]) -> tuple[str | None, list[tuple[str, HumanA
         if isinstance(event, WorkflowOutputEvent):
             completed_output = event.data
         if isinstance(event, RequestInfoEvent) and isinstance(event.data, HumanApprovalRequest):
-            # Capture pending human approvals so the caller can ask the user for
-            # input after the current batch of events is processed.
+            # 保留中の人間承認をキャプチャし、呼び出し元が現在のイベントバッチ処理後にユーザーに入力を求められるようにします。
             requests.append((event.request_id, event.data))
         elif isinstance(event, WorkflowStatusEvent) and event.state in {
             WorkflowRunState.IN_PROGRESS_PENDING_REQUESTS,
@@ -287,14 +268,13 @@ def _print_events(events: list[Any]) -> tuple[str | None, list[tuple[str, HumanA
 
 
 def _prompt_for_responses(requests: list[tuple[str, HumanApprovalRequest]]) -> dict[str, str] | None:
-    """Interactive CLI prompt for any live RequestInfo requests."""
+    """ライブのRequestInfoリクエストに対する対話型CLIプロンプト。"""
 
     if not requests:
         return None
     answers: dict[str, str] = {}
     for request_id, request in requests:
-        # Keep the prompt conversational so testers can use the script without
-        # memorising the workflow APIs.
+        # プロンプトを会話形式に保ち、テスターがワークフローAPIを覚えなくてもスクリプトを使えるようにします。
         print("\n=== Human approval needed ===")
         print(f"request_id: {request_id}")
         if request.iteration:
@@ -309,7 +289,7 @@ def _prompt_for_responses(requests: list[tuple[str, HumanApprovalRequest]]) -> d
 
 
 def _maybe_pre_supply_responses(cp: "WorkflowCheckpoint") -> dict[str, str] | None:
-    """Offer to collect responses before resuming a checkpoint."""
+    """チェックポイント再開前にレスポンス収集を提案します。"""
 
     pending = get_checkpoint_summary(cp).pending_requests
     if not pending:
@@ -329,8 +309,7 @@ def _maybe_pre_supply_responses(cp: "WorkflowCheckpoint") -> dict[str, str] | No
         print(f"\nPending draft (iteration {iteration} | request_id={item.request_id}):")
         draft_text = (item.draft or "").strip()
         if draft_text:
-            # The shortened preview in the summary may truncate text; here we
-            # show the full draft so the reviewer can make an informed choice.
+            # サマリーの短縮プレビューはテキストを切り詰める可能性があります。ここではレビュアーが十分な判断を下せるように完全なドラフトを表示します。
             print("Draft:\n---\n" + draft_text + "\n---")
         else:
             print("Draft: [not captured in checkpoint payload - refer to your notes/log]")
@@ -344,13 +323,13 @@ def _maybe_pre_supply_responses(cp: "WorkflowCheckpoint") -> dict[str, str] | No
 
 
 async def _consume(stream: AsyncIterable[Any]) -> list[Any]:
-    """Materialise an async event stream into a list."""
+    """非同期イベントストリームをリストに具現化します。"""
 
     return [event async for event in stream]
 
 
 async def run_interactive_session(workflow: "Workflow", initial_message: str) -> str | None:
-    """Run the workflow until it either finishes or pauses for human input."""
+    """ワークフローを完了または人間入力待ちで一時停止するまで実行します。"""
 
     pending_responses: dict[str, str] | None = None
     completed_output: str | None = None
@@ -358,12 +337,11 @@ async def run_interactive_session(workflow: "Workflow", initial_message: str) ->
 
     while completed_output is None:
         if first:
-            # Kick off the workflow with the initial brief. The returned events
-            # include RequestInfo events when the agent produces a draft.
+            # 初期の概要でワークフローを開始します。Agentがドラフトを生成するとRequestInfoイベントが含まれます。
             events = await _consume(workflow.run_stream(initial_message))
             first = False
         elif pending_responses:
-            # Feed any answers the user just typed back into the workflow.
+            # ユーザーが入力した回答をワークフローにフィードバックします。
             events = await _consume(workflow.send_responses_streaming(pending_responses))
         else:
             break
@@ -381,7 +359,7 @@ async def resume_from_checkpoint(
     storage: FileCheckpointStorage,
     pre_supplied: dict[str, str] | None,
 ) -> None:
-    """Resume a stored checkpoint and continue until completion or another pause."""
+    """保存されたチェックポイントを再開し、完了または次の一時停止まで続行します。"""
 
     print(f"\nResuming from checkpoint: {checkpoint_id}")
     events = await _consume(
@@ -393,9 +371,7 @@ async def resume_from_checkpoint(
     )
     completed_output, requests = _print_events(events)
     if pre_supplied and not requests and completed_output is None:
-        # When the checkpoint only needed the provided answers we let the user
-        # know the workflow is waiting for the next superstep (usually another
-        # agent response).
+        # チェックポイントが提供された回答のみを必要とした場合、ワークフローが次のスーパーステップ（通常は別のAgentレスポンス）を待っていることをユーザーに知らせます。
         print("Pre-supplied responses applied automatically; workflow is now waiting for the next step.")
 
     pending = _prompt_for_responses(requests)
@@ -412,11 +388,10 @@ async def resume_from_checkpoint(
 
 
 async def main() -> None:
-    """Entry point used by both the initial run and subsequent resumes."""
+    """初回実行と再開の両方で使用されるエントリーポイント。"""
 
     for file in TEMP_DIR.glob("*.json"):
-        # Start each execution with a clean slate so the demonstration is
-        # deterministic even if the directory had stale checkpoints.
+        # 各実行をクリーンスレートで開始し、ディレクトリに古いチェックポイントがあってもデモが決定論的になるようにします。
         file.unlink()
 
     storage = FileCheckpointStorage(storage_path=TEMP_DIR)
@@ -439,8 +414,7 @@ async def main() -> None:
         print("No checkpoints recorded.")
         return
 
-    # Show the user what is available before we prompt for the index. The
-    # summary helper keeps this output consistent with other tooling.
+    # ユーザーにインデックスを入力する前に利用可能なものを表示します。 summary helper はこの出力を他のツールと一貫させます。
     _render_checkpoint_summary(checkpoints)
 
     sorted_cps = sorted(checkpoints, key=lambda c: c.timestamp)
@@ -448,9 +422,8 @@ async def main() -> None:
     for idx, cp in enumerate(sorted_cps):
         print(f"  [{idx}] id={cp.checkpoint_id} iter={cp.iteration_count}")
 
-    # For the pause/resume demo we typically pick the latest checkpoint whose summary
-    # status reads "awaiting human response" - that is the saved state that proves the
-    # workflow can rehydrate, collect the pending answer, and continue after a break.
+    # pause/resume デモでは通常、summary status が "awaiting human response"
+    # と表示される最新のチェックポイントを選びます。 これは、ワークフローが再構築され、保留中の回答を収集し、休止後に続行できることを証明する保存された状態です。
     selection = input("\nResume from which checkpoint? (press Enter to skip): ").strip()  # noqa: ASYNC250
     if not selection:
         print("No resume selected. Exiting.")
@@ -472,13 +445,11 @@ async def main() -> None:
         print("Selected checkpoint already reflects a completed workflow; nothing to resume.")
         return
 
-    # If the user wants, capture their decisions now so the resume call can
-    # push them into the workflow and avoid re-prompting.
+    # ユーザーが望む場合は、resume 呼び出しがワークフローにプッシュして再プロンプトを避けられるように、今すぐ彼らの決定をキャプチャします。
     pre_responses = _maybe_pre_supply_responses(chosen)
 
     resumed_workflow = create_workflow()
-    # Resume with a fresh workflow instance. The checkpoint carries the
-    # persistent state while this object holds the runtime wiring.
+    # 新しいワークフローインスタンスで再開します。チェックポイントは永続的な状態を保持し、このオブジェクトはランタイムの配線を保持します。
     await resume_from_checkpoint(resumed_workflow, chosen.checkpoint_id, storage, pre_responses)
 
 

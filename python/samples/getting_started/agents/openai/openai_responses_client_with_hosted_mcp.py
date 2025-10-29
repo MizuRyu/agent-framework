@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 async def handle_approvals_without_thread(query: str, agent: "AgentProtocol"):
-    """When we don't have a thread, we need to ensure we return with the input, approval request and approval."""
+    """スレッドがない場合、入力、承認リクエスト、および承認を返すことを保証する必要があります。"""
     from agent_framework import ChatMessage
 
     result = await agent.run(query)
@@ -40,7 +40,7 @@ async def handle_approvals_without_thread(query: str, agent: "AgentProtocol"):
 
 
 async def handle_approvals_with_thread(query: str, agent: "AgentProtocol", thread: "AgentThread"):
-    """Here we let the thread deal with the previous responses, and we just rerun with the approval."""
+    """ここではスレッドに以前のレスポンスを処理させ、承認で再実行します。"""
     from agent_framework import ChatMessage
 
     result = await agent.run(query, thread=thread, store=True)
@@ -63,7 +63,7 @@ async def handle_approvals_with_thread(query: str, agent: "AgentProtocol", threa
 
 
 async def handle_approvals_with_thread_streaming(query: str, agent: "AgentProtocol", thread: "AgentThread"):
-    """Here we let the thread deal with the previous responses, and we just rerun with the approval."""
+    """ここではスレッドに以前のレスポンスを処理させ、承認で再実行します。"""
     from agent_framework import ChatMessage
 
     new_input: list[ChatMessage] = []
@@ -90,11 +90,10 @@ async def handle_approvals_with_thread_streaming(query: str, agent: "AgentProtoc
 
 
 async def run_hosted_mcp_without_thread_and_specific_approval() -> None:
-    """Example showing Mcp Tools with approvals without using a thread."""
+    """スレッドを使用せずに承認付きMcp Toolsを示す例。"""
     print("=== Mcp with approvals and without thread ===")
 
-    # Tools are provided when creating the agent
-    # The agent can use these tools for any query during its lifetime
+    # Agent作成時にToolsが提供されます Agentはその生涯の間に任意のクエリでこれらのToolsを使用できます
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         name="DocsAgent",
@@ -102,18 +101,17 @@ async def run_hosted_mcp_without_thread_and_specific_approval() -> None:
         tools=HostedMCPTool(
             name="Microsoft Learn MCP",
             url="https://learn.microsoft.com/api/mcp",
-            # we don't require approval for microsoft_docs_search tool calls
-            # but we do for any other tool
+            # microsoft_docs_searchツール呼び出しには承認を必要としません しかし他のツールには必要です
             approval_mode={"never_require_approval": ["microsoft_docs_search"]},
         ),
     ) as agent:
-        # First query
+        # 最初のクエリ
         query1 = "How to create an Azure storage account using az cli?"
         print(f"User: {query1}")
         result1 = await handle_approvals_without_thread(query1, agent)
         print(f"{agent.name}: {result1}\n")
         print("\n=======================================\n")
-        # Second query
+        # 2番目のクエリ
         query2 = "What is Microsoft Agent Framework?"
         print(f"User: {query2}")
         result2 = await handle_approvals_without_thread(query2, agent)
@@ -121,11 +119,10 @@ async def run_hosted_mcp_without_thread_and_specific_approval() -> None:
 
 
 async def run_hosted_mcp_without_approval() -> None:
-    """Example showing Mcp Tools without approvals."""
+    """承認なしのMcp Toolsを示す例。"""
     print("=== Mcp without approvals ===")
 
-    # Tools are provided when creating the agent
-    # The agent can use these tools for any query during its lifetime
+    # Agent作成時にToolsが提供されます Agentはその生涯の間に任意のクエリでこれらのToolsを使用できます
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         name="DocsAgent",
@@ -133,19 +130,18 @@ async def run_hosted_mcp_without_approval() -> None:
         tools=HostedMCPTool(
             name="Microsoft Learn MCP",
             url="https://learn.microsoft.com/api/mcp",
-            # we don't require approval for any function calls
-            # this means we will not see the approval messages,
-            # it is fully handled by the service and a final response is returned.
+            # すべての関数呼び出しに承認を必要としません これは承認メッセージが表示されず、
+            # サービスによって完全に処理され、最終レスポンスが返されることを意味します。
             approval_mode="never_require",
         ),
     ) as agent:
-        # First query
+        # 最初のクエリ
         query1 = "How to create an Azure storage account using az cli?"
         print(f"User: {query1}")
         result1 = await handle_approvals_without_thread(query1, agent)
         print(f"{agent.name}: {result1}\n")
         print("\n=======================================\n")
-        # Second query
+        # 2番目のクエリ
         query2 = "What is Microsoft Agent Framework?"
         print(f"User: {query2}")
         result2 = await handle_approvals_without_thread(query2, agent)
@@ -153,11 +149,10 @@ async def run_hosted_mcp_without_approval() -> None:
 
 
 async def run_hosted_mcp_with_thread() -> None:
-    """Example showing Mcp Tools with approvals using a thread."""
+    """スレッドを使用した承認付きMcp Toolsを示す例。"""
     print("=== Mcp with approvals and with thread ===")
 
-    # Tools are provided when creating the agent
-    # The agent can use these tools for any query during its lifetime
+    # Agent作成時にToolsが提供されます Agentはその生涯の間に任意のクエリでこれらのToolsを使用できます
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         name="DocsAgent",
@@ -165,18 +160,18 @@ async def run_hosted_mcp_with_thread() -> None:
         tools=HostedMCPTool(
             name="Microsoft Learn MCP",
             url="https://learn.microsoft.com/api/mcp",
-            # we require approval for all function calls
+            # すべての関数呼び出しに承認を必要とします
             approval_mode="always_require",
         ),
     ) as agent:
-        # First query
+        # 最初のクエリ
         thread = agent.get_new_thread()
         query1 = "How to create an Azure storage account using az cli?"
         print(f"User: {query1}")
         result1 = await handle_approvals_with_thread(query1, agent, thread)
         print(f"{agent.name}: {result1}\n")
         print("\n=======================================\n")
-        # Second query
+        # 2番目のクエリ
         query2 = "What is Microsoft Agent Framework?"
         print(f"User: {query2}")
         result2 = await handle_approvals_with_thread(query2, agent, thread)
@@ -184,11 +179,10 @@ async def run_hosted_mcp_with_thread() -> None:
 
 
 async def run_hosted_mcp_with_thread_streaming() -> None:
-    """Example showing Mcp Tools with approvals using a thread."""
+    """スレッドを使用した承認付きMcp Toolsを示す例。"""
     print("=== Mcp with approvals and with thread ===")
 
-    # Tools are provided when creating the agent
-    # The agent can use these tools for any query during its lifetime
+    # Agent作成時にToolsが提供されます Agentはその生涯の間に任意のクエリでこれらのToolsを使用できます
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         name="DocsAgent",
@@ -196,11 +190,11 @@ async def run_hosted_mcp_with_thread_streaming() -> None:
         tools=HostedMCPTool(
             name="Microsoft Learn MCP",
             url="https://learn.microsoft.com/api/mcp",
-            # we require approval for all function calls
+            # すべての関数呼び出しに承認を必要とします
             approval_mode="always_require",
         ),
     ) as agent:
-        # First query
+        # 最初のクエリ
         thread = agent.get_new_thread()
         query1 = "How to create an Azure storage account using az cli?"
         print(f"User: {query1}")
@@ -209,7 +203,7 @@ async def run_hosted_mcp_with_thread_streaming() -> None:
             print(update, end="")
         print("\n")
         print("\n=======================================\n")
-        # Second query
+        # 2番目のクエリ
         query2 = "What is Microsoft Agent Framework?"
         print(f"User: {query2}")
         print(f"{agent.name}: ", end="")

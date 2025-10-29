@@ -7,19 +7,19 @@ from pytest import fixture
 
 @fixture
 def exclude_list(request: Any) -> list[str]:
-    """Fixture that returns a list of environment variables to exclude."""
+    """除外する環境変数のリストを返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else []
 
 
 @fixture
 def override_env_param_dict(request: Any) -> dict[str, str]:
-    """Fixture that returns a dict of environment variables to override."""
+    """上書きする環境変数の辞書を返すフィクスチャ。"""
     return request.param if hasattr(request, "param") else {}
 
 
 @fixture()
 def azure_ai_unit_test_env(monkeypatch, exclude_list, override_env_param_dict):  # type: ignore
-    """Fixture to set environment variables for AzureAISettings."""
+    """AzureAISettings 用の環境変数を設定するフィクスチャ。"""
 
     if exclude_list is None:
         exclude_list = []
@@ -45,25 +45,25 @@ def azure_ai_unit_test_env(monkeypatch, exclude_list, override_env_param_dict): 
 
 @fixture
 def mock_ai_project_client() -> MagicMock:
-    """Fixture that provides a mock AIProjectClient."""
+    """モック AIProjectClient を提供するフィクスチャ。"""
     mock_client = MagicMock()
 
-    # Mock agents property
+    # モック agents プロパティ。
     mock_client.agents = MagicMock()
     mock_client.agents.create_agent = AsyncMock()
     mock_client.agents.delete_agent = AsyncMock()
 
-    # Mock agent creation response
+    # モック agent 作成レスポンス。
     mock_agent = MagicMock()
     mock_agent.id = "test-agent-id"
     mock_client.agents.create_agent.return_value = mock_agent
 
-    # Mock threads property
+    # モック threads プロパティ。
     mock_client.agents.threads = MagicMock()
     mock_client.agents.threads.create = AsyncMock()
     mock_client.agents.messages.create = AsyncMock()
 
-    # Mock runs property
+    # モック runs プロパティ。
     mock_client.agents.runs = MagicMock()
     mock_client.agents.runs.list = AsyncMock()
     mock_client.agents.runs.cancel = AsyncMock()
@@ -75,5 +75,5 @@ def mock_ai_project_client() -> MagicMock:
 
 @fixture
 def mock_azure_credential() -> MagicMock:
-    """Fixture that provides a mock AsyncTokenCredential."""
+    """モック AsyncTokenCredential を提供するフィクスチャ。"""
     return MagicMock()

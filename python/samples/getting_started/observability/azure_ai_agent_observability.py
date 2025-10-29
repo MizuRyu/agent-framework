@@ -25,15 +25,15 @@ You must add an Application Insights instance to your Azure AI project
 for this sample to work.
 """
 
-# For loading the `AZURE_AI_PROJECT_ENDPOINT` environment variable
+# `AZURE_AI_PROJECT_ENDPOINT` 環境変数の読み込み用
 dotenv.load_dotenv()
 
 
 async def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
-    await asyncio.sleep(randint(0, 10) / 10.0)  # Simulate a network call
+    """指定された場所の天気を取得します。"""
+    await asyncio.sleep(randint(0, 10) / 10.0)  # ネットワークコールをシミュレートします
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -44,9 +44,8 @@ async def main():
         AIProjectClient(endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"], credential=credential) as project,
         AzureAIAgentClient(project_client=project) as client,
     ):
-        # This will enable tracing and configure the application to send telemetry data to the
-        # Application Insights instance attached to the Azure AI project.
-        # This will override any existing configuration.
+        # トレーシングを有効にし、アプリケーションがAzure AIプロジェクトに紐づくApplication
+        # Insightsインスタンスにテレメトリデータを送信するように設定します。 既存の設定は上書きされます。
         await client.setup_azure_ai_observability()
 
         questions = ["What's the weather in Amsterdam?", "and in Paris, and which is better?", "Why is the sky blue?"]

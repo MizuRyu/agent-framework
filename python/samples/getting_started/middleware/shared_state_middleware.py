@@ -29,7 +29,7 @@ This approach shows how middleware can work together by sharing state within the
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -37,17 +37,17 @@ def get_weather(
 def get_time(
     timezone: Annotated[str, Field(description="The timezone to get the time for.")] = "UTC",
 ) -> str:
-    """Get the current time for a given timezone."""
+    """指定されたタイムゾーンの現在時刻を取得します。"""
     import datetime
 
     return f"The current time in {timezone} is {datetime.datetime.now().strftime('%H:%M:%S')}"
 
 
 class MiddlewareContainer:
-    """Container class that holds middleware functions with shared state."""
+    """共有状態を持つミドルウェア関数を保持するコンテナクラス。"""
 
     def __init__(self) -> None:
-        # Simple shared state: count function calls
+        # シンプルな共有状態：関数呼び出し回数をカウントする
         self.call_count: int = 0
 
     async def call_counter_middleware(
@@ -55,13 +55,13 @@ class MiddlewareContainer:
         context: FunctionInvocationContext,
         next: Callable[[FunctionInvocationContext], Awaitable[None]],
     ) -> None:
-        """First middleware: increments call count in shared state."""
-        # Increment the shared call count
+        """最初のミドルウェア：共有状態の呼び出し回数をインクリメントする。"""
+        # 共有の呼び出し回数をインクリメントする
         self.call_count += 1
 
         print(f"[CallCounter] This is function call #{self.call_count}")
 
-        # Call the next middleware/function
+        # 次のミドルウェア/関数を呼び出す
         await next(context)
 
     async def result_enhancer_middleware(
@@ -69,13 +69,13 @@ class MiddlewareContainer:
         context: FunctionInvocationContext,
         next: Callable[[FunctionInvocationContext], Awaitable[None]],
     ) -> None:
-        """Second middleware: uses shared call count to enhance function results."""
+        """2番目のミドルウェア：共有の呼び出し回数を使って関数の結果を強化する。"""
         print(f"[ResultEnhancer] Current total calls so far: {self.call_count}")
 
-        # Call the next middleware/function
+        # 次のミドルウェア/関数を呼び出す
         await next(context)
 
-        # After function execution, enhance the result using shared state
+        # 関数実行後、共有状態を使って結果を強化する
         if context.result:
             enhanced_result = f"[Call #{self.call_count}] {context.result}"
             context.result = enhanced_result
@@ -83,30 +83,28 @@ class MiddlewareContainer:
 
 
 async def main() -> None:
-    """Example demonstrating shared state function-based middleware."""
+    """共有状態を用いた関数ベースのミドルウェアを示す例。"""
     print("=== Shared State Function-based Middleware Example ===")
 
-    # Create middleware container with shared state
+    # 共有状態を持つミドルウェアコンテナを作成する
     middleware_container = MiddlewareContainer()
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
             name="UtilityAgent",
             instructions="You are a helpful assistant that can provide weather information and current time.",
             tools=[get_weather, get_time],
-            # Pass both middleware functions from the same container instance
-            # Order matters: counter runs first to increment count,
-            # then result enhancer uses the updated count
+            # 同じコンテナインスタンスから両方のミドルウェア関数を渡す 順序が重要：カウンターが最初に実行されてカウントを増やし、
+            # その後、結果強化が更新されたカウントを使用する
             middleware=[
                 middleware_container.call_counter_middleware,
                 middleware_container.result_enhancer_middleware,
             ],
         ) as agent,
     ):
-        # Test multiple requests to see shared state in action
+        # 複数のリクエストをテストして共有状態の動作を確認する
         queries = [
             "What's the weather like in New York?",
             "What time is it in London?",
@@ -119,7 +117,7 @@ async def main() -> None:
             result = await agent.run(query)
             print(f"Agent: {result.text if result.text else 'No response'}")
 
-        # Display final statistics
+        # 最終統計を表示する
         print("\n=== Final Statistics ===")
         print(f"Total function calls made: {middleware_container.call_count}")
 

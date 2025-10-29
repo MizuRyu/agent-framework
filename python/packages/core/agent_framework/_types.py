@@ -68,17 +68,18 @@ logger = get_logger("agent_framework")
 
 
 class EnumLike(type):
-    """Generic metaclass for creating enum-like classes with predefined constants.
+    """定義済み定数を持つenum風クラスを作成するためのジェネリックメタクラス。
 
-    This metaclass automatically creates class-level constants based on a _constants
-    class attribute. Each constant is defined as a tuple of (name, *args) where
-    name is the constant name and args are the constructor arguments.
+    このメタクラスは_constantsクラス属性に基づいてクラスレベルの定数を自動的に作成します。
+    各定数は(name, *args)のタプルとして定義され、
+    nameは定数名、argsはコンストラクタ引数です。
+
     """
 
     def __new__(mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]) -> "EnumLike":
         cls = super().__new__(mcs, name, bases, namespace)
 
-        # Create constants if _constants is defined
+        # _constantsが定義されていれば定数を作成します。
         if (const := getattr(cls, "_constants", None)) and isinstance(const, dict):
             for const_name, const_args in const.items():
                 if isinstance(const_args, (list, tuple)):
@@ -90,16 +91,17 @@ class EnumLike(type):
 
 
 def _parse_content(content_data: MutableMapping[str, Any]) -> "Contents":
-    """Parse a single content data dictionary into the appropriate Content object.
+    """単一のcontentデータ辞書を適切なContentオブジェクトにパースします。
 
     Args:
-        content_data: Content data (dict)
+        content_data: Contentデータ（dict）
 
     Returns:
-        Content object
+        Contentオブジェクト
 
     Raises:
-        ContentError if parsing fails
+        パースに失敗した場合はContentError
+
     """
     content_type = str(content_data.get("type"))
     match content_type:
@@ -132,13 +134,14 @@ def _parse_content(content_data: MutableMapping[str, Any]) -> "Contents":
 
 
 def _parse_content_list(contents_data: Sequence[Any]) -> list["Contents"]:
-    """Parse a list of content data dictionaries into appropriate Content objects.
+    """contentデータ辞書のリストを適切なContentオブジェクトにパースします。
 
     Args:
-        contents_data: List of content data (dicts or already constructed objects)
+        contents_data: Contentデータのリスト（dictまたは既に構築されたオブジェクト）
 
     Returns:
-        List of Content objects with unknown types logged and ignored
+        不明なタイプはログに記録して無視し、Contentオブジェクトのリストを返します。
+
     """
     contents: list["Contents"] = []
     for content_data in contents_data:
@@ -149,22 +152,20 @@ def _parse_content_list(contents_data: Sequence[Any]) -> list["Contents"]:
             except ContentError as exc:
                 logger.warning(f"Skipping unknown content type or invalid content: {exc}")
         else:
-            # If it's already a content object, keep it as is
+            # すでにcontentオブジェクトであればそのまま保持します。
             contents.append(content_data)
 
     return contents
 
 
-# endregion
-
-# region Constants and types
+# endregion region Constants and types
 _T = TypeVar("_T")
 TEmbedding = TypeVar("TEmbedding")
 TChatResponse = TypeVar("TChatResponse", bound="ChatResponse")
 TToolMode = TypeVar("TToolMode", bound="ToolMode")
 TAgentRunResponse = TypeVar("TAgentRunResponse", bound="AgentRunResponse")
 
-CreatedAtT = str  # Use a datetimeoffset type? Or a more specific type like datetime.datetime?
+CreatedAtT = str  # datetimeoffset型を使うか？それともdatetime.datetimeのようなより具体的な型か？
 
 URI_PATTERN = re.compile(r"^data:(?P<media_type>[^;]+);base64,(?P<base64_data>[A-Za-z0-9+/=]+)$")
 
@@ -197,20 +198,20 @@ KNOWN_MEDIA_TYPES = [
 
 
 class UsageDetails(SerializationMixin):
-    """Provides usage details about a request/response.
+    """リクエスト/レスポンスの使用状況の詳細を提供します。
 
     Attributes:
-        input_token_count: The number of tokens in the input.
-        output_token_count: The number of tokens in the output.
-        total_token_count: The total number of tokens used to produce the response.
-        additional_counts: A dictionary of additional token counts, can be set by passing kwargs.
+        input_token_count: 入力のトークン数。
+        output_token_count: 出力のトークン数。
+        total_token_count: レスポンス生成に使用されたトークンの合計数。
+        additional_counts: 追加のトークン数の辞書。kwargsで設定可能。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import UsageDetails
 
-            # Create usage details
+            # 使用状況詳細の作成
             usage = UsageDetails(
                 input_token_count=100,
                 output_token_count=50,
@@ -218,7 +219,7 @@ class UsageDetails(SerializationMixin):
             )
             print(usage.total_token_count)  # 150
 
-            # With additional counts
+            # 追加のカウントを含む場合
             usage = UsageDetails(
                 input_token_count=100,
                 output_token_count=50,
@@ -227,11 +228,12 @@ class UsageDetails(SerializationMixin):
             )
             print(usage.additional_counts["reasoning_tokens"])  # 25
 
-            # Combine usage details
+            # 使用状況詳細の結合
             usage1 = UsageDetails(input_token_count=100, output_token_count=50)
             usage2 = UsageDetails(input_token_count=200, output_token_count=100)
             combined = usage1 + usage2
             print(combined.input_token_count)  # 300
+
     """
 
     DEFAULT_EXCLUDE: ClassVar[set[str]] = {"_extra_counts"}
@@ -243,22 +245,23 @@ class UsageDetails(SerializationMixin):
         total_token_count: int | None = None,
         **kwargs: int,
     ) -> None:
-        """Initializes the UsageDetails instance.
+        """UsageDetailsインスタンスを初期化します。
 
         Args:
-            input_token_count: The number of tokens in the input.
-            output_token_count: The number of tokens in the output.
-            total_token_count: The total number of tokens used to produce the response.
+            input_token_count: 入力のトークン数。
+            output_token_count: 出力のトークン数。
+            total_token_count: レスポンス生成に使用されたトークンの合計数。
 
         Keyword Args:
-            **kwargs: Additional token counts, can be set by passing keyword arguments.
-                They can be retrieved through the `additional_counts` property.
+            **kwargs: 追加のトークン数。キーワード引数で設定可能。
+                `additional_counts`プロパティを通じて取得できます。
+
         """
         self.input_token_count = input_token_count
         self.output_token_count = output_token_count
         self.total_token_count = total_token_count
 
-        # Validate that all kwargs are integers (preserving Pydantic behavior)
+        # すべてのkwargsが整数であることを検証します（Pydanticの動作を保持）。
         self._extra_counts: dict[str, int] = {}
         for key, value in kwargs.items():
             if not isinstance(value, int):
@@ -266,19 +269,20 @@ class UsageDetails(SerializationMixin):
             self._extra_counts[key] = value
 
     def to_dict(self, *, exclude_none: bool = True, exclude: set[str] | None = None) -> dict[str, Any]:
-        """Convert the UsageDetails instance to a dictionary.
+        """UsageDetailsインスタンスを辞書に変換します。
 
         Keyword Args:
-            exclude_none: Whether to exclude None values from the output.
-            exclude: Set of field names to exclude from the output.
+            exclude_none: None値を出力から除外するかどうか。
+            exclude: 出力から除外するフィールド名のセット。
 
         Returns:
-            Dictionary representation of the UsageDetails instance.
+            UsageDetailsインスタンスの辞書表現。
+
         """
-        # Get the base dict from parent class
+        # 親クラスから基本の辞書を取得します。
         result = super().to_dict(exclude_none=exclude_none, exclude=exclude)
 
-        # Add additional counts (extra fields)
+        # 追加のカウント（追加フィールド）を加えます。
         if exclude is None:
             exclude = set()
 
@@ -292,31 +296,31 @@ class UsageDetails(SerializationMixin):
         return result
 
     def __str__(self) -> str:
-        """Returns a string representation of the usage details."""
+        """使用状況詳細の文字列表現を返します。"""
         return self.to_json()
 
     @property
     def additional_counts(self) -> dict[str, int]:
-        """Represents well-known additional counts for usage. This is not an exhaustive list.
+        """使用状況のよく知られた追加カウントを表します。これは網羅的なリストではありません。
 
         Remarks:
-            To make it possible to avoid collisions between similarly-named, but unrelated, additional counts
-            between different AI services, any keys not explicitly defined here should be prefixed with the
-            name of the AI service, e.g., "openai." or "azure.". The separator "." was chosen because it cannot
-            be a legal character in a JSON key.
+            異なるAIサービス間で同名だが無関係な追加カウントの衝突を避けるために、
+            ここで明示的に定義されていないキーはAIサービス名でプレフィックスを付けるべきです。
+            例："openai."や"azure."。区切り文字"."はJSONキーとして不正な文字のため選ばれました。
 
-            Over time additional counts may be added to the base class.
+            時間とともに追加カウントがベースクラスに追加される可能性があります。
+
         """
         return self._extra_counts
 
     def __setitem__(self, key: str, value: int) -> None:
-        """Sets an additional count for the usage details."""
+        """使用状況詳細に追加カウントを設定します。"""
         if not isinstance(value, int):
             raise ValueError("Additional counts must be integers.")
         self._extra_counts[key] = value
 
     def __add__(self, other: "UsageDetails | None") -> "UsageDetails":
-        """Combines two `UsageDetails` instances."""
+        """2つの`UsageDetails`インスタンスを結合します。"""
         if not other:
             return self
         if not isinstance(other, UsageDetails):
@@ -350,7 +354,7 @@ class UsageDetails(SerializationMixin):
         return self
 
     def __eq__(self, other: object) -> bool:
-        """Check if two UsageDetails instances are equal."""
+        """2つのUsageDetailsインスタンスが等しいかどうかをチェックします。"""
         if not isinstance(other, UsageDetails):
             return False
 
@@ -366,16 +370,17 @@ class UsageDetails(SerializationMixin):
 
 
 class TextSpanRegion(SerializationMixin):
-    """Represents a region of text that has been annotated.
+    """注釈されたテキスト領域を表します。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import TextSpanRegion
 
-            # Create a text span region
+            # テキストスパン領域を作成
             region = TextSpanRegion(start_index=0, end_index=10)
             print(region.type)  # "text_span"
+
     """
 
     def __init__(
@@ -385,18 +390,19 @@ class TextSpanRegion(SerializationMixin):
         end_index: int | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize TextSpanRegion.
+        """TextSpanRegionを初期化します。
 
         Keyword Args:
-            start_index: The start index of the text span.
-            end_index: The end index of the text span.
-            **kwargs: Additional keyword arguments.
+            start_index: テキストスパンの開始インデックス。
+            end_index: テキストスパンの終了インデックス。
+            **kwargs: 追加のキーワード引数。
+
         """
         self.type: Literal["text_span"] = "text_span"
         self.start_index = start_index
         self.end_index = end_index
 
-        # Handle any additional kwargs
+        # 追加のkwargsを処理します。
         for key, value in kwargs.items():
             if not hasattr(self, key):
                 setattr(self, key, value)
@@ -406,7 +412,7 @@ AnnotatedRegions = TextSpanRegion
 
 
 class BaseAnnotation(SerializationMixin):
-    """Base class for all AI Annotation types."""
+    """すべてのAI Annotationタイプの基底クラス。"""
 
     DEFAULT_EXCLUDE: ClassVar[set[str]] = {"raw_representation", "additional_properties"}
 
@@ -418,15 +424,16 @@ class BaseAnnotation(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize BaseAnnotation.
+        """BaseAnnotationを初期化します。
 
         Keyword Args:
-            annotated_regions: A list of regions that have been annotated. Can be region objects or dicts.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content from an underlying implementation.
-            **kwargs: Additional keyword arguments (merged into additional_properties).
+            annotated_regions: 注釈された領域のリスト。regionオブジェクトまたはdict。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: 基盤実装からのコンテンツのオプションの生表現。
+            **kwargs: 追加のキーワード引数（additional_propertiesにマージされます）。
+
         """
-        # Handle annotated_regions conversion from dict format (for SerializationMixin support)
+        # annotated_regionsのdict形式からの変換を処理します（SerializationMixin対応）。
         self.annotated_regions: list[AnnotatedRegions] | None = None
         if annotated_regions is not None:
             converted_regions: list[AnnotatedRegions] = []
@@ -437,32 +444,33 @@ class BaseAnnotation(SerializationMixin):
                     else:
                         logger.warning(f"Unknown region type: {region_data.get('type', '')} in {region_data}")
                 else:
-                    # Already a region object, keep as is
+                    # すでにregionオブジェクトであればそのまま保持します。
                     converted_regions.append(region_data)
             self.annotated_regions = converted_regions
 
-        # Merge kwargs into additional_properties
+        # kwargs を additional_properties にマージする
         self.additional_properties = additional_properties or {}
         self.additional_properties.update(kwargs)
 
         self.raw_representation = raw_representation
 
     def to_dict(self, *, exclude: set[str] | None = None, exclude_none: bool = True) -> dict[str, Any]:
-        """Convert the instance to a dictionary.
+        """インスタンスを辞書に変換します。
 
-        Extracts additional_properties fields to the root level.
+        additional_properties のフィールドをルートレベルに抽出します。
 
         Keyword Args:
-            exclude: Set of field names to exclude from serialization.
-            exclude_none: Whether to exclude None values from the output. Defaults to True.
+            exclude: シリアライズから除外するフィールド名のセット。
+            exclude_none: None の値を出力から除外するかどうか。デフォルトは True。
 
         Returns:
-            Dictionary representation of the instance.
+            インスタンスの辞書表現。
+
         """
-        # Get the base dict from SerializationMixin
+        # SerializationMixin から基本の辞書を取得する
         result = super().to_dict(exclude=exclude, exclude_none=exclude_none)
 
-        # Extract additional_properties to root level
+        # additional_properties をルートレベルに抽出する
         if self.additional_properties:
             result.update(self.additional_properties)
 
@@ -470,25 +478,25 @@ class BaseAnnotation(SerializationMixin):
 
 
 class CitationAnnotation(BaseAnnotation):
-    """Represents a citation annotation.
+    """引用注釈を表します。
 
     Attributes:
-        type: The type of content, which is always "citation" for this class.
-        title: The title of the cited content.
-        url: The URL of the cited content.
-        file_id: The file identifier of the cited content, if applicable.
-        tool_name: The name of the tool that generated the citation, if applicable.
-        snippet: A snippet of the cited content, if applicable.
-        annotated_regions: A list of regions that have been annotated with this citation.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content from an underlying implementation.
+        type: コンテンツのタイプ。このクラスでは常に "citation" です。
+        title: 引用されたコンテンツのタイトル。
+        url: 引用されたコンテンツの URL。
+        file_id: 該当する場合、引用されたコンテンツのファイル識別子。
+        tool_name: 該当する場合、引用を生成したツールの名前。
+        snippet: 該当する場合、引用されたコンテンツの抜粋。
+        annotated_regions: この引用で注釈された領域のリスト。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: 基盤となる実装からのコンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import CitationAnnotation, TextSpanRegion
 
-            # Create a citation annotation
+            # 引用注釈を作成
             citation = CitationAnnotation(
                 title="Agent Framework Documentation",
                 url="https://example.com/docs",
@@ -496,6 +504,7 @@ class CitationAnnotation(BaseAnnotation):
                 annotated_regions=[TextSpanRegion(start_index=0, end_index=25)],
             )
             print(citation.title)  # "Agent Framework Documentation"
+
     """
 
     def __init__(
@@ -511,18 +520,19 @@ class CitationAnnotation(BaseAnnotation):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize CitationAnnotation.
+        """CitationAnnotation を初期化します。
 
         Keyword Args:
-            title: The title of the cited content.
-            url: The URL of the cited content.
-            file_id: The file identifier of the cited content, if applicable.
-            tool_name: The name of the tool that generated the citation, if applicable.
-            snippet: A snippet of the cited content, if applicable.
-            annotated_regions: A list of regions that have been annotated with this citation.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content from an underlying implementation.
-            **kwargs: Additional keyword arguments.
+            title: 引用されたコンテンツのタイトル。
+            url: 引用されたコンテンツの URL。
+            file_id: 該当する場合、引用されたコンテンツのファイル識別子。
+            tool_name: 該当する場合、引用を生成したツールの名前。
+            snippet: 該当する場合、引用されたコンテンツの抜粋。
+            annotated_regions: この引用で注釈された領域のリスト。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: 基盤となる実装からのコンテンツのオプションの生の表現。
+            **kwargs: 追加のキーワード引数。
+
         """
         super().__init__(
             annotated_regions=annotated_regions,
@@ -547,12 +557,13 @@ TContents = TypeVar("TContents", bound="BaseContent")
 
 
 class BaseContent(SerializationMixin):
-    """Represents content used by AI services.
+    """AI サービスで使用されるコンテンツを表します。
 
     Attributes:
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content from an underlying implementation.
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: 基盤となる実装からのコンテンツのオプションの生の表現。
+
 
     """
 
@@ -566,21 +577,22 @@ class BaseContent(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize BaseContent.
+        """BaseContent を初期化します。
 
         Keyword Args:
-            annotations: Optional annotations associated with the content. Can be annotation objects or dicts.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content from an underlying implementation.
-            **kwargs: Additional keyword arguments (merged into additional_properties).
+            annotations: コンテンツに関連付けられたオプションの注釈。注釈オブジェクトまたは辞書のいずれか。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: 基盤となる実装からのコンテンツのオプションの生の表現。
+            **kwargs: 追加のキーワード引数（additional_properties にマージされます）。
+
         """
         self.annotations: list[Annotations] | None = None
-        # Handle annotations conversion from dict format (for SerializationMixin support)
+        # 辞書形式からの注釈変換を処理する（SerializationMixin サポート用）
         if annotations is not None:
             converted_annotations: list[Annotations] = []
             for annotation_data in annotations:
                 if isinstance(annotation_data, Annotations):
-                    # If it's already an annotation object, keep it as is
+                    # すでに注釈オブジェクトであれば、そのまま保持する
                     converted_annotations.append(annotation_data)
                 elif isinstance(annotation_data, MutableMapping) and annotation_data.get("type", "") == "citation":
                     converted_annotations.append(CitationAnnotation.from_dict(annotation_data))
@@ -591,28 +603,29 @@ class BaseContent(SerializationMixin):
                     )
             self.annotations = converted_annotations
 
-        # Merge kwargs into additional_properties
+        # kwargs を additional_properties にマージする
         self.additional_properties = additional_properties or {}
         self.additional_properties.update(kwargs)
 
         self.raw_representation = raw_representation
 
     def to_dict(self, *, exclude: set[str] | None = None, exclude_none: bool = True) -> dict[str, Any]:
-        """Convert the instance to a dictionary.
+        """インスタンスを辞書に変換します。
 
-        Extracts additional_properties fields to the root level.
+        additional_properties のフィールドをルートレベルに抽出します。
 
         Keyword Args:
-            exclude: Set of field names to exclude from serialization.
-            exclude_none: Whether to exclude None values from the output. Defaults to True.
+            exclude: シリアライズから除外するフィールド名のセット。
+            exclude_none: None の値を出力から除外するかどうか。デフォルトは True。
 
         Returns:
-            Dictionary representation of the instance.
+            インスタンスの辞書表現。
+
         """
-        # Get the base dict from SerializationMixin
+        # SerializationMixin から基本の辞書を取得する
         result = super().to_dict(exclude=exclude, exclude_none=exclude_none)
 
-        # Extract additional_properties to root level
+        # additional_properties をルートレベルに抽出する
         if self.additional_properties:
             result.update(self.additional_properties)
 
@@ -620,29 +633,30 @@ class BaseContent(SerializationMixin):
 
 
 class TextContent(BaseContent):
-    """Represents text content in a chat.
+    """チャット内のテキストコンテンツを表します。
 
     Attributes:
-        text: The text content represented by this instance.
-        type: The type of content, which is always "text" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+        text: このインスタンスが表すテキストコンテンツ。
+        type: コンテンツのタイプ。このクラスでは常に "text" です。
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: コンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import TextContent
 
-            # Create basic text content
+            # 基本的なテキストコンテンツを作成
             text = TextContent(text="Hello, world!")
             print(text.text)  # "Hello, world!"
 
-            # Concatenate text content
+            # テキストコンテンツを連結
             text1 = TextContent(text="Hello, ")
             text2 = TextContent(text="world!")
             combined = text1 + text2
             print(combined.text)  # "Hello, world!"
+
     """
 
     def __init__(
@@ -654,16 +668,17 @@ class TextContent(BaseContent):
         annotations: list[Annotations | MutableMapping[str, Any]] | None = None,
         **kwargs: Any,
     ):
-        """Initializes a TextContent instance.
+        """TextContent インスタンスを初期化します。
 
         Args:
-            text: The text content represented by this instance.
+            text: このインスタンスが表すテキストコンテンツ。
 
         Keyword Args:
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            annotations: Optional annotations associated with the content.
-            **kwargs: Any additional keyword arguments.
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            **kwargs: その他の追加キーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -675,18 +690,19 @@ class TextContent(BaseContent):
         self.type: Literal["text"] = "text"
 
     def __add__(self, other: "TextContent") -> "TextContent":
-        """Concatenate two TextContent instances.
+        """2つの TextContent インスタンスを連結します。
 
-        The following things happen:
-        The text is concatenated.
-        The annotations are combined.
-        The additional properties are merged, with the values of shared keys of the first instance taking precedence.
-        The raw_representations are combined into a list of them, if they both have one.
+        以下の処理が行われます:
+        テキストが連結されます。
+        注釈が結合されます。
+        追加プロパティがマージされ、共有キーの値は最初のインスタンスのものが優先されます。
+        両方に raw_representation がある場合は、それらがリストにまとめられます。
+
         """
         if not isinstance(other, TextContent):
             raise TypeError("Incompatible type")
 
-        # Merge raw representations
+        # raw_representation をマージする
         if self.raw_representation is None:
             raw_representation = other.raw_representation
         elif other.raw_representation is None:
@@ -696,7 +712,7 @@ class TextContent(BaseContent):
                 self.raw_representation if isinstance(self.raw_representation, list) else [self.raw_representation]
             ) + (other.raw_representation if isinstance(other.raw_representation, list) else [other.raw_representation])
 
-        # Merge annotations
+        # 注釈をマージする
         if self.annotations is None:
             annotations = other.annotations
         elif other.annotations is None:
@@ -704,7 +720,7 @@ class TextContent(BaseContent):
         else:
             annotations = self.annotations + other.annotations
 
-        # Create new instance using from_dict for proper deserialization
+        # 適切なデシリアライズのため from_dict を使って新しいインスタンスを作成する
         result_dict = {
             "text": self.text + other.text,
             "type": "text",
@@ -718,30 +734,31 @@ class TextContent(BaseContent):
         return TextContent.from_dict(result_dict)
 
     def __iadd__(self, other: "TextContent") -> Self:
-        """In-place concatenation of two TextContent instances.
+        """2つの TextContent インスタンスをインプレースで連結します。
 
-        The following things happen:
-        The text is concatenated.
-        The annotations are combined.
-        The additional properties are merged, with the values of shared keys of the first instance taking precedence.
-        The raw_representations are combined into a list of them, if they both have one.
+        以下の処理が行われます:
+        テキストが連結されます。
+        注釈が結合されます。
+        追加プロパティがマージされ、共有キーの値は最初のインスタンスのものが優先されます。
+        両方に raw_representation がある場合は、それらがリストにまとめられます。
+
         """
         if not isinstance(other, TextContent):
             raise TypeError("Incompatible type")
 
-        # Concatenate text
+        # テキストを連結する
         self.text += other.text
 
-        # Merge additional properties (self takes precedence)
+        # 追加プロパティをマージする（self が優先）
         if self.additional_properties is None:
             self.additional_properties = {}
         if other.additional_properties:
-            # Update from other first, then restore self's values to maintain precedence
+            # まず他方から更新し、その後 self の値を復元して優先を維持する
             self_props = self.additional_properties.copy()
             self.additional_properties.update(other.additional_properties)
             self.additional_properties.update(self_props)
 
-        # Merge raw representations
+        # raw_representation をマージする
         if self.raw_representation is None:
             self.raw_representation = other.raw_representation
         elif other.raw_representation is not None:
@@ -749,7 +766,7 @@ class TextContent(BaseContent):
                 self.raw_representation if isinstance(self.raw_representation, list) else [self.raw_representation]
             ) + (other.raw_representation if isinstance(other.raw_representation, list) else [other.raw_representation])
 
-        # Merge annotations
+        # 注釈をマージする
         if other.annotations:
             if self.annotations is None:
                 self.annotations = []
@@ -759,32 +776,33 @@ class TextContent(BaseContent):
 
 
 class TextReasoningContent(BaseContent):
-    """Represents text reasoning content in a chat.
+    """チャット内のテキスト推論コンテンツを表します。
 
     Remarks:
-        This class and `TextContent` are superficially similar, but distinct.
+        このクラスと `TextContent` は表面的には似ていますが、異なります。
 
     Attributes:
-        text: The text content represented by this instance.
-        type: The type of content, which is always "text_reasoning" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+        text: このインスタンスが表すテキストコンテンツ。
+        type: コンテンツのタイプ。このクラスでは常に "text_reasoning" です。
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: コンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import TextReasoningContent
 
-            # Create reasoning content
+            # 推論コンテンツを作成
             reasoning = TextReasoningContent(text="Let me think step by step...")
             print(reasoning.text)  # "Let me think step by step..."
 
-            # Concatenate reasoning content
+            # 推論コンテンツを連結
             reasoning1 = TextReasoningContent(text="First, ")
             reasoning2 = TextReasoningContent(text="second, ")
             combined = reasoning1 + reasoning2
             print(combined.text)  # "First, second, "
+
     """
 
     def __init__(
@@ -796,16 +814,17 @@ class TextReasoningContent(BaseContent):
         annotations: list[Annotations | MutableMapping[str, Any]] | None = None,
         **kwargs: Any,
     ):
-        """Initializes a TextReasoningContent instance.
+        """TextReasoningContent インスタンスを初期化します。
 
         Args:
-            text: The text content represented by this instance.
+            text: このインスタンスが表すテキストコンテンツ。
 
         Keyword Args:
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            annotations: Optional annotations associated with the content.
-            **kwargs: Any additional keyword arguments.
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            **kwargs: その他の追加キーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -817,18 +836,19 @@ class TextReasoningContent(BaseContent):
         self.type: Literal["text_reasoning"] = "text_reasoning"
 
     def __add__(self, other: "TextReasoningContent") -> "TextReasoningContent":
-        """Concatenate two TextReasoningContent instances.
+        """2つの TextReasoningContent インスタンスを連結します。
 
-        The following things happen:
-        The text is concatenated.
-        The annotations are combined.
-        The additional properties are merged, with the values of shared keys of the first instance taking precedence.
-        The raw_representations are combined into a list of them, if they both have one.
+        以下の処理が行われます:
+        テキストが連結されます。
+        注釈が結合されます。
+        追加プロパティがマージされ、共有キーの値は最初のインスタンスのものが優先されます。
+        両方に raw_representation がある場合は、それらがリストにまとめられます。
+
         """
         if not isinstance(other, TextReasoningContent):
             raise TypeError("Incompatible type")
 
-        # Merge raw representations
+        # raw_representation をマージする
         if self.raw_representation is None:
             raw_representation = other.raw_representation
         elif other.raw_representation is None:
@@ -838,7 +858,7 @@ class TextReasoningContent(BaseContent):
                 self.raw_representation if isinstance(self.raw_representation, list) else [self.raw_representation]
             ) + (other.raw_representation if isinstance(other.raw_representation, list) else [other.raw_representation])
 
-        # Merge annotations
+        # 注釈をマージする
         if self.annotations is None:
             annotations = other.annotations
         elif other.annotations is None:
@@ -846,7 +866,7 @@ class TextReasoningContent(BaseContent):
         else:
             annotations = self.annotations + other.annotations
 
-        # Create new instance using from_dict for proper deserialization
+        # 適切なデシリアライズのため from_dict を使って新しいインスタンスを作成する
         result_dict = {
             "text": self.text + other.text,
             "type": "text_reasoning",
@@ -857,30 +877,31 @@ class TextReasoningContent(BaseContent):
         return TextReasoningContent.from_dict(result_dict)
 
     def __iadd__(self, other: "TextReasoningContent") -> Self:
-        """In-place concatenation of two TextReasoningContent instances.
+        """2つの TextReasoningContent インスタンスをインプレースで連結します。
 
-        The following things happen:
-        The text is concatenated.
-        The annotations are combined.
-        The additional properties are merged, with the values of shared keys of the first instance taking precedence.
-        The raw_representations are combined into a list of them, if they both have one.
+        以下の処理が行われます:
+        テキストが連結されます。
+        注釈が結合されます。
+        追加プロパティがマージされ、共有キーの値は最初のインスタンスのものが優先されます。
+        両方に raw_representation がある場合は、それらがリストにまとめられます。
+
         """
         if not isinstance(other, TextReasoningContent):
             raise TypeError("Incompatible type")
 
-        # Concatenate text
+        # テキストを連結する
         self.text += other.text
 
-        # Merge additional properties (self takes precedence)
+        # 追加プロパティをマージする（self が優先）
         if self.additional_properties is None:
             self.additional_properties = {}
         if other.additional_properties:
-            # Update from other first, then restore self's values to maintain precedence
+            # まず他方から更新し、その後 self の値を復元して優先を維持する
             self_props = self.additional_properties.copy()
             self.additional_properties.update(other.additional_properties)
             self.additional_properties.update(self_props)
 
-        # Merge raw representations
+        # raw_representation をマージする
         if self.raw_representation is None:
             self.raw_representation = other.raw_representation
         elif other.raw_representation is not None:
@@ -888,7 +909,7 @@ class TextReasoningContent(BaseContent):
                 self.raw_representation if isinstance(self.raw_representation, list) else [self.raw_representation]
             ) + (other.raw_representation if isinstance(other.raw_representation, list) else [other.raw_representation])
 
-        # Merge annotations
+        # 注釈をマージする
         if other.annotations:
             if self.annotations is None:
                 self.annotations = []
@@ -898,37 +919,38 @@ class TextReasoningContent(BaseContent):
 
 
 class DataContent(BaseContent):
-    """Represents binary data content with an associated media type (also known as a MIME type).
+    """メディアタイプ（MIMEタイプとも呼ばれる）に関連付けられたバイナリデータコンテンツを表します。
 
     Important:
-        This is for binary data that is represented as a data URI, not for online resources.
-        Use ``UriContent`` for online resources.
+        これはデータ URI として表現されるバイナリデータ用であり、オンラインリソース用ではありません。
+        オンラインリソースには ``UriContent`` を使用してください。
 
     Attributes:
-        uri: The URI of the data represented by this instance, typically in the form of a data URI.
-            Should be in the form: "data:{media_type};base64,{base64_data}".
-        media_type: The media type of the data.
-        type: The type of content, which is always "data" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+        uri: このインスタンスが表すデータの URI。通常はデータ URI の形式です。
+            形式は "data:{media_type};base64,{base64_data}" の形であるべきです。
+        media_type: データのメディアタイプ。
+        type: コンテンツのタイプ。このクラスでは常に "data" です。
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: コンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import DataContent
 
-            # Create from binary data
+            # バイナリデータから作成
             image_data = b"raw image bytes"
             data_content = DataContent(data=image_data, media_type="image/png")
 
-            # Create from data URI
+            # データ URI から作成
             data_uri = "data:image/png;base64,iVBORw0KGgoAAAANS..."
             data_content = DataContent(uri=data_uri)
 
-            # Check media type
+            # メディアタイプをチェック
             if data_content.has_top_level_media_type("image"):
                 print("This is an image")
+
     """
 
     @overload
@@ -941,19 +963,20 @@ class DataContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a DataContent instance with a URI.
+        """URIを使ってDataContentインスタンスを初期化します。
 
-        Important:
-            This is for binary data that is represented as a data URI, not for online resources.
-            Use ``UriContent`` for online resources.
+        重要:
+            これはデータURIとして表現されるバイナリデータ用であり、オンラインリソース用ではありません。
+            オンラインリソースには``UriContent``を使用してください。
 
-        Keyword Args:
-            uri: The URI of the data represented by this instance.
-                Should be in the form: "data:{media_type};base64,{base64_data}".
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            uri: このインスタンスが表すデータのURI。
+                形式は "data:{media_type};base64,{base64_data}" であるべきです。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
 
     @overload
@@ -967,20 +990,21 @@ class DataContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a DataContent instance with binary data.
+        """バイナリデータを使ってDataContentインスタンスを初期化します。
 
-        Important:
-            This is for binary data that is represented as a data URI, not for online resources.
-            Use ``UriContent`` for online resources.
+        重要:
+            これはデータURIとして表現されるバイナリデータ用であり、オンラインリソース用ではありません。
+            オンラインリソースには``UriContent``を使用してください。
 
-        Keyword Args:
-            data: The binary data represented by this instance.
-                The data is transformed into a base64-encoded data URI.
-            media_type: The media type of the data.
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            data: このインスタンスが表すバイナリデータ。
+                データはbase64エンコードされたデータURIに変換されます。
+            media_type: データのメディアタイプ。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
 
     def __init__(
@@ -994,29 +1018,30 @@ class DataContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a DataContent instance.
+        """DataContentインスタンスを初期化します。
 
-        Important:
-            This is for binary data that is represented as a data URI, not for online resources.
-            Use ``UriContent`` for online resources.
+        重要:
+            これはデータURIとして表現されるバイナリデータ用であり、オンラインリソース用ではありません。
+            オンラインリソースには``UriContent``を使用してください。
 
-        Keyword Args:
-            uri: The URI of the data represented by this instance.
-                Should be in the form: "data:{media_type};base64,{base64_data}".
-            data: The binary data represented by this instance.
-                The data is transformed into a base64-encoded data URI.
-            media_type: The media type of the data.
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            uri: このインスタンスが表すデータのURI。
+                形式は "data:{media_type};base64,{base64_data}" であるべきです。
+            data: このインスタンスが表すバイナリデータ。
+                データはbase64エンコードされたデータURIに変換されます。
+            media_type: データのメディアタイプ。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         if uri is None:
             if data is None or media_type is None:
                 raise ValueError("Either 'data' and 'media_type' or 'uri' must be provided.")
             uri = f"data:{media_type};base64,{base64.b64encode(data).decode('utf-8')}"
 
-        # Validate URI format and extract media type if not provided
+        # URI形式を検証し、media_typeが提供されていない場合は抽出します
         validated_uri = self._validate_uri(uri)
         if media_type is None:
             match = URI_PATTERN.match(validated_uri)
@@ -1035,9 +1060,10 @@ class DataContent(BaseContent):
 
     @classmethod
     def _validate_uri(cls, uri: str) -> str:
-        """Validates the URI format and extracts the media type.
+        """URI形式を検証し、media_typeを抽出します。
 
-        Minimal data URI parser based on RFC 2397: https://datatracker.ietf.org/doc/html/rfc2397.
+        RFC 2397に基づく最小限のデータURIパーサー: https://datatracker.ietf.org/doc/html/rfc2397。
+
         """
         match = URI_PATTERN.match(uri)
         if not match:
@@ -1052,40 +1078,41 @@ class DataContent(BaseContent):
 
 
 class UriContent(BaseContent):
-    """Represents a URI content.
+    """URIコンテンツを表します。
 
-    Important:
-        This is used for content that is identified by a URI, such as an image or a file.
-        For (binary) data URIs, use ``DataContent`` instead.
+    重要:
+        これは画像やファイルなど、URIで識別されるコンテンツに使用されます。
+        （バイナリ）データURIの場合は、代わりに``DataContent``を使用してください。
 
-    Attributes:
-        uri: The URI of the content, e.g., 'https://example.com/image.png'.
-        media_type: The media type of the content, e.g., 'image/png', 'application/json', etc.
-        type: The type of content, which is always "uri" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+    属性:
+        uri: コンテンツのURI、例: 'https://example.com/image.png'。
+        media_type: コンテンツのメディアタイプ、例: 'image/png', 'application/json'など。
+        type: コンテンツのタイプで、このクラスでは常に"uri"です。
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: コンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import UriContent
 
-            # Create URI content for an image
+            # 画像用のURIコンテンツを作成
             image_uri = UriContent(
                 uri="https://example.com/image.png",
                 media_type="image/png",
             )
 
-            # Create URI content for a document
+            # ドキュメント用のURIコンテンツを作成
             doc_uri = UriContent(
                 uri="https://example.com/document.pdf",
                 media_type="application/pdf",
             )
 
-            # Check if it's an image
+            # 画像かどうかをチェック
             if image_uri.has_top_level_media_type("image"):
                 print("This is an image URI")
+
     """
 
     def __init__(
@@ -1098,21 +1125,22 @@ class UriContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a UriContent instance.
+        """UriContentインスタンスを初期化します。
 
-        Remarks:
-            This is used for content that is identified by a URI, such as an image or a file.
-            For (binary) data URIs, use `DataContent` instead.
+        備考:
+            これは画像やファイルなど、URIで識別されるコンテンツに使用されます。
+            （バイナリ）データURIの場合は、代わりに`DataContent`を使用してください。
 
-        Args:
-            uri: The URI of the content.
-            media_type: The media type of the content.
+        引数:
+            uri: コンテンツのURI。
+            media_type: コンテンツのメディアタイプ。
 
-        Keyword Args:
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -1125,11 +1153,12 @@ class UriContent(BaseContent):
         self.type: Literal["uri"] = "uri"
 
     def has_top_level_media_type(self, top_level_media_type: Literal["application", "audio", "image", "text"]) -> bool:
-        """Returns a boolean indicating if the media type has the specified top-level media type.
+        """指定されたトップレベルのメディアタイプを持つかどうかを示すブール値を返します。
 
-        Args:
-            top_level_media_type: The top-level media type to check for, allowed values:
-                "image", "text", "application", "audio".
+        引数:
+            top_level_media_type: チェックするトップレベルのメディアタイプ。許可される値:
+                "image", "text", "application", "audio"。
+
 
         """
         return _has_top_level_media_type(self.media_type, top_level_media_type)
@@ -1148,27 +1177,26 @@ def _has_top_level_media_type(
 
 
 class ErrorContent(BaseContent):
-    """Represents an error.
+    """エラーを表します。
 
-    Remarks:
-        Typically used for non-fatal errors, where something went wrong as part of the operation,
-        but the operation was still able to continue.
+    備考:
+        通常は致命的でないエラーに使用され、操作の一部で問題が発生したが、操作自体は継続可能な場合に使われます。
 
-    Attributes:
-        error_code: The error code associated with the error.
-        details: Additional details about the error.
-        message: The error message.
-        type: The type of content, which is always "error" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+    属性:
+        error_code: エラーに関連付けられたエラーコード。
+        details: エラーに関する追加の詳細。
+        message: エラーメッセージ。
+        type: コンテンツのタイプで、このクラスでは常に"error"です。
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: コンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import ErrorContent
 
-            # Create an error content
+            # エラーコンテンツを作成
             error = ErrorContent(
                 message="Failed to process request",
                 error_code="PROCESSING_ERROR",
@@ -1176,9 +1204,10 @@ class ErrorContent(BaseContent):
             )
             print(str(error))  # "Error PROCESSING_ERROR: Failed to process request"
 
-            # Error without code
+            # コードなしのエラー
             simple_error = ErrorContent(message="Something went wrong")
             print(str(simple_error))  # "Something went wrong"
+
     """
 
     def __init__(
@@ -1192,16 +1221,17 @@ class ErrorContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes an ErrorContent instance.
+        """ErrorContentインスタンスを初期化します。
 
-        Keyword Args:
-            message: The error message.
-            error_code: The error code associated with the error.
-            details: Additional details about the error.
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            message: エラーメッセージ。
+            error_code: エラーに関連付けられたエラーコード。
+            details: エラーに関する追加の詳細。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -1215,40 +1245,40 @@ class ErrorContent(BaseContent):
         self.type: Literal["error"] = "error"
 
     def __str__(self) -> str:
-        """Returns a string representation of the error."""
+        """エラーの文字列表現を返します。"""
         return f"Error {self.error_code}: {self.message}" if self.error_code else self.message or "Unknown error"
 
 
 class FunctionCallContent(BaseContent):
-    """Represents a function call request.
+    """関数呼び出しリクエストを表します。
 
-    Attributes:
-        call_id: The function call identifier.
-        name: The name of the function requested.
-        arguments: The arguments requested to be provided to the function.
-        exception: Any exception that occurred while mapping the original function call data to this representation.
-        type: The type of content, which is always "function_call" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+    属性:
+        call_id: 関数呼び出しの識別子。
+        name: 要求された関数の名前。
+        arguments: 関数に提供されることを要求された引数。
+        exception: 元の関数呼び出しデータをこの表現にマッピングする際に発生した例外。
+        type: コンテンツのタイプで、このクラスでは常に"function_call"です。
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: コンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import FunctionCallContent
 
-            # Create a function call
+            # 関数呼び出しを作成
             func_call = FunctionCallContent(
                 call_id="call_123",
                 name="get_weather",
                 arguments={"location": "Seattle", "unit": "celsius"},
             )
 
-            # Parse arguments
+            # 引数を解析
             args = func_call.parse_arguments()
             print(args["location"])  # "Seattle"
 
-            # Create with string arguments (gradual completion)
+            # 文字列引数で作成（段階的な補完）
             func_call_partial_1 = FunctionCallContent(
                 call_id="call_124",
                 name="search",
@@ -1262,6 +1292,7 @@ class FunctionCallContent(BaseContent):
             full_call = func_call_partial_1 + func_call_partial_2
             args = full_call.parse_arguments()
             print(args["query"])  # "latest news"
+
     """
 
     def __init__(
@@ -1276,18 +1307,19 @@ class FunctionCallContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a FunctionCallContent instance.
+        """FunctionCallContentインスタンスを初期化します。
 
-        Keyword Args:
-            call_id: The function call identifier.
-            name: The name of the function requested.
-            arguments: The arguments requested to be provided to the function,
-                can be a string to allow gradual completion of the args.
-            exception: Any exception that occurred while mapping the original function call data to this representation.
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            call_id: 関数呼び出しの識別子。
+            name: 要求された関数の名前。
+            arguments: 関数に提供されることを要求された引数。
+                引数の段階的な補完を許可するために文字列であることも可能です。
+            exception: 元の関数呼び出しデータをこの表現にマッピングする際に発生した例外。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -1302,13 +1334,14 @@ class FunctionCallContent(BaseContent):
         self.type: Literal["function_call"] = "function_call"
 
     def parse_arguments(self) -> dict[str, Any | None] | None:
-        """Parse the arguments into a dictionary.
+        """引数を辞書に解析します。
 
-        If they cannot be parsed as json or if the resulting json is not a dict,
-        they are returned as a dictionary with a single key "raw".
+        JSONとして解析できない場合、または解析結果が辞書でない場合は、
+        "raw"という単一のキーを持つ辞書として返されます。
+
         """
         if isinstance(self.arguments, str):
-            # If arguments are a string, try to parse it as JSON
+            # 引数が文字列の場合、JSONとして解析を試みます
             try:
                 loaded = json.loads(self.arguments)
                 if isinstance(loaded, dict):
@@ -1344,34 +1377,35 @@ class FunctionCallContent(BaseContent):
 
 
 class FunctionResultContent(BaseContent):
-    """Represents the result of a function call.
+    """関数呼び出しの結果を表します。
 
-    Attributes:
-        call_id: The identifier of the function call for which this is the result.
-        result: The result of the function call, or a generic error message if the function call failed.
-        exception: An exception that occurred if the function call failed.
-        type: The type of content, which is always "function_result" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+    属性:
+        call_id: この結果が対応する関数呼び出しの識別子。
+        result: 関数呼び出しの結果、または関数呼び出しが失敗した場合の一般的なエラーメッセージ。
+        exception: 関数呼び出しが失敗した場合に発生した例外。
+        type: コンテンツのタイプで、このクラスでは常に"function_result"です。
+        annotations: コンテンツに関連付けられたオプションの注釈。
+        additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+        raw_representation: コンテンツのオプションの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import FunctionResultContent
 
-            # Create a successful function result
+            # 成功した関数結果を作成
             result = FunctionResultContent(
                 call_id="call_123",
                 result={"temperature": 22, "condition": "sunny"},
             )
 
-            # Create a failed function result
+            # 失敗した関数結果を作成
             failed_result = FunctionResultContent(
                 call_id="call_124",
                 result="Function execution failed",
                 exception=ValueError("Invalid location"),
             )
+
     """
 
     def __init__(
@@ -1385,16 +1419,17 @@ class FunctionResultContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a FunctionResultContent instance.
+        """FunctionResultContentインスタンスを初期化します。
 
-        Keyword Args:
-            call_id: The identifier of the function call for which this is the result.
-            result: The result of the function call, or a generic error message if the function call failed.
-            exception: An exception that occurred if the function call failed.
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            call_id: この結果が対応する関数呼び出しの識別子。
+            result: 関数呼び出しの結果、または関数呼び出しが失敗した場合の一般的なエラーメッセージ。
+            exception: 関数呼び出しが失敗した場合に発生した例外。
+            annotations: コンテンツに関連付けられたオプションの注釈。
+            additional_properties: コンテンツに関連付けられたオプションの追加プロパティ。
+            raw_representation: コンテンツのオプションの生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -1409,21 +1444,21 @@ class FunctionResultContent(BaseContent):
 
 
 class UsageContent(BaseContent):
-    """Represents usage information associated with a chat request and response.
+    """チャットのRequestとResponseに関連する使用情報を表します。
 
     Attributes:
-        details: The usage information, including input and output token counts, and any additional counts.
-        type: The type of content, which is always "usage" for this class.
-        annotations: Optional annotations associated with the content.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+        details: 入力および出力のToken数やその他のカウントを含む使用情報。
+        type: コンテンツの種類で、このClassでは常に"usage"です。
+        annotations: コンテンツに関連付けられた任意の注釈。
+        additional_properties: コンテンツに関連付けられた任意の追加プロパティ。
+        raw_representation: コンテンツの任意の生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import UsageContent, UsageDetails
 
-            # Create usage content
+            # 使用コンテンツを作成
             usage = UsageContent(
                 details=UsageDetails(
                     input_token_count=100,
@@ -1432,6 +1467,7 @@ class UsageContent(BaseContent):
                 ),
             )
             print(usage.details.total_token_count)  # 150
+
     """
 
     def __init__(
@@ -1443,14 +1479,14 @@ class UsageContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a UsageContent instance."""
+        """UsageContentインスタンスを初期化します。"""
         super().__init__(
             annotations=annotations,
             additional_properties=additional_properties,
             raw_representation=raw_representation,
             **kwargs,
         )
-        # Convert dict to UsageDetails if needed
+        # 必要に応じてdictをUsageDetailsに変換します。
         if isinstance(details, MutableMapping):
             details = UsageDetails.from_dict(details)
         self.details = details
@@ -1458,22 +1494,23 @@ class UsageContent(BaseContent):
 
 
 class HostedFileContent(BaseContent):
-    """Represents a hosted file content.
+    """ホストされたファイルコンテンツを表します。
 
     Attributes:
-        file_id: The identifier of the hosted file.
-        type: The type of content, which is always "hosted_file" for this class.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+        file_id: ホストされたファイルの識別子。
+        type: コンテンツの種類で、このClassでは常に"hosted_file"です。
+        additional_properties: コンテンツに関連付けられた任意の追加プロパティ。
+        raw_representation: コンテンツの任意の生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import HostedFileContent
 
-            # Create hosted file content
+            # ホストされたファイルコンテンツを作成
             file_content = HostedFileContent(file_id="file-abc123")
             print(file_content.file_id)  # "file-abc123"
+
     """
 
     def __init__(
@@ -1484,15 +1521,16 @@ class HostedFileContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a HostedFileContent instance.
+        """HostedFileContentインスタンスを初期化します。
 
         Args:
-            file_id: The identifier of the hosted file.
+            file_id: ホストされたファイルの識別子。
 
         Keyword Args:
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+            additional_properties: コンテンツに関連付けられた任意の追加プロパティ。
+            raw_representation: コンテンツの任意の生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         super().__init__(
             additional_properties=additional_properties,
@@ -1504,22 +1542,23 @@ class HostedFileContent(BaseContent):
 
 
 class HostedVectorStoreContent(BaseContent):
-    """Represents a hosted vector store content.
+    """ホストされたベクターストアコンテンツを表します。
 
     Attributes:
-        vector_store_id: The identifier of the hosted vector store.
-        type: The type of content, which is always "hosted_vector_store" for this class.
-        additional_properties: Optional additional properties associated with the content.
-        raw_representation: Optional raw representation of the content.
+        vector_store_id: ホストされたベクターストアの識別子。
+        type: コンテンツの種類で、このClassでは常に"hosted_vector_store"です。
+        additional_properties: コンテンツに関連付けられた任意の追加プロパティ。
+        raw_representation: コンテンツの任意の生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import HostedVectorStoreContent
 
-            # Create hosted vector store content
+            # ホストされたベクターストアコンテンツを作成
             vs_content = HostedVectorStoreContent(vector_store_id="vs-xyz789")
             print(vs_content.vector_store_id)  # "vs-xyz789"
+
     """
 
     def __init__(
@@ -1530,15 +1569,16 @@ class HostedVectorStoreContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a HostedVectorStoreContent instance.
+        """HostedVectorStoreContentインスタンスを初期化します。
 
         Args:
-            vector_store_id: The identifier of the hosted vector store.
+            vector_store_id: ホストされたベクターストアの識別子。
 
         Keyword Args:
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+            additional_properties: コンテンツに関連付けられた任意の追加プロパティ。
+            raw_representation: コンテンツの任意の生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         super().__init__(
             additional_properties=additional_properties,
@@ -1550,7 +1590,7 @@ class HostedVectorStoreContent(BaseContent):
 
 
 class BaseUserInputRequest(BaseContent):
-    """Base class for all user requests."""
+    """すべてのユーザーRequestの基底Classです。"""
 
     def __init__(
         self,
@@ -1561,14 +1601,15 @@ class BaseUserInputRequest(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize BaseUserInputRequest.
+        """BaseUserInputRequestを初期化します。
 
         Keyword Args:
-            id: The unique identifier for the request.
-            annotations: Optional annotations associated with the content.
-            additional_properties: Optional additional properties associated with the content.
-            raw_representation: Optional raw representation of the content.
-            **kwargs: Any additional keyword arguments.
+            id: Requestの一意識別子。
+            annotations: コンテンツに関連付けられた任意の注釈。
+            additional_properties: コンテンツに関連付けられた任意の追加プロパティ。
+            raw_representation: コンテンツの任意の生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
         """
         if not id or len(id) < 1:
             raise ValueError("id must be at least 1 character long")
@@ -1583,14 +1624,14 @@ class BaseUserInputRequest(BaseContent):
 
 
 class FunctionApprovalResponseContent(BaseContent):
-    """Represents a response for user approval of a function call.
+    """関数呼び出しのユーザー承認に対するResponseを表します。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import FunctionApprovalResponseContent, FunctionCallContent
 
-            # Create a function approval response
+            # 関数承認Responseを作成
             func_call = FunctionCallContent(
                 call_id="call_123",
                 name="send_email",
@@ -1602,6 +1643,7 @@ class FunctionApprovalResponseContent(BaseContent):
                 function_call=func_call,
             )
             print(response.approved)  # False
+
     """
 
     def __init__(
@@ -1615,18 +1657,19 @@ class FunctionApprovalResponseContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a FunctionApprovalResponseContent instance.
+        """FunctionApprovalResponseContentインスタンスを初期化します。
 
         Args:
-            approved: Whether the function call was approved.
+            approved: 関数呼び出しが承認されたかどうか。
 
         Keyword Args:
-            id: The unique identifier for the request.
-            function_call: The function call content to be approved. Can be a FunctionCallContent object or dict.
-            annotations: Optional list of annotations for the request.
-            additional_properties: Optional additional properties for the request.
-            raw_representation: Optional raw representation of the request.
-            **kwargs: Additional keyword arguments.
+            id: Requestの一意識別子。
+            function_call: 承認対象の関数呼び出しコンテンツ。FunctionCallContentオブジェクトまたはdictで指定可能。
+            annotations: Requestに関連付けられた任意の注釈リスト。
+            additional_properties: Requestに関連付けられた任意の追加プロパティ。
+            raw_representation: Requestの任意の生の表現。
+            **kwargs: その他のキーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -1636,24 +1679,24 @@ class FunctionApprovalResponseContent(BaseContent):
         )
         self.id = id
         self.approved = approved
-        # Convert dict to FunctionCallContent if needed (for SerializationMixin support)
+        # 必要に応じてdictをFunctionCallContentに変換します（SerializationMixin対応）。
         if isinstance(function_call, MutableMapping):
             self.function_call = FunctionCallContent.from_dict(function_call)
         else:
             self.function_call = function_call
-        # Override the type for this specific subclass
+        # この特定のサブクラスのtypeをオーバーライドします。
         self.type: Literal["function_approval_response"] = "function_approval_response"
 
 
 class FunctionApprovalRequestContent(BaseContent):
-    """Represents a request for user approval of a function call.
+    """関数呼び出しのユーザー承認Requestを表します。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import FunctionApprovalRequestContent, FunctionCallContent
 
-            # Create a function approval request
+            # 関数承認Requestを作成
             func_call = FunctionCallContent(
                 call_id="call_123",
                 name="send_email",
@@ -1664,9 +1707,10 @@ class FunctionApprovalRequestContent(BaseContent):
                 function_call=func_call,
             )
 
-            # Create response
+            # Responseを作成
             approval_response = approval_request.create_response(approved=True)
             print(approval_response.approved)  # True
+
     """
 
     def __init__(
@@ -1679,15 +1723,16 @@ class FunctionApprovalRequestContent(BaseContent):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a FunctionApprovalRequestContent instance.
+        """FunctionApprovalRequestContentインスタンスを初期化します。
 
         Keyword Args:
-            id: The unique identifier for the request.
-            function_call: The function call content to be approved. Can be a FunctionCallContent object or dict.
-            annotations: Optional list of annotations for the request.
-            additional_properties: Optional additional properties for the request.
-            raw_representation: Optional raw representation of the request.
-            **kwargs: Additional keyword arguments.
+            id: Requestの一意識別子。
+            function_call: 承認対象の関数呼び出しコンテンツ。FunctionCallContentオブジェクトまたはdictで指定可能。
+            annotations: Requestに関連付けられた任意の注釈リスト。
+            additional_properties: Requestに関連付けられた任意の追加プロパティ。
+            raw_representation: Requestの任意の生の表現。
+            **kwargs: その他のキーワード引数。
+
         """
         super().__init__(
             annotations=annotations,
@@ -1696,16 +1741,16 @@ class FunctionApprovalRequestContent(BaseContent):
             **kwargs,
         )
         self.id = id
-        # Convert dict to FunctionCallContent if needed (for SerializationMixin support)
+        # 必要に応じてdictをFunctionCallContentに変換します（SerializationMixin対応）。
         if isinstance(function_call, MutableMapping):
             self.function_call = FunctionCallContent.from_dict(function_call)
         else:
             self.function_call = function_call
-        # Override the type for this specific subclass
+        # この特定のサブクラスのtypeをオーバーライドします。
         self.type: Literal["function_approval_request"] = "function_approval_request"
 
     def create_response(self, approved: bool) -> "FunctionApprovalResponseContent":
-        """Create a response for the function approval request."""
+        """関数承認Requestに対するResponseを作成します。"""
         return FunctionApprovalResponseContent(
             approved,
             id=self.id,
@@ -1734,7 +1779,7 @@ Contents = (
 
 def _prepare_function_call_results_as_dumpable(content: Contents | Any | list[Contents | Any]) -> Any:
     if isinstance(content, list):
-        # Particularly deal with lists of Content
+        # 特にContentのリストを処理します。
         return [_prepare_function_call_results_as_dumpable(item) for item in content]
     if isinstance(content, dict):
         return {k: _prepare_function_call_results_as_dumpable(v) for k, v in content.items()}
@@ -1744,15 +1789,15 @@ def _prepare_function_call_results_as_dumpable(content: Contents | Any | list[Co
 
 
 def prepare_function_call_results(content: Contents | Any | list[Contents | Any]) -> str:
-    """Prepare the values of the function call results."""
+    """関数呼び出し結果の値を準備します。"""
     if isinstance(content, Contents):
-        # For BaseContent objects, use to_dict and serialize to JSON
+        # BaseContentオブジェクトの場合、to_dictを使いJSONにシリアライズします。
         return json.dumps(content.to_dict(exclude={"raw_representation", "additional_properties"}))
 
     dumpable = _prepare_function_call_results_as_dumpable(content)
     if isinstance(dumpable, str):
         return dumpable
-    # fallback
+    # フォールバック
     return json.dumps(dumpable)
 
 
@@ -1760,37 +1805,38 @@ def prepare_function_call_results(content: Contents | Any | list[Contents | Any]
 
 
 class Role(SerializationMixin, metaclass=EnumLike):
-    """Describes the intended purpose of a message within a chat interaction.
+    """チャット対話内のメッセージの意図された役割を表します。
 
     Attributes:
-        value: The string representation of the role.
+        value: 役割の文字列表現。
 
     Properties:
-        SYSTEM: The role that instructs or sets the behavior of the AI system.
-        USER: The role that provides user input for chat interactions.
-        ASSISTANT: The role that provides responses to system-instructed, user-prompted input.
-        TOOL: The role that provides additional information and references in response to tool use requests.
+        SYSTEM: AIシステムの動作を指示または設定する役割。
+        USER: チャット対話に対するユーザー入力を提供する役割。
+        ASSISTANT: システム指示やユーザープロンプトに応答する役割。
+        TOOL: ツール使用要求に応じて追加情報や参照を提供する役割。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import Role
 
-            # Use predefined role constants
+            # 定義済み役割定数を使用
             system_role = Role.SYSTEM
             user_role = Role.USER
             assistant_role = Role.ASSISTANT
             tool_role = Role.TOOL
 
-            # Create custom role
+            # カスタム役割を作成
             custom_role = Role(value="custom")
 
-            # Compare roles
+            # 役割を比較
             print(system_role == Role.SYSTEM)  # True
             print(system_role.value)  # "system"
+
     """
 
-    # Constants configuration for EnumLike metaclass
+    # EnumLikeメタクラスの定数設定
     _constants: ClassVar[dict[str, str]] = {
         "SYSTEM": "system",
         "USER": "user",
@@ -1798,62 +1844,64 @@ class Role(SerializationMixin, metaclass=EnumLike):
         "TOOL": "tool",
     }
 
-    # Type annotations for constants
+    # 定数の型注釈
     SYSTEM: "Role"
     USER: "Role"
     ASSISTANT: "Role"
     TOOL: "Role"
 
     def __init__(self, value: str) -> None:
-        """Initialize Role with a value.
+        """Roleを値で初期化します。
 
         Args:
-            value: The string representation of the role.
+            value: 役割の文字列表現。
+
         """
         self.value = value
 
     def __str__(self) -> str:
-        """Returns the string representation of the role."""
+        """役割の文字列表現を返します。"""
         return self.value
 
     def __repr__(self) -> str:
-        """Returns the string representation of the role."""
+        """役割の文字列表現を返します。"""
         return f"Role(value={self.value!r})"
 
     def __eq__(self, other: object) -> bool:
-        """Check if two Role instances are equal."""
+        """2つのRoleインスタンスが等しいかどうかをチェックします。"""
         if not isinstance(other, Role):
             return False
         return self.value == other.value
 
     def __hash__(self) -> int:
-        """Return hash of the Role for use in sets and dicts."""
+        """セットやdictでの使用のためRoleのハッシュ値を返します。"""
         return hash(self.value)
 
 
 class FinishReason(SerializationMixin, metaclass=EnumLike):
-    """Represents the reason a chat response completed.
+    """チャットResponseが完了した理由を表します。
 
     Attributes:
-        value: The string representation of the finish reason.
+        value: 完了理由の文字列表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import FinishReason
 
-            # Use predefined finish reason constants
-            stop_reason = FinishReason.STOP  # Normal completion
-            length_reason = FinishReason.LENGTH  # Max tokens reached
-            tool_calls_reason = FinishReason.TOOL_CALLS  # Tool calls triggered
-            filter_reason = FinishReason.CONTENT_FILTER  # Content filter triggered
+            # 定義済み完了理由定数を使用
+            stop_reason = FinishReason.STOP  # 正常完了
+            length_reason = FinishReason.LENGTH  # 最大トークン数到達
+            tool_calls_reason = FinishReason.TOOL_CALLS  # ツール呼び出し発生
+            filter_reason = FinishReason.CONTENT_FILTER  # コンテンツフィルター発動
 
-            # Check finish reason
+            # 完了理由をチェック
             if stop_reason == FinishReason.STOP:
                 print("Response completed normally")
+
     """
 
-    # Constants configuration for EnumLike metaclass
+    # EnumLikeメタクラスの定数設定
     _constants: ClassVar[dict[str, str]] = {
         "CONTENT_FILTER": "content_filter",
         "LENGTH": "length",
@@ -1861,36 +1909,37 @@ class FinishReason(SerializationMixin, metaclass=EnumLike):
         "TOOL_CALLS": "tool_calls",
     }
 
-    # Type annotations for constants
+    # 定数の型注釈
     CONTENT_FILTER: "FinishReason"
     LENGTH: "FinishReason"
     STOP: "FinishReason"
     TOOL_CALLS: "FinishReason"
 
     def __init__(self, value: str) -> None:
-        """Initialize FinishReason with a value.
+        """FinishReasonを値で初期化します。
 
         Args:
-            value: The string representation of the finish reason.
+            value: 完了理由の文字列表現。
+
         """
         self.value = value
 
     def __eq__(self, other: object) -> bool:
-        """Check if two FinishReason instances are equal."""
+        """2つのFinishReasonインスタンスが等しいかどうかをチェックします。"""
         if not isinstance(other, FinishReason):
             return False
         return self.value == other.value
 
     def __hash__(self) -> int:
-        """Return hash of the FinishReason for use in sets and dicts."""
+        """セットやdictでの使用のためFinishReasonのハッシュ値を返します。"""
         return hash(self.value)
 
     def __str__(self) -> str:
-        """Returns the string representation of the finish reason."""
+        """完了理由の文字列表現を返します。"""
         return self.value
 
     def __repr__(self) -> str:
-        """Returns the string representation of the finish reason."""
+        """完了理由の文字列表現を返します。"""
         return f"FinishReason(value={self.value!r})"
 
 
@@ -1898,47 +1947,48 @@ class FinishReason(SerializationMixin, metaclass=EnumLike):
 
 
 class ChatMessage(SerializationMixin):
-    """Represents a chat message.
+    """チャットメッセージを表します。
 
-    Attributes:
-        role: The role of the author of the message.
-        contents: The chat message content items.
-        author_name: The name of the author of the message.
-        message_id: The ID of the chat message.
-        additional_properties: Any additional properties associated with the chat message.
-        raw_representation: The raw representation of the chat message from an underlying implementation.
+    属性:
+        role: メッセージの作成者の役割。
+        contents: チャットメッセージの内容アイテム。
+        author_name: メッセージの作成者の名前。
+        message_id: チャットメッセージのID。
+        additional_properties: チャットメッセージに関連付けられた追加のプロパティ。
+        raw_representation: 基盤となる実装からのチャットメッセージの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import ChatMessage, TextContent
 
-            # Create a message with text
+            # テキストでメッセージを作成
             user_msg = ChatMessage(role="user", text="What's the weather?")
             print(user_msg.text)  # "What's the weather?"
 
-            # Create a message with role string
+            # 役割文字列でメッセージを作成
             system_msg = ChatMessage(role="system", text="You are a helpful assistant.")
 
-            # Create a message with contents
+            # contentsでメッセージを作成
             assistant_msg = ChatMessage(
                 role="assistant",
                 contents=[TextContent(text="The weather is sunny!")],
             )
             print(assistant_msg.text)  # "The weather is sunny!"
 
-            # Serialization - to_dict and from_dict
+            # シリアライズ - to_dict と from_dict
             msg_dict = user_msg.to_dict()
             # {'type': 'chat_message', 'role': {'type': 'role', 'value': 'user'},
             #  'contents': [{'type': 'text', 'text': "What's the weather?"}], 'additional_properties': {}}
             restored_msg = ChatMessage.from_dict(msg_dict)
             print(restored_msg.text)  # "What's the weather?"
 
-            # Serialization - to_json and from_json
+            # シリアライズ - to_json と from_json
             msg_json = user_msg.to_json()
             # '{"type": "chat_message", "role": {"type": "role", "value": "user"}, "contents": [...], ...}'
             restored_from_json = ChatMessage.from_json(msg_json)
             print(restored_from_json.role.value)  # "user"
+
 
     """
 
@@ -1956,18 +2006,19 @@ class ChatMessage(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a ChatMessage with a role and text content.
+        """role とテキストコンテンツで ChatMessage を初期化します。
 
-        Args:
-            role: The role of the author of the message.
+        引数:
+            role: メッセージの作成者の役割。
 
-        Keyword Args:
-            text: The text content of the message.
-            author_name: Optional name of the author of the message.
-            message_id: Optional ID of the chat message.
-            additional_properties: Optional additional properties associated with the chat message.
-            raw_representation: Optional raw representation of the chat message.
-            **kwargs: Additional keyword arguments.
+        キーワード引数:
+            text: メッセージのテキストコンテンツ。
+            author_name: メッセージの作成者の名前（任意）。
+            message_id: チャットメッセージのID（任意）。
+            additional_properties: チャットメッセージに関連付けられた追加のプロパティ（任意）。
+            raw_representation: チャットメッセージの生の表現（任意）。
+            **kwargs: その他のキーワード引数。
+
         """
 
     @overload
@@ -1982,18 +2033,19 @@ class ChatMessage(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a ChatMessage with a role and optional contents.
+        """role とオプションの contents で ChatMessage を初期化します。
 
-        Args:
-            role: The role of the author of the message.
+        引数:
+            role: メッセージの作成者の役割。
 
-        Keyword Args:
-            contents: Optional list of BaseContent items to include in the message.
-            author_name: Optional name of the author of the message.
-            message_id: Optional ID of the chat message.
-            additional_properties: Optional additional properties associated with the chat message.
-            raw_representation: Optional raw representation of the chat message.
-            **kwargs: Additional keyword arguments.
+        キーワード引数:
+            contents: メッセージに含める BaseContent アイテムのリスト（任意）。
+            author_name: メッセージの作成者の名前（任意）。
+            message_id: チャットメッセージのID（任意）。
+            additional_properties: チャットメッセージに関連付けられた追加のプロパティ（任意）。
+            raw_representation: チャットメッセージの生の表現（任意）。
+            **kwargs: その他のキーワード引数。
+
         """
 
     def __init__(
@@ -2008,27 +2060,28 @@ class ChatMessage(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize ChatMessage.
+        """ChatMessage を初期化します。
 
-        Args:
-            role: The role of the author of the message (Role, string, or dict).
+        引数:
+            role: メッセージの作成者の役割（Role、文字列、または辞書）。
 
-        Keyword Args:
-            text: Optional text content of the message.
-            contents: Optional list of BaseContent items or dicts to include in the message.
-            author_name: Optional name of the author of the message.
-            message_id: Optional ID of the chat message.
-            additional_properties: Optional additional properties associated with the chat message.
-            raw_representation: Optional raw representation of the chat message.
-            kwargs: will be combined with additional_properties if provided.
+        キーワード引数:
+            text: メッセージのテキストコンテンツ（任意）。
+            contents: メッセージに含める BaseContent アイテムまたは辞書のリスト（任意）。
+            author_name: メッセージの作成者の名前（任意）。
+            message_id: チャットメッセージのID（任意）。
+            additional_properties: チャットメッセージに関連付けられた追加のプロパティ（任意）。
+            raw_representation: チャットメッセージの生の表現（任意）。
+            kwargs: 提供された場合、additional_properties と結合されます。
+
         """
-        # Handle role conversion
+        # role の変換を処理します
         if isinstance(role, dict):
             role = Role.from_dict(role)
         elif isinstance(role, str):
             role = Role(value=role)
 
-        # Handle contents conversion
+        # contents の変換を処理します
         parsed_contents = [] if contents is None else _parse_content_list(contents)
 
         if text is not None:
@@ -2044,10 +2097,11 @@ class ChatMessage(SerializationMixin):
 
     @property
     def text(self) -> str:
-        """Returns the text content of the message.
+        """メッセージのテキストコンテンツを返します。
 
-        Remarks:
-            This property concatenates the text of all TextContent objects in Contents.
+        備考:
+            このプロパティは Contents 内のすべての TextContent オブジェクトのテキストを連結します。
+
         """
         return " ".join(content.text for content in self.contents if isinstance(content, TextContent))
 
@@ -2058,7 +2112,7 @@ class ChatMessage(SerializationMixin):
 def _process_update(
     response: "ChatResponse | AgentRunResponse", update: "ChatResponseUpdate | AgentRunResponseUpdate"
 ) -> None:
-    """Processes a single update and modifies the response in place."""
+    """単一のアップデートを処理し、レスポンスをその場で変更します。"""
     is_new_message = False
     if (
         not response.messages
@@ -2076,7 +2130,7 @@ def _process_update(
         response.messages.append(message)
     else:
         message = response.messages[-1]
-    # Incorporate the update's properties into the message.
+    # アップデートのプロパティをメッセージに組み込みます。
     if update.author_name is not None:
         message.author_name = update.author_name
     if update.role is not None:
@@ -2105,7 +2159,7 @@ def _process_update(
                 logger.warning(f"Skipping unknown content type or invalid content: {exc}")
         else:
             message.contents.append(content)
-    # Incorporate the update's properties into the response.
+    # アップデートのプロパティをレスポンスに組み込みます。
     if update.response_id:
         response.response_id = update.response_id
     if update.created_at is not None:
@@ -2131,7 +2185,7 @@ def _process_update(
 def _coalesce_text_content(
     contents: list["Contents"], type_: type["TextContent"] | type["TextReasoningContent"]
 ) -> None:
-    """Take any subsequence Text or TextReasoningContent items and coalesce them into a single item."""
+    """任意の連続する Text または TextReasoningContent アイテムを取りまとめて単一のアイテムにします。"""
     if not contents:
         return
     coalesced_contents: list["Contents"] = []
@@ -2143,13 +2197,11 @@ def _coalesce_text_content(
             else:
                 first_new_content += content
         else:
-            # skip this content, it is not of the right type
-            # so write the existing one to the list and start a new one,
-            # once the right type is found again
+            # このコンテンツは適切なタイプではないためスキップします 既存のものをリストに書き込み、新しいものを開始します 適切なタイプが再び見つかるまで
             if first_new_content:
                 coalesced_contents.append(first_new_content)
             first_new_content = None
-            # but keep the other content in the new list
+            # しかし他のコンテンツは新しいリストに保持します
             coalesced_contents.append(content)
     if first_new_content:
         coalesced_contents.append(first_new_content)
@@ -2158,37 +2210,37 @@ def _coalesce_text_content(
 
 
 def _finalize_response(response: "ChatResponse | AgentRunResponse") -> None:
-    """Finalizes the response by performing any necessary post-processing."""
+    """必要な後処理を行いレスポンスを最終化します。"""
     for msg in response.messages:
         _coalesce_text_content(msg.contents, TextContent)
         _coalesce_text_content(msg.contents, TextReasoningContent)
 
 
 class ChatResponse(SerializationMixin):
-    """Represents the response to a chat request.
+    """チャットリクエストへのレスポンスを表します。
 
-    Attributes:
-        messages: The list of chat messages in the response.
-        response_id: The ID of the chat response.
-        conversation_id: An identifier for the state of the conversation.
-        model_id: The model ID used in the creation of the chat response.
-        created_at: A timestamp for the chat response.
-        finish_reason: The reason for the chat response.
-        usage_details: The usage details for the chat response.
-        structured_output: The structured output of the chat response, if applicable.
-        additional_properties: Any additional properties associated with the chat response.
-        raw_representation: The raw representation of the chat response from an underlying implementation.
+    属性:
+        messages: レスポンス内のチャットメッセージのリスト。
+        response_id: チャットレスポンスのID。
+        conversation_id: 会話の状態を識別するID。
+        model_id: チャットレスポンスの作成に使用されたモデルID。
+        created_at: チャットレスポンスのタイムスタンプ。
+        finish_reason: チャットレスポンスの終了理由。
+        usage_details: チャットレスポンスの使用詳細。
+        structured_output: チャットレスポンスの構造化出力（該当する場合）。
+        additional_properties: チャットレスポンスに関連付けられた追加のプロパティ。
+        raw_representation: 基盤となる実装からのチャットレスポンスの生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import ChatResponse, ChatMessage
 
-            # Create a simple text response
+            # シンプルなテキストレスポンスを作成
             response = ChatResponse(text="Hello, how can I help you?")
             print(response.text)  # "Hello, how can I help you?"
 
-            # Create a response with messages
+            # メッセージ付きのレスポンスを作成
             msg = ChatMessage(role="assistant", text="The weather is sunny.")
             response = ChatResponse(
                 messages=[msg],
@@ -2196,22 +2248,23 @@ class ChatResponse(SerializationMixin):
                 model_id="gpt-4",
             )
 
-            # Combine streaming updates
-            updates = [...]  # List of ChatResponseUpdate objects
+            # ストリーミングアップデートを結合
+            updates = [...]  # ChatResponseUpdate オブジェクトのリスト
             response = ChatResponse.from_chat_response_updates(updates)
 
-            # Serialization - to_dict and from_dict
+            # シリアライズ - to_dict と from_dict
             response_dict = response.to_dict()
             # {'type': 'chat_response', 'messages': [...], 'model_id': 'gpt-4',
             #  'finish_reason': {'type': 'finish_reason', 'value': 'stop'}}
             restored_response = ChatResponse.from_dict(response_dict)
             print(restored_response.model_id)  # "gpt-4"
 
-            # Serialization - to_json and from_json
+            # シリアライズ - to_json と from_json
             response_json = response.to_json()
             # '{"type": "chat_response", "messages": [...], "model_id": "gpt-4", ...}'
             restored_from_json = ChatResponse.from_json(response_json)
             print(restored_from_json.text)  # "The weather is sunny."
+
     """
 
     DEFAULT_EXCLUDE: ClassVar[set[str]] = {"raw_representation", "additional_properties"}
@@ -2233,22 +2286,23 @@ class ChatResponse(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a ChatResponse with the provided parameters.
+        """提供されたパラメータで ChatResponse を初期化します。
 
-        Keyword Args:
-            messages: A single ChatMessage or a sequence of ChatMessage objects to include in the response.
-            response_id: Optional ID of the chat response.
-            conversation_id: Optional identifier for the state of the conversation.
-            model_id: Optional model ID used in the creation of the chat response.
-            created_at: Optional timestamp for the chat response.
-            finish_reason: Optional reason for the chat response.
-            usage_details: Optional usage details for the chat response.
-            value: Optional value of the structured output.
-            response_format: Optional response format for the chat response.
-            messages: List of ChatMessage objects to include in the response.
-            additional_properties: Optional additional properties associated with the chat response.
-            raw_representation: Optional raw representation of the chat response from an underlying implementation.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            messages: レスポンスに含める単一の ChatMessage または ChatMessage オブジェクトのシーケンス。
+            response_id: チャットレスポンスのID（任意）。
+            conversation_id: 会話の状態を識別するID（任意）。
+            model_id: チャットレスポンスの作成に使用されたモデルID（任意）。
+            created_at: チャットレスポンスのタイムスタンプ（任意）。
+            finish_reason: チャットレスポンスの終了理由（任意）。
+            usage_details: チャットレスポンスの使用詳細（任意）。
+            value: 構造化出力の値（任意）。
+            response_format: チャットレスポンスのレスポンスフォーマット（任意）。
+            messages: レスポンスに含める ChatMessage オブジェクトのリスト。
+            additional_properties: チャットレスポンスに関連付けられた追加のプロパティ（任意）。
+            raw_representation: 基盤となる実装からのチャットレスポンスの生の表現（任意）。
+            **kwargs: その他のキーワード引数。
+
         """
 
     @overload
@@ -2268,21 +2322,22 @@ class ChatResponse(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a ChatResponse with the provided parameters.
+        """提供されたパラメータで ChatResponse を初期化します。
 
-        Keyword Args:
-            text: The text content to include in the response. If provided, it will be added as a ChatMessage.
-            response_id: Optional ID of the chat response.
-            conversation_id: Optional identifier for the state of the conversation.
-            model_id: Optional model ID used in the creation of the chat response.
-            created_at: Optional timestamp for the chat response.
-            finish_reason: Optional reason for the chat response.
-            usage_details: Optional usage details for the chat response.
-            value: Optional value of the structured output.
-            response_format: Optional response format for the chat response.
-            additional_properties: Optional additional properties associated with the chat response.
-            raw_representation: Optional raw representation of the chat response from an underlying implementation.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            text: レスポンスに含めるテキストコンテンツ。提供された場合、ChatMessage として追加されます。
+            response_id: チャットレスポンスのID（任意）。
+            conversation_id: 会話の状態を識別するID（任意）。
+            model_id: チャットレスポンスの作成に使用されたモデルID（任意）。
+            created_at: チャットレスポンスのタイムスタンプ（任意）。
+            finish_reason: チャットレスポンスの終了理由（任意）。
+            usage_details: チャットレスポンスの使用詳細（任意）。
+            value: 構造化出力の値（任意）。
+            response_format: チャットレスポンスのレスポンスフォーマット（任意）。
+            additional_properties: チャットレスポンスに関連付けられた追加のプロパティ（任意）。
+            raw_representation: 基盤となる実装からのチャットレスポンスの生の表現（任意）。
+            **kwargs: その他のキーワード引数。
+
 
         """
 
@@ -2303,30 +2358,31 @@ class ChatResponse(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a ChatResponse with the provided parameters.
+        """提供されたパラメータで ChatResponse を初期化します。
 
-        Keyword Args:
-            messages: A single ChatMessage or a sequence of ChatMessage objects to include in the response.
-            text: The text content to include in the response. If provided, it will be added as a ChatMessage.
-            response_id: Optional ID of the chat response.
-            conversation_id: Optional identifier for the state of the conversation.
-            model_id: Optional model ID used in the creation of the chat response.
-            created_at: Optional timestamp for the chat response.
-            finish_reason: Optional reason for the chat response.
-            usage_details: Optional usage details for the chat response.
-            value: Optional value of the structured output.
-            response_format: Optional response format for the chat response.
-            additional_properties: Optional additional properties associated with the chat response.
-            raw_representation: Optional raw representation of the chat response from an underlying implementation.
-            **kwargs: Any additional keyword arguments.
+        キーワード引数:
+            messages: レスポンスに含める単一の ChatMessage または ChatMessage オブジェクトのシーケンス。
+            text: レスポンスに含めるテキストコンテンツ。提供された場合、ChatMessage として追加されます。
+            response_id: チャットレスポンスのID（任意）。
+            conversation_id: 会話の状態を識別するID（任意）。
+            model_id: チャットレスポンスの作成に使用されたモデルID（任意）。
+            created_at: チャットレスポンスのタイムスタンプ（任意）。
+            finish_reason: チャットレスポンスの終了理由（任意）。
+            usage_details: チャットレスポンスの使用詳細（任意）。
+            value: 構造化出力の値（任意）。
+            response_format: チャットレスポンスのレスポンスフォーマット（任意）。
+            additional_properties: チャットレスポンスに関連付けられた追加のプロパティ（任意）。
+            raw_representation: 基盤となる実装からのチャットレスポンスの生の表現（任意）。
+            **kwargs: その他のキーワード引数。
+
         """
-        # Handle messages conversion
+        # messages の変換を処理します
         if messages is None:
             messages = []
         elif not isinstance(messages, MutableSequence):
             messages = [messages]
         else:
-            # Convert any dicts in messages list to ChatMessage objects
+            # messages リスト内の辞書を ChatMessage オブジェクトに変換します
             converted_messages: list[ChatMessage] = []
             for msg in messages:
                 if isinstance(msg, dict):
@@ -2340,11 +2396,11 @@ class ChatResponse(SerializationMixin):
                 text = TextContent(text=text)
             messages.append(ChatMessage(role=Role.ASSISTANT, contents=[text]))
 
-        # Handle finish_reason conversion
+        # finish_reason の変換を処理します
         if isinstance(finish_reason, dict):
             finish_reason = FinishReason.from_dict(finish_reason)
 
-        # Handle usage_details conversion
+        # usage_details の変換を処理します
         if isinstance(usage_details, dict):
             usage_details = UsageDetails.from_dict(usage_details)
 
@@ -2370,28 +2426,28 @@ class ChatResponse(SerializationMixin):
         *,
         output_format_type: type[BaseModel] | None = None,
     ) -> TChatResponse:
-        """Joins multiple updates into a single ChatResponse.
+        """複数の更新を1つのChatResponseに結合します。
 
         Example:
             .. code-block:: python
 
                 from agent_framework import ChatResponse, ChatResponseUpdate
 
-                # Create some response updates
+                # いくつかのresponse更新を作成
                 updates = [
                     ChatResponseUpdate(role="assistant", text="Hello"),
                     ChatResponseUpdate(text=" How can I help you?"),
                 ]
 
-                # Combine updates into a single ChatResponse
+                # 更新を1つのChatResponseに結合
                 response = ChatResponse.from_chat_response_updates(updates)
                 print(response.text)  # "Hello How can I help you?"
 
         Args:
-            updates: A sequence of ChatResponseUpdate objects to combine.
+            updates: 結合するChatResponseUpdateオブジェクトのシーケンス。
 
         Keyword Args:
-            output_format_type: Optional Pydantic model type to parse the response text into structured data.
+            output_format_type: レスポンステキストを構造化データに解析するためのOptionalなPydanticモデルタイプ。
         """
         msg = cls(messages=[])
         for update in updates:
@@ -2408,24 +2464,24 @@ class ChatResponse(SerializationMixin):
         *,
         output_format_type: type[BaseModel] | None = None,
     ) -> TChatResponse:
-        """Joins multiple updates into a single ChatResponse.
+        """複数の更新を1つのChatResponseに結合します。
 
         Example:
             .. code-block:: python
 
                 from agent_framework import ChatResponse, ChatResponseUpdate, ChatClient
 
-                client = ChatClient()  # should be a concrete implementation
+                client = ChatClient()  # 具体的な実装であるべき
                 response = await ChatResponse.from_chat_response_generator(
                     client.get_streaming_response("Hello, how are you?")
                 )
                 print(response.text)
 
         Args:
-            updates: An async iterable of ChatResponseUpdate objects to combine.
+            updates: 結合するChatResponseUpdateオブジェクトの非同期イテラブル。
 
         Keyword Args:
-            output_format_type: Optional Pydantic model type to parse the response text into structured data.
+            output_format_type: レスポンステキストを構造化データに解析するためのOptionalなPydanticモデルタイプ。
         """
         msg = cls(messages=[])
         async for update in updates:
@@ -2437,14 +2493,14 @@ class ChatResponse(SerializationMixin):
 
     @property
     def text(self) -> str:
-        """Returns the concatenated text of all messages in the response."""
+        """レスポンス内のすべてのメッセージの連結されたテキストを返します。"""
         return ("\n".join(message.text for message in self.messages if isinstance(message, ChatMessage))).strip()
 
     def __str__(self) -> str:
         return self.text
 
     def try_parse_value(self, output_format_type: type[BaseModel]) -> None:
-        """If there is a value, does nothing, otherwise tries to parse the text into the value."""
+        """値が存在する場合は何もしません。そうでなければテキストを値に解析しようとします。"""
         if self.value is None:
             try:
                 self.value = output_format_type.model_validate_json(self.text)  # type: ignore[reportUnknownMemberType]
@@ -2456,27 +2512,27 @@ class ChatResponse(SerializationMixin):
 
 
 class ChatResponseUpdate(SerializationMixin):
-    """Represents a single streaming response chunk from a `ChatClient`.
+    """`ChatClient`からの単一のストリーミングレスポンスチャンクを表します。
 
     Attributes:
-        contents: The chat response update content items.
-        role: The role of the author of the response update.
-        author_name: The name of the author of the response update.
-        response_id: The ID of the response of which this update is a part.
-        message_id: The ID of the message of which this update is a part.
-        conversation_id: An identifier for the state of the conversation of which this update is a part.
-        model_id: The model ID associated with this response update.
-        created_at: A timestamp for the chat response update.
-        finish_reason: The finish reason for the operation.
-        additional_properties: Any additional properties associated with the chat response update.
-        raw_representation: The raw representation of the chat response update from an underlying implementation.
+        contents: チャットレスポンス更新のコンテンツ項目。
+        role: レスポンス更新の作成者の役割。
+        author_name: レスポンス更新の作成者の名前。
+        response_id: この更新が属するレスポンスのID。
+        message_id: この更新が属するメッセージのID。
+        conversation_id: この更新が属する会話の状態を識別するID。
+        model_id: このレスポンス更新に関連付けられたモデルID。
+        created_at: チャットレスポンス更新のタイムスタンプ。
+        finish_reason: 操作の終了理由。
+        additional_properties: チャットレスポンス更新に関連付けられた追加のプロパティ。
+        raw_representation: 基盤となる実装からのチャットレスポンス更新の生の表現。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import ChatResponseUpdate, TextContent
 
-            # Create a response update
+            # レスポンス更新を作成
             update = ChatResponseUpdate(
                 contents=[TextContent(text="Hello")],
                 role="assistant",
@@ -2484,22 +2540,21 @@ class ChatResponseUpdate(SerializationMixin):
             )
             print(update.text)  # "Hello"
 
-            # Create update with text shorthand
+            # テキスト省略形で更新を作成
             update = ChatResponseUpdate(text="World!", role="assistant")
 
-            # Serialization - to_dict and from_dict
+            # シリアライズ - to_dict と from_dict
             update_dict = update.to_dict()
             # {'type': 'chat_response_update', 'contents': [{'type': 'text', 'text': 'Hello'}],
             #  'role': {'type': 'role', 'value': 'assistant'}, 'message_id': 'msg_123'}
             restored_update = ChatResponseUpdate.from_dict(update_dict)
             print(restored_update.text)  # "Hello"
 
-            # Serialization - to_json and from_json
+            # シリアライズ - to_json と from_json
             update_json = update.to_json()
             # '{"type": "chat_response_update", "contents": [{"type": "text", "text": "Hello"}], ...}'
             restored_from_json = ChatResponseUpdate.from_json(update_json)
             print(restored_from_json.message_id)  # "msg_123"
-
     """
 
     DEFAULT_EXCLUDE: ClassVar[set[str]] = {"raw_representation"}
@@ -2521,26 +2576,26 @@ class ChatResponseUpdate(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes a ChatResponseUpdate with the provided parameters.
+        """提供されたパラメータでChatResponseUpdateを初期化します。
 
         Keyword Args:
-            contents: Optional list of BaseContent items or dicts to include in the update.
-            text: Optional text content to include in the update.
-            role: Optional role of the author of the response update (Role, string, or dict
-            author_name: Optional name of the author of the response update.
-            response_id: Optional ID of the response of which this update is a part.
-            message_id: Optional ID of the message of which this update is a part.
-            conversation_id: Optional identifier for the state of the conversation of which this update is a part
-            model_id: Optional model ID associated with this response update.
-            created_at: Optional timestamp for the chat response update.
-            finish_reason: Optional finish reason for the operation.
-            additional_properties: Optional additional properties associated with the chat response update.
-            raw_representation: Optional raw representation of the chat response update
-                from an underlying implementation.
-            **kwargs: Any additional keyword arguments.
+            contents: 更新に含めるOptionalなBaseContentアイテムまたは辞書のリスト。
+            text: 更新に含めるOptionalなテキストコンテンツ。
+            role: レスポンス更新の作成者のOptionalな役割（Role、文字列、または辞書）。
+            author_name: レスポンス更新の作成者のOptionalな名前。
+            response_id: この更新が属するレスポンスのOptionalなID。
+            message_id: この更新が属するメッセージのOptionalなID。
+            conversation_id: この更新が属する会話の状態を識別するOptionalなID。
+            model_id: このレスポンス更新に関連付けられたOptionalなモデルID。
+            created_at: チャットレスポンス更新のOptionalなタイムスタンプ。
+            finish_reason: 操作のOptionalな終了理由。
+            additional_properties: チャットレスポンス更新に関連付けられたOptionalな追加プロパティ。
+            raw_representation: 基盤となる実装からのチャットレスポンス更新のOptionalな生の表現。
+            **kwargs: その他の任意のキーワード引数。
+
 
         """
-        # Handle contents conversion
+        # contentsの変換を処理します
         contents = [] if contents is None else _parse_content_list(contents)
 
         if text is not None:
@@ -2548,13 +2603,13 @@ class ChatResponseUpdate(SerializationMixin):
                 text = TextContent(text=text)
             contents.append(text)
 
-        # Handle role conversion
+        # roleの変換を処理します
         if isinstance(role, dict):
             role = Role.from_dict(role)
         elif isinstance(role, str):
             role = Role(value=role)
 
-        # Handle finish_reason conversion
+        # finish_reasonの変換を処理します
         if isinstance(finish_reason, dict):
             finish_reason = FinishReason.from_dict(finish_reason)
 
@@ -2572,7 +2627,7 @@ class ChatResponseUpdate(SerializationMixin):
 
     @property
     def text(self) -> str:
-        """Returns the concatenated text of all contents in the update."""
+        """更新内のすべてのcontentsの連結されたテキストを返します。"""
         return "".join(content.text for content in self.contents if isinstance(content, TextContent))
 
     def __str__(self) -> str:
@@ -2583,38 +2638,37 @@ class ChatResponseUpdate(SerializationMixin):
 
 
 class AgentRunResponse(SerializationMixin):
-    """Represents the response to an Agent run request.
+    """Agentのrunリクエストに対するレスポンスを表します。
 
-    Provides one or more response messages and metadata about the response.
-    A typical response will contain a single message, but may contain multiple
-    messages in scenarios involving function calls, RAG retrievals, or complex logic.
+    1つ以上のレスポンスメッセージとレスポンスに関するメタデータを提供します。
+    通常のレスポンスは単一のメッセージを含みますが、関数呼び出し、RAG取得、複雑なロジックを含むシナリオでは複数のメッセージを含む場合があります。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import AgentRunResponse, ChatMessage
 
-            # Create agent response
+            # エージェントレスポンスを作成
             msg = ChatMessage(role="assistant", text="Task completed successfully.")
             response = AgentRunResponse(messages=[msg], response_id="run_123")
             print(response.text)  # "Task completed successfully."
 
-            # Access user input requests
+            # ユーザー入力リクエストにアクセス
             user_requests = response.user_input_requests
             print(len(user_requests))  # 0
 
-            # Combine streaming updates
-            updates = [...]  # List of AgentRunResponseUpdate objects
+            # ストリーミング更新を結合
+            updates = [...]  # AgentRunResponseUpdateオブジェクトのリスト
             response = AgentRunResponse.from_agent_run_response_updates(updates)
 
-            # Serialization - to_dict and from_dict
+            # シリアライズ - to_dict と from_dict
             response_dict = response.to_dict()
             # {'type': 'agent_run_response', 'messages': [...], 'response_id': 'run_123',
             #  'additional_properties': {}}
             restored_response = AgentRunResponse.from_dict(response_dict)
             print(restored_response.response_id)  # "run_123"
 
-            # Serialization - to_json and from_json
+            # シリアライズ - to_json と from_json
             response_json = response.to_json()
             # '{"type": "agent_run_response", "messages": [...], "response_id": "run_123", ...}'
             restored_from_json = AgentRunResponse.from_json(response_json)
@@ -2639,17 +2693,18 @@ class AgentRunResponse(SerializationMixin):
         additional_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize an AgentRunResponse.
+        """AgentRunResponseを初期化します。
 
         Keyword Args:
-            messages: The list of chat messages in the response.
-            response_id: The ID of the chat response.
-            created_at: A timestamp for the chat response.
-            usage_details: The usage details for the chat response.
-            value: The structured output of the agent run response, if applicable.
-            additional_properties: Any additional properties associated with the chat response.
-            raw_representation: The raw representation of the chat response from an underlying implementation.
-            **kwargs: Additional properties to set on the response.
+            messages: レスポンス内のチャットメッセージのリスト。
+            response_id: チャットレスポンスのID。
+            created_at: チャットレスポンスのタイムスタンプ。
+            usage_details: チャットレスポンスの使用詳細。
+            value: 適用可能な場合のagent runレスポンスの構造化出力。
+            additional_properties: チャットレスポンスに関連付けられた追加のプロパティ。
+            raw_representation: 基盤となる実装からのチャットレスポンスの生の表現。
+            **kwargs: レスポンスに設定する追加のプロパティ。
+
         """
         processed_messages: list[ChatMessage] = []
         if messages is not None:
@@ -2666,7 +2721,7 @@ class AgentRunResponse(SerializationMixin):
             elif isinstance(messages, MutableMapping):
                 processed_messages.append(ChatMessage.from_dict(messages))
 
-        # Convert usage_details from dict if needed (for SerializationMixin support)
+        # 必要に応じてusage_detailsを辞書から変換します（SerializationMixinサポートのため）
         if isinstance(usage_details, MutableMapping):
             usage_details = UsageDetails.from_dict(usage_details)
 
@@ -2681,12 +2736,12 @@ class AgentRunResponse(SerializationMixin):
 
     @property
     def text(self) -> str:
-        """Get the concatenated text of all messages."""
+        """すべてのメッセージの連結されたテキストを取得します。"""
         return "".join(msg.text for msg in self.messages) if self.messages else ""
 
     @property
     def user_input_requests(self) -> list[UserInputRequestContents]:
-        """Get all BaseUserInputRequest messages from the response."""
+        """レスポンスからすべてのBaseUserInputRequestメッセージを取得します。"""
         return [
             content
             for msg in self.messages
@@ -2701,13 +2756,13 @@ class AgentRunResponse(SerializationMixin):
         *,
         output_format_type: type[BaseModel] | None = None,
     ) -> TAgentRunResponse:
-        """Joins multiple updates into a single AgentRunResponse.
+        """複数の更新を1つのAgentRunResponseに結合します。
 
         Args:
-            updates: A sequence of AgentRunResponseUpdate objects to combine.
+            updates: 結合するAgentRunResponseUpdateオブジェクトのシーケンス。
 
         Keyword Args:
-            output_format_type: Optional Pydantic model type to parse the response text into structured data.
+            output_format_type: レスポンステキストを構造化データに解析するためのOptionalなPydanticモデルタイプ。
         """
         msg = cls(messages=[])
         for update in updates:
@@ -2724,13 +2779,13 @@ class AgentRunResponse(SerializationMixin):
         *,
         output_format_type: type[BaseModel] | None = None,
     ) -> TAgentRunResponse:
-        """Joins multiple updates into a single AgentRunResponse.
+        """複数の更新を1つのAgentRunResponseに結合します。
 
         Args:
-            updates: An async iterable of AgentRunResponseUpdate objects to combine.
+            updates: 結合するAgentRunResponseUpdateオブジェクトの非同期イテラブル。
 
         Keyword Args:
-            output_format_type: Optional Pydantic model type to parse the response text into structured data
+            output_format_type: レスポンステキストを構造化データに解析するためのOptionalなPydanticモデルタイプ。
         """
         msg = cls(messages=[])
         async for update in updates:
@@ -2744,7 +2799,7 @@ class AgentRunResponse(SerializationMixin):
         return self.text
 
     def try_parse_value(self, output_format_type: type[BaseModel]) -> None:
-        """If there is a value, does nothing, otherwise tries to parse the text into the value."""
+        """値が存在する場合は何もしません。そうでなければテキストを値に解析しようとします。"""
         if self.value is None:
             try:
                 self.value = output_format_type.model_validate_json(self.text)  # type: ignore[reportUnknownMemberType]
@@ -2756,14 +2811,14 @@ class AgentRunResponse(SerializationMixin):
 
 
 class AgentRunResponseUpdate(SerializationMixin):
-    """Represents a single streaming response chunk from an Agent.
+    """Agentからの単一のストリーミングレスポンスチャンクを表します。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import AgentRunResponseUpdate, TextContent
 
-            # Create an agent run update
+            # エージェントラン更新を作成
             update = AgentRunResponseUpdate(
                 contents=[TextContent(text="Processing...")],
                 role="assistant",
@@ -2771,17 +2826,17 @@ class AgentRunResponseUpdate(SerializationMixin):
             )
             print(update.text)  # "Processing..."
 
-            # Check for user input requests
+            # ユーザー入力リクエストをチェック
             user_requests = update.user_input_requests
 
-            # Serialization - to_dict and from_dict
+            # シリアライズ - to_dict と from_dict
             update_dict = update.to_dict()
             # {'type': 'agent_run_response_update', 'contents': [{'type': 'text', 'text': 'Processing...'}],
             #  'role': {'type': 'role', 'value': 'assistant'}, 'response_id': 'run_123'}
             restored_update = AgentRunResponseUpdate.from_dict(update_dict)
             print(restored_update.response_id)  # "run_123"
 
-            # Serialization - to_json and from_json
+            # シリアライズ - to_json と from_json
             update_json = update.to_json()
             # '{"type": "agent_run_response_update", "contents": [{"type": "text", "text": "Processing..."}], ...}'
             restored_from_json = AgentRunResponseUpdate.from_json(update_json)
@@ -2804,19 +2859,20 @@ class AgentRunResponseUpdate(SerializationMixin):
         raw_representation: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize an AgentRunResponseUpdate.
+        """AgentRunResponseUpdateを初期化します。
 
-        Keyword Args:
-            contents: Optional list of BaseContent items or dicts to include in the update.
-            text: Optional text content of the update.
-            role: The role of the author of the response update (Role, string, or dict
-            author_name: Optional name of the author of the response update.
-            response_id: Optional ID of the response of which this update is a part.
-            message_id: Optional ID of the message of which this update is a part.
-            created_at: Optional timestamp for the chat response update.
-            additional_properties: Optional additional properties associated with the chat response update.
-            raw_representation: Optional raw representation of the chat response update.
-            kwargs: will be combined with additional_properties if provided.
+        キーワード引数:
+            contents: 更新に含めるBaseContentアイテムまたは辞書のオプションリスト。
+            text: 更新のテキストコンテンツ（オプション）。
+            role: レスポンス更新の作成者の役割（Role、文字列、または辞書）。
+            author_name: レスポンス更新の作成者名（オプション）。
+            response_id: この更新が属するレスポンスのID（オプション）。
+            message_id: この更新が属するメッセージのID（オプション）。
+            created_at: チャットレスポンス更新のタイムスタンプ（オプション）。
+            additional_properties: チャットレスポンス更新に関連付けられた追加プロパティ（オプション）。
+            raw_representation: チャットレスポンス更新の生の表現（オプション）。
+            kwargs: 提供された場合、additional_propertiesと結合されます。
+
 
         """
         parsed_contents: list[Contents] = [] if contents is None else _parse_content_list(contents)
@@ -2826,7 +2882,7 @@ class AgentRunResponseUpdate(SerializationMixin):
                 text = TextContent(text=text)
             parsed_contents.append(text)
 
-        # Convert role from dict if needed (for SerializationMixin support)
+        # 必要に応じてdictからroleを変換します（SerializationMixinのサポートのため）
         if isinstance(role, MutableMapping):
             role = Role.from_dict(role)
         elif isinstance(role, str):
@@ -2843,7 +2899,7 @@ class AgentRunResponseUpdate(SerializationMixin):
 
     @property
     def text(self) -> str:
-        """Get the concatenated text of all TextContent objects in contents."""
+        """contents内のすべてのTextContentオブジェクトの連結されたテキストを取得します。"""
         return (
             "".join(content.text for content in self.contents if isinstance(content, TextContent))
             if self.contents
@@ -2852,7 +2908,7 @@ class AgentRunResponseUpdate(SerializationMixin):
 
     @property
     def user_input_requests(self) -> list[UserInputRequestContents]:
-        """Get all BaseUserInputRequest messages from the response."""
+        """レスポンスからすべてのBaseUserInputRequestメッセージを取得します。"""
         return [content for content in self.contents if isinstance(content, UserInputRequestContents)]
 
     def __str__(self) -> str:
@@ -2863,34 +2919,35 @@ class AgentRunResponseUpdate(SerializationMixin):
 
 
 class ToolMode(SerializationMixin, metaclass=EnumLike):
-    """Defines if and how tools are used in a chat request.
+    """チャットリクエストでツールが使用されるかどうか、およびその方法を定義します。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import ToolMode
 
-            # Use predefined tool modes
-            auto_mode = ToolMode.AUTO  # Model decides when to use tools
-            required_mode = ToolMode.REQUIRED_ANY  # Model must use a tool
-            none_mode = ToolMode.NONE  # No tools allowed
+            # 事前定義されたツールモードを使用
+            auto_mode = ToolMode.AUTO  # モデルがツール使用のタイミングを決定
+            required_mode = ToolMode.REQUIRED_ANY  # モデルはツールを使用しなければならない
+            none_mode = ToolMode.NONE  # ツールの使用は禁止
 
-            # Require a specific function
+            # 特定の関数を要求
             specific_mode = ToolMode.REQUIRED(function_name="get_weather")
             print(specific_mode.required_function_name)  # "get_weather"
 
-            # Compare modes
+            # モードの比較
             print(auto_mode == "auto")  # True
+
     """
 
-    # Constants configuration for EnumLike metaclass
+    # EnumLikeメタクラスの定数設定
     _constants: ClassVar[dict[str, tuple[str, ...]]] = {
         "AUTO": ("auto",),
         "REQUIRED_ANY": ("required",),
         "NONE": ("none",),
     }
 
-    # Type annotations for constants
+    # 定数の型アノテーション
     AUTO: "ToolMode"
     REQUIRED_ANY: "ToolMode"
     NONE: "ToolMode"
@@ -2901,24 +2958,25 @@ class ToolMode(SerializationMixin, metaclass=EnumLike):
         *,
         required_function_name: str | None = None,
     ) -> None:
-        """Initialize ToolMode.
+        """ToolModeを初期化します。
 
-        Args:
-            mode: The tool mode - "auto", "required", or "none".
+        引数:
+            mode: ツールモード - "auto"、"required"、または"none"。
 
-        Keyword Args:
-            required_function_name: Optional function name for required mode.
+        キーワード引数:
+            required_function_name: requiredモード用の関数名（オプション）。
+
         """
         self.mode = mode
         self.required_function_name = required_function_name
 
     @classmethod
     def REQUIRED(cls, function_name: str | None = None) -> "ToolMode":
-        """Returns a ToolMode that requires the specified function to be called."""
+        """指定された関数の呼び出しを要求するToolModeを返します。"""
         return cls(mode="required", required_function_name=function_name)
 
     def __eq__(self, other: object) -> bool:
-        """Checks equality with another ToolMode or string."""
+        """別のToolModeまたは文字列との等価性をチェックします。"""
         if isinstance(other, str):
             return self.mode == other
         if isinstance(other, ToolMode):
@@ -2926,33 +2984,33 @@ class ToolMode(SerializationMixin, metaclass=EnumLike):
         return False
 
     def __hash__(self) -> int:
-        """Return hash of the ToolMode for use in sets and dicts."""
+        """セットや辞書で使用するためのToolModeのハッシュを返します。"""
         return hash((self.mode, self.required_function_name))
 
     def serialize_model(self) -> str:
-        """Serializes the ToolMode to just the mode string."""
+        """ToolModeをモード文字列だけにシリアライズします。"""
         return self.mode
 
     def __str__(self) -> str:
-        """Returns the string representation of the mode."""
+        """モードの文字列表現を返します。"""
         return self.mode
 
     def __repr__(self) -> str:
-        """Returns the string representation of the ToolMode."""
+        """ToolModeの文字列表現を返します。"""
         if self.required_function_name:
             return f"ToolMode(mode={self.mode!r}, required_function_name={self.required_function_name!r})"
         return f"ToolMode(mode={self.mode!r})"
 
 
 class ChatOptions(SerializationMixin):
-    """Common request settings for AI services.
+    """AIサービスの共通リクエスト設定。
 
     Examples:
         .. code-block:: python
 
             from agent_framework import ChatOptions, ai_function
 
-            # Create basic chat options
+            # 基本的なチャットオプションを作成
             options = ChatOptions(
                 model_id="gpt-4",
                 temperature=0.7,
@@ -2960,10 +3018,10 @@ class ChatOptions(SerializationMixin):
             )
 
 
-            # With tools
+            # ツールを使う場合
             @ai_function
             def get_weather(location: str) -> str:
-                '''Get weather for a location.'''
+                '''場所の天気を取得します。'''
                 return f"Weather in {location}"
 
 
@@ -2973,20 +3031,21 @@ class ChatOptions(SerializationMixin):
                 tool_choice="auto",
             )
 
-            # Require a specific tool to be called
+            # 特定のツールの呼び出しを要求
             options_required = ChatOptions(
                 model_id="gpt-4",
                 tools=get_weather,
                 tool_choice=ToolMode.REQUIRED(function_name="get_weather"),
             )
 
-            # Combine options
+            # オプションの組み合わせ
             base_options = ChatOptions(temperature=0.5)
             extended_options = ChatOptions(max_tokens=500, tools=get_weather)
             combined = base_options & extended_options
+
     """
 
-    DEFAULT_EXCLUDE: ClassVar[set[str]] = {"_tools"}  # Internal field, use .tools property
+    DEFAULT_EXCLUDE: ClassVar[set[str]] = {"_tools"}  # 内部フィールド、.toolsプロパティを使用してください
 
     def __init__(
         self,
@@ -3016,31 +3075,32 @@ class ChatOptions(SerializationMixin):
         additional_properties: MutableMapping[str, Any] | None = None,
         **kwargs: Any,
     ):
-        """Initialize ChatOptions.
+        """ChatOptionsを初期化します。
 
-        Keyword Args:
-            model_id: The AI model ID to use.
-            allow_multiple_tool_calls: Whether to allow multiple tool calls.
-            conversation_id: The conversation ID.
-            frequency_penalty: The frequency penalty (must be between -2.0 and 2.0).
-            instructions: the instructions, will be turned into a system or equivalent message.
-            logit_bias: The logit bias mapping.
-            max_tokens: The maximum number of tokens (must be > 0).
-            metadata: Metadata mapping.
-            presence_penalty: The presence penalty (must be between -2.0 and 2.0).
-            response_format: Structured output response format schema. Must be a valid Pydantic model.
-            seed: Random seed for reproducibility.
-            stop: Stop sequences.
-            store: Whether to store the conversation.
-            temperature: The temperature (must be between 0.0 and 2.0).
-            tool_choice: The tool choice mode.
-            tools: List of available tools.
-            top_p: The top-p value (must be between 0.0 and 1.0).
-            user: The user ID.
-            additional_properties: Provider-specific additional properties, can also be passed as kwargs.
-            **kwargs: Additional properties to include in additional_properties.
+        キーワード引数:
+            model_id: 使用するAIモデルID。
+            allow_multiple_tool_calls: 複数のツール呼び出しを許可するかどうか。
+            conversation_id: 会話ID。
+            frequency_penalty: 頻度ペナルティ（-2.0から2.0の範囲）。
+            instructions: 指示。システムまたは同等のメッセージに変換されます。
+            logit_bias: ロジットバイアスマッピング。
+            max_tokens: 最大トークン数（0より大きい必要があります）。
+            metadata: メタデータマッピング。
+            presence_penalty: プレゼンスペナルティ（-2.0から2.0の範囲）。
+            response_format: 構造化出力レスポンスフォーマットスキーマ。有効なPydanticモデルである必要があります。
+            seed: 再現性のためのランダムシード。
+            stop: ストップシーケンス。
+            store: 会話を保存するかどうか。
+            temperature: 温度（0.0から2.0の範囲）。
+            tool_choice: ツール選択モード。
+            tools: 利用可能なツールのリスト。
+            top_p: top-p値（0.0から1.0の範囲）。
+            user: ユーザーID。
+            additional_properties: プロバイダー固有の追加プロパティ。kwargsとしても渡せます。
+            **kwargs: additional_propertiesに含める追加プロパティ。
+
         """
-        # Validate numeric constraints and convert types as needed
+        # 数値制約を検証し、必要に応じて型を変換します
         if frequency_penalty is not None:
             if not (-2.0 <= frequency_penalty <= 2.0):
                 raise ValueError("frequency_penalty must be between -2.0 and 2.0")
@@ -3087,7 +3147,7 @@ class ChatOptions(SerializationMixin):
 
     @property
     def tools(self) -> list[ToolProtocol | MutableMapping[str, Any]] | None:
-        """Return the tools that are specified."""
+        """指定されたツールを返します。"""
         return self._tools
 
     @tools.setter
@@ -3099,7 +3159,7 @@ class ChatOptions(SerializationMixin):
         | Sequence[ToolProtocol | Callable[..., Any] | MutableMapping[str, Any]]
         | None,
     ) -> None:
-        """Set the tools."""
+        """ツールを設定します。"""
         self._tools = self._validate_tools(new_tools)
 
     @classmethod
@@ -3113,7 +3173,7 @@ class ChatOptions(SerializationMixin):
             | None
         ),
     ) -> list[ToolProtocol | MutableMapping[str, Any]] | None:
-        """Parse the tools field."""
+        """toolsフィールドを解析します。"""
         if not tools:
             return None
         if not isinstance(tools, Sequence):
@@ -3126,7 +3186,7 @@ class ChatOptions(SerializationMixin):
     def _validate_tool_mode(
         cls, tool_choice: ToolMode | Literal["auto", "required", "none"] | Mapping[str, Any] | None
     ) -> ToolMode | str | None:
-        """Validates the tool_choice field to ensure it is a valid ToolMode."""
+        """tool_choiceフィールドが有効なToolModeであることを検証します。"""
         if not tool_choice:
             return None
         if isinstance(tool_choice, str):
@@ -3144,19 +3204,20 @@ class ChatOptions(SerializationMixin):
         return tool_choice
 
     def __and__(self, other: object) -> "ChatOptions":
-        """Combines two ChatOptions instances.
+        """2つのChatOptionsインスタンスを結合します。
 
-        The values from the other ChatOptions take precedence.
-        List and dicts are combined.
+        他方のChatOptionsの値が優先されます。
+        リストや辞書は結合されます。
+
         """
         if not isinstance(other, ChatOptions):
             return self
         other_tools = other.tools
-        # tool_choice has a specialized serialize method. Save it here so we can fix it later.
+        # tool_choiceは特殊なシリアライズメソッドを持ちます。後で修正できるようここに保存します。
         tool_choice = other.tool_choice or self.tool_choice
-        # response_format is a class type that can't be serialized. Save it here so we can restore it later.
+        # response_formatはシリアライズできないクラス型です。後で復元できるようここに保存します。
         response_format = self.response_format
-        # Start with a shallow copy of self that preserves tool objects
+        # ツールオブジェクトを保持したままselfの浅いコピーから開始します。
         combined = ChatOptions.from_dict(self.to_dict())
         combined.tool_choice = self.tool_choice
         combined.tools = list(self.tools) if self.tools else None
@@ -3164,7 +3225,7 @@ class ChatOptions(SerializationMixin):
         combined.metadata = dict(self.metadata) if self.metadata else None
         combined.response_format = response_format
 
-        # Apply scalar and mapping updates from the other options
+        # 他のオプションからスカラーおよびマッピングの更新を適用します。
         updated_data = other.to_dict(exclude_none=True, exclude={"tools"})
         logit_bias = updated_data.pop("logit_bias", {})
         metadata = updated_data.pop("metadata", {})
@@ -3174,7 +3235,7 @@ class ChatOptions(SerializationMixin):
             setattr(combined, key, value)
 
         combined.tool_choice = tool_choice
-        # Preserve response_format from other if it exists, otherwise keep self's
+        # 他方にresponse_formatがあればそれを保持し、なければselfのものを保持します。
         if other.response_format is not None:
             combined.response_format = other.response_format
         if other.instructions:

@@ -10,14 +10,14 @@ from pydantic import BaseModel
 
 
 class CustomStoreState(BaseModel):
-    """Implementation of custom chat message store state."""
+    """カスタムchat message store stateの実装。"""
 
     messages: list[ChatMessage]
 
 
 class CustomChatMessageStore(ChatMessageStoreProtocol):
-    """Implementation of custom chat message store.
-    In real applications, this can be an implementation of relational database or vector store."""
+    """カスタムchat message storeの実装。
+    実際のアプリケーションでは、リレーショナルデータベースやベクターストアの実装となる場合があります。"""
 
     def __init__(self, messages: Collection[ChatMessage] | None = None) -> None:
         self._messages: list[ChatMessage] = []
@@ -42,37 +42,35 @@ class CustomChatMessageStore(ChatMessageStoreProtocol):
 
 
 async def main() -> None:
-    """Demonstrates how to use 3rd party or custom chat message store for threads."""
+    """スレッド用にサードパーティまたはカスタムchat message storeを使用する方法を示します。"""
     print("=== Thread with 3rd party or custom chat message store ===")
 
-    # OpenAI Chat Client is used as an example here,
-    # other chat clients can be used as well.
+    # ここではOpenAI Chat Clientを例として使用していますが、他のchat clientも使用可能です。
     agent = OpenAIChatClient().create_agent(
         name="Joker",
         instructions="You are good at telling jokes.",
-        # Use custom chat message store.
-        # If not provided, the default in-memory store will be used.
+        # カスタムchat message storeを使用します。 指定しない場合はデフォルトのインメモリストアが使用されます。
         chat_message_store_factory=CustomChatMessageStore,
     )
 
-    # Start a new thread for the agent conversation.
+    # agent会話のために新しいスレッドを開始します。
     thread = agent.get_new_thread()
 
-    # Respond to user input.
+    # ユーザー入力に応答します。
     query = "Tell me a joke about a pirate."
     print(f"User: {query}")
     print(f"Agent: {await agent.run(query, thread=thread)}\n")
 
-    # Serialize the thread state, so it can be stored for later use.
+    # 後で使用できるようにスレッドのstateをシリアライズします。
     serialized_thread = await thread.serialize()
 
-    # The thread can now be saved to a database, file, or any other storage mechanism and loaded again later.
+    # スレッドはデータベース、ファイル、その他のストレージメカニズムに保存され、後で再度読み込むことができます。
     print(f"Serialized thread: {serialized_thread}\n")
 
-    # Deserialize the thread state after loading from storage.
+    # ストレージから読み込んだ後にスレッドstateをデシリアライズします。
     resumed_thread = await agent.deserialize_thread(serialized_thread)
 
-    # Respond to user input.
+    # ユーザー入力に応答します。
     query = "Now tell the same joke in the voice of a pirate, and add some emojis to the joke."
     print(f"User: {query}")
     print(f"Agent: {await agent.run(query, thread=resumed_thread)}\n")

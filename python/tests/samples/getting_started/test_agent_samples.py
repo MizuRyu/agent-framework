@@ -147,12 +147,12 @@ from samples.getting_started.agents.openai.openai_responses_client_with_web_sear
     main as openai_responses_client_with_web_search,
 )
 
-# Environment variable for controlling sample tests
+# サンプルテストを制御する環境変数。
 RUN_SAMPLES_TESTS = "RUN_SAMPLES_TESTS"
 
-# All agent samples across providers
+# プロバイダー全体のすべてのAgentサンプル。
 agent_samples = [
-    # Azure Assistants Agent samples
+    # Azure Assistants Agentのサンプル。
     param(
         azure_assistants_basic,
         [],  # Non-interactive sample
@@ -207,7 +207,7 @@ agent_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # Azure Chat Client Agent samples
+    # Azure Chat Client Agentのサンプル。
     param(
         azure_chat_client_basic,
         [],  # Non-interactive sample
@@ -244,7 +244,7 @@ agent_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # Azure Responses Client Agent samples
+    # Azure Responses Client Agentのサンプル。
     param(
         azure_responses_client_basic,
         [],  # Non-interactive sample
@@ -290,7 +290,7 @@ agent_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # Azure AI Agent samples
+    # Azure AI Agentのサンプル。
     param(
         azure_ai_basic,
         [],  # Non-interactive sample
@@ -372,7 +372,7 @@ agent_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # OpenAI Assistants Agent samples
+    # OpenAI Assistants Agentのサンプル。
     param(
         openai_assistants_basic,
         [],  # Non-interactive sample
@@ -437,7 +437,7 @@ agent_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # OpenAI Chat Client Agent samples
+    # OpenAI Chat Client Agentのサンプル。
     param(
         openai_chat_client_basic,
         [],  # Non-interactive sample
@@ -492,7 +492,7 @@ agent_samples = [
             pytest.mark.skipif(os.getenv(RUN_SAMPLES_TESTS, None) is None, reason="Not running sample tests."),
         ],
     ),
-    # OpenAI Responses Client Agent samples
+    # OpenAI Responses Client Agent のサンプル
     param(
         openai_responses_client_basic,
         [],  # Non-interactive sample
@@ -581,7 +581,7 @@ agent_samples = [
 @pytest.mark.flaky
 @mark.parametrize("sample, responses", agent_samples)
 async def test_agent_samples(sample: Callable[..., Awaitable[Any]], responses: list[str], monkeypatch: MonkeyPatch):
-    """Test agent samples with input mocking and retry logic."""
+    """入力のモックとリトライロジックを用いたテストAgentのサンプル。"""
     saved_responses = copy.deepcopy(responses)
 
     def reset():

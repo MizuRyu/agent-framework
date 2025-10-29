@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+# 著作権 (c) Microsoft。無断転載を禁じます。
 
 import asyncio
 
@@ -11,15 +11,13 @@ This sample demonstrates basic usage of CopilotStudioAgent with automatic config
 from environment variables, showing both streaming and non-streaming responses.
 """
 
-# Environment variables needed:
-# COPILOTSTUDIOAGENT__ENVIRONMENTID - Environment ID where your copilot is deployed
-# COPILOTSTUDIOAGENT__SCHEMANAME - Agent identifier/schema name of your copilot
-# COPILOTSTUDIOAGENT__AGENTAPPID - Client ID for authentication
-# COPILOTSTUDIOAGENT__TENANTID - Tenant ID for authentication
+# 必要な環境変数: COPILOTSTUDIOAGENT__ENVIRONMENTID - Copilotがデプロイされている環境ID
+# COPILOTSTUDIOAGENT__SCHEMANAME - CopilotのAgent識別子/スキーマ名 COPILOTSTUDIOAGENT__AGENTAPPID
+# - 認証用クライアントID COPILOTSTUDIOAGENT__TENANTID - 認証用テナントID
 
 
 async def non_streaming_example() -> None:
-    """Example of non-streaming response (get the complete result at once)."""
+    """非ストリーミングレスポンスの例（一度に完全な結果を取得）。"""
     print("=== Non-streaming Response Example ===")
 
     agent = CopilotStudioAgent()
@@ -31,7 +29,7 @@ async def non_streaming_example() -> None:
 
 
 async def streaming_example() -> None:
-    """Example of streaming response (get results as they are generated)."""
+    """ストリーミングレスポンスの例（生成される結果を逐次取得）。"""
     print("=== Streaming Response Example ===")
 
     agent = CopilotStudioAgent()

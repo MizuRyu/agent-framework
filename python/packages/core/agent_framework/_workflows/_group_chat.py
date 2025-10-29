@@ -1,21 +1,15 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Group chat orchestration primitives.
+"""グループチャットのオーケストレーションプリミティブ。
 
-This module introduces a reusable orchestration surface for manager-directed
-multi-agent conversations. The key components are:
+このモジュールはマネージャー主導のマルチエージェント会話の再利用可能なオーケストレーションサーフェスを導入する。主なコンポーネントは:
 
-- GroupChatRequestMessage / GroupChatResponseMessage: canonical envelopes used
-  between the orchestrator and participants.
-- Group chat managers: minimal asynchronous callables for pluggable coordination logic.
-- GroupChatOrchestratorExecutor: runtime state machine that delegates to a
-  manager to select the next participant or complete the task.
-- GroupChatBuilder: high-level builder that wires managers and participants
-  into a workflow graph. It mirrors the ergonomics of SequentialBuilder and
-  ConcurrentBuilder while allowing Magentic to reuse the same infrastructure.
+- GroupChatRequestMessage / GroupChatResponseMessage: オーケストレーターと参加者間で使われる標準的なエンベロープ。
+- グループチャットマネージャー: プラグ可能な調整ロジックのための最小限の非同期呼び出し可能。
+- GroupChatOrchestratorExecutor: ランタイムステートマシンで、マネージャーに次の参加者選択やタスク完了を委譲。
+- GroupChatBuilder: マネージャーと参加者をワークフローグラフに配線する高レベルビルダー。SequentialBuilderやConcurrentBuilderの使い勝手を模倣しつつ、Magenticが同じインフラを再利用可能にする。
 
-The default wiring uses AgentExecutor under the hood for agent participants so
-existing observability and streaming semantics continue to apply.
+デフォルトの配線はAgentExecutorを内部で使い、エージェント参加者の既存の可観測性やストリーミングセマンティクスを維持する。
 """
 
 import inspect
@@ -50,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class _GroupChatRequestMessage:
-    """Internal: Request envelope sent from the orchestrator to a participant."""
+    """内部: オーケストレーターから参加者に送信されるRequestエンベロープ。"""
 
     agent_name: str
     conversation: list[ChatMessage] = field(default_factory=list)  # type: ignore
@@ -61,7 +55,7 @@ class _GroupChatRequestMessage:
 
 @dataclass
 class _GroupChatResponseMessage:
-    """Internal: Response envelope emitted by participants back to the orchestrator."""
+    """内部: 参加者からオーケストレーターに返されるResponseエンベロープ。"""
 
     agent_name: str
     message: ChatMessage
@@ -69,7 +63,7 @@ class _GroupChatResponseMessage:
 
 @dataclass
 class _GroupChatTurn:
-    """Internal: Represents a single turn in the manager-participant conversation."""
+    """内部: マネージャーと参加者の会話における単一ターンを表す。"""
 
     speaker: str
     role: str
@@ -78,7 +72,7 @@ class _GroupChatTurn:
 
 @dataclass
 class GroupChatDirective:
-    """Instruction emitted by a group chat manager implementation."""
+    """グループチャットマネージャー実装から発行される指示。"""
 
     agent_name: str | None = None
     instruction: str | None = None
@@ -87,10 +81,7 @@ class GroupChatDirective:
     final_message: ChatMessage | None = None
 
 
-# endregion
-
-
-# region Manager callable
+# endregion region Manager callable
 
 
 GroupChatStateSnapshot = Mapping[str, Any]
@@ -98,7 +89,7 @@ _GroupChatManagerFn = Callable[[GroupChatStateSnapshot], Awaitable[GroupChatDire
 
 
 async def _maybe_await(value: Any) -> Any:
-    """Await value if it is awaitable; otherwise return as-is."""
+    """値がawaitableならawaitし、そうでなければそのまま返す。"""
     if inspect.isawaitable(value):
         return await value
     return value
@@ -109,14 +100,15 @@ _GroupChatParticipantPipeline: TypeAlias = Sequence[Executor]
 
 @dataclass
 class _GroupChatConfig:
-    """Internal: Configuration passed to factories during workflow assembly.
+    """内部: ワークフロー組み立て時にファクトリーに渡される設定。
 
     Attributes:
-        manager: Manager instance responsible for orchestration decisions (None when custom factory handles it)
-        manager_name: Display name for the manager in conversation history
-        participants: Mapping of participant names to their specifications
-        max_rounds: Optional limit on manager selection rounds to prevent infinite loops
-        orchestrator: Orchestrator executor instance (populated during build)
+        manager: オーケストレーション決定を担当するマネージャーインスタンス（カスタムファクトリーが処理する場合はNone）
+        manager_name: 会話履歴に表示されるマネージャー名
+        participants: 参加者名から仕様へのマッピング
+        max_rounds: 無限ループ防止のためのマネージャー選択ラウンドのオプション制限
+        orchestrator: オーケストレーターExecutorインスタンス（ビルド時に設定）
+
     """
 
     manager: _GroupChatManagerFn | None
@@ -128,10 +120,7 @@ class _GroupChatConfig:
     participant_executors: dict[str, Executor] = field(default_factory=dict)  # type: ignore[type-arg]
 
 
-# endregion
-
-
-# region Default participant factory
+# endregion region Default participant factory
 
 _GroupChatOrchestratorFactory: TypeAlias = Callable[[_GroupChatConfig], Executor]
 _InterceptorSpec: TypeAlias = tuple[Callable[[_GroupChatConfig], Executor], Callable[[Any], bool]]
@@ -141,22 +130,22 @@ def _default_participant_factory(
     spec: GroupChatParticipantSpec,
     wiring: _GroupChatConfig,
 ) -> _GroupChatParticipantPipeline:
-    """Default factory for constructing participant pipeline nodes in the workflow graph.
+    """ワークフローグラフ内の参加者パイプラインノードを構築するデフォルトファクトリー。
 
-    Creates a single AgentExecutor node for AgentProtocol participants or a passthrough executor
-    for custom participants. Translation between group-chat envelopes and the agent runtime is now
-    handled inside the orchestrator, removing the need for dedicated ingress/egress adapters.
+    AgentProtocol参加者には単一のAgentExecutorノードを作成し、カスタム参加者にはパススルーExecutorを作成する。
+    グループチャットのエンベロープとエージェントランタイム間の変換はオーケストレーター内で処理されるため、専用のイングレス/イーグレスアダプターは不要。
 
     Args:
-        spec: Participant specification containing name, instance, and description
-        wiring: GroupChatWiring configuration for accessing cached executors
+        spec: 名前、インスタンス、説明を含む参加者仕様
+        wiring: キャッシュされたExecutorにアクセスするためのGroupChatWiring設定
 
     Returns:
-        Sequence of executors representing the participant pipeline in execution order
+        実行順序で参加者パイプラインを表すExecutorのシーケンス
 
     Behavior:
-        - AgentProtocol participants are wrapped in AgentExecutor with deterministic IDs
-        - Executor participants are wired directly without additional adapters
+        - AgentProtocol参加者は決定論的ID付きのAgentExecutorでラップされる
+        - Executor参加者は追加アダプターなしで直接配線される
+
     """
     participant = spec.participant
     if isinstance(participant, Executor):
@@ -723,83 +712,79 @@ def assemble_group_chat_workflow(
     return workflow_builder.build()
 
 
-# endregion
-
-
-# region Builder
+# endregion region Builder
 
 
 class GroupChatBuilder:
-    r"""High-level builder for manager-directed group chat workflows with dynamic orchestration.
+    r"""マネージャーが指示するグループチャットワークフローのための高レベルビルダーで、動的なオーケストレーションを提供します。
 
-    GroupChat coordinates multi-agent conversations using a manager that selects which participant
-    speaks next. The manager can be a simple Python function (select_speakers) or an LLM-based
-    selector (set_prompt_based_manager). These two approaches are mutually exclusive.
+    GroupChatは、次に話す参加者を選択するマネージャーを使ってマルチエージェントの会話を調整します。マネージャーは単純なPython関数（select_speakers）か、LLMベースのセレクター（set_prompt_based_manager）であり、これら二つの方法は相互排他的です。
 
     **Core Workflow:**
-    1. Define participants: list of agents (uses their .name) or dict mapping names to agents
-    2. Configure speaker selection: select_speakers() OR set_prompt_based_manager() (not both)
-    3. Optional: set round limits, checkpointing, termination conditions
-    4. Build and run the workflow
+    1. 参加者を定義：エージェントのリスト（.nameを使用）または名前からエージェントへの辞書マッピング
+    2. スピーカー選択の設定：select_speakers() または set_prompt_based_manager()（両方は不可）
+    3. 任意：ラウンド制限、チェックポイント、終了条件の設定
+    4. ワークフローの構築と実行
 
     **Speaker Selection Patterns:**
 
-    *Pattern 1: Simple function-based selection (recommended)*
+    *Pattern 1: シンプルな関数ベースの選択（推奨）*
 
     .. code-block:: python
 
-        def select_next_speaker(state: GroupChatStateSnapshot) -> str | None:
-            # state contains: task, participants, conversation, history, round_index
-            if state["round_index"] >= 5:
-                return None  # Finish
-            last_speaker = state["history"][-1].speaker if state["history"] else None
-            if last_speaker == "researcher":
-                return "writer"
-            return "researcher"
+    def select_next_speaker(state: GroupChatStateSnapshot) -> str | None:
+        # stateには task, participants, conversation, history, round_index が含まれる
+        if state["round_index"] >= 5:
+            return None  # 終了
+        last_speaker = state["history"][-1].speaker if state["history"] else None
+        if last_speaker == "researcher":
+            return "writer"
+        return "researcher"
 
 
-        workflow = (
-            GroupChatBuilder()
-            .select_speakers(select_next_speaker)
-            .participants([researcher_agent, writer_agent])  # Uses agent.name
-            .build()
-        )
+    workflow = (
+        GroupChatBuilder()
+        .select_speakers(select_next_speaker)
+        .participants([researcher_agent, writer_agent])  # agent.nameを使用
+        .build()
+    )
 
-    *Pattern 2: LLM-based selection*
+    *Pattern 2: LLMベースの選択*
 
     .. code-block:: python
 
-        from agent_framework.azure import AzureOpenAIChatClient
+    from agent_framework.azure import AzureOpenAIChatClient
 
-        workflow = (
-            GroupChatBuilder()
-            .set_prompt_based_manager(chat_client=AzureOpenAIChatClient(), display_name="Coordinator")
-            .participants([researcher, writer])  # Or use dict: researcher=r, writer=w
-            .with_max_rounds(10)
-            .build()
-        )
+    workflow = (
+        GroupChatBuilder()
+        .set_prompt_based_manager(chat_client=AzureOpenAIChatClient(), display_name="Coordinator")
+        .participants([researcher, writer])  # または辞書形式: researcher=r, writer=w
+        .with_max_rounds(10)
+        .build()
+    )
 
     **Participant Specification:**
 
-    Two ways to specify participants:
-    - List form: ``[agent1, agent2]`` - uses ``agent.name`` attribute for participant names
-    - Dict form: ``{name1: agent1, name2: agent2}`` - explicit name control
-    - Keyword form: ``participants(name1=agent1, name2=agent2)`` - explicit name control
+    参加者の指定方法は二通りあります：
+    - リスト形式：``[agent1, agent2]`` - participant名は ``agent.name`` 属性を使用
+    - 辞書形式：``{name1: agent1, name2: agent2}`` - 明示的な名前指定
+    - キーワード形式：``participants(name1=agent1, name2=agent2)`` - 明示的な名前指定
 
     **State Snapshot Structure:**
 
-    The GroupChatStateSnapshot passed to select_speakers contains:
-    - ``task``: ChatMessage - Original user task
-    - ``participants``: dict[str, str] - Mapping of participant names to descriptions
-    - ``conversation``: tuple[ChatMessage, ...] - Full conversation history
-    - ``history``: tuple[GroupChatTurn, ...] - Turn-by-turn record with speaker attribution
-    - ``round_index``: int - Number of manager selection rounds so far
-    - ``pending_agent``: str | None - Name of agent currently processing (if any)
+    select_speakersに渡されるGroupChatStateSnapshotには以下が含まれます：
+    - ``task``: ChatMessage - 元のユーザータスク
+    - ``participants``: dict[str, str] - 参加者名から説明へのマッピング
+    - ``conversation``: tuple[ChatMessage, ...] - 会話の全履歴
+    - ``history``: tuple[GroupChatTurn, ...] - 発話者情報付きのターンごとの記録
+    - ``round_index``: int - これまでのマネージャー選択ラウンド数
+    - ``pending_agent``: str | None - 現在処理中のエージェント名（あれば）
 
     **Important Constraints:**
-    - Cannot combine select_speakers() and set_prompt_based_manager() - choose one
-    - Participant names must be unique
-    - When using list form, agents must have a non-empty ``name`` attribute
+    - select_speakers() と set_prompt_based_manager() は併用不可。どちらか一方を選択
+    - 参加者名はユニークであること
+    - リスト形式使用時は、エージェントに空でない ``name`` 属性が必要
+
     """
 
     def __init__(
@@ -809,13 +794,14 @@ class GroupChatBuilder:
         _participant_factory: Callable[[GroupChatParticipantSpec, _GroupChatConfig], _GroupChatParticipantPipeline]
         | None = None,
     ) -> None:
-        """Initialize the GroupChatBuilder.
+        """GroupChatBuilderを初期化します。
 
         Args:
-            _orchestrator_factory: Internal extension point for custom orchestrator implementations.
-                Used by Magentic. Not part of public API - subject to change.
-            _participant_factory: Internal extension point for custom participant pipelines.
-                Used by Magentic. Not part of public API - subject to change.
+        _orchestrator_factory: カスタムオーケストレーター実装のための内部拡張ポイント。
+        Magenticで使用。パブリックAPIの一部ではなく、変更される可能性があります。
+        _participant_factory: カスタム参加者パイプラインのための内部拡張ポイント。
+        Magenticで使用。パブリックAPIの一部ではなく、変更される可能性があります。
+
         """
         self._participants: dict[str, AgentProtocol | Executor] = {}
         self._participant_metadata: dict[str, Any] | None = None
@@ -849,42 +835,39 @@ class GroupChatBuilder:
         instructions: str | None = None,
         display_name: str | None = None,
     ) -> "GroupChatBuilder":
-        r"""Configure the default prompt-based manager driven by an LLM chat client.
+        r"""LLMチャットクライアントによって駆動されるデフォルトのプロンプトベースマネージャーを設定します。
 
-        The manager coordinates participants by making selection decisions based on the conversation
-        state, task, and participant descriptions. It uses structured output (ManagerDirectiveModel)
-        to ensure reliable parsing of decisions.
+        マネージャーは会話状態、タスク、参加者の説明に基づいて選択決定を行い、参加者を調整します。構造化出力（ManagerDirectiveModel）を使用して決定の信頼性の高い解析を保証します。
 
         Args:
-            chat_client: Chat completion client used to run the coordinator LLM.
-            instructions: System instructions to steer the coordinator's decision-making.
-                If not provided, uses DEFAULT_MANAGER_INSTRUCTIONS. These instructions are combined
-                with the task description, participant list, and structured output format to guide
-                the LLM in selecting the next speaker or completing the conversation.
-            display_name: Optional conversational display name for manager messages.
+        chat_client: コーディネーターLLMを実行するためのチャット完了クライアント。
+        instructions: コーディネーターの意思決定を誘導するシステム指示。
+        指定しない場合はDEFAULT_MANAGER_INSTRUCTIONSを使用。これらの指示はタスク説明、参加者リスト、構造化出力形式と組み合わされ、LLMが次のスピーカー選択や会話完了を行うのを導きます。
+        display_name: マネージャーメッセージの会話表示名（任意）。
 
         Returns:
-            Self for fluent chaining.
+        Fluentチェーンのためのself。
 
         Note:
-            Calling this method and :meth:`set_speaker_selector` together is not allowed; choose one.
+        このメソッドと :meth:`set_speaker_selector` を同時に呼び出すことはできません。どちらかを選択してください。
 
         Example:
 
         .. code-block:: python
 
-            from agent_framework import GroupChatBuilder, DEFAULT_MANAGER_INSTRUCTIONS
+        from agent_framework import GroupChatBuilder, DEFAULT_MANAGER_INSTRUCTIONS
 
-            custom_instructions = (
-                DEFAULT_MANAGER_INSTRUCTIONS + "\\n\\nPrioritize the researcher for data analysis tasks."
-            )
+        custom_instructions = (
+        DEFAULT_MANAGER_INSTRUCTIONS + "\n\nPrioritize the researcher for data analysis tasks."
+        )
 
-            workflow = (
-                GroupChatBuilder()
-                .set_prompt_based_manager(chat_client, instructions=custom_instructions, display_name="Coordinator")
-                .participants(researcher=researcher, writer=writer)
-                .build()
-            )
+        workflow = (
+        GroupChatBuilder()
+        .set_prompt_based_manager(chat_client, instructions=custom_instructions, display_name="Coordinator")
+        .participants(researcher=researcher, writer=writer)
+        .build()
+        )
+
         """
         manager = _PromptBasedGroupChatManager(
             chat_client,
@@ -902,51 +885,47 @@ class GroupChatBuilder:
         display_name: str | None = None,
         final_message: ChatMessage | str | Callable[[GroupChatStateSnapshot], Any] | None = None,
     ) -> "GroupChatBuilder":
-        """Configure speaker selection using a pure function that examines group chat state.
+        """グループチャットの状態を調べる純粋関数を使ってスピーカー選択を設定します。
 
-        This is the primary way to control orchestration flow in a GroupChat. Your selector
-        function receives an immutable snapshot of the current conversation state and returns
-        the name of the next participant to speak, or None to finish the conversation.
+        これはGroupChatのオーケストレーションフローを制御する主要な方法です。セレクター関数は現在の会話状態の不変スナップショットを受け取り、次に話す参加者の名前を返すか、会話を終了するためにNoneを返します。
 
-        The selector function signature:
-            def select_next_speaker(state: GroupChatStateSnapshot) -> str | None:
-                # state contains: task, participants, conversation, history, round_index
-                # Return participant name to continue, or None to finish
-                ...
+        セレクター関数のシグネチャ:
+        def select_next_speaker(state: GroupChatStateSnapshot) -> str | None:
+        # stateには task, participants, conversation, history, round_index が含まれる
+        # 続行する参加者名を返すか、終了する場合はNoneを返す
+        ...
 
         Args:
-            selector: Function that takes GroupChatStateSnapshot and returns the next speaker's
-                name (str) to continue the conversation, or None to finish. May be sync or async.
-            display_name: Optional name shown in conversation history for orchestrator messages
-                (defaults to "manager").
-            final_message: Optional final message (or factory) emitted when selector returns None
-                (defaults to "Conversation completed." authored by the manager).
+        selector: GroupChatStateSnapshotを受け取り、次のスピーカーの名前（str）を返す関数。会話を終了する場合はNone。同期または非同期関数可。
+        display_name: オーケストレーターのメッセージに表示される任意の名前（デフォルトは"manager"）。
+        final_message: セレクターがNoneを返したときに出力される最終メッセージまたはファクトリー（デフォルトはマネージャー作成の"Conversation completed."）。
 
         Returns:
-            Self for fluent chaining.
+        Fluentチェーンのためのself。
 
         Example:
 
         .. code-block:: python
 
-            def select_next_speaker(state: GroupChatStateSnapshot) -> str | None:
-                if state["round_index"] >= 3:
-                    return None  # Finish after 3 rounds
-                last_speaker = state["history"][-1].speaker if state["history"] else None
-                if last_speaker == "researcher":
-                    return "writer"
-                return "researcher"
+        def select_next_speaker(state: GroupChatStateSnapshot) -> str | None:
+        if state["round_index"] >= 3:
+            return None  # 3ラウンド後に終了
+        last_speaker = state["history"][-1].speaker if state["history"] else None
+        if last_speaker == "researcher":
+            return "writer"
+        return "researcher"
 
 
-            workflow = (
-                GroupChatBuilder()
-                .select_speakers(select_next_speaker)
-                .participants(researcher=researcher_agent, writer=writer_agent)
-                .build()
-            )
+        workflow = (
+        GroupChatBuilder()
+        .select_speakers(select_next_speaker)
+        .participants(researcher=researcher_agent, writer=writer_agent)
+        .build()
+        )
 
         Note:
-            Cannot be combined with set_prompt_based_manager(). Choose one orchestration strategy.
+        set_prompt_based_manager()と併用できません。どちらか一方のオーケストレーション戦略を選択してください。
+
         """
         manager_name = display_name or "manager"
         adapter = _SpeakerSelectorAdapter(
@@ -962,34 +941,34 @@ class GroupChatBuilder:
         /,
         **named_participants: AgentProtocol | Executor,
     ) -> "GroupChatBuilder":
-        """Define participants for this group chat workflow.
+        """このグループチャットワークフローの参加者を定義します。
 
-        Accepts AgentProtocol instances (auto-wrapped as AgentExecutor) or Executor instances.
-        Provide a mapping of name → participant for explicit control, or pass a sequence and
-        names will be inferred from the agent's name attribute (or executor id).
+        AgentProtocolインスタンス（AgentExecutorとして自動ラップされる）またはExecutorインスタンスを受け入れます。
+        名前→参加者のマッピングを提供して明示的に制御するか、シーケンスを渡してエージェントのname属性（またはexecutorのid）から名前を推測します。
 
         Args:
-            participants: Optional mapping or sequence of participant definitions
-            **named_participants: Keyword arguments mapping names to agent/executor instances
+        participants: 参加者定義のマッピングまたはシーケンス（任意）
+        **named_participants: 名前からエージェント/Executorインスタンスへのキーワード引数マッピング
 
         Returns:
-            Self for fluent chaining
+        Fluentチェーンのためのself
 
         Raises:
-            ValueError: If participants are empty, names are duplicated, or names are empty strings
+        ValueError: 参加者が空、名前が重複、または名前が空文字列の場合
 
         Usage:
 
         .. code-block:: python
 
-            from agent_framework import GroupChatBuilder
+        from agent_framework import GroupChatBuilder
 
-            workflow = (
-                GroupChatBuilder()
-                .set_prompt_based_manager(chat_client)
-                .participants([writer_agent, reviewer_agent])
-                .build()
-            )
+        workflow = (
+        GroupChatBuilder()
+        .set_prompt_based_manager(chat_client)
+        .participants([writer_agent, reviewer_agent])
+        .build()
+        )
+
         """
         combined: dict[str, AgentProtocol | Executor] = {}
 
@@ -1030,31 +1009,31 @@ class GroupChatBuilder:
         return self
 
     def with_checkpointing(self, checkpoint_storage: CheckpointStorage) -> "GroupChatBuilder":
-        """Enable checkpointing for the built workflow using the provided storage.
+        """提供されたストレージを使って構築されたワークフローのチェックポイント機能を有効にします。
 
-        Checkpointing allows the workflow to persist state and resume from interruption
-        points, enabling long-running conversations and failure recovery.
+        チェックポイントにより、ワークフローは状態を永続化し、中断ポイントから再開可能となり、長時間の会話や障害復旧を可能にします。
 
         Args:
-            checkpoint_storage: Storage implementation for persisting workflow state
+        checkpoint_storage: ワークフロー状態を永続化するためのストレージ実装
 
         Returns:
-            Self for fluent chaining
+        Fluentチェーンのためのself
 
         Usage:
 
         .. code-block:: python
 
-            from agent_framework import GroupChatBuilder, MemoryCheckpointStorage
+        from agent_framework import GroupChatBuilder, MemoryCheckpointStorage
 
-            storage = MemoryCheckpointStorage()
-            workflow = (
-                GroupChatBuilder()
-                .set_prompt_based_manager(chat_client)
-                .participants(agent1=agent1, agent2=agent2)
-                .with_checkpointing(storage)
-                .build()
-            )
+        storage = MemoryCheckpointStorage()
+        workflow = (
+        GroupChatBuilder()
+        .set_prompt_based_manager(chat_client)
+        .participants(agent1=agent1, agent2=agent2)
+        .with_checkpointing(storage)
+        .build()
+        )
+
         """
         self._checkpoint_storage = checkpoint_storage
         return self
@@ -1065,14 +1044,15 @@ class GroupChatBuilder:
         *,
         condition: Callable[[Any], bool],
     ) -> "GroupChatBuilder":
-        """Register an interceptor factory that creates executors for special requests.
+        """特別なリクエスト用のExecutorを作成するインターセプターファクトリーを登録します。
 
         Args:
-            handler: Callable that receives the wiring and returns an executor, or a pre-built executor
-            condition: Filter determining which orchestrator messages the interceptor should process
+        handler: wiringを受け取りExecutorを返すCallable、または事前構築済みのExecutor
+        condition: インターセプターが処理すべきオーケストレーターのメッセージを判定するフィルター
 
         Returns:
-            Self for fluent chaining
+        Fluentチェーンのためのself
+
         """
         factory: Callable[[_GroupChatConfig], Executor]
         if isinstance(handler, Executor):
@@ -1089,40 +1069,40 @@ class GroupChatBuilder:
         return self
 
     def with_max_rounds(self, max_rounds: int | None) -> "GroupChatBuilder":
-        """Set a maximum number of manager rounds to prevent infinite conversations.
+        """無限会話を防ぐためにマネージャーの最大ラウンド数を設定します。
 
-        When the round limit is reached, the workflow automatically completes with
-        a default completion message. Setting to None allows unlimited rounds.
+        ラウンド制限に達すると、ワークフローはデフォルトの完了メッセージで自動的に完了します。Noneを設定すると無制限になります。
 
         Args:
-            max_rounds: Maximum number of manager selection rounds, or None for unlimited
+        max_rounds: マネージャー選択ラウンドの最大数、または無制限の場合はNone
 
         Returns:
-            Self for fluent chaining
+        Fluentチェーンのためのself
 
         Usage:
 
         .. code-block:: python
 
-            from agent_framework import GroupChatBuilder
+        from agent_framework import GroupChatBuilder
 
-            # Limit to 15 rounds
-            workflow = (
-                GroupChatBuilder()
-                .set_prompt_based_manager(chat_client)
-                .participants(agent1=agent1, agent2=agent2)
-                .with_max_rounds(15)
-                .build()
-            )
+        # 15ラウンドに制限
+        workflow = (
+        GroupChatBuilder()
+        .set_prompt_based_manager(chat_client)
+        .participants(agent1=agent1, agent2=agent2)
+        .with_max_rounds(15)
+        .build()
+        )
 
-            # Unlimited rounds
-            workflow = (
-                GroupChatBuilder()
-                .set_prompt_based_manager(chat_client)
-                .participants(agent1=agent1)
-                .with_max_rounds(None)
-                .build()
-            )
+        # 無制限ラウンド
+        workflow = (
+        GroupChatBuilder()
+        .set_prompt_based_manager(chat_client)
+        .participants(agent1=agent1)
+        .with_max_rounds(None)
+        .build()
+        )
+
         """
         self._max_rounds = max_rounds
         return self
@@ -1153,27 +1133,27 @@ class GroupChatBuilder:
         return specs
 
     def build(self) -> Workflow:
-        """Build and validate the group chat workflow.
+        """グループチャットのワークフローを構築し検証します。
 
-        Assembles the orchestrator, participants, and their interconnections into
-        a complete workflow graph. The orchestrator delegates speaker selection to
-        the manager, routes requests to the appropriate participants, and collects
-        their responses to continue or complete the conversation.
+        オーケストレーター、参加者、およびそれらの相互接続を組み合わせて
+        完全なワークフローグラフを作成します。オーケストレーターはスピーカー選択を
+        マネージャーに委任し、リクエストを適切な参加者にルーティングし、
+        その応答を収集して会話を継続または完了させます。
 
         Returns:
-            Validated Workflow instance ready for execution
+            実行準備が整った検証済みのWorkflowインスタンス
 
         Raises:
-            ValueError: If manager or participants are not configured (when using default factory)
+            ValueError: マネージャーまたは参加者が設定されていない場合（デフォルトファクトリ使用時）
 
         Wiring pattern:
-        - Orchestrator receives initial input (str, ChatMessage, or list[ChatMessage])
-        - Orchestrator queries manager for next action (participant selection or finish)
-        - If participant selected: request routed directly to participant entry node
-        - Participant pipeline: AgentExecutor for agents or custom executor chains
-        - Participant response flows back to orchestrator
-        - Orchestrator updates state and queries manager again
-        - When manager returns finish directive: orchestrator yields final message and becomes idle
+        - Orchestratorは初期入力（str, ChatMessage, またはlist[ChatMessage]）を受け取る
+        - Orchestratorは次のアクション（参加者選択または終了）についてマネージャーに問い合わせる
+        - 参加者が選択された場合：リクエストは直接参加者のエントリノードにルーティングされる
+        - 参加者パイプライン：AgentExecutor（エージェント用）またはカスタムエグゼキューターチェーン
+        - 参加者の応答はオーケストレーターに戻る
+        - オーケストレーターは状態を更新し再度マネージャーに問い合わせる
+        - マネージャーが終了指示を返した場合：オーケストレーターは最終メッセージを返しアイドル状態になる
 
         Usage:
 
@@ -1181,7 +1161,7 @@ class GroupChatBuilder:
 
             from agent_framework import GroupChatBuilder
 
-            # Execute the workflow
+            # ワークフローを実行する
             workflow = (
                 GroupChatBuilder()
                 .set_prompt_based_manager(chat_client)
@@ -1190,9 +1170,10 @@ class GroupChatBuilder:
             )
             async for message in workflow.run("Solve this problem collaboratively"):
                 print(message.text)
+
         """
-        # Manager is only required when using the default orchestrator factory
-        # Custom factories (e.g., MagenticBuilder) provide their own orchestrator with embedded manager
+        # マネージャーはデフォルトのオーケストレーターファクトリを使用する場合にのみ必要です
+        # カスタムファクトリ（例：MagenticBuilder）は、組み込みのマネージャーを持つ独自のオーケストレーターを提供します
         if self._manager is None and self._orchestrator_factory == _default_orchestrator_factory:
             raise ValueError("manager must be configured before build() when using default orchestrator")
         if not self._participants:
@@ -1221,10 +1202,7 @@ class GroupChatBuilder:
         return result
 
 
-# endregion
-
-
-# region Default manager implementation
+# endregion region Default manager implementation
 
 
 DEFAULT_MANAGER_INSTRUCTIONS = """You are coordinating a team conversation to solve the user's task.
@@ -1242,7 +1220,7 @@ DEFAULT_MANAGER_STRUCTURED_OUTPUT_PROMPT = """Return your decision using the fol
 
 
 class ManagerDirectiveModel(BaseModel):
-    """Pydantic model for structured manager directive output."""
+    """構造化されたマネージャー指示出力のためのPydanticモデル。"""
 
     next_agent: str | None = Field(
         default=None,
@@ -1263,39 +1241,39 @@ class ManagerDirectiveModel(BaseModel):
 
 
 class _PromptBasedGroupChatManager:
-    """LLM-backed manager that produces directives via structured output.
+    """LLMを利用したマネージャーで、構造化出力を通じて指示を生成します。
 
-    This is the default manager implementation for group chat workflows. It uses an LLM
-    to make speaker selection decisions based on conversation state, participant
-    descriptions, and custom instructions.
+    これはグループチャットワークフローのデフォルトのマネージャー実装です。会話状態、参加者の説明、
+    カスタム指示に基づいてスピーカー選択の決定をLLMが行います。
 
-    Coordination strategy:
-    - Receives immutable state snapshot with full conversation history
-    - Formats system prompt with instructions, task, and participant descriptions
-    - Appends conversation context and uses structured output (Pydantic model) for reliable parsing
-    - Converts LLM response to GroupChatDirective
+    調整戦略:
+    - 会話履歴全体を含む不変の状態スナップショットを受け取る
+    - システムプロンプトを指示、タスク、参加者説明でフォーマットする
+    - 会話コンテキストを追加し、構造化出力（Pydanticモデル）を使用して信頼性の高い解析を行う
+    - LLMの応答をGroupChatDirectiveに変換する
 
-    Flexibility:
-    - Custom instructions allow domain-specific coordination strategies
-    - Participant descriptions guide the LLM's selection logic
-    - Structured output ensures reliable parsing (no regex or brittle prompts)
+    柔軟性:
+    - カスタム指示によりドメイン固有の調整戦略が可能
+    - 参加者の説明がLLMの選択ロジックを導く
+    - 構造化出力により信頼性の高い解析を保証（正規表現や壊れやすいプロンプトを使用しない）
 
-    Example coordination patterns:
-    - Round-robin: "Rotate between participants in order"
-    - Task-based: "Select the participant best suited for the current sub-task"
-    - Dependency-aware: "Only call analyst after researcher provides data"
+    例示的な調整パターン:
+    - ラウンドロビン：「参加者を順番に回す」
+    - タスクベース：「現在のサブタスクに最適な参加者を選択する」
+    - 依存関係認識：「研究者がデータを提供した後にのみアナリストを呼び出す」
 
     Args:
-        chat_client: ChatClientProtocol implementation for LLM inference
-        instructions: Custom system instructions (defaults to DEFAULT_MANAGER_INSTRUCTIONS).
-                     These instructions are combined with the task, participant list, and
-                     structured output format (ManagerDirectiveModel) to coordinate the conversation.
-        name: Display name for the manager in conversation history
+        chat_client: LLM推論用のChatClientProtocol実装
+        instructions: カスタムシステム指示（デフォルトはDEFAULT_MANAGER_INSTRUCTIONS）。
+                     これらの指示はタスク、参加者リスト、
+                     構造化出力フォーマット（ManagerDirectiveModel）と組み合わせて会話を調整します。
+        name: 会話履歴に表示されるマネージャーの名前
 
     Raises:
-        RuntimeError: If LLM response cannot be parsed into the directive payload
-                     If directive is missing next_agent when finish=False
-                     If selected agent is not in participants
+        RuntimeError: LLMの応答が指示ペイロードに解析できない場合
+                     finish=Falseでnext_agentが欠落している場合
+                     選択されたエージェントが参加者に存在しない場合
+
     """
 
     def __init__(
@@ -1374,7 +1352,7 @@ class _PromptBasedGroupChatManager:
 
 
 class _SpeakerSelectorAdapter:
-    """Adapter that turns a simple speaker selector into a full manager directive."""
+    """単純なスピーカーセレクターを完全なマネージャー指示に変換するアダプター。"""
 
     def __init__(
         self,

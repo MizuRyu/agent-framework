@@ -10,7 +10,7 @@ from agent_framework.openai import OpenAIChatClient
 def get_weather(
     location: Annotated[str, "The location to get the weather for."],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得します。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 

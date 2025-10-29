@@ -33,7 +33,7 @@ can be implemented as async functions that accept context and next parameters.
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
+    """指定された場所の天気を取得する。"""
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
@@ -42,15 +42,14 @@ async def security_agent_middleware(
     context: AgentRunContext,
     next: Callable[[AgentRunContext], Awaitable[None]],
 ) -> None:
-    """Agent middleware that checks for security violations."""
-    # Check for potential security violations in the query
-    # For this example, we'll check the last user message
+    """セキュリティ違反をチェックするAgent Middleware。"""
+    # クエリの潜在的なセキュリティ違反をチェックする この例では最後のユーザーメッセージをチェックする
     last_message = context.messages[-1] if context.messages else None
     if last_message and last_message.text:
         query = last_message.text
         if "password" in query.lower() or "secret" in query.lower():
             print("[SecurityAgentMiddleware] Security Warning: Detected sensitive information, blocking request.")
-            # Simply don't call next() to prevent execution
+            # 単にnext()を呼ばずに実行を防ぐ
             return
 
     print("[SecurityAgentMiddleware] Security check passed.")
@@ -61,7 +60,7 @@ async def logging_function_middleware(
     context: FunctionInvocationContext,
     next: Callable[[FunctionInvocationContext], Awaitable[None]],
 ) -> None:
-    """Function middleware that logs function calls."""
+    """関数呼び出しをログに記録するFunction Middleware。"""
     function_name = context.function.name
     print(f"[LoggingFunctionMiddleware] About to call function: {function_name}.")
 
@@ -76,11 +75,10 @@ async def logging_function_middleware(
 
 
 async def main() -> None:
-    """Example demonstrating function-based middleware."""
+    """関数ベースMiddlewareのデモ。"""
     print("=== Function-based Middleware Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with (
         AzureCliCredential() as credential,
         AzureAIAgentClient(async_credential=credential).create_agent(
@@ -90,14 +88,14 @@ async def main() -> None:
             middleware=[security_agent_middleware, logging_function_middleware],
         ) as agent,
     ):
-        # Test with normal query
+        # 通常クエリでテストする
         print("\n--- Normal Query ---")
         query = "What's the weather like in Tokyo?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result.text if result.text else 'No response'}\n")
 
-        # Test with security violation
+        # セキュリティ違反でテストする
         print("--- Security Test ---")
         query = "What's the secret weather password?"
         print(f"User: {query}")

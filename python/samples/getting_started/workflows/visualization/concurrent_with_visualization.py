@@ -37,7 +37,7 @@ Prerequisites:
 
 
 class DispatchToExperts(Executor):
-    """Dispatches the incoming prompt to all expert agent executors (fan-out)."""
+    """受信したプロンプトをすべての専門Agent Executorにディスパッチします（fan-out）。"""
 
     def __init__(self, expert_ids: list[str], id: str | None = None):
         super().__init__(id=id or "dispatch_to_experts")
@@ -45,7 +45,7 @@ class DispatchToExperts(Executor):
 
     @handler
     async def dispatch(self, prompt: str, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
-        # Wrap the incoming prompt as a user message for each expert and request a response.
+        # 受信したプロンプトを各専門家のユーザーメッセージとしてラップし、応答を要求します。
         initial_message = ChatMessage(Role.USER, text=prompt)
         for expert_id in self._expert_ids:
             await ctx.send_message(
@@ -56,7 +56,7 @@ class DispatchToExperts(Executor):
 
 @dataclass
 class AggregatedInsights:
-    """Structured output from the aggregator."""
+    """aggregatorからの構造化出力。"""
 
     research: str
     marketing: str
@@ -64,7 +64,7 @@ class AggregatedInsights:
 
 
 class AggregateInsights(Executor):
-    """Aggregates expert agent responses into a single consolidated result (fan-in)."""
+    """専門Agentの応答を単一の統合結果に集約します（fan-in）。"""
 
     def __init__(self, expert_ids: list[str], id: str | None = None):
         super().__init__(id=id or "aggregate_insights")
@@ -72,10 +72,10 @@ class AggregateInsights(Executor):
 
     @handler
     async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext[Never, str]) -> None:
-        # Map responses to text by executor id for a simple, predictable demo.
+        # executor idごとに応答をテキストにマップし、シンプルで予測可能なデモを実現します。
         by_id: dict[str, str] = {}
         for r in results:
-            # AgentExecutorResponse.agent_run_response.text contains concatenated assistant text
+            # AgentExecutorResponse.agent_run_response.textには連結されたassistantのテキストが含まれます。
             by_id[r.executor_id] = r.agent_run_response.text
 
         research_text = by_id.get("researcher", "")
@@ -88,7 +88,7 @@ class AggregateInsights(Executor):
             legal=legal_text,
         )
 
-        # Provide a readable, consolidated string as the final workflow result.
+        # 最終的なワークフロー結果として読みやすく統合された文字列を提供します。
         consolidated = (
             "Consolidated Insights\n"
             "====================\n\n"
@@ -101,7 +101,7 @@ class AggregateInsights(Executor):
 
 
 async def main() -> None:
-    # 1) Create agent executors for domain experts
+    # ドメインエキスパートのためのAgent Executorを作成します。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
     researcher = AgentExecutor(
@@ -137,7 +137,7 @@ async def main() -> None:
     dispatcher = DispatchToExperts(expert_ids=expert_ids, id="dispatcher")
     aggregator = AggregateInsights(expert_ids=expert_ids, id="aggregator")
 
-    # 2) Build a simple fan-out/fan-in workflow
+    # シンプルなfan-out/fan-inワークフローを構築します。
     workflow = (
         WorkflowBuilder()
         .set_start_executor(dispatcher)
@@ -146,28 +146,28 @@ async def main() -> None:
         .build()
     )
 
-    # 2.5) Generate workflow visualization
+    # ワークフローの可視化を生成します。
     print("Generating workflow visualization...")
     viz = WorkflowViz(workflow)
-    # Print out the mermaid string.
+    # mermaid文字列を出力します。
     print("Mermaid string: \n=======")
     print(viz.to_mermaid())
     print("=======")
-    # Print out the DiGraph string.
+    # DiGraph文字列を出力します。
     print("DiGraph string: \n=======")
     print(viz.to_digraph())
     print("=======")
     try:
-        # Export the DiGraph visualization as SVG.
+        # DiGraphの可視化をSVGとしてエクスポートします。
         svg_file = viz.export(format="svg")
         print(f"SVG file saved to: {svg_file}")
     except ImportError:
         print("Tip: Install 'viz' extra to export workflow visualization: pip install agent-framework[viz] --pre")
 
-    # 3) Run with a single prompt
+    # 単一のプロンプトで実行します。
     async for event in workflow.run_stream("We are launching a new budget-friendly electric bike for urban commuters."):
         if isinstance(event, AgentRunEvent):
-            # Show which agent ran and what step completed.
+            # どのAgentが実行され、どのステップが完了したかを表示します。
             print(event)
         elif isinstance(event, WorkflowOutputEvent):
             print("===== Final Aggregated Output =====")

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for AgentExecutor handling of tool calls and results in streaming mode."""
+"""ストリーミングモードにおけるAgentExecutorのツール呼び出しと結果処理のテスト。"""
 
 from collections.abc import AsyncIterable
 from typing import Any
@@ -22,7 +22,7 @@ from agent_framework import (
 
 
 class _ToolCallingAgent(BaseAgent):
-    """Mock agent that simulates tool calls and results in streaming mode."""
+    """ストリーミングモードでのツール呼び出しと結果をシミュレートするモックエージェント。"""
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -34,7 +34,7 @@ class _ToolCallingAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AgentRunResponse:
-        """Non-streaming run - not used in this test."""
+        """非ストリーミング実行 - このテストでは使用しません。"""
         return AgentRunResponse(messages=[ChatMessage(role=Role.ASSISTANT, text="done")])
 
     async def run_stream(
@@ -44,14 +44,14 @@ class _ToolCallingAgent(BaseAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Simulate streaming with tool calls and results."""
-        # First update: some text
+        """ツール呼び出しと結果でストリーミングをシミュレートします。"""
+        # 最初の更新：いくつかのテキスト
         yield AgentRunResponseUpdate(
             contents=[TextContent(text="Let me search for that...")],
             role=Role.ASSISTANT,
         )
 
-        # Second update: tool call (no text!)
+        # 2回目の更新：ツール呼び出し（テキストなし！）
         yield AgentRunResponseUpdate(
             contents=[
                 FunctionCallContent(
@@ -63,7 +63,7 @@ class _ToolCallingAgent(BaseAgent):
             role=Role.ASSISTANT,
         )
 
-        # Third update: tool result (no text!)
+        # 3回目の更新：ツール結果（テキストなし！）
         yield AgentRunResponseUpdate(
             contents=[
                 FunctionResultContent(
@@ -74,7 +74,7 @@ class _ToolCallingAgent(BaseAgent):
             role=Role.TOOL,
         )
 
-        # Fourth update: final text response
+        # 4回目の更新：最終テキストレスポンス
         yield AgentRunResponseUpdate(
             contents=[TextContent(text="The weather is sunny, 72°F.")],
             role=Role.ASSISTANT,
@@ -82,41 +82,41 @@ class _ToolCallingAgent(BaseAgent):
 
 
 async def test_agent_executor_emits_tool_calls_in_streaming_mode() -> None:
-    """Test that AgentExecutor emits updates containing FunctionCallContent and FunctionResultContent."""
-    # Arrange
+    """AgentExecutorがFunctionCallContentとFunctionResultContentを含む更新を発行することをテストします。"""
+    # 準備
     agent = _ToolCallingAgent(id="tool_agent", name="ToolAgent")
     agent_exec = AgentExecutor(agent, id="tool_exec")
 
     workflow = WorkflowBuilder().set_start_executor(agent_exec).build()
 
-    # Act: run in streaming mode
+    # 実行：ストリーミングモードで実行
     events: list[AgentRunUpdateEvent] = []
     async for event in workflow.run_stream("What's the weather?"):
         if isinstance(event, AgentRunUpdateEvent):
             events.append(event)
 
-    # Assert: we should receive 4 events (text, function call, function result, text)
+    # 検証：4つのイベント（テキスト、関数呼び出し、関数結果、テキスト）を受け取るはずです
     assert len(events) == 4, f"Expected 4 events, got {len(events)}"
 
-    # First event: text update
+    # 最初のイベント：テキスト更新
     assert events[0].data is not None
     assert isinstance(events[0].data.contents[0], TextContent)
     assert "Let me search" in events[0].data.contents[0].text
 
-    # Second event: function call
+    # 2番目のイベント：関数呼び出し
     assert events[1].data is not None
     assert isinstance(events[1].data.contents[0], FunctionCallContent)
     func_call = events[1].data.contents[0]
     assert func_call.call_id == "call_123"
     assert func_call.name == "search"
 
-    # Third event: function result
+    # 3番目のイベント：関数結果
     assert events[2].data is not None
     assert isinstance(events[2].data.contents[0], FunctionResultContent)
     func_result = events[2].data.contents[0]
     assert func_result.call_id == "call_123"
 
-    # Fourth event: final text
+    # 4番目のイベント：最終テキスト
     assert events[3].data is not None
     assert isinstance(events[3].data.contents[0], TextContent)
     assert "sunny" in events[3].data.contents[0].text

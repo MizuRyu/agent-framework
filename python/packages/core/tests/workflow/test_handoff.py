@@ -165,13 +165,13 @@ async def test_handoff_routes_to_specialist_and_requests_user_input():
 
     assert triage.calls, "Starting agent should receive initial conversation"
     assert specialist.calls, "Specialist should be invoked after handoff"
-    assert len(specialist.calls[0]) == 2  # user + triage reply
+    assert len(specialist.calls[0]) == 2  # ユーザー + triage の返信
 
     requests = [ev for ev in events if isinstance(ev, RequestInfoEvent)]
     assert requests, "Workflow should request additional user input"
     request_payload = requests[-1].data
     assert isinstance(request_payload, HandoffUserInputRequest)
-    assert len(request_payload.conversation) == 4  # user, triage tool call, tool ack, specialist
+    assert len(request_payload.conversation) == 4  # ユーザー、triage ツール呼び出し、ツール承認、スペシャリスト
     assert request_payload.conversation[2].role == Role.TOOL
     assert request_payload.conversation[3].role == Role.ASSISTANT
     assert "specialist reply" in request_payload.conversation[3].text
@@ -181,7 +181,7 @@ async def test_handoff_routes_to_specialist_and_requests_user_input():
 
 
 async def test_specialist_to_specialist_handoff():
-    """Test that specialists can hand off to other specialists via .add_handoff() configuration."""
+    """.add_handoff() 設定を介してスペシャリストが他のスペシャリストに引き継げることをテストします。"""
     triage = _RecordingAgent(name="triage", handoff_to="specialist")
     specialist = _RecordingAgent(name="specialist", handoff_to="escalation")
     escalation = _RecordingAgent(name="escalation")
@@ -195,20 +195,20 @@ async def test_specialist_to_specialist_handoff():
         .build()
     )
 
-    # Start conversation - triage hands off to specialist
+    # 会話開始 - triage がスペシャリストに引き継ぐ
     events = await _drain(workflow.run_stream("Need technical support"))
     requests = [ev for ev in events if isinstance(ev, RequestInfoEvent)]
     assert requests
 
-    # Specialist should have been called
+    # スペシャリストが呼び出されたはずです。
     assert len(specialist.calls) > 0
 
-    # Second user message - specialist hands off to escalation
+    # 2回目のユーザーメッセージ - スペシャリストがエスカレーションに引き継ぐ
     events = await _drain(workflow.send_responses_streaming({requests[-1].request_id: "This is complex"}))
     outputs = [ev for ev in events if isinstance(ev, WorkflowOutputEvent)]
     assert outputs
 
-    # Escalation should have been called
+    # エスカレーションが呼び出されたはずです。
     assert len(escalation.calls) > 0
 
 
@@ -216,7 +216,7 @@ async def test_handoff_preserves_complex_additional_properties(complex_metadata:
     triage = _RecordingAgent(name="triage", handoff_to="specialist", extra_properties={"complex": complex_metadata})
     specialist = _RecordingAgent(name="specialist")
 
-    # Sanity check: agent response contains complex metadata before entering workflow
+    # 整合性チェック：ワークフローに入る前にエージェントの応答に複雑なメタデータが含まれていること。
     triage_response = await triage.run([ChatMessage(role=Role.USER, text="Need help with a return")])
     assert triage_response.messages
     assert "complex" in triage_response.messages[0].additional_properties
@@ -228,7 +228,7 @@ async def test_handoff_preserves_complex_additional_properties(complex_metadata:
         .build()
     )
 
-    # Initial run should preserve complex metadata in the triage response
+    # 初回実行で triage の応答に複雑なメタデータが保持されること。
     events = await _drain(workflow.run_stream("Need help with a return"))
     agent_events = [ev for ev in events if hasattr(ev, "data") and hasattr(ev.data, "messages")]
     if agent_events:
@@ -255,7 +255,7 @@ async def test_handoff_preserves_complex_additional_properties(complex_metadata:
     restored_meta = next(value for value in metadata_values if isinstance(value, _ComplexMetadata))
     assert restored_meta.payload["code"] == "X1"
 
-    # Respond and ensure metadata survives subsequent cycles
+    # 応答し、メタデータが後続のサイクルでも保持されることを確認します。
     follow_up_events = await _drain(
         workflow.send_responses_streaming({requests[-1].request_id: "Here are more details"})
     )
@@ -295,7 +295,7 @@ async def test_tool_call_handoff_detection_with_text_hint():
 
 
 def test_build_fails_without_coordinator():
-    """Verify that build() raises ValueError when set_coordinator() was not called."""
+    """set_coordinator() が呼ばれていない場合に build() が ValueError を発生させることを検証します。"""
     triage = _RecordingAgent(name="triage")
     specialist = _RecordingAgent(name="specialist")
 
@@ -304,13 +304,13 @@ def test_build_fails_without_coordinator():
 
 
 def test_build_fails_without_participants():
-    """Verify that build() raises ValueError when no participants are provided."""
+    """参加者が提供されていない場合に build() が ValueError を発生させることを検証します。"""
     with pytest.raises(ValueError, match="No participants provided"):
         HandoffBuilder().build()
 
 
 async def test_multiple_runs_dont_leak_conversation():
-    """Verify that running the same workflow multiple times doesn't leak conversation history."""
+    """同じワークフローを複数回実行しても会話履歴が漏れないことを検証します。"""
     triage = _RecordingAgent(name="triage", handoff_to="specialist")
     specialist = _RecordingAgent(name="specialist")
 
@@ -321,7 +321,7 @@ async def test_multiple_runs_dont_leak_conversation():
         .build()
     )
 
-    # First run
+    # 最初の実行
     events = await _drain(workflow.run_stream("First run message"))
     requests = [ev for ev in events if isinstance(ev, RequestInfoEvent)]
     assert requests
@@ -336,7 +336,7 @@ async def test_multiple_runs_dont_leak_conversation():
     assert len(first_run_user_messages) == 2
     assert any("First run message" in msg.text for msg in first_run_user_messages if msg.text)
 
-    # Second run - should start fresh, not include first run's messages
+    # 2回目の実行 - 新規開始で、1回目のメッセージは含まれないはずです。
     triage.calls.clear()
     specialist.calls.clear()
 
@@ -361,7 +361,7 @@ async def test_multiple_runs_dont_leak_conversation():
 
 
 async def test_handoff_async_termination_condition() -> None:
-    """Test that async termination conditions work correctly."""
+    """非同期終了条件が正しく機能することをテストします。"""
     termination_call_count = 0
 
     async def async_termination(conv: list[ChatMessage]) -> bool:

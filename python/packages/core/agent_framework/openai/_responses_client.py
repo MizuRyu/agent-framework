@@ -76,7 +76,7 @@ __all__ = ["OpenAIResponsesClient"]
 
 
 class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
-    """Base class for all OpenAI Responses based API's."""
+    """すべてのOpenAI ResponsesベースAPIの基底クラス。"""
 
     FILE_SEARCH_MAX_RESULTS: int = 50
 
@@ -98,7 +98,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                 )
                 chat_options.conversation_id = response.id if chat_options.store is True else None
                 return self._create_response_content(response, chat_options=chat_options)
-            # create call does not support response_format, so we need to handle it via parse call
+            # create呼び出しはresponse_formatをサポートしていないため、parse呼び出しで処理する必要があります。
             resp_format = chat_options.response_format
             parsed_response: ParsedResponse[BaseModel] = await self.client.responses.parse(
                 text_format=resp_format,
@@ -144,7 +144,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                     )
                     yield update
                 return
-            # create call does not support response_format, so we need to handle it via stream call
+            # create呼び出しはresponse_formatをサポートしていないため、stream呼び出しで処理する必要があります。
             async with self.client.responses.stream(
                 text_format=chat_options.response_format,
                 **options_dict,
@@ -274,15 +274,15 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                     case _:
                         logger.debug("Unsupported tool passed (type: %s)", type(tool))
             else:
-                # Handle raw dictionary tools
+                # 生の辞書ツールを処理します。
                 tool_dict = tool if isinstance(tool, dict) else dict(tool)
 
-                # Special handling for image_generation tools
+                # image_generationツールの特別な処理。
                 if tool_dict.get("type") == "image_generation":
-                    # Create a copy to avoid modifying the original
+                    # 元のものを変更しないようにコピーを作成します。
                     mapped_tool = tool_dict.copy()
 
-                    # Map user-friendly parameter names to OpenAI API parameter names
+                    # ユーザーフレンドリーなパラメータ名をOpenAI APIのパラメータ名にマッピングします。
                     parameter_mapping = {
                         "format": "output_format",
                         "compression": "output_compression",
@@ -290,7 +290,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
 
                     for user_param, api_param in parameter_mapping.items():
                         if user_param in mapped_tool:
-                            # Map the parameter name and remove the old one
+                            # パラメータ名をマッピングし、古いものを削除します。
                             mapped_tool[api_param] = mapped_tool.pop(user_param)
 
                     response_tools.append(mapped_tool)
@@ -299,7 +299,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         return response_tools
 
     def _prepare_options(self, messages: MutableSequence[ChatMessage], chat_options: ChatOptions) -> dict[str, Any]:
-        """Take ChatOptions and create the specific options for Responses API."""
+        """ChatOptionsを受け取り、Responses API用の特定のオプションを作成します。"""
         options_dict: dict[str, Any] = chat_options.to_dict(
             exclude={
                 "type",
@@ -338,7 +338,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
             raise ServiceInvalidRequestError("Messages are required for chat completions")
         options_dict["input"] = request_input
 
-        # additional provider specific settings
+        # 追加のプロバイダー固有の設定。
         if additional_properties := options_dict.pop("additional_properties", None):
             for key, value in additional_properties.items():
                 if value is not None:
@@ -348,21 +348,22 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         return options_dict
 
     def _prepare_chat_messages_for_request(self, chat_messages: Sequence[ChatMessage]) -> list[dict[str, Any]]:
-        """Prepare the chat messages for a request.
+        """リクエスト用にチャットメッセージを準備します。
 
-        Allowing customization of the key names for role/author, and optionally overriding the role.
+        role/authorのキー名のカスタマイズや、役割のオーバーライドを許可します。
 
-        Role.TOOL messages need to be formatted different than system/user/assistant messages:
-            They require a "tool_call_id" and (function) "name" key, and the "metadata" key should
-            be removed. The "encoding" key should also be removed.
+        Role.TOOLメッセージはsystem/user/assistantメッセージとは異なるフォーマットが必要です:
+            "tool_call_id"と(function) "name"キーが必要で、"metadata"キーは削除すべきです。
+            "encoding"キーも削除すべきです。
 
-        Override this method to customize the formatting of the chat history for a request.
+        このメソッドをオーバーライドして、リクエスト用のチャット履歴のフォーマットをカスタマイズしてください。
 
-        Args:
-            chat_messages: The chat history to prepare.
+        引数:
+            chat_messages: 準備するチャット履歴。
 
-        Returns:
-            The prepared chat messages for a request.
+        戻り値:
+            リクエスト用に準備されたチャットメッセージ。
+
         """
         call_id_to_id: dict[str, str] = {}
         for message in chat_messages:
@@ -374,7 +375,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                 ):
                     call_id_to_id[content.call_id] = content.additional_properties["fc_id"]
         list_of_list = [self._openai_chat_message_parser(message, call_id_to_id) for message in chat_messages]
-        # Flatten the list of lists into a single list
+        # リストのリストを単一のリストに平坦化します。
         return list(chain.from_iterable(list_of_list))
 
     def _openai_chat_message_parser(
@@ -382,7 +383,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         message: ChatMessage,
         call_id_to_id: dict[str, str],
     ) -> list[dict[str, Any]]:
-        """Parse a chat message into the openai format."""
+        """チャットメッセージをopenaiフォーマットに解析します。"""
         all_messages: list[dict[str, Any]] = []
         args: dict[str, Any] = {
             "role": message.role.value if isinstance(message.role, Role) else message.role,
@@ -392,7 +393,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         for content in message.contents:
             match content:
                 case TextReasoningContent():
-                    # Don't send reasoning content back to model
+                    # 推論内容をモデルに返送しないようにします。
                     continue
                 case FunctionResultContent():
                     new_args: dict[str, Any] = {}
@@ -417,7 +418,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         content: Contents,
         call_id_to_id: dict[str, str],
     ) -> dict[str, Any]:
-        """Parse contents into the openai format."""
+        """内容をopenaiフォーマットに解析します。"""
         match content:
             case TextContent():
                 return {
@@ -491,7 +492,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                     "status": None,
                 }
             case FunctionResultContent():
-                # call_id for the result needs to be the same as the call_id for the function call
+                # 結果のcall_idは関数呼び出しのcall_idと同じである必要があります。
                 args: dict[str, Any] = {
                     "call_id": content.call_id,
                     "id": call_id_to_id.get(content.call_id),
@@ -534,31 +535,21 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         response: OpenAIResponse | ParsedResponse[BaseModel],
         chat_options: ChatOptions,
     ) -> "ChatResponse":
-        """Create a chat message content object from a choice."""
+        """choiceからチャットメッセージコンテンツオブジェクトを作成します。"""
         structured_response: BaseModel | None = response.output_parsed if isinstance(response, ParsedResponse) else None  # type: ignore[reportUnknownMemberType]
 
         metadata: dict[str, Any] = response.metadata or {}
         contents: list[Contents] = []
         for item in response.output:  # type: ignore[reportUnknownMemberType]
             match item.type:
-                # types:
-                # ParsedResponseOutputMessage[Unknown] |
-                # ParsedResponseFunctionToolCall |
-                # ResponseFileSearchToolCall |
-                # ResponseFunctionWebSearch |
-                # ResponseComputerToolCall |
-                # ResponseReasoningItem |
-                # MCPCall |
-                # MCPApprovalRequest |
-                # ImageGenerationCall |
-                # LocalShellCall |
-                # LocalShellCallAction |
-                # MCPListTools |
-                # ResponseCodeInterpreterToolCall |
-                # ResponseCustomToolCall |
-                # ParsedResponseOutputMessage[BaseModel] |
-                # ResponseOutputMessage |
-                # ResponseFunctionToolCall
+                # types: ParsedResponseOutputMessage[Unknown] |
+                # ParsedResponseFunctionToolCall | ResponseFileSearchToolCall |
+                # ResponseFunctionWebSearch | ResponseComputerToolCall |
+                # ResponseReasoningItem | MCPCall | MCPApprovalRequest |
+                # ImageGenerationCall | LocalShellCall | LocalShellCallAction |
+                # MCPListTools | ResponseCodeInterpreterToolCall |
+                # ResponseCustomToolCall | ParsedResponseOutputMessage[BaseModel] |
+                # ResponseOutputMessage | ResponseFunctionToolCall
                 case "message":  # ResponseOutputMessage
                     for message_content in item.content:  # type: ignore[reportMissingTypeArgument]
                         match message_content.type:
@@ -659,12 +650,12 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                                     UriContent(
                                         uri=code_output.url,
                                         raw_representation=item,
-                                        # no more specific media type then this can be inferred
+                                        # これ以上特定のメディアタイプがない場合、これが推測されます。
                                         media_type="image",
                                     )
                                 )
                     elif hasattr(item, "code") and item.code:
-                        # fallback if no output was returned is the code:
+                        # 出力が返されなかった場合のフォールバックはコードです:
                         contents.append(TextContent(text=item.code, raw_representation=item))
                 case "function_call":  # ResponseOutputFunctionCall
                     contents.append(
@@ -691,17 +682,16 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                     )
                 case "image_generation_call":  # ResponseOutputImageGenerationCall
                     if item.result:
-                        # Handle the result as either a proper data URI or raw base64 string
+                        # 結果を適切なdata URIまたは生のbase64文字列として処理します。
                         uri = item.result
                         media_type = None
                         if not uri.startswith("data:"):
-                            # Raw base64 string - convert to proper data URI format
-                            # Detect format from base64 data
+                            # 生のbase64文字列 - 適切なdata URI形式に変換します base64データからフォーマットを検出します。
                             import base64
 
                             try:
-                                # Decode a small portion to detect format
-                                decoded_data = base64.b64decode(uri[:100])  # First ~75 bytes should be enough
+                                # フォーマットを検出するために一部をデコードします。
+                                decoded_data = base64.b64decode(uri[:100])  # 最初の約75バイトで十分なはずです。
                                 if decoded_data.startswith(b"\x89PNG"):
                                     format_type = "png"
                                 elif decoded_data.startswith(b"\xff\xd8\xff"):
@@ -711,21 +701,22 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                                 elif decoded_data.startswith(b"GIF87a") or decoded_data.startswith(b"GIF89a"):
                                     format_type = "gif"
                                 else:
-                                    # Default to png if format cannot be detected
+                                    # フォーマットが検出できない場合はpngをデフォルトにします。
                                     format_type = "png"
                             except Exception:
-                                # Fallback to png if decoding fails
+                                # デコードに失敗した場合はpngにフォールバックします。
                                 format_type = "png"
                             uri = f"data:image/{format_type};base64,{uri}"
                             media_type = f"image/{format_type}"
                         else:
-                            # Parse media type from existing data URI
+                            # 既存のdata URIからメディアタイプを解析します。
                             try:
-                                # Extract media type from data URI (e.g., "data:image/png;base64,...")
+                                # data URIからメディアタイプを抽出します（例:
+                                # "data:image/png;base64,..."）。
                                 if ";" in uri and uri.startswith("data:"):
                                     media_type = uri.split(";")[0].split(":", 1)[1]
                             except Exception:
-                                # Fallback if parsing fails
+                                # 解析に失敗した場合のフォールバック。
                                 media_type = "image"
                         contents.append(
                             DataContent(
@@ -734,7 +725,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                                 raw_representation=item,
                             )
                         )
-                # TODO(peterychang): Add support for other content types
+                # TODO(peterychang): 他のコンテンツタイプのサポートを追加する予定です。
                 case _:
                     logger.debug("Unparsed output of type: %s: %s", item.type, item)
         response_message = ChatMessage(role="assistant", contents=contents)
@@ -762,65 +753,44 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         chat_options: ChatOptions,
         function_call_ids: dict[int, tuple[str, str]],
     ) -> ChatResponseUpdate:
-        """Create a streaming chat message content object from a choice."""
+        """choiceからストリーミングチャットメッセージコンテンツオブジェクトを作成します。"""
         metadata: dict[str, Any] = {}
         contents: list[Contents] = []
         conversation_id: str | None = None
         model = self.model_id
-        # TODO(peterychang): Add support for other content types
+        # TODO(peterychang): 他のコンテンツタイプのサポートを追加する予定です。
         match event.type:
-            # types:
-            # ResponseAudioDeltaEvent,
-            # ResponseAudioDoneEvent,
-            # ResponseAudioTranscriptDeltaEvent,
-            # ResponseAudioTranscriptDoneEvent,
+            # types: ResponseAudioDeltaEvent, ResponseAudioDoneEvent,
+            # ResponseAudioTranscriptDeltaEvent, ResponseAudioTranscriptDoneEvent,
             # ResponseCodeInterpreterCallCodeDeltaEvent,
             # ResponseCodeInterpreterCallCodeDoneEvent,
             # ResponseCodeInterpreterCallCompletedEvent,
             # ResponseCodeInterpreterCallInProgressEvent,
-            # ResponseCodeInterpreterCallInterpretingEvent,
-            # ResponseCompletedEvent,
-            # ResponseContentPartAddedEvent,
-            # ResponseContentPartDoneEvent,
-            # ResponseCreatedEvent,
-            # ResponseErrorEvent,
+            # ResponseCodeInterpreterCallInterpretingEvent, ResponseCompletedEvent,
+            # ResponseContentPartAddedEvent, ResponseContentPartDoneEvent,
+            # ResponseCreatedEvent, ResponseErrorEvent,
             # ResponseFileSearchCallCompletedEvent,
             # ResponseFileSearchCallInProgressEvent,
             # ResponseFileSearchCallSearchingEvent,
             # ResponseFunctionCallArgumentsDeltaEvent,
-            # ResponseFunctionCallArgumentsDoneEvent,
-            # ResponseInProgressEvent,
-            # ResponseFailedEvent,
-            # ResponseIncompleteEvent,
-            # ResponseOutputItemAddedEvent,
-            # ResponseOutputItemDoneEvent,
+            # ResponseFunctionCallArgumentsDoneEvent, ResponseInProgressEvent,
+            # ResponseFailedEvent, ResponseIncompleteEvent,
+            # ResponseOutputItemAddedEvent, ResponseOutputItemDoneEvent,
             # ResponseReasoningSummaryPartAddedEvent,
             # ResponseReasoningSummaryPartDoneEvent,
             # ResponseReasoningSummaryTextDeltaEvent,
-            # ResponseReasoningSummaryTextDoneEvent,
-            # ResponseReasoningTextDeltaEvent,
-            # ResponseReasoningTextDoneEvent,
-            # ResponseRefusalDeltaEvent,
-            # ResponseRefusalDoneEvent,
-            # ResponseTextDeltaEvent,
-            # ResponseTextDoneEvent,
-            # ResponseWebSearchCallCompletedEvent,
-            # ResponseWebSearchCallInProgressEvent,
-            # ResponseWebSearchCallSearchingEvent,
-            # ResponseImageGenCallCompletedEvent,
-            # ResponseImageGenCallGeneratingEvent,
-            # ResponseImageGenCallInProgressEvent,
-            # ResponseImageGenCallPartialImageEvent,
-            # ResponseMcpCallArgumentsDeltaEvent,
-            # ResponseMcpCallArgumentsDoneEvent,
-            # ResponseMcpCallCompletedEvent,
-            # ResponseMcpCallFailedEvent,
-            # ResponseMcpCallInProgressEvent,
-            # ResponseMcpListToolsCompletedEvent,
-            # ResponseMcpListToolsFailedEvent,
+            # ResponseReasoningSummaryTextDoneEvent, ResponseReasoningTextDeltaEvent,
+            # ResponseReasoningTextDoneEvent, ResponseRefusalDeltaEvent,
+            # ResponseRefusalDoneEvent, ResponseTextDeltaEvent, ResponseTextDoneEvent,
+            # ResponseWebSearchCallCompletedEvent, ResponseWebSearchCallInProgressEvent,
+            # ResponseWebSearchCallSearchingEvent, ResponseImageGenCallCompletedEvent,
+            # ResponseImageGenCallGeneratingEvent, ResponseImageGenCallInProgressEvent,
+            # ResponseImageGenCallPartialImageEvent, ResponseMcpCallArgumentsDeltaEvent,
+            # ResponseMcpCallArgumentsDoneEvent, ResponseMcpCallCompletedEvent,
+            # ResponseMcpCallFailedEvent, ResponseMcpCallInProgressEvent,
+            # ResponseMcpListToolsCompletedEvent, ResponseMcpListToolsFailedEvent,
             # ResponseMcpListToolsInProgressEvent,
-            # ResponseOutputTextAnnotationAddedEvent,
-            # ResponseQueuedEvent,
+            # ResponseOutputTextAnnotationAddedEvent, ResponseQueuedEvent,
             # ResponseCustomToolCallInputDeltaEvent,
             # ResponseCustomToolCallInputDoneEvent,
             case "response.content_part.added":
@@ -856,19 +826,11 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
             case "response.output_item.added":
                 event_item = event.item
                 match event_item.type:
-                    # types:
-                    # ResponseOutputMessage,
-                    # ResponseFileSearchToolCall,
-                    # ResponseFunctionToolCall,
-                    # ResponseFunctionWebSearch,
-                    # ResponseComputerToolCall,
-                    # ResponseReasoningItem,
-                    # ImageGenerationCall,
-                    # ResponseCodeInterpreterToolCall,
-                    # LocalShellCall,
-                    # McpCall,
-                    # McpListTools,
-                    # McpApprovalRequest,
+                    # types: ResponseOutputMessage, ResponseFileSearchToolCall,
+                    # ResponseFunctionToolCall, ResponseFunctionWebSearch,
+                    # ResponseComputerToolCall, ResponseReasoningItem,
+                    # ImageGenerationCall, ResponseCodeInterpreterToolCall,
+                    # LocalShellCall, McpCall, McpListTools, McpApprovalRequest,
                     # ResponseCustomToolCall,
                     case "function_call":
                         function_call_ids[event.output_index] = (event_item.call_id, event_item.name)
@@ -895,12 +857,12 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                                         UriContent(
                                             uri=code_output.url,
                                             raw_representation=event_item,
-                                            # no more specific media type then this can be inferred
+                                            # これ以上特定のメディアタイプがない場合、これが推測されます。
                                             media_type="image",
                                         )
                                     )
                         elif hasattr(event_item, "code") and event_item.code:
-                            # fallback if no output was returned is the code:
+                            # 出力が返されなかった場合のフォールバックコードは次の通りです:
                             contents.append(TextContent(text=event_item.code, raw_representation=event_item))
                     case "reasoning":  # ResponseOutputReasoning
                         if hasattr(event_item, "content") and event_item.content:
@@ -958,7 +920,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
         return details
 
     def _get_metadata_from_response(self, output: Any) -> dict[str, Any]:
-        """Get metadata from a chat choice."""
+        """チャットの選択肢からメタデータを取得します。"""
         if logprobs := getattr(output, "logprobs", None):
             return {
                 "logprobs": logprobs,
@@ -973,7 +935,7 @@ TOpenAIResponsesClient = TypeVar("TOpenAIResponsesClient", bound="OpenAIResponse
 @use_observability
 @use_chat_middleware
 class OpenAIResponsesClient(OpenAIConfigMixin, OpenAIBaseResponsesClient):
-    """OpenAI Responses client class."""
+    """OpenAI Responsesのクライアントクラスです。"""
 
     def __init__(
         self,
@@ -989,42 +951,41 @@ class OpenAIResponsesClient(OpenAIConfigMixin, OpenAIBaseResponsesClient):
         env_file_encoding: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize an OpenAI Responses client.
+        """OpenAI Responsesクライアントを初期化します。
 
-        Keyword Args:
-            model_id: OpenAI model name, see https://platform.openai.com/docs/models.
-                Can also be set via environment variable OPENAI_RESPONSES_MODEL_ID.
-            api_key: The API key to use. If provided will override the env vars or .env file value.
-                Can also be set via environment variable OPENAI_API_KEY.
-            org_id: The org ID to use. If provided will override the env vars or .env file value.
-                Can also be set via environment variable OPENAI_ORG_ID.
-            base_url: The base URL to use. If provided will override the standard value.
-                Can also be set via environment variable OPENAI_BASE_URL.
-            default_headers: The default headers mapping of string keys to
-                string values for HTTP requests.
-            async_client: An existing client to use.
-            instruction_role: The role to use for 'instruction' messages, for example,
-                "system" or "developer". If not provided, the default is "system".
-            env_file_path: Use the environment settings file as a fallback
-                to environment variables.
-            env_file_encoding: The encoding of the environment settings file.
-            kwargs: Other keyword parameters.
+        キーワード引数:
+            model_id: OpenAIのモデル名。詳細は https://platform.openai.com/docs/models を参照してください。
+                環境変数 OPENAI_RESPONSES_MODEL_ID でも設定可能です。
+            api_key: 使用するAPIキー。指定した場合は環境変数や.envファイルの値を上書きします。
+                環境変数 OPENAI_API_KEY でも設定可能です。
+            org_id: 使用する組織ID。指定した場合は環境変数や.envファイルの値を上書きします。
+                環境変数 OPENAI_ORG_ID でも設定可能です。
+            base_url: 使用するベースURL。指定した場合は標準値を上書きします。
+                環境変数 OPENAI_BASE_URL でも設定可能です。
+            default_headers: HTTPリクエスト用の文字列キーから文字列値へのデフォルトヘッダーのマッピング。
+            async_client: 既存のクライアントを使用する場合。
+            instruction_role: 'instruction'メッセージに使用するロール。例として "system" や "developer"。
+                指定しない場合のデフォルトは "system" です。
+            env_file_path: 環境変数のフォールバックとして環境設定ファイルを使用します。
+            env_file_encoding: 環境設定ファイルのエンコーディング。
+            kwargs: その他のキーワードパラメータ。
 
         Examples:
             .. code-block:: python
 
                 from agent_framework.openai import OpenAIResponsesClient
 
-                # Using environment variables
-                # Set OPENAI_API_KEY=sk-...
-                # Set OPENAI_RESPONSES_MODEL_ID=gpt-4o
+                # 環境変数を使用する場合
+                # OPENAI_API_KEY=sk-... を設定
+                # OPENAI_RESPONSES_MODEL_ID=gpt-4o を設定
                 client = OpenAIResponsesClient()
 
-                # Or passing parameters directly
+                # またはパラメータを直接渡す場合
                 client = OpenAIResponsesClient(model_id="gpt-4o", api_key="sk-...")
 
-                # Or loading from a .env file
+                # または .env ファイルから読み込む場合
                 client = OpenAIResponsesClient(env_file_path="path/to/.env")
+
         """
         try:
             openai_settings = OpenAISettings(

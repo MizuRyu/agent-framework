@@ -21,7 +21,7 @@ for Python code execution and mathematical problem solving.
 
 
 def get_code_interpreter_chunk(chunk: AgentRunResponseUpdate) -> str | None:
-    """Helper method to access code interpreter data."""
+    """コードインタープリターのデータにアクセスするためのヘルパーメソッド。"""
     if (
         isinstance(chunk.raw_representation, ChatResponseUpdate)
         and isinstance(chunk.raw_representation.raw_representation, RunStepDeltaEvent)
@@ -40,7 +40,7 @@ def get_code_interpreter_chunk(chunk: AgentRunResponseUpdate) -> str | None:
 
 
 async def main() -> None:
-    """Example showing how to use the HostedCodeInterpreterTool with OpenAI Assistants."""
+    """HostedCodeInterpreterToolをOpenAI Assistantsで使う例。"""
     print("=== OpenAI Assistants Agent with Code Interpreter Example ===")
 
     async with ChatAgent(

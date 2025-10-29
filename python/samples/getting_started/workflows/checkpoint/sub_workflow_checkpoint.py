@@ -44,13 +44,13 @@ def _utc_now() -> datetime:
 
 
 # ---------------------------------------------------------------------------
-# Messages exchanged inside the sub-workflow
+# サブワークフロー内で交換されるメッセージ
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class DraftTask:
-    """Task handed from the parent to the sub-workflow writer."""
+    """親からサブワークフローライターに渡されたタスク。"""
 
     topic: str
     due: datetime
@@ -59,7 +59,7 @@ class DraftTask:
 
 @dataclass
 class DraftPackage:
-    """Intermediate draft produced by the sub-workflow writer."""
+    """サブワークフローライターによって作成された中間ドラフト。"""
 
     topic: str
     content: str
@@ -69,7 +69,7 @@ class DraftPackage:
 
 @dataclass
 class FinalDraft:
-    """Final deliverable returned to the parent workflow."""
+    """親ワークフローに返される最終成果物。"""
 
     topic: str
     content: str
@@ -79,7 +79,7 @@ class FinalDraft:
 
 @dataclass
 class ReviewRequest(RequestInfoMessage):
-    """Human approval request surfaced via RequestInfoExecutor."""
+    """RequestInfoExecutor を介して表示される人間の承認要求。"""
 
     topic: str = ""
     iteration: int = 1
@@ -88,13 +88,12 @@ class ReviewRequest(RequestInfoMessage):
     reviewer_guidance: list[str] = field(default_factory=list)  # type: ignore
 
 
-# ---------------------------------------------------------------------------
-# Sub-workflow executors
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------- サブワークフロー
+# executor ---------------------------------------------------------------------------
 
 
 class DraftWriter(Executor):
-    """Produces an initial draft for the supplied topic."""
+    """指定されたトピックの初期ドラフトを生成します。"""
 
     def __init__(self) -> None:
         super().__init__(id="draft_writer")
@@ -116,7 +115,7 @@ class DraftWriter(Executor):
 
 
 class DraftReviewRouter(Executor):
-    """Turns draft packages into human approval requests."""
+    """ドラフトパッケージを人間の承認要求に変換します。"""
 
     def __init__(self) -> None:
         super().__init__(id="draft_review")
@@ -146,7 +145,7 @@ class DraftReviewRouter(Executor):
 
 
 class DraftFinaliser(Executor):
-    """Applies the human decision and emits the final draft."""
+    """人間の決定を適用し、最終ドラフトを出力します。"""
 
     def __init__(self) -> None:
         super().__init__(id="draft_finaliser")
@@ -163,8 +162,7 @@ class DraftFinaliser(Executor):
         iteration = original.iteration if original else 1
 
         if reply != "approve":
-            # Loop back with a follow-up task. In a real workflow you would
-            # incorporate the human guidance; here we just increment the counter.
+            # フォローアップタスクでループバックします。実際のワークフローでは人間の指導を組み込みますが、ここでは単にカウンターをインクリメントします。
             next_task = DraftTask(
                 topic=topic,
                 due=_utc_now() + timedelta(hours=1),
@@ -182,13 +180,12 @@ class DraftFinaliser(Executor):
         await ctx.yield_output(final)
 
 
-# ---------------------------------------------------------------------------
-# Parent workflow executors
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------- 親ワークフロー
+# executor ---------------------------------------------------------------------------
 
 
 class LaunchCoordinator(Executor):
-    """Owns the top-level workflow and collects the final draft."""
+    """トップレベルのワークフローを所有し、最終ドラフトを収集します。"""
 
     def __init__(self) -> None:
         super().__init__(id="launch_coordinator")
@@ -227,7 +224,7 @@ class LaunchCoordinator(Executor):
 
 
 # ---------------------------------------------------------------------------
-# Workflow construction helpers
+# ワークフロー構築ヘルパー
 # ---------------------------------------------------------------------------
 
 
@@ -316,7 +313,7 @@ async def main() -> None:
         print(f"Pending review requests (parent executor snapshot): {list(parent_pending.keys())}")
 
     print("\n=== Stage 2: resume from checkpoint and approve draft ===")
-    # Rebuild fresh instances to mimic a separate process resuming
+    # 別プロセスが再開することを模倣するために新しいインスタンスを再構築します。
     coordinator2, workflow2 = build_parent_workflow(storage)
 
     approval_response = "approve"

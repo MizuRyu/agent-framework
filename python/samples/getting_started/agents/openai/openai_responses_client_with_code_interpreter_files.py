@@ -15,11 +15,11 @@ This sample demonstrates using HostedCodeInterpreterTool with OpenAI Responses C
 for Python code execution and data analysis with uploaded files.
 """
 
-# Helper functions
+# ヘルパー関数
 
 
 async def create_sample_file_and_upload(openai_client: AsyncOpenAI) -> tuple[str, str]:
-    """Create a sample CSV file and upload it to OpenAI."""
+    """サンプルCSVファイルを作成し、OpenAIにアップロードします。"""
     csv_data = """name,department,salary,years_experience
 Alice Johnson,Engineering,95000,5
 Bob Smith,Sales,75000,3
@@ -29,12 +29,12 @@ Emma Davis,Sales,82000,4
 Frank Wilson,Engineering,88000,6
 """
 
-    # Create temporary CSV file
+    # 一時CSVファイルを作成します
     with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as temp_file:
         temp_file.write(csv_data)
         temp_file_path = temp_file.name
 
-    # Upload file to OpenAI
+    # ファイルをOpenAIにアップロードします
     print("Uploading file to OpenAI...")
     with open(temp_file_path, "rb") as file:
         uploaded_file = await openai_client.files.create(
@@ -47,32 +47,32 @@ Frank Wilson,Engineering,88000,6
 
 
 async def cleanup_files(openai_client: AsyncOpenAI, temp_file_path: str, file_id: str) -> None:
-    """Clean up both local temporary file and uploaded file."""
-    # Clean up: delete the uploaded file
+    """ローカルの一時ファイルとアップロードされたファイルの両方をクリーンアップします。"""
+    # クリーンアップ：アップロードされたファイルを削除します
     await openai_client.files.delete(file_id)
     print(f"Cleaned up uploaded file: {file_id}")
 
-    # Clean up temporary local file
+    # 一時ローカルファイルをクリーンアップします
     os.unlink(temp_file_path)
     print(f"Cleaned up temporary file: {temp_file_path}")
 
 
 async def main() -> None:
-    """Complete example of uploading a file to OpenAI and using it with code interpreter."""
+    """ファイルをOpenAIにアップロードし、コードインタープリターで使用する完全な例。"""
     print("=== OpenAI Code Interpreter with File Upload ===")
 
     openai_client = AsyncOpenAI()
 
     temp_file_path, file_id = await create_sample_file_and_upload(openai_client)
 
-    # Create agent using OpenAI Responses client
+    # OpenAI Responsesクライアントを使用してAgentを作成します
     agent = ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant that can analyze data files using Python code.",
         tools=HostedCodeInterpreterTool(inputs=[{"file_id": file_id}]),
     )
 
-    # Test the code interpreter with the uploaded file
+    # アップロードされたファイルでコードインタープリターをテストします
     query = "Analyze the employee data in the uploaded CSV file. Calculate average salary by department."
     print(f"User: {query}")
     result = await agent.run(query)

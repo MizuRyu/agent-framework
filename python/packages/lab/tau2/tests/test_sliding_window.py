@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for sliding window message list."""
+"""スライディングウィンドウメッセージリストのテスト。"""
 
 from unittest.mock import patch
 
@@ -9,7 +9,7 @@ from agent_framework_lab_tau2._sliding_window import SlidingWindowChatMessageSto
 
 
 def test_initialization_empty():
-    """Test initializing with no messages."""
+    """メッセージなしでの初期化テスト。"""
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000)
 
     assert sliding_window.max_tokens == 1000
@@ -20,7 +20,7 @@ def test_initialization_empty():
 
 
 def test_initialization_with_parameters():
-    """Test initializing with system message and tool definitions."""
+    """システムメッセージとツール定義での初期化テスト。"""
     system_msg = "You are a helpful assistant"
     tool_defs = [{"name": "test_tool", "description": "A test tool"}]
 
@@ -34,7 +34,7 @@ def test_initialization_with_parameters():
 
 
 def test_initialization_with_messages():
-    """Test initializing with existing messages."""
+    """既存メッセージでの初期化テスト。"""
     messages = [
         ChatMessage(role=Role.USER, contents=[TextContent(text="Hello")]),
         ChatMessage(role=Role.ASSISTANT, contents=[TextContent(text="Hi there!")]),
@@ -47,8 +47,8 @@ def test_initialization_with_messages():
 
 
 async def test_add_messages_simple():
-    """Test adding messages without truncation."""
-    sliding_window = SlidingWindowChatMessageStore(max_tokens=10000)  # Large limit
+    """切り詰めなしでメッセージを追加するテスト。"""
+    sliding_window = SlidingWindowChatMessageStore(max_tokens=10000)  # 大きな制限値
 
     new_messages = [
         ChatMessage(role=Role.USER, contents=[TextContent(text="What's the weather?")]),
@@ -64,10 +64,10 @@ async def test_add_messages_simple():
 
 
 async def test_list_all_messages_vs_list_messages():
-    """Test difference between list_all_messages and list_messages."""
-    sliding_window = SlidingWindowChatMessageStore(max_tokens=50)  # Small limit to force truncation
+    """list_all_messagesとlist_messagesの違いのテスト。"""
+    sliding_window = SlidingWindowChatMessageStore(max_tokens=50)  # 切り詰めを強制する小さな制限値
 
-    # Add many messages to trigger truncation
+    # 切り詰めを引き起こすために多くのメッセージを追加
     messages = [
         ChatMessage(role=Role.USER, contents=[TextContent(text=f"Message {i} with some content")]) for i in range(10)
     ]
@@ -77,43 +77,43 @@ async def test_list_all_messages_vs_list_messages():
     truncated_messages = await sliding_window.list_messages()
     all_messages = await sliding_window.list_all_messages()
 
-    # All messages should contain everything
+    # すべてのメッセージはすべての内容を含むべきです
     assert len(all_messages) == 10
 
-    # Truncated messages should be fewer due to token limit
+    # トークン制限により切り詰められたメッセージは少なくなるべきです
     assert len(truncated_messages) < len(all_messages)
 
 
 def test_get_token_count_basic():
-    """Test basic token counting."""
+    """基本的なトークンカウントのテスト。"""
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000)
     sliding_window.truncated_messages = [ChatMessage(role=Role.USER, contents=[TextContent(text="Hello")])]
 
     token_count = sliding_window.get_token_count()
 
-    # Should be more than 0 (exact count depends on encoding)
+    # 0より多いはずです（正確な数はエンコーディングによる）
     assert token_count > 0
 
 
 def test_get_token_count_with_system_message():
-    """Test token counting includes system message."""
+    """システムメッセージを含むトークンカウントのテスト。"""
     system_msg = "You are a helpful assistant"
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000, system_message=system_msg)
 
-    # Without messages
+    # メッセージなしの場合
     token_count_empty = sliding_window.get_token_count()
 
-    # Add a message
+    # メッセージを追加
     sliding_window.truncated_messages = [ChatMessage(role=Role.USER, contents=[TextContent(text="Hello")])]
     token_count_with_message = sliding_window.get_token_count()
 
-    # With message should be more tokens
+    # メッセージありの方がトークン数が多いはず
     assert token_count_with_message > token_count_empty
-    assert token_count_empty > 0  # System message contributes tokens
+    assert token_count_empty > 0  # システムメッセージはトークンに寄与する
 
 
 def test_get_token_count_function_call():
-    """Test token counting with function calls."""
+    """関数呼び出しを含むトークンカウントのテスト。"""
     function_call = FunctionCallContent(call_id="call_123", name="test_function", arguments={"param": "value"})
 
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000)
@@ -124,7 +124,7 @@ def test_get_token_count_function_call():
 
 
 def test_get_token_count_function_result():
-    """Test token counting with function results."""
+    """関数結果を含むトークンカウントのテスト。"""
     function_result = FunctionResultContent(call_id="call_123", result={"success": True, "data": "result"})
 
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000)
@@ -136,10 +136,10 @@ def test_get_token_count_function_result():
 
 @patch("agent_framework_lab_tau2._sliding_window.logger")
 def test_truncate_messages_removes_old_messages(mock_logger):
-    """Test that truncation removes old messages when token limit exceeded."""
-    sliding_window = SlidingWindowChatMessageStore(max_tokens=20)  # Very small limit
+    """トークン制限を超えた場合に古いメッセージが切り詰められることのテスト。"""
+    sliding_window = SlidingWindowChatMessageStore(max_tokens=20)  # 非常に小さな制限値
 
-    # Create messages that will exceed the limit
+    # 制限を超えるメッセージを作成
     messages = [
         ChatMessage(
             role=Role.USER,
@@ -155,35 +155,35 @@ def test_truncate_messages_removes_old_messages(mock_logger):
     sliding_window.truncated_messages = messages.copy()
     sliding_window.truncate_messages()
 
-    # Should have fewer messages after truncation
+    # 切り詰め後はメッセージ数が少なくなるはず
     assert len(sliding_window.truncated_messages) < len(messages)
 
-    # Should have logged warnings
+    # 警告がログに記録されるべきです
     assert mock_logger.warning.called
 
 
 @patch("agent_framework_lab_tau2._sliding_window.logger")
 def test_truncate_messages_removes_leading_tool_messages(mock_logger):
-    """Test that truncation removes leading tool messages."""
-    sliding_window = SlidingWindowChatMessageStore(max_tokens=10000)  # Large limit
+    """トランケーションが先頭のtoolメッセージを削除することをテストします。"""
+    sliding_window = SlidingWindowChatMessageStore(max_tokens=10000)  # 大きな制限
 
-    # Create messages starting with tool message
+    # toolメッセージで始まるメッセージを作成する
     tool_message = ChatMessage(role=Role.TOOL, contents=[FunctionResultContent(call_id="call_123", result="result")])
     user_message = ChatMessage(role=Role.USER, contents=[TextContent(text="Hello")])
 
     sliding_window.truncated_messages = [tool_message, user_message]
     sliding_window.truncate_messages()
 
-    # Tool message should be removed from the beginning
+    # toolメッセージは先頭から削除されるべきです
     assert len(sliding_window.truncated_messages) == 1
     assert sliding_window.truncated_messages[0].role == Role.USER
 
-    # Should have logged warning about removing tool message
+    # toolメッセージを削除したことに関する警告がログに記録されているはずです
     mock_logger.warning.assert_called()
 
 
 def test_estimate_any_object_token_count_dict():
-    """Test token counting for dictionary objects."""
+    """辞書オブジェクトのトークンカウントをテストします。"""
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000)
 
     test_dict = {"key": "value", "number": 42}
@@ -193,7 +193,7 @@ def test_estimate_any_object_token_count_dict():
 
 
 def test_estimate_any_object_token_count_string():
-    """Test token counting for string objects."""
+    """文字列オブジェクトのトークンカウントをテストします。"""
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000)
 
     test_string = "This is a test string"
@@ -203,10 +203,10 @@ def test_estimate_any_object_token_count_string():
 
 
 def test_estimate_any_object_token_count_non_serializable():
-    """Test token counting for non-JSON-serializable objects."""
+    """JSONシリアライズ不可能なオブジェクトのトークンカウントをテストします。"""
     sliding_window = SlidingWindowChatMessageStore(max_tokens=1000)
 
-    # Create an object that can't be JSON serialized
+    # JSONシリアライズできないオブジェクトを作成する
     class CustomObject:
         def __str__(self):
             return "CustomObject instance"
@@ -214,18 +214,18 @@ def test_estimate_any_object_token_count_non_serializable():
     custom_obj = CustomObject()
     token_count = sliding_window.estimate_any_object_token_count(custom_obj)
 
-    # Should fall back to string representation
+    # 文字列表現にフォールバックするはずです
     assert token_count > 0
 
 
 async def test_real_world_scenario():
-    """Test a realistic conversation scenario."""
+    """現実的な会話シナリオをテストします。"""
     sliding_window = SlidingWindowChatMessageStore(
         max_tokens=30,
         system_message="You are a helpful assistant",  # Moderate limit
     )
 
-    # Simulate a conversation
+    # 会話をシミュレートする
     conversation = [
         ChatMessage(role=Role.USER, contents=[TextContent(text="Hello, how are you?")]),
         ChatMessage(
@@ -253,13 +253,13 @@ async def test_real_world_scenario():
     current_messages = await sliding_window.list_messages()
     all_messages = await sliding_window.list_all_messages()
 
-    # All messages should be preserved
+    # すべてのメッセージは保持されるべきです
     assert len(all_messages) == 6
 
-    # Current messages might be truncated
+    # 現在のメッセージはトランケーションされる可能性があります
     assert len(current_messages) <= 6
 
-    # Token count should be within or close to limit
+    # トークン数は制限内または制限に近いはずです
     token_count = sliding_window.get_token_count()
-    # Allow some margin since truncation happens when exceeded
+    # トランケーションは制限を超えた時に発生するため、ある程度のマージンを許容します
     assert token_count <= sliding_window.max_tokens * 1.1

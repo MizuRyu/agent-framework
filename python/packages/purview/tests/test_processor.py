@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Tests for Purview processor."""
+"""Purview processor のテスト。"""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -19,26 +19,26 @@ from agent_framework_purview._processor import ScopedContentProcessor, _is_valid
 
 
 class TestGuidValidation:
-    """Test GUID validation helper."""
+    """GUID 検証ヘルパーをテスト。"""
 
     def test_valid_guid(self) -> None:
-        """Test _is_valid_guid with valid GUIDs."""
+        """有効な GUID で _is_valid_guid をテスト。"""
         assert _is_valid_guid("12345678-1234-1234-1234-123456789012")
         assert _is_valid_guid("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d")
 
     def test_invalid_guid(self) -> None:
-        """Test _is_valid_guid with invalid GUIDs."""
+        """無効な GUID で _is_valid_guid をテスト。"""
         assert not _is_valid_guid("not-a-guid")
         assert not _is_valid_guid("")
         assert not _is_valid_guid(None)
 
 
 class TestScopedContentProcessor:
-    """Test ScopedContentProcessor functionality."""
+    """ScopedContentProcessor の機能をテスト。"""
 
     @pytest.fixture
     def mock_client(self) -> AsyncMock:
-        """Create a mock Purview client."""
+        """モックの Purview client を作成する。"""
         client = AsyncMock()
         client.get_user_info_from_token = AsyncMock(
             return_value={
@@ -51,7 +51,7 @@ class TestScopedContentProcessor:
 
     @pytest.fixture
     def settings_with_defaults(self) -> PurviewSettings:
-        """Create settings with default values."""
+        """デフォルト値を持つ設定を作成する。"""
         app_location = PurviewAppLocation(
             location_type=PurviewLocationType.APPLICATION, location_value="12345678-1234-1234-1234-123456789012"
         )
@@ -63,25 +63,25 @@ class TestScopedContentProcessor:
 
     @pytest.fixture
     def settings_without_defaults(self) -> PurviewSettings:
-        """Create settings without default values (requiring token info)."""
+        """デフォルト値を持たない設定を作成する（トークン情報が必要）。"""
         return PurviewSettings(app_name="Test App")
 
     @pytest.fixture
     def processor(self, mock_client: AsyncMock, settings_with_defaults: PurviewSettings) -> ScopedContentProcessor:
-        """Create a ScopedContentProcessor with mock client."""
+        """モッククライアントを使って ScopedContentProcessor を作成する。"""
         return ScopedContentProcessor(mock_client, settings_with_defaults)
 
     async def test_processor_initialization(
         self, mock_client: AsyncMock, settings_with_defaults: PurviewSettings
     ) -> None:
-        """Test ScopedContentProcessor initialization."""
+        """ScopedContentProcessor の初期化をテスト。"""
         processor = ScopedContentProcessor(mock_client, settings_with_defaults)
 
         assert processor._client == mock_client
         assert processor._settings == settings_with_defaults
 
     async def test_process_messages_with_defaults(self, processor: ScopedContentProcessor) -> None:
-        """Test process_messages with settings that have defaults."""
+        """デフォルトを持つ設定で process_messages をテスト。"""
         messages = [
             ChatMessage(role=Role.USER, text="Hello"),
             ChatMessage(role=Role.ASSISTANT, text="Hi there"),
@@ -97,7 +97,7 @@ class TestScopedContentProcessor:
     async def test_process_messages_blocks_content(
         self, processor: ScopedContentProcessor, process_content_request_factory
     ) -> None:
-        """Test process_messages returns True when content should be blocked."""
+        """コンテンツがブロックされるべき場合に process_messages が True を返すことをテスト。"""
         messages = [ChatMessage(role=Role.USER, text="Sensitive content")]
 
         mock_request = process_content_request_factory("Sensitive content")
@@ -118,7 +118,7 @@ class TestScopedContentProcessor:
     async def test_map_messages_creates_requests(
         self, processor: ScopedContentProcessor, mock_client: AsyncMock
     ) -> None:
-        """Test _map_messages creates ProcessContentRequest objects."""
+        """_map_messages が ProcessContentRequest オブジェクトを作成することをテスト。"""
         messages = [
             ChatMessage(
                 role=Role.USER,
@@ -136,7 +136,7 @@ class TestScopedContentProcessor:
         assert user_id == "12345678-1234-1234-1234-123456789012"
 
     async def test_map_messages_without_defaults_gets_token_info(self, mock_client: AsyncMock) -> None:
-        """Test _map_messages gets token info when settings lack some defaults."""
+        """設定に一部のデフォルトがない場合に _map_messages がトークン情報を取得することをテスト。"""
         settings = PurviewSettings(app_name="Test App", tenant_id="12345678-1234-1234-1234-123456789012")
         processor = ScopedContentProcessor(mock_client, settings)
         messages = [ChatMessage(role=Role.USER, text="Test", message_id="msg-123")]
@@ -148,8 +148,8 @@ class TestScopedContentProcessor:
         assert user_id is not None
 
     async def test_map_messages_raises_on_missing_tenant_id(self, mock_client: AsyncMock) -> None:
-        """Test _map_messages raises ValueError when tenant_id cannot be determined."""
-        settings = PurviewSettings(app_name="Test App")  # No tenant_id
+        """tenant_id が判別できない場合に _map_messages が ValueError を発生させることをテスト。"""
+        settings = PurviewSettings(app_name="Test App")  # tenant_id がない
         processor = ScopedContentProcessor(mock_client, settings)
 
         mock_client.get_user_info_from_token = AsyncMock(
@@ -164,7 +164,7 @@ class TestScopedContentProcessor:
     async def test_check_applicable_scopes_no_scopes(
         self, processor: ScopedContentProcessor, process_content_request_factory
     ) -> None:
-        """Test _check_applicable_scopes when no scopes are returned."""
+        """スコープが返されない場合の _check_applicable_scopes をテスト。"""
         from agent_framework_purview._models import ProtectionScopesResponse
 
         request = process_content_request_factory()
@@ -178,7 +178,7 @@ class TestScopedContentProcessor:
     async def test_check_applicable_scopes_with_block_action(
         self, processor: ScopedContentProcessor, process_content_request_factory
     ) -> None:
-        """Test _check_applicable_scopes identifies block actions."""
+        """ブロックアクションを識別する _check_applicable_scopes をテスト。"""
         from agent_framework_purview._models import (
             PolicyLocation,
             PolicyScope,
@@ -207,7 +207,7 @@ class TestScopedContentProcessor:
         assert actions[0].action == DlpAction.BLOCK_ACCESS
 
     async def test_combine_policy_actions(self, processor: ScopedContentProcessor) -> None:
-        """Test _combine_policy_actions merges action lists."""
+        """アクションリストをマージする _combine_policy_actions をテスト。"""
         action1 = DlpActionInfo(action=DlpAction.BLOCK_ACCESS, restrictionAction=RestrictionAction.BLOCK)
         action2 = DlpActionInfo(action=DlpAction.OTHER, restrictionAction=RestrictionAction.OTHER)
 
@@ -220,7 +220,7 @@ class TestScopedContentProcessor:
     async def test_process_with_scopes_calls_client_methods(
         self, processor: ScopedContentProcessor, mock_client: AsyncMock, process_content_request_factory
     ) -> None:
-        """Test _process_with_scopes calls get_protection_scopes and process_content."""
+        """get_protection_scopes と process_content を呼び出す _process_with_scopes をテスト。"""
         from agent_framework_purview._models import (
             ContentActivitiesResponse,
             ProtectionScopesResponse,
@@ -242,7 +242,7 @@ class TestScopedContentProcessor:
         assert response.id is None
 
     async def test_map_messages_with_user_id_in_additional_properties(self, mock_client: AsyncMock) -> None:
-        """Test user_id extraction from message additional_properties."""
+        """message の additional_properties から user_id を抽出することをテスト。"""
         settings = PurviewSettings(
             app_name="Test App",
             tenant_id="12345678-1234-1234-1234-123456789012",
@@ -267,7 +267,7 @@ class TestScopedContentProcessor:
         assert requests[0].user_id == "22345678-1234-1234-1234-123456789012"
 
     async def test_map_messages_with_provided_user_id_fallback(self, mock_client: AsyncMock) -> None:
-        """Test using provided_user_id when no other source is available."""
+        """他のソースがない場合に provided_user_id を使用することをテスト。"""
         settings = PurviewSettings(
             app_name="Test App",
             tenant_id="12345678-1234-1234-1234-123456789012",
@@ -288,7 +288,7 @@ class TestScopedContentProcessor:
         assert requests[0].user_id == "32345678-1234-1234-1234-123456789012"
 
     async def test_map_messages_returns_empty_when_no_user_id(self, mock_client: AsyncMock) -> None:
-        """Test that empty results are returned when user_id cannot be resolved."""
+        """user_id が解決できない場合に空の結果が返されることをテスト。"""
         settings = PurviewSettings(
             app_name="Test App",
             tenant_id="12345678-1234-1234-1234-123456789012",
@@ -308,7 +308,7 @@ class TestScopedContentProcessor:
     async def test_process_content_sends_activities_when_not_applicable(
         self, mock_client: AsyncMock, process_content_request_factory
     ) -> None:
-        """Test that content activities are sent when scopes don't apply."""
+        """スコープが適用されない場合にコンテンツアクティビティが送信されることをテスト。"""
         settings = PurviewSettings(
             app_name="Test App",
             tenant_id="12345678-1234-1234-1234-123456789012",
@@ -320,12 +320,12 @@ class TestScopedContentProcessor:
 
         pc_request = process_content_request_factory()
 
-        # Mock get_protection_scopes to return no applicable scopes
+        # 適用可能なスコープがないように get_protection_scopes をモック。
         mock_ps_response = MagicMock()
         mock_ps_response.scopes = []
         mock_client.get_protection_scopes.return_value = mock_ps_response
 
-        # Mock send_content_activities to return success
+        # 成功を返すように send_content_activities をモック。
         mock_ca_response = MagicMock()
         mock_ca_response.error = None
         mock_client.send_content_activities.return_value = mock_ca_response
@@ -335,13 +335,13 @@ class TestScopedContentProcessor:
         mock_client.get_protection_scopes.assert_called_once()
         mock_client.process_content.assert_not_called()
         mock_client.send_content_activities.assert_called_once()
-        # When content activities succeed, response has no errors (processing_errors can be None or empty)
+        # コンテンツアクティビティが成功した場合、レスポンスにエラーがないこと（processing_errors は None または空でよい）。
         assert response.processing_errors is None or response.processing_errors == []
 
     async def test_process_content_handles_activities_error(
         self, mock_client: AsyncMock, process_content_request_factory
     ) -> None:
-        """Test error handling when content activities fail."""
+        """コンテンツアクティビティが失敗した場合のエラー処理をテスト。"""
         settings = PurviewSettings(
             app_name="Test App",
             tenant_id="12345678-1234-1234-1234-123456789012",
@@ -353,12 +353,12 @@ class TestScopedContentProcessor:
 
         pc_request = process_content_request_factory()
 
-        # Mock get_protection_scopes to return no applicable scopes
+        # 適用可能なスコープがないように get_protection_scopes をモック。
         mock_ps_response = MagicMock()
         mock_ps_response.scopes = []
         mock_client.get_protection_scopes.return_value = mock_ps_response
 
-        # Mock send_content_activities to return error
+        # エラーを返すように send_content_activities をモック。
         mock_ca_response = MagicMock()
         mock_ca_response.error = "Test error message"
         mock_client.send_content_activities.return_value = mock_ca_response

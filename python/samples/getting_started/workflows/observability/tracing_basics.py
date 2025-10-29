@@ -31,32 +31,31 @@ logger = get_logger()
 class StartExecutor(Executor):
     @handler  # type: ignore[misc]
     async def handle_input(self, message: str, ctx: WorkflowContext[str]) -> None:
-        # Transform and forward downstream. This produces executor.process and message.send spans.
+        # 変換して下流に転送します。これによりexecutor.processとmessage.sendのスパンが生成されます。
         await ctx.send_message(message.upper())
 
 
 class EndExecutor(Executor):
     @handler  # type: ignore[misc]
     async def handle_final(self, message: str, ctx: WorkflowContext) -> None:
-        # Sink executor. The workflow completes when idle with no pending work.
+        # Sink executor。ワークフローはアイドル状態で保留作業がないと完了します。
         print(f"Final result: {message}")
 
 
 async def main() -> None:
-    # This will enable tracing and create the necessary tracing, logging and metrics providers
-    # based on environment variables.
+    # トレーシングを有効にし、環境変数に基づいて必要なトレーシング、ロギング、メトリクスプロバイダーを作成します。
     setup_observability()
 
-    # Build a two node graph: StartExecutor -> EndExecutor. The builder emits a workflow.build span.
+    # 2ノードのグラフを構築します：StartExecutor -> EndExecutor。ビルダーはworkflow.buildスパンを発行します。
     workflow = (
         WorkflowBuilder()
         .add_edge(StartExecutor(id="start"), EndExecutor(id="end"))
         .set_start_executor("start")  # set_start_executor accepts an executor id string or the instance
         .build()
-    )  # workflow.build span emitted here
+    )  # ここでworkflow.buildスパンが発行されます。
 
-    # Run once with a simple payload. You should see workflow.run plus executor and message spans.
-    await workflow.run("hello tracing")  # workflow.run + executor.process and message.send spans
+    # 単純なペイロードで一度実行します。workflow.runとexecutorおよびmessageのスパンが表示されるはずです。
+    await workflow.run("hello tracing")  # workflow.run + executor.processとmessage.sendのスパン
 
 
 if __name__ == "__main__":  # pragma: no cover

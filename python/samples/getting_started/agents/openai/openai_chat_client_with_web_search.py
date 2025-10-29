@@ -17,7 +17,7 @@ async def main() -> None:
     client = OpenAIChatClient(model_id="gpt-4o-search-preview")
 
     message = "What is the current weather? Do not ask for my current location."
-    # Test that the client will use the web search tool with location
+    # クライアントが場所を指定してWeb検索ツールを使用することをテストします
     additional_properties = {
         "user_location": {
             "country": "US",

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Agent Framework executor implementation."""
+"""Agent Frameworkのエグゼキューター実装。"""
 
 import json
 import logging
@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 
 
 class EntityNotFoundError(Exception):
-    """Raised when an entity is not found."""
+    """エンティティが見つからない場合に発生する例外。"""
 
     pass
 
 
 class AgentFrameworkExecutor:
-    """Executor for Agent Framework entities - agents and workflows."""
+    """Agent Frameworkエンティティ（エージェントとワークフロー）のエグゼキューター。"""
 
     def __init__(
         self,
@@ -35,29 +35,30 @@ class AgentFrameworkExecutor:
         message_mapper: MessageMapper,
         conversation_store: ConversationStore | None = None,
     ):
-        """Initialize Agent Framework executor.
+        """Agent Frameworkエグゼキューターを初期化する。
 
         Args:
-            entity_discovery: Entity discovery instance
-            message_mapper: Message mapper instance
-            conversation_store: Optional conversation store (defaults to in-memory)
+            entity_discovery: エンティティディスカバリーのインスタンス
+            message_mapper: メッセージマッパーのインスタンス
+            conversation_store: Optionalな会話ストア（デフォルトはインメモリ）
+
         """
         self.entity_discovery = entity_discovery
         self.message_mapper = message_mapper
         self._setup_tracing_provider()
         self._setup_agent_framework_tracing()
 
-        # Use provided conversation store or default to in-memory
+        # 提供された会話ストアを使用するか、デフォルトでインメモリを使用する
         self.conversation_store = conversation_store or InMemoryConversationStore()
 
     def _setup_tracing_provider(self) -> None:
-        """Set up our own TracerProvider so we can add processors."""
+        """独自のTracerProviderをセットアップしてプロセッサを追加できるようにする。"""
         try:
             from opentelemetry import trace
             from opentelemetry.sdk.resources import Resource
             from opentelemetry.sdk.trace import TracerProvider
 
-            # Only set up if no provider exists yet
+            # まだプロバイダーが存在しない場合のみセットアップする
             if not hasattr(trace, "_TRACER_PROVIDER") or trace._TRACER_PROVIDER is None:
                 resource = Resource.create({
                     "service.name": "agent-framework-server",
@@ -75,8 +76,8 @@ class AgentFrameworkExecutor:
             logger.warning(f"Failed to setup TracerProvider: {e}")
 
     def _setup_agent_framework_tracing(self) -> None:
-        """Set up Agent Framework's built-in tracing."""
-        # Configure Agent Framework tracing only if ENABLE_OTEL is set
+        """Agent Frameworkの組み込みトレーシングをセットアップする。"""
+        # ENABLE_OTELが設定されている場合のみAgent Frameworkのトレーシングを構成する
         if os.environ.get("ENABLE_OTEL"):
             try:
                 from agent_framework.observability import setup_observability
@@ -89,24 +90,26 @@ class AgentFrameworkExecutor:
             logger.debug("ENABLE_OTEL not set, skipping observability setup")
 
     async def discover_entities(self) -> list[EntityInfo]:
-        """Discover all available entities.
+        """利用可能なすべてのエンティティをディスカバーする。
 
         Returns:
-            List of discovered entities
+            発見されたエンティティのリスト
+
         """
         return await self.entity_discovery.discover_entities()
 
     def get_entity_info(self, entity_id: str) -> EntityInfo:
-        """Get entity information.
+        """エンティティ情報を取得する。
 
         Args:
-            entity_id: Entity identifier
+            entity_id: エンティティ識別子
 
         Returns:
-            Entity information
+            エンティティ情報
 
         Raises:
-            EntityNotFoundError: If entity is not found
+            EntityNotFoundError: エンティティが見つからない場合
+
         """
         entity_info = self.entity_discovery.get_entity_info(entity_id)
         if entity_info is None:
@@ -114,13 +117,14 @@ class AgentFrameworkExecutor:
         return entity_info
 
     async def execute_streaming(self, request: AgentFrameworkRequest) -> AsyncGenerator[Any, None]:
-        """Execute request and stream results in OpenAI format.
+        """リクエストを実行し、OpenAI形式で結果をストリームする。
 
         Args:
-            request: Request to execute
+            request: 実行するリクエスト
 
         Yields:
-            OpenAI response stream events
+            OpenAIレスポンスのストリームイベント
+
         """
         try:
             entity_id = request.get_entity_id()
@@ -128,12 +132,12 @@ class AgentFrameworkExecutor:
                 logger.error("No entity_id specified in request")
                 return
 
-            # Validate entity exists
+            # エンティティが存在するか検証する
             if not self.entity_discovery.get_entity_info(entity_id):
                 logger.error(f"Entity '{entity_id}' not found")
                 return
 
-            # Execute entity and convert events
+            # エンティティを実行しイベントを変換する
             async for raw_event in self.execute_entity(entity_id, request):
                 openai_events = await self.message_mapper.convert_event(raw_event, request)
                 for event in openai_events:
@@ -141,38 +145,40 @@ class AgentFrameworkExecutor:
 
         except Exception as e:
             logger.exception(f"Error in streaming execution: {e}")
-            # Could yield error event here
+            # ここでエラーイベントをyieldする可能性がある
 
     async def execute_sync(self, request: AgentFrameworkRequest) -> OpenAIResponse:
-        """Execute request synchronously and return complete response.
+        """リクエストを同期的に実行し、完全なレスポンスを返す。
 
         Args:
-            request: Request to execute
+            request: 実行するリクエスト
 
         Returns:
-            Final aggregated OpenAI response
+            最終的に集約されたOpenAIレスポンス
+
         """
-        # Collect all streaming events
+        # すべてのストリーミングイベントを収集する
         events = [event async for event in self.execute_streaming(request)]
 
-        # Aggregate into final response
+        # 最終レスポンスに集約する
         return await self.message_mapper.aggregate_to_response(events, request)
 
     async def execute_entity(self, entity_id: str, request: AgentFrameworkRequest) -> AsyncGenerator[Any, None]:
-        """Execute the entity and yield raw Agent Framework events plus trace events.
+        """エンティティを実行し、生のAgent Frameworkイベントとトレースイベントをyieldする。
 
         Args:
-            entity_id: ID of entity to execute
-            request: Request to execute
+            entity_id: 実行するエンティティのID
+            request: 実行するリクエスト
 
         Yields:
-            Raw Agent Framework events and trace events
+            生のAgent Frameworkイベントとトレースイベント
+
         """
         try:
-            # Get entity info
+            # エンティティ情報を取得する
             entity_info = self.get_entity_info(entity_id)
 
-            # Trigger lazy loading (will return from cache if already loaded)
+            # 遅延読み込みをトリガーする（すでに読み込まれていればキャッシュから返す）
             entity_obj = await self.entity_discovery.load_entity(entity_id)
 
             if not entity_obj:
@@ -180,10 +186,10 @@ class AgentFrameworkExecutor:
 
             logger.info(f"Executing {entity_info.type}: {entity_id}")
 
-            # Extract session_id from request for trace context
+            # トレースコンテキストのためにリクエストからsession_idを抽出する
             session_id = getattr(request.extra_body, "session_id", None) if request.extra_body else None
 
-            # Use simplified trace capture
+            # 簡易化されたトレースキャプチャを使用する
             with capture_traces(session_id=session_id, entity_id=entity_id) as trace_collector:
                 if entity_info.type == "agent":
                     async for event in self._execute_agent(entity_obj, request, trace_collector):
@@ -194,38 +200,39 @@ class AgentFrameworkExecutor:
                 else:
                     raise ValueError(f"Unsupported entity type: {entity_info.type}")
 
-                # Yield any remaining trace events after execution completes
+                # 実行完了後に残っているトレースイベントをyieldする
                 for trace_event in trace_collector.get_pending_events():
                     yield trace_event
 
         except Exception as e:
             logger.exception(f"Error executing entity {entity_id}: {e}")
-            # Yield error event
+            # エラーイベントをyieldする
             yield {"type": "error", "message": str(e), "entity_id": entity_id}
 
     async def _execute_agent(
         self, agent: AgentProtocol, request: AgentFrameworkRequest, trace_collector: Any
     ) -> AsyncGenerator[Any, None]:
-        """Execute Agent Framework agent with trace collection and optional thread support.
+        """トレース収集とオプションのThreadサポート付きでAgent Frameworkエージェントを実行する。
 
         Args:
-            agent: Agent object to execute
-            request: Request to execute
-            trace_collector: Trace collector to get events from
+            agent: 実行するエージェントオブジェクト
+            request: 実行するリクエスト
+            trace_collector: イベントを取得するトレースコレクター
 
         Yields:
-            Agent update events and trace events
+            エージェントの更新イベントとトレースイベント
+
         """
         try:
-            # Emit agent lifecycle start event
+            # エージェントのライフサイクル開始イベントを発行する
             from .models._openai_custom import AgentStartedEvent
 
             yield AgentStartedEvent()
 
-            # Convert input to proper ChatMessage or string
+            # 入力を適切なChatMessageまたは文字列に変換する
             user_message = self._convert_input_to_chat_message(request.input)
 
-            # Get thread from conversation parameter (OpenAI standard!)
+            # 会話パラメーターからThreadを取得する（OpenAI標準！）
             thread = None
             conversation_id = request.get_conversation_id()
             if conversation_id:
@@ -239,9 +246,9 @@ class AgentFrameworkExecutor:
                 logger.debug(f"Executing agent with text input: {user_message[:100]}...")
             else:
                 logger.debug(f"Executing agent with multimodal ChatMessage: {type(user_message)}")
-            # Check if agent supports streaming
+            # エージェントがストリーミングをサポートしているかチェックする
             if hasattr(agent, "run_stream") and callable(agent.run_stream):
-                # Use Agent Framework's native streaming with optional thread
+                # Agent FrameworkのネイティブストリーミングをオプションのThread付きで使用する
                 if thread:
                     async for update in agent.run_stream(user_message, thread=thread):
                         for trace_event in trace_collector.get_pending_events():
@@ -255,67 +262,68 @@ class AgentFrameworkExecutor:
 
                         yield update
             elif hasattr(agent, "run") and callable(agent.run):
-                # Non-streaming agent - use run() and yield complete response
+                # 非ストリーミングAgent - run()を使用し、完全なレスポンスをyieldする
                 logger.info("Agent lacks run_stream(), using run() method (non-streaming)")
                 if thread:
                     response = await agent.run(user_message, thread=thread)
                 else:
                     response = await agent.run(user_message)
 
-                # Yield trace events before response
+                # レスポンスの前にtraceイベントをyieldする
                 for trace_event in trace_collector.get_pending_events():
                     yield trace_event
 
-                # Yield the complete response (mapper will convert to streaming events)
+                # 完全なレスポンスをyieldする（mapperがストリーミングイベントに変換します）
                 yield response
             else:
                 raise ValueError("Agent must implement either run() or run_stream() method")
 
-            # Emit agent lifecycle completion event
+            # Agentのライフサイクル完了イベントを発行する
             from .models._openai_custom import AgentCompletedEvent
 
             yield AgentCompletedEvent()
 
         except Exception as e:
             logger.error(f"Error in agent execution: {e}")
-            # Emit agent lifecycle failure event
+            # Agentのライフサイクル失敗イベントを発行する
             from .models._openai_custom import AgentFailedEvent
 
             yield AgentFailedEvent(error=e)
 
-            # Still yield the error for backward compatibility
+            # 後方互換性のためにエラーもyieldし続ける
             yield {"type": "error", "message": f"Agent execution error: {e!s}"}
 
     async def _execute_workflow(
         self, workflow: Any, request: AgentFrameworkRequest, trace_collector: Any
     ) -> AsyncGenerator[Any, None]:
-        """Execute Agent Framework workflow with trace collection.
+        """トレース収集付きでAgent Frameworkのワークフローを実行します。
 
         Args:
-            workflow: Workflow object to execute
-            request: Request to execute
-            trace_collector: Trace collector to get events from
+            workflow: 実行するWorkflowオブジェクト
+            request: 実行するRequest
+            trace_collector: イベントを取得するためのTrace collector
 
         Yields:
-            Workflow events and trace events
+            Workflowイベントとtraceイベント
+
         """
         try:
-            # Get input data directly from request.input field
+            # request.inputフィールドから直接入力データを取得する
             input_data = request.input
             logger.debug(f"Using input field: {type(input_data)}")
 
-            # Parse input based on workflow's expected input type
+            # workflowの期待される入力タイプに基づいて入力を解析する
             parsed_input = await self._parse_workflow_input(workflow, input_data)
 
             logger.debug(f"Executing workflow with parsed input type: {type(parsed_input)}")
 
-            # Use Agent Framework workflow's native streaming
+            # Agent Framework workflowのネイティブストリーミングを使用する
             async for event in workflow.run_stream(parsed_input):
-                # Yield any pending trace events first
+                # 保留中のtraceイベントを最初にyieldする
                 for trace_event in trace_collector.get_pending_events():
                     yield trace_event
 
-                # Then yield the workflow event
+                # 次にworkflowイベントをyieldする
                 yield event
 
         except Exception as e:
@@ -323,70 +331,72 @@ class AgentFrameworkExecutor:
             yield {"type": "error", "message": f"Workflow execution error: {e!s}"}
 
     def _convert_input_to_chat_message(self, input_data: Any) -> Any:
-        """Convert OpenAI Responses API input to Agent Framework ChatMessage or string.
+        """OpenAI Responses APIの入力をAgent FrameworkのChatMessageまたは文字列に変換します。
 
-        Handles various input formats including text, images, files, and multimodal content.
-        Falls back to string extraction for simple cases.
+        テキスト、画像、ファイル、マルチモーダルコンテンツなど様々な入力形式に対応します。
+        単純なケースでは文字列抽出にフォールバックします。
 
         Args:
             input_data: OpenAI ResponseInputParam (List[ResponseInputItemParam])
 
         Returns:
-            ChatMessage for multimodal content, or string for simple text
+            マルチモーダルコンテンツの場合はChatMessage、単純なテキストの場合は文字列
+
         """
-        # Import Agent Framework types
+        # Agent Frameworkの型をインポートする
         try:
             from agent_framework import ChatMessage, DataContent, Role, TextContent
         except ImportError:
-            # Fallback to string extraction if Agent Framework not available
+            # Agent Frameworkが利用できない場合は文字列抽出にフォールバックする
             return self._extract_user_message_fallback(input_data)
 
-        # Handle simple string input (backward compatibility)
+        # 単純な文字列入力を処理する（後方互換性）
         if isinstance(input_data, str):
             return input_data
 
-        # Handle OpenAI ResponseInputParam (List[ResponseInputItemParam])
+        # OpenAI ResponseInputParam (List[ResponseInputItemParam])を処理する
         if isinstance(input_data, list):
             return self._convert_openai_input_to_chat_message(input_data, ChatMessage, TextContent, DataContent, Role)
 
-        # Fallback for other formats
+        # その他の形式に対するフォールバック
         return self._extract_user_message_fallback(input_data)
 
     def _convert_openai_input_to_chat_message(
         self, input_items: list[Any], ChatMessage: Any, TextContent: Any, DataContent: Any, Role: Any
     ) -> Any:
-        """Convert OpenAI ResponseInputParam to Agent Framework ChatMessage.
+        """OpenAI ResponseInputParamをAgent FrameworkのChatMessageに変換します。
 
-        Processes text, images, files, and other content types from OpenAI format
-        to Agent Framework ChatMessage with appropriate content objects.
+        OpenAI形式のテキスト、画像、ファイル、その他のコンテンツタイプを
+        適切なコンテンツオブジェクトを持つAgent FrameworkのChatMessageに変換します。
 
         Args:
-            input_items: List of OpenAI ResponseInputItemParam objects (dicts or objects)
-            ChatMessage: ChatMessage class for creating chat messages
-            TextContent: TextContent class for text content
-            DataContent: DataContent class for data/media content
-            Role: Role enum for message roles
+            input_items: OpenAI ResponseInputItemParamオブジェクトのリスト（辞書またはオブジェクト）
+            ChatMessage: チャットメッセージ作成用のChatMessageクラス
+            TextContent: テキストコンテンツ用のTextContentクラス
+            DataContent: データ/メディアコンテンツ用のDataContentクラス
+            Role: メッセージの役割用のRole列挙型
 
         Returns:
-            ChatMessage with converted content
+            変換されたコンテンツを持つChatMessage
+
         """
         contents = []
 
-        # Process each input item
+        # 各入力アイテムを処理する
         for item in input_items:
-            # Handle dict format (from JSON)
+            # 辞書形式（JSONから）を処理する
             if isinstance(item, dict):
                 item_type = item.get("type")
                 if item_type == "message":
-                    # Extract content from OpenAI message
+                    # OpenAIメッセージからコンテンツを抽出する
                     message_content = item.get("content", [])
 
-                    # Handle both string content and list content
+                    # 文字列コンテンツとリストコンテンツの両方を処理する
                     if isinstance(message_content, str):
                         contents.append(TextContent(text=message_content))
                     elif isinstance(message_content, list):
                         for content_item in message_content:
-                            # Handle dict content items
+                            # 辞書形式のコンテンツアイテムを処理する
                             if isinstance(content_item, dict):
                                 content_type = content_item.get("type")
 
@@ -397,11 +407,11 @@ class AgentFrameworkExecutor:
                                 elif content_type == "input_image":
                                     image_url = content_item.get("image_url", "")
                                     if image_url:
-                                        # Extract media type from data URI if possible
-                                        # Parse media type from data URL, fallback to image/png
+                                        # 可能であればdata URIからメディアタイプを抽出する data
+                                        # URLからメディアタイプを解析し、フォールバックはimage/png
                                         if image_url.startswith("data:"):
                                             try:
-                                                # Extract media type from data:image/jpeg;base64,... format
+                                                # data:image/jpeg;base64,...形式からメディアタイプを抽出する
                                                 media_type = image_url.split(";")[0].split(":")[1]
                                             except (IndexError, AttributeError):
                                                 logger.warning(
@@ -413,13 +423,13 @@ class AgentFrameworkExecutor:
                                         contents.append(DataContent(uri=image_url, media_type=media_type))
 
                                 elif content_type == "input_file":
-                                    # Handle file input
+                                    # ファイル入力を処理する
                                     file_data = content_item.get("file_data")
                                     file_url = content_item.get("file_url")
                                     filename = content_item.get("filename", "")
 
-                                    # Determine media type from filename
-                                    media_type = "application/octet-stream"  # default
+                                    # ファイル名からメディアタイプを判定する
+                                    media_type = "application/octet-stream"  # デフォルト
                                     if filename:
                                         if filename.lower().endswith(".pdf"):
                                             media_type = "application/pdf"
@@ -434,19 +444,19 @@ class AgentFrameworkExecutor:
                                             ".aac",
                                         )):
                                             ext = filename.split(".")[-1].lower()
-                                            # Normalize extensions to match audio MIME types
+                                            # 拡張子を正規化して音声MIMEタイプに合わせる
                                             media_type = "audio/mp4" if ext == "m4a" else f"audio/{ext}"
 
-                                    # Use file_data or file_url
+                                    # file_dataまたはfile_urlを使用する
                                     if file_data:
-                                        # Assume file_data is base64, create data URI
+                                        # file_dataはbase64と仮定し、data URIを作成する
                                         data_uri = f"data:{media_type};base64,{file_data}"
                                         contents.append(DataContent(uri=data_uri, media_type=media_type))
                                     elif file_url:
                                         contents.append(DataContent(uri=file_url, media_type=media_type))
 
                                 elif content_type == "function_approval_response":
-                                    # Handle function approval response (DevUI extension)
+                                    # 関数承認レスポンスを処理する（DevUI拡張）
                                     try:
                                         from agent_framework import FunctionApprovalResponseContent, FunctionCallContent
 
@@ -454,14 +464,14 @@ class AgentFrameworkExecutor:
                                         approved = content_item.get("approved", False)
                                         function_call_data = content_item.get("function_call", {})
 
-                                        # Create FunctionCallContent from the function_call data
+                                        # function_callデータからFunctionCallContentを作成する
                                         function_call = FunctionCallContent(
                                             call_id=function_call_data.get("id", ""),
                                             name=function_call_data.get("name", ""),
                                             arguments=function_call_data.get("arguments", {}),
                                         )
 
-                                        # Create FunctionApprovalResponseContent with correct signature
+                                        # 正しい署名でFunctionApprovalResponseContentを作成する
                                         approval_response = FunctionApprovalResponseContent(
                                             approved,  # positional argument
                                             id=request_id,  # keyword argument 'id', NOT 'request_id'
@@ -479,10 +489,8 @@ class AgentFrameworkExecutor:
                                     except Exception as e:
                                         logger.error(f"Failed to create FunctionApprovalResponseContent: {e}")
 
-            # Handle other OpenAI input item types as needed
-            # (tool calls, function results, etc.)
-
-        # If no contents found, create a simple text message
+            # 必要に応じて他のOpenAI入力アイテムタイプを処理する （ツール呼び出し、関数結果など）
+            # コンテンツが見つからない場合は単純なテキストメッセージを作成する
         if not contents:
             contents.append(TextContent(text=""))
 
@@ -499,37 +507,39 @@ class AgentFrameworkExecutor:
         return chat_message
 
     def _extract_user_message_fallback(self, input_data: Any) -> str:
-        """Fallback method to extract user message as string.
+        """ユーザーメッセージを文字列として抽出するフォールバックメソッド。
 
         Args:
-            input_data: Input data in various formats
+            input_data: 様々な形式の入力データ
 
         Returns:
-            Extracted user message string
+            抽出されたユーザーメッセージの文字列
+
         """
         if isinstance(input_data, str):
             return input_data
         if isinstance(input_data, dict):
-            # Try common field names
+            # 一般的なフィールド名を試す
             for field in ["message", "text", "input", "content", "query"]:
                 if field in input_data:
                     return str(input_data[field])
-            # Fallback to JSON string
+            # JSON文字列にフォールバックする
             return json.dumps(input_data)
         return str(input_data)
 
     async def _parse_workflow_input(self, workflow: Any, raw_input: Any) -> Any:
-        """Parse input based on workflow's expected input type.
+        """workflowの期待される入力タイプに基づいて入力を解析する。
 
         Args:
-            workflow: Workflow object
-            raw_input: Raw input data
+            workflow: Workflowオブジェクト
+            raw_input: 生の入力データ
 
         Returns:
-            Parsed input appropriate for the workflow
+            workflowに適した解析済み入力
+
         """
         try:
-            # Handle structured input
+            # 構造化入力を処理する
             if isinstance(raw_input, dict):
                 return self._parse_structured_workflow_input(workflow, raw_input)
             return self._parse_raw_workflow_input(workflow, str(raw_input))
@@ -539,7 +549,7 @@ class AgentFrameworkExecutor:
             return raw_input
 
     def _get_start_executor_message_types(self, workflow: Any) -> tuple[Any | None, list[Any]]:
-        """Return start executor and its declared input types."""
+        """開始executorとその宣言された入力タイプを返す。"""
         try:
             start_executor = workflow.get_start_executor()
         except Exception as exc:  # pragma: no cover - defensive logging path
@@ -570,19 +580,20 @@ class AgentFrameworkExecutor:
         return start_executor, message_types
 
     def _parse_structured_workflow_input(self, workflow: Any, input_data: dict[str, Any]) -> Any:
-        """Parse structured input data for workflow execution.
+        """workflow実行のための構造化入力データを解析する。
 
         Args:
-            workflow: Workflow object
-            input_data: Structured input data
+            workflow: Workflowオブジェクト
+            input_data: 構造化入力データ
 
         Returns:
-            Parsed input for workflow
+            workflow用に解析された入力
+
         """
         try:
             from ._utils import parse_input_for_type
 
-            # Get the start executor and its input type
+            # 開始executorとその入力タイプを取得する
             start_executor, message_types = self._get_start_executor_message_types(workflow)
             if not start_executor:
                 logger.debug("Cannot determine input type for workflow - using raw dict")
@@ -592,7 +603,7 @@ class AgentFrameworkExecutor:
                 logger.debug("No message types found for start executor - using raw dict")
                 return input_data
 
-            # Get the first (primary) input type
+            # 最初の（主要な）入力タイプを取得する
             from ._utils import select_primary_input_type
 
             input_type = select_primary_input_type(message_types)
@@ -600,7 +611,7 @@ class AgentFrameworkExecutor:
                 logger.debug("Could not select primary input type for workflow - using raw dict")
                 return input_data
 
-            # Use consolidated parsing logic from _utils
+            # _utilsの統合された解析ロジックを使用する
             return parse_input_for_type(input_data, input_type)
 
         except Exception as e:
@@ -608,19 +619,20 @@ class AgentFrameworkExecutor:
             return input_data
 
     def _parse_raw_workflow_input(self, workflow: Any, raw_input: str) -> Any:
-        """Parse raw input string based on workflow's expected input type.
+        """workflowの期待される入力タイプに基づいて生の入力文字列を解析する。
 
         Args:
-            workflow: Workflow object
-            raw_input: Raw input string
+            workflow: Workflowオブジェクト
+            raw_input: 生の入力文字列
 
         Returns:
-            Parsed input for workflow
+            workflow用に解析された入力
+
         """
         try:
             from ._utils import parse_input_for_type
 
-            # Get the start executor and its input type
+            # 開始executorとその入力タイプを取得する
             start_executor, message_types = self._get_start_executor_message_types(workflow)
             if not start_executor:
                 logger.debug("Cannot determine input type for workflow - using raw string")
@@ -630,7 +642,7 @@ class AgentFrameworkExecutor:
                 logger.debug("No message types found for start executor - using raw string")
                 return raw_input
 
-            # Get the first (primary) input type
+            # 最初の（主要な）入力タイプを取得する
             from ._utils import select_primary_input_type
 
             input_type = select_primary_input_type(message_types)
@@ -638,7 +650,7 @@ class AgentFrameworkExecutor:
                 logger.debug("Could not select primary input type for workflow - using raw string")
                 return raw_input
 
-            # Use consolidated parsing logic from _utils
+            # _utilsの統合された解析ロジックを使用する
             return parse_input_for_type(raw_input, input_type)
 
         except Exception as e:

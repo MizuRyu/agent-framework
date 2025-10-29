@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Focused tests for server functionality."""
+"""サーバー機能に特化したテスト。"""
 
 import asyncio
 import tempfile
@@ -14,7 +14,7 @@ from agent_framework_devui.models._openai_custom import AgentFrameworkRequest
 
 
 class _StubExecutor:
-    """Simple executor stub exposing handler metadata."""
+    """ハンドラメタデータを公開するシンプルなexecutorスタブ。"""
 
     def __init__(self, *, input_types=None, handlers=None):
         if input_types is not None:
@@ -25,34 +25,34 @@ class _StubExecutor:
 
 @pytest.fixture
 def test_entities_dir():
-    """Use the samples directory which has proper entity structure."""
-    # Get the samples directory from the main python samples folder
+    """適切なエンティティ構造を持つsamplesディレクトリを使用します。"""
+    # メインのpython samplesフォルダからsamplesディレクトリを取得します。
     current_dir = Path(__file__).parent
-    # Navigate to python/samples/getting_started/devui
+    # python/samples/getting_started/devuiに移動します。
     samples_dir = current_dir.parent.parent.parent / "samples" / "getting_started" / "devui"
     return str(samples_dir.resolve())
 
 
 async def test_server_health_endpoint(test_entities_dir):
-    """Test /health endpoint."""
+    """/healthエンドポイントをテストします。"""
     server = DevServer(entities_dir=test_entities_dir)
     executor = await server._ensure_executor()
 
-    # Test entity count
+    # エンティティ数をテストします。
     entities = await executor.discover_entities()
     assert len(entities) > 0
-    # Framework name is now hardcoded since we simplified to single framework
+    # フレームワーク名は単一フレームワークに簡素化されたためハードコードされています。
 
 
 @pytest.mark.skip("Skipping while we fix discovery")
 async def test_server_entities_endpoint(test_entities_dir):
-    """Test /v1/entities endpoint."""
+    """/v1/entitiesエンドポイントをテストします。"""
     server = DevServer(entities_dir=test_entities_dir)
     executor = await server._ensure_executor()
 
     entities = await executor.discover_entities()
     assert len(entities) >= 1
-    # Should find at least the weather agent
+    # 少なくともweather agentを見つける必要があります。
     agent_entities = [e for e in entities if e.type == "agent"]
     assert len(agent_entities) >= 1
     agent_names = [e.name for e in agent_entities]
@@ -60,14 +60,14 @@ async def test_server_entities_endpoint(test_entities_dir):
 
 
 async def test_server_execution_sync(test_entities_dir):
-    """Test sync execution endpoint."""
+    """同期実行エンドポイントをテストします。"""
     server = DevServer(entities_dir=test_entities_dir)
     executor = await server._ensure_executor()
 
     entities = await executor.discover_entities()
     agent_id = entities[0].id
 
-    # Use model as entity_id (new simplified routing)
+    # モデルをentity_idとして使用します（新しい簡素化されたルーティング）。
     request = AgentFrameworkRequest(
         model=agent_id,  # model IS the entity_id now!
         input="San Francisco",
@@ -75,19 +75,19 @@ async def test_server_execution_sync(test_entities_dir):
     )
 
     response = await executor.execute_sync(request)
-    assert response.model == agent_id  # Should echo back the model (entity_id)
+    assert response.model == agent_id  # モデル（entity_id）をエコーバックする必要があります。
     assert len(response.output) > 0
 
 
 async def test_server_execution_streaming(test_entities_dir):
-    """Test streaming execution endpoint."""
+    """ストリーミング実行エンドポイントをテストします。"""
     server = DevServer(entities_dir=test_entities_dir)
     executor = await server._ensure_executor()
 
     entities = await executor.discover_entities()
     agent_id = entities[0].id
 
-    # Use model as entity_id (new simplified routing)
+    # モデルをentity_idとして使用します（新しい簡素化されたルーティング）。
     request = AgentFrameworkRequest(
         model=agent_id,  # model IS the entity_id now!
         input="New York",
@@ -104,7 +104,7 @@ async def test_server_execution_streaming(test_entities_dir):
 
 
 def test_configuration():
-    """Test basic configuration."""
+    """基本的な設定をテストします。"""
     server = DevServer(entities_dir="test", port=9000, host="localhost")
     assert server.port == 9000
     assert server.host == "localhost"
@@ -114,7 +114,7 @@ def test_configuration():
 
 
 def test_extract_executor_message_types_prefers_input_types():
-    """Input types property is used when available."""
+    """利用可能な場合はinput typesプロパティが使用されます。"""
     stub = _StubExecutor(input_types=[str, dict])
 
     types = extract_executor_message_types(stub)
@@ -123,7 +123,7 @@ def test_extract_executor_message_types_prefers_input_types():
 
 
 def test_extract_executor_message_types_falls_back_to_handlers():
-    """Handlers provide message metadata when input_types missing."""
+    """input_typesがない場合、ハンドラはメッセージメタデータを提供します。"""
     stub = _StubExecutor(handlers={str: object(), int: object()})
 
     types = extract_executor_message_types(stub)
@@ -133,7 +133,7 @@ def test_extract_executor_message_types_falls_back_to_handlers():
 
 
 def test_select_primary_input_type_prefers_string_and_dict():
-    """Primary type selection prefers user-friendly primitives."""
+    """プライマリタイプの選択はユーザーフレンドリーなプリミティブを優先します。"""
     string_first = select_primary_input_type([dict[str, str], str])
     dict_first = select_primary_input_type([dict[str, str]])
     fallback = select_primary_input_type([int, float])
@@ -145,109 +145,109 @@ def test_select_primary_input_type_prefers_string_and_dict():
 
 @pytest.mark.asyncio
 async def test_credential_cleanup() -> None:
-    """Test that async credentials are properly closed during server cleanup."""
+    """サーバークリーンアップ中に非同期資格情報が正しくクローズされることをテストします。"""
     from unittest.mock import AsyncMock, Mock
 
     from agent_framework import ChatAgent
 
-    # Create mock credential with async close
+    # 非同期closeを持つモック資格情報を作成します。
     mock_credential = AsyncMock()
     mock_credential.close = AsyncMock()
 
-    # Create mock chat client with credential
+    # 資格情報を持つモックチャットクライアントを作成します。
     mock_client = Mock()
     mock_client.async_credential = mock_credential
     mock_client.model_id = "test-model"
 
-    # Create agent with mock client
+    # モッククライアントでagentを作成します。
     agent = ChatAgent(name="TestAgent", chat_client=mock_client, instructions="Test agent")
 
-    # Create DevUI server with agent
+    # agentでDevUIサーバーを作成します。
     server = DevServer()
     server._pending_entities = [agent]
     await server._ensure_executor()
 
-    # Run cleanup
+    # クリーンアップを実行します。
     await server._cleanup_entities()
 
-    # Verify credential.close() was called
+    # credential.close()が呼び出されたことを検証します。
     assert mock_credential.close.called, "Async credential close should have been called"
     assert mock_credential.close.call_count == 1
 
 
 @pytest.mark.asyncio
 async def test_credential_cleanup_error_handling() -> None:
-    """Test that credential cleanup errors are handled gracefully."""
+    """資格情報クリーンアップエラーが適切に処理されることをテストします。"""
     from unittest.mock import AsyncMock, Mock
 
     from agent_framework import ChatAgent
 
-    # Create mock credential that raises error on close
+    # close時にエラーを発生させるモック資格情報を作成します。
     mock_credential = AsyncMock()
     mock_credential.close = AsyncMock(side_effect=Exception("Close failed"))
 
-    # Create mock chat client with credential
+    # 資格情報を持つモックチャットクライアントを作成します。
     mock_client = Mock()
     mock_client.async_credential = mock_credential
     mock_client.model_id = "test-model"
 
-    # Create agent with mock client
+    # モッククライアントでagentを作成します。
     agent = ChatAgent(name="TestAgent", chat_client=mock_client, instructions="Test agent")
 
-    # Create DevUI server with agent
+    # agentでDevUIサーバーを作成します。
     server = DevServer()
     server._pending_entities = [agent]
     await server._ensure_executor()
 
-    # Run cleanup - should not raise despite credential error
+    # クリーンアップを実行します - 資格情報エラーがあっても例外は発生しません。
     await server._cleanup_entities()
 
-    # Verify close was attempted
+    # closeが試みられたことを検証します。
     assert mock_credential.close.called
 
 
 @pytest.mark.asyncio
 async def test_multiple_credential_attributes() -> None:
-    """Test that we check all common credential attribute names."""
+    """一般的な資格情報属性名をすべてチェックすることをテストします。"""
     from unittest.mock import AsyncMock, Mock
 
     from agent_framework import ChatAgent
 
-    # Create mock credentials
+    # モック資格情報を作成します。
     mock_cred1 = Mock()
     mock_cred1.close = Mock()
     mock_cred2 = AsyncMock()
     mock_cred2.close = AsyncMock()
 
-    # Create mock chat client with multiple credential attributes
+    # 複数の資格情報属性を持つモックチャットクライアントを作成します。
     mock_client = Mock()
     mock_client.credential = mock_cred1
     mock_client.async_credential = mock_cred2
     mock_client.model_id = "test-model"
 
-    # Create agent with mock client
+    # モッククライアントでagentを作成します。
     agent = ChatAgent(name="TestAgent", chat_client=mock_client, instructions="Test agent")
 
-    # Create DevUI server with agent
+    # agentでDevUIサーバーを作成します。
     server = DevServer()
     server._pending_entities = [agent]
     await server._ensure_executor()
 
-    # Run cleanup
+    # クリーンアップを実行します。
     await server._cleanup_entities()
 
-    # Verify both credentials were closed
+    # 両方の資格情報がクローズされたことを検証します。
     assert mock_cred1.close.called, "Sync credential should be closed"
     assert mock_cred2.close.called, "Async credential should be closed"
 
 
 if __name__ == "__main__":
-    # Simple test runner
+    # シンプルなテストランナー。
     async def run_tests():
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create test agent
+            # テスト用agentを作成します。
             agent_file = temp_path / "weather_agent.py"
             agent_file.write_text("""
 class WeatherAgent:

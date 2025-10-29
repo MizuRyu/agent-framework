@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Side-by-side handoff orchestrations for Semantic Kernel and Agent Framework."""
+"""Semantic KernelとAgent Frameworkのハンドオフオーケストレーションを並べて示します。"""
 
 import asyncio
 import sys
@@ -42,9 +42,7 @@ SCRIPTED_RESPONSES = [
 ]
 
 
-######################################################################
-# Semantic Kernel orchestration path
-######################################################################
+#  Semantic Kernelのオーケストレーションパス
 
 
 class OrderStatusPlugin:
@@ -118,7 +116,7 @@ _sk_new_message = True
 
 
 def _sk_streaming_callback(message: StreamingChatMessageContent, is_final: bool) -> None:
-    """Display SK agent messages as they stream."""
+    """SK Agentのメッセージをストリーム表示します。"""
     global _sk_new_message
     if _sk_new_message:
         print(f"{message.name}: ", end="", flush=True)
@@ -174,9 +172,7 @@ async def run_semantic_kernel_example(initial_task: str, scripted_responses: Seq
         await runtime.stop_when_idle()
 
 
-######################################################################
-# Agent Framework orchestration path
-######################################################################
+#  Agent Frameworkのオーケストレーションパス
 
 
 def _create_af_agents(client: AzureOpenAIChatClient):
@@ -262,7 +258,7 @@ async def run_agent_framework_example(initial_task: str, scripted_responses: Seq
     if not conversation:
         return ""
 
-    # Render final transcript succinctly.
+    # 最終トランスクリプトを簡潔にレンダリングします。
     lines = []
     for message in conversation:
         text = message.text or ""
@@ -273,9 +269,7 @@ async def run_agent_framework_example(initial_task: str, scripted_responses: Seq
     return "\n".join(lines)
 
 
-######################################################################
-# Console entry point
-######################################################################
+#  コンソールのエントリポイント
 
 
 async def main() -> None:

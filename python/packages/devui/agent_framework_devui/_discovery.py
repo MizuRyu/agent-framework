@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Agent Framework entity discovery implementation."""
+"""Agent Frameworkのエンティティ検出実装。"""
 
 from __future__ import annotations
 
@@ -20,23 +20,25 @@ logger = logging.getLogger(__name__)
 
 
 class EntityDiscovery:
-    """Discovery for Agent Framework entities - agents and workflows."""
+    """Agent Frameworkエンティティ（エージェントとワークフロー）の検出。"""
 
     def __init__(self, entities_dir: str | None = None):
-        """Initialize entity discovery.
+        """エンティティ検出を初期化します。
 
         Args:
-            entities_dir: Directory to scan for entities (optional)
+            entities_dir: エンティティをスキャンするディレクトリ（オプション）
+
         """
         self.entities_dir = entities_dir
         self._entities: dict[str, EntityInfo] = {}
         self._loaded_objects: dict[str, Any] = {}
 
     async def discover_entities(self) -> list[EntityInfo]:
-        """Scan for Agent Framework entities.
+        """Agent Frameworkエンティティをスキャンします。
 
         Returns:
-            List of discovered entities
+            検出されたエンティティのリスト
+
         """
         if not self.entities_dir:
             logger.info("No Agent Framework entities directory configured")
@@ -49,59 +51,62 @@ class EntityDiscovery:
         return self.list_entities()
 
     def get_entity_info(self, entity_id: str) -> EntityInfo | None:
-        """Get entity metadata.
+        """エンティティのメタデータを取得します。
 
         Args:
-            entity_id: Entity identifier
+            entity_id: エンティティ識別子
 
         Returns:
-            Entity information or None if not found
+            エンティティ情報または見つからない場合はNone
+
         """
         return self._entities.get(entity_id)
 
     def get_entity_object(self, entity_id: str) -> Any | None:
-        """Get the actual loaded entity object.
+        """実際にロードされたエンティティオブジェクトを取得します。
 
         Args:
-            entity_id: Entity identifier
+            entity_id: エンティティ識別子
 
         Returns:
-            Entity object or None if not found
+            エンティティオブジェクトまたは見つからない場合はNone
+
         """
         return self._loaded_objects.get(entity_id)
 
     async def load_entity(self, entity_id: str) -> Any:
-        """Load entity on-demand (lazy loading).
+        """オンデマンドでエンティティをロードします（遅延ロード）。
 
-        This method implements lazy loading by importing the entity module only when needed.
-        In-memory entities are returned from cache immediately.
+        このメソッドは、必要なときにのみエンティティモジュールをインポートすることで遅延ロードを実装します。
+        インメモリのエンティティはキャッシュから即座に返されます。
 
         Args:
-            entity_id: Entity identifier
+            entity_id: エンティティ識別子
 
         Returns:
-            Loaded entity object
+            ロードされたエンティティオブジェクト
 
         Raises:
-            ValueError: If entity not found or cannot be loaded
+            ValueError: エンティティが見つからないかロードできない場合
+
         """
-        # Check if already loaded (includes in-memory entities)
+        # すでにロードされているか確認します（インメモリエンティティを含む）。
         if entity_id in self._loaded_objects:
             logger.debug(f"Entity {entity_id} already loaded (cache hit)")
             return self._loaded_objects[entity_id]
 
-        # Get entity metadata
+        # エンティティのメタデータを取得します。
         entity_info = self._entities.get(entity_id)
         if not entity_info:
             raise ValueError(f"Entity {entity_id} not found in registry")
 
-        # In-memory entities should never reach here (they're pre-loaded)
+        # インメモリエンティティはここに到達すべきではありません（事前にロードされています）。
         if entity_info.source == "in_memory":
             raise ValueError(f"In-memory entity {entity_id} missing from loaded objects cache")
 
         logger.info(f"Lazy loading entity: {entity_id} (source: {entity_info.source})")
 
-        # Load based on source - only directory and in-memory are supported
+        # ソースに基づいてロードします - ディレクトリとインメモリのみサポート。
         if entity_info.source == "directory":
             entity_obj = await self._load_directory_entity(entity_id, entity_info)
         else:
@@ -110,51 +115,51 @@ class EntityDiscovery:
                 f"Only 'directory' and 'in_memory' sources are supported."
             )
 
-        # Enrich metadata with actual entity data
-        # Don't pass entity_type if it's "unknown" - let inference determine the real type
+        # 実際のエンティティデータでメタデータを強化します entity_typeが"unknown"の場合は渡さず、推論により実際のタイプを決定させます。
         enriched_info = await self.create_entity_info_from_object(
             entity_obj,
             entity_type=entity_info.type if entity_info.type != "unknown" else None,
             source=entity_info.source,
         )
-        # IMPORTANT: Preserve the original entity_id (enrichment generates a new one)
+        # 重要: 元のentity_idを保持します（強化により新しいIDが生成されます）。
         enriched_info.id = entity_id
-        # Preserve the original path from sparse metadata
+        # スパースメタデータから元のパスを保持します。
         if "path" in entity_info.metadata:
             enriched_info.metadata["path"] = entity_info.metadata["path"]
         enriched_info.metadata["lazy_loaded"] = True
         self._entities[entity_id] = enriched_info
 
-        # Cache the loaded object
+        # ロードしたオブジェクトをキャッシュします。
         self._loaded_objects[entity_id] = entity_obj
         logger.info(f"Successfully loaded entity: {entity_id} (type: {enriched_info.type})")
 
         return entity_obj
 
     async def _load_directory_entity(self, entity_id: str, entity_info: EntityInfo) -> Any:
-        """Load entity from directory (imports module).
+        """ディレクトリからエンティティをロードします（モジュールをインポート）。
 
         Args:
-            entity_id: Entity identifier
-            entity_info: Entity metadata
+            entity_id: エンティティ識別子
+            entity_info: エンティティのメタデータ
 
         Returns:
-            Loaded entity object
+            ロードされたエンティティオブジェクト
+
         """
-        # Get directory path from metadata
+        # メタデータからディレクトリパスを取得します。
         dir_path = Path(entity_info.metadata.get("path", ""))
         if not dir_path.exists():  # noqa: ASYNC240
             raise ValueError(f"Entity directory not found: {dir_path}")
 
-        # Load .env if it exists
+        # .envファイルが存在すればロードします。
         if dir_path.is_dir():  # noqa: ASYNC240
             self._load_env_for_entity(dir_path)
         else:
             self._load_env_for_entity(dir_path.parent)
 
-        # Import the module
+        # モジュールをインポートします。
         if dir_path.is_dir():  # noqa: ASYNC240
-            # Directory-based entity - try different import patterns
+            # ディレクトリベースのエンティティ - 異なるインポートパターンを試みます。
             import_patterns = [
                 entity_id,
                 f"{entity_id}.agent",
@@ -164,13 +169,13 @@ class EntityDiscovery:
             for pattern in import_patterns:
                 module = self._load_module_from_pattern(pattern)
                 if module:
-                    # Find entity in module - pass entity_id so registration uses correct ID
+                    # モジュール内でエンティティを見つけます - entity_idを渡して正しいIDで登録します。
                     entity_obj = await self._find_entity_in_module(module, entity_id, str(dir_path))
                     if entity_obj:
                         return entity_obj
 
             raise ValueError(f"No valid entity found in {dir_path}")
-        # File-based entity
+        # ファイルベースのエンティティ。
         module = self._load_module_from_file(dir_path, entity_id)
         if module:
             entity_obj = await self._find_entity_in_module(module, entity_id, str(dir_path))
@@ -180,29 +185,31 @@ class EntityDiscovery:
         raise ValueError(f"No valid entity found in {dir_path}")
 
     def list_entities(self) -> list[EntityInfo]:
-        """List all discovered entities.
+        """検出されたすべてのエンティティを一覧表示します。
 
         Returns:
-            List of all entity information
+            すべてのエンティティ情報のリスト
+
         """
         return list(self._entities.values())
 
     def invalidate_entity(self, entity_id: str) -> None:
-        """Invalidate (clear cache for) an entity to enable hot reload.
+        """エンティティのキャッシュを無効化（クリア）してホットリロードを可能にします。
 
-        This removes the entity from the loaded objects cache and clears its module
-        from Python's sys.modules cache. The entity metadata remains, so it will be
-        reimported on next access.
+        これはロード済みオブジェクトのキャッシュからエンティティを削除し、
+        Pythonのsys.modulesキャッシュからそのモジュールをクリアします。
+        エンティティのメタデータは残るため、次回アクセス時に再インポートされます。
 
         Args:
-            entity_id: Entity identifier to invalidate
+            entity_id: 無効化するエンティティ識別子
+
         """
-        # Remove from loaded objects cache
+        # ロード済みオブジェクトのキャッシュから削除します。
         if entity_id in self._loaded_objects:
             del self._loaded_objects[entity_id]
             logger.info(f"Cleared loaded object cache for: {entity_id}")
 
-        # Clear from Python's module cache (including submodules)
+        # Pythonのモジュールキャッシュ（サブモジュールを含む）からクリアします。
         keys_to_delete = [
             module_name
             for module_name in sys.modules
@@ -212,7 +219,7 @@ class EntityDiscovery:
             del sys.modules[key]
             logger.debug(f"Cleared module cache: {key}")
 
-        # Reset lazy_loaded flag in metadata
+        # メタデータのlazy_loadedフラグをリセットします。
         entity_info = self._entities.get(entity_id)
         if entity_info and "lazy_loaded" in entity_info.metadata:
             entity_info.metadata["lazy_loaded"] = False
@@ -220,9 +227,10 @@ class EntityDiscovery:
         logger.info(f"Entity invalidated: {entity_id} (will reload on next access)")
 
     def invalidate_all(self) -> None:
-        """Invalidate all cached entities.
+        """すべてのキャッシュされたエンティティを無効化します。
 
-        Useful for forcing a complete reload of all entities.
+        すべてのエンティティの完全なリロードを強制するのに有用です。
+
         """
         entity_ids = list(self._loaded_objects.keys())
         for entity_id in entity_ids:
@@ -230,12 +238,13 @@ class EntityDiscovery:
         logger.info(f"Invalidated {len(entity_ids)} entities")
 
     def register_entity(self, entity_id: str, entity_info: EntityInfo, entity_object: Any) -> None:
-        """Register an entity with both metadata and object.
+        """メタデータとオブジェクトの両方でエンティティを登録します。
 
         Args:
-            entity_id: Unique entity identifier
-            entity_info: Entity metadata
-            entity_object: Actual entity object for execution
+            entity_id: ユニークなエンティティ識別子
+            entity_info: エンティティのメタデータ
+            entity_object: 実行用の実際のエンティティオブジェクト
+
         """
         self._entities[entity_id] = entity_info
         self._loaded_objects[entity_id] = entity_object
@@ -244,38 +253,39 @@ class EntityDiscovery:
     async def create_entity_info_from_object(
         self, entity_object: Any, entity_type: str | None = None, source: str = "in_memory"
     ) -> EntityInfo:
-        """Create EntityInfo from Agent Framework entity object.
+        """Agent FrameworkのエンティティオブジェクトからEntityInfoを作成します。
 
         Args:
-            entity_object: Agent Framework entity object
-            entity_type: Optional entity type override
-            source: Source of entity (directory, in_memory, remote)
+            entity_object: Agent Frameworkのエンティティオブジェクト
+            entity_type: オプションのエンティティタイプの上書き
+            source: エンティティのソース（directory, in_memory, remote）
 
         Returns:
-            EntityInfo with Agent Framework specific metadata
+            Agent Framework固有のメタデータを持つEntityInfo
+
         """
-        # Determine entity type if not provided
+        # 提供されていない場合はエンティティタイプを決定します。
         if entity_type is None:
             entity_type = "agent"
-            # Check if it's a workflow
+            # ワークフローかどうかを確認します。
             if hasattr(entity_object, "get_executors_list") or hasattr(entity_object, "executors"):
                 entity_type = "workflow"
 
-        # Extract metadata with improved fallback naming
+        # 改善されたフォールバック命名でメタデータを抽出します。
         name = getattr(entity_object, "name", None)
         if not name:
-            # In-memory entities: use class name as it's more readable than UUID
+            # インメモリのエンティティ: UUIDよりもクラス名の方が読みやすいため使用する
             class_name = entity_object.__class__.__name__
             name = f"{entity_type.title()} {class_name}"
         description = getattr(entity_object, "description", "")
 
-        # Generate entity ID using Agent Framework specific naming
+        # Agent Framework固有の命名を使用してエンティティIDを生成する
         entity_id = self._generate_entity_id(entity_object, entity_type, source)
 
-        # Extract tools/executors using Agent Framework specific logic
+        # Agent Framework固有のロジックを使ってツール/エグゼキューターを抽出する
         tools_list = await self._extract_tools_from_object(entity_object, entity_type)
 
-        # Extract agent-specific fields (for agents only)
+        # エージェント固有のフィールドを抽出する（エージェントのみ）
         instructions = None
         model = None
         chat_client_type = None
@@ -292,7 +302,7 @@ class EntityDiscovery:
             context_providers_list = agent_meta["context_providers"]
             middleware_list = agent_meta["middleware"]
 
-        # Log helpful info about agent capabilities (before creating EntityInfo)
+        # EntityInfoを作成する前にエージェントの機能に関する有用な情報をログに記録する
         if entity_type == "agent":
             has_run_stream = hasattr(entity_object, "run_stream")
             has_run = hasattr(entity_object, "run")
@@ -305,7 +315,7 @@ class EntityDiscovery:
             elif not has_run_stream and not has_run:
                 logger.warning(f"Agent '{entity_id}' lacks both run() and run_stream() methods. May not work.")
 
-        # Create EntityInfo with Agent Framework specifics
+        # Agent Framework固有の仕様でEntityInfoを作成する
         return EntityInfo(
             id=entity_id,
             name=name,
@@ -331,13 +341,14 @@ class EntityDiscovery:
         )
 
     async def _scan_entities_directory(self, entities_dir: Path) -> None:
-        """Scan the entities directory for Agent Framework entities (lazy loading).
+        """Agent Frameworkのエンティティを対象にentitiesディレクトリをスキャンする（遅延読み込み）。
 
-        This method scans the filesystem WITHOUT importing modules, creating sparse
-        metadata that will be enriched on-demand when entities are accessed.
+        このメソッドはモジュールをインポートせずにファイルシステムをスキャンし、
+        エンティティにアクセスされたときにオンデマンドで補完されるスパースなメタデータを作成します。
 
         Args:
-            entities_dir: Directory to scan for entities
+            entities_dir: エンティティをスキャンするディレクトリ
+
         """
         if not entities_dir.exists():  # noqa: ASYNC240
             logger.warning(f"Entities directory not found: {entities_dir}")
@@ -345,31 +356,32 @@ class EntityDiscovery:
 
         logger.info(f"Scanning {entities_dir} for Agent Framework entities (lazy mode)...")
 
-        # Add entities directory to Python path if not already there
+        # まだ存在しない場合はentitiesディレクトリをPythonパスに追加する
         entities_dir_str = str(entities_dir)
         if entities_dir_str not in sys.path:
             sys.path.insert(0, entities_dir_str)
 
-        # Scan for directories and Python files WITHOUT importing
+        # インポートせずにディレクトリとPythonファイルをスキャンする
         for item in entities_dir.iterdir():  # noqa: ASYNC240
             if item.name.startswith(".") or item.name == "__pycache__":
                 continue
 
             if item.is_dir() and self._looks_like_entity(item):
-                # Directory-based entity - create sparse metadata
+                # ディレクトリベースのエンティティ - スパースなメタデータを作成する
                 self._register_sparse_entity(item)
             elif item.is_file() and item.suffix == ".py" and not item.name.startswith("_"):
-                # Single file entity - create sparse metadata
+                # 単一ファイルエンティティ - スパースなメタデータを作成する
                 self._register_sparse_file_entity(item)
 
     def _looks_like_entity(self, dir_path: Path) -> bool:
-        """Check if directory contains an entity (without importing).
+        """ディレクトリにエンティティが含まれているかどうかをインポートせずにチェックする。
 
         Args:
-            dir_path: Directory to check
+            dir_path: チェックするディレクトリ
 
         Returns:
-            True if directory appears to contain an entity
+            ディレクトリがエンティティを含んでいると思われる場合はTrue
+
         """
         return (
             (dir_path / "agent.py").exists()
@@ -378,37 +390,39 @@ class EntityDiscovery:
         )
 
     def _detect_entity_type(self, dir_path: Path) -> str:
-        """Detect entity type from directory structure (without importing).
+        """ディレクトリ構造からエンティティタイプをインポートせずに検出する。
 
-        Uses filename conventions to determine entity type:
+        ファイル名の規約を使ってエンティティタイプを判別する:
         - workflow.py → "workflow"
         - agent.py → "agent"
-        - both or neither → "unknown"
+        - 両方またはどちらもない → "unknown"
 
         Args:
-            dir_path: Directory to analyze
+            dir_path: 分析するディレクトリ
 
         Returns:
-            Entity type: "workflow", "agent", or "unknown"
+            エンティティタイプ: "workflow", "agent", または "unknown"
+
         """
         has_agent = (dir_path / "agent.py").exists()
         has_workflow = (dir_path / "workflow.py").exists()
 
         if has_agent and has_workflow:
-            # Both files exist - ambiguous, mark as unknown
+            # 両方のファイルが存在するため曖昧であり、unknownとしてマークする
             return "unknown"
         if has_workflow:
             return "workflow"
         if has_agent:
             return "agent"
-        # Has __init__.py but no specific file
+        # __init__.pyはあるが特定のファイルはない
         return "unknown"
 
     def _register_sparse_entity(self, dir_path: Path) -> None:
-        """Register entity with sparse metadata (no import).
+        """スパースなメタデータでエンティティを登録する（インポートなし）。
 
         Args:
-            dir_path: Entity directory
+            dir_path: エンティティのディレクトリ
+
         """
         entity_id = dir_path.name
         entity_type = self._detect_entity_type(dir_path)
@@ -432,14 +446,15 @@ class EntityDiscovery:
         logger.debug(f"Registered sparse entity: {entity_id} (type: {entity_type})")
 
     def _register_sparse_file_entity(self, file_path: Path) -> None:
-        """Register file-based entity with sparse metadata (no import).
+        """スパースなメタデータでファイルベースのエンティティを登録する（インポートなし）。
 
         Args:
-            file_path: Entity Python file
+            file_path: エンティティのPythonファイル
+
         """
         entity_id = file_path.stem
 
-        # File-based entities are typically agents, but we can't know for sure without importing
+        # ファイルベースのエンティティは通常エージェントだが、インポートしないと確実にはわからない
         entity_info = EntityInfo(
             id=entity_id,
             name=entity_id.replace("_", " ").title(),
@@ -459,20 +474,21 @@ class EntityDiscovery:
         logger.debug(f"Registered sparse file entity: {entity_id}")
 
     def _load_env_for_entity(self, entity_path: Path) -> bool:
-        """Load .env file for an entity.
+        """エンティティの.envファイルを読み込む。
 
         Args:
-            entity_path: Path to entity directory
+            entity_path: エンティティディレクトリのパス
 
         Returns:
-            True if .env was loaded successfully
+            .envが正常に読み込まれた場合はTrue
+
         """
-        # Check for .env in the entity folder first
+        # まずエンティティフォルダ内の.envをチェックする
         env_file = entity_path / ".env"
         if self._load_env_file(env_file):
             return True
 
-        # Check one level up (the entities directory) for safety
+        # 安全のために1階層上（entitiesディレクトリ）もチェックする
         if self.entities_dir:
             entities_dir = Path(self.entities_dir).resolve()
             entities_env = entities_dir / ".env"
@@ -482,13 +498,14 @@ class EntityDiscovery:
         return False
 
     def _load_env_file(self, env_path: Path) -> bool:
-        """Load environment variables from .env file.
+        """.envファイルから環境変数を読み込む。
 
         Args:
-            env_path: Path to .env file
+            env_path: .envファイルのパス
 
         Returns:
-            True if file was loaded successfully
+            ファイルが正常に読み込まれた場合はTrue
+
         """
         if env_path.exists():
             load_dotenv(env_path, override=True)
@@ -497,16 +514,17 @@ class EntityDiscovery:
         return False
 
     def _load_module_from_pattern(self, pattern: str) -> Any | None:
-        """Load module using import pattern.
+        """インポートパターンを使ってモジュールを読み込む。
 
         Args:
-            pattern: Import pattern to try
+            pattern: 試すインポートパターン
 
         Returns:
-            Loaded module or None if failed
+            読み込まれたモジュール、失敗した場合はNone
+
         """
         try:
-            # Check if module exists first
+            # まずモジュールが存在するかをチェックする
             spec = importlib.util.find_spec(pattern)
             if spec is None:
                 return None
@@ -523,14 +541,15 @@ class EntityDiscovery:
             return None
 
     def _load_module_from_file(self, file_path: Path, module_name: str) -> Any | None:
-        """Load module directly from file path.
+        """ファイルパスから直接モジュールを読み込む。
 
         Args:
-            file_path: Path to Python file
-            module_name: Name to assign to module
+            file_path: Pythonファイルのパス
+            module_name: モジュールに割り当てる名前
 
         Returns:
-            Loaded module or None if failed
+            読み込まれたモジュール、失敗した場合はNone
+
         """
         try:
             spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -538,7 +557,7 @@ class EntityDiscovery:
                 return None
 
             module = importlib.util.module_from_spec(spec)
-            sys.modules[module_name] = module  # Add to sys.modules for proper imports
+            sys.modules[module_name] = module  # 適切なインポートのためにsys.modulesに追加する
             spec.loader.exec_module(module)
 
             logger.debug(f"Successfully loaded module from {file_path}")
@@ -549,17 +568,18 @@ class EntityDiscovery:
             return None
 
     async def _find_entity_in_module(self, module: Any, entity_id: str, module_path: str) -> Any:
-        """Find agent or workflow entity in a loaded module.
+        """読み込んだモジュールからエージェントまたはワークフローエンティティを探す。
 
         Args:
-            module: Loaded Python module
-            entity_id: Expected entity identifier to register with
-            module_path: Path to module for metadata
+            module: 読み込んだPythonモジュール
+            entity_id: 登録するための期待されるエンティティ識別子
+            module_path: メタデータ用のモジュールパス
 
         Returns:
-            Loaded entity object, or None if not found
+            読み込まれたエンティティオブジェクト、見つからなければNone
+
         """
-        # Look for explicit variable names first
+        # まず明示的な変数名を探す
         candidates = [
             ("agent", getattr(module, "agent", None)),
             ("workflow", getattr(module, "workflow", None)),
@@ -570,22 +590,22 @@ class EntityDiscovery:
                 continue
 
             if self._is_valid_entity(obj, obj_type):
-                # Register with the correct entity_id (from directory name)
-                # Store the object directly in _loaded_objects so we can return it
+                # 正しいentity_id（ディレクトリ名から）で登録する オブジェクトを直接_loaded_objectsに保存して返せるようにする
                 self._loaded_objects[entity_id] = obj
                 return obj
 
         return None
 
     def _is_valid_entity(self, obj: Any, expected_type: str) -> bool:
-        """Check if object is a valid agent or workflow using duck typing.
+        """ダックタイピングを使ってオブジェクトが有効なエージェントまたはワークフローかどうかをチェックする。
 
         Args:
-            obj: Object to validate
-            expected_type: Expected type ("agent" or "workflow")
+            obj: 検証するオブジェクト
+            expected_type: 期待されるタイプ（"agent"または"workflow"）
 
         Returns:
-            True if object is valid for the expected type
+            オブジェクトが期待されるタイプに有効であればTrue
+
         """
         if expected_type == "agent":
             return self._is_valid_agent(obj)
@@ -594,16 +614,17 @@ class EntityDiscovery:
         return False
 
     def _is_valid_agent(self, obj: Any) -> bool:
-        """Check if object is a valid Agent Framework agent.
+        """オブジェクトが有効なAgent Frameworkのエージェントかどうかをチェックする。
 
         Args:
-            obj: Object to validate
+            obj: 検証するオブジェクト
 
         Returns:
-            True if object appears to be a valid agent
+            オブジェクトが有効なエージェントと思われる場合はTrue
+
         """
         try:
-            # Try to import AgentProtocol for proper type checking
+            # 適切な型チェックのためにAgentProtocolのインポートを試みる
             try:
                 from agent_framework import AgentProtocol
 
@@ -612,8 +633,8 @@ class EntityDiscovery:
             except ImportError:
                 pass
 
-            # Fallback to duck typing for agent protocol
-            # Agent must have either run_stream() or run() method, plus id and name
+            # エージェントプロトコルのダックタイピングによるフォールバック
+            # Agentはrun_stream()またはrun()メソッドのいずれかとidおよびnameを持つ必要がある
             has_execution_method = hasattr(obj, "run_stream") or hasattr(obj, "run")
             if has_execution_method and hasattr(obj, "id") and hasattr(obj, "name"):
                 return True
@@ -624,47 +645,49 @@ class EntityDiscovery:
         return False
 
     def _is_valid_workflow(self, obj: Any) -> bool:
-        """Check if object is a valid Agent Framework workflow.
+        """オブジェクトが有効なAgent Frameworkのワークフローかどうかをチェックする。
 
         Args:
-            obj: Object to validate
+            obj: 検証するオブジェクト
 
         Returns:
-            True if object appears to be a valid workflow
+            オブジェクトが有効なワークフローと思われる場合はTrue
+
         """
-        # Check for workflow - must have run_stream method and executors
+        # ワークフローのチェック - run_streamメソッドとexecutorsを持つ必要がある
         return hasattr(obj, "run_stream") and (hasattr(obj, "executors") or hasattr(obj, "get_executors_list"))
 
     async def _register_entity_from_object(
         self, obj: Any, obj_type: str, module_path: str, source: str = "directory"
     ) -> None:
-        """Register an entity from a live object.
+        """ライブオブジェクトからエンティティを登録する。
 
         Args:
-            obj: Entity object
-            obj_type: Type of entity ("agent" or "workflow")
-            module_path: Path to module for metadata
-            source: Source of entity (directory, in_memory, remote)
+            obj: エンティティオブジェクト
+            obj_type: エンティティのタイプ（"agent"または"workflow"）
+            module_path: メタデータ用のモジュールパス
+            source: エンティティのソース（directory, in_memory, remote）
+
         """
         try:
-            # Generate entity ID with source information
+            # ソース情報を含むエンティティIDを生成する
             entity_id = self._generate_entity_id(obj, obj_type, source)
 
-            # Extract metadata from the live object with improved fallback naming
+            # 改善されたフォールバック命名でライブオブジェクトからメタデータを抽出する
             name = getattr(obj, "name", None)
             if not name:
-                # Use class name as it's more readable than UUID
+                # UUIDよりもクラス名の方が読みやすいため使用する
                 class_name = obj.__class__.__name__
                 name = f"{obj_type.title()} {class_name}"
             description = getattr(obj, "description", None)
             tools = await self._extract_tools_from_object(obj, obj_type)
 
-            # Create EntityInfo
+            # EntityInfoを作成する
             tools_union: list[str | dict[str, Any]] | None = None
             if tools:
                 tools_union = [tool for tool in tools]
 
-            # Extract agent-specific fields (for agents only)
+            # エージェント固有のフィールドを抽出する（エージェントのみ）
             instructions = None
             model = None
             chat_client_type = None
@@ -702,27 +725,28 @@ class EntityDiscovery:
                 },
             )
 
-            # Register the entity
+            # エンティティを登録する
             self.register_entity(entity_id, entity_info, obj)
 
         except Exception as e:
             logger.error(f"Error registering entity from {source}: {e}")
 
     async def _extract_tools_from_object(self, obj: Any, obj_type: str) -> list[str]:
-        """Extract tool/executor names from a live object.
+        """ライブオブジェクトからツール/エグゼキューター名を抽出する。
 
         Args:
-            obj: Entity object
-            obj_type: Type of entity
+            obj: エンティティオブジェクト
+            obj_type: エンティティのタイプ
 
         Returns:
-            List of tool/executor names
+            ツール/エグゼキューター名のリスト
+
         """
         tools = []
 
         try:
             if obj_type == "agent":
-                # For agents, check chat_options.tools first
+                # エージェントの場合はchat_options.toolsを最初にチェックする
                 chat_options = getattr(obj, "chat_options", None)
                 if chat_options and hasattr(chat_options, "tools"):
                     for tool in chat_options.tools:
@@ -733,7 +757,7 @@ class EntityDiscovery:
                         else:
                             tools.append(str(tool))
                 else:
-                    # Fallback to direct tools attribute
+                    # 直接tools属性へのフォールバック
                     agent_tools = getattr(obj, "tools", None)
                     if agent_tools:
                         for tool in agent_tools:
@@ -745,7 +769,7 @@ class EntityDiscovery:
                                 tools.append(str(tool))
 
             elif obj_type == "workflow":
-                # For workflows, extract executor names
+                # ワークフローの場合はエグゼキューター名を抽出する
                 if hasattr(obj, "get_executors_list"):
                     executor_objects = obj.get_executors_list()
                     tools = [getattr(ex, "id", str(ex)) for ex in executor_objects]
@@ -762,31 +786,32 @@ class EntityDiscovery:
         return tools
 
     def _generate_entity_id(self, entity: Any, entity_type: str, source: str = "directory") -> str:
-        """Generate unique entity ID with UUID suffix for collision resistance.
+        """衝突回避のためUUIDサフィックス付きのユニークなエンティティIDを生成する。
 
         Args:
-            entity: Entity object
-            entity_type: Type of entity (agent, workflow, etc.)
-            source: Source of entity (directory, in_memory, remote)
+            entity: エンティティオブジェクト
+            entity_type: エンティティのタイプ（agent, workflowなど）
+            source: エンティティのソース（directory, in_memory, remote）
 
         Returns:
-            Unique entity ID with format: {type}_{source}_{name}_{uuid}
+            フォーマット: {type}_{source}_{name}_{uuid} のユニークなエンティティID
+
         """
         import re
 
-        # Extract base name with priority: name -> id -> class_name
+        # 優先順位付きでベース名を抽出: name -> id -> class_name
         if hasattr(entity, "name") and entity.name:
             base_name = str(entity.name).lower().replace(" ", "-").replace("_", "-")
         elif hasattr(entity, "id") and entity.id:
             base_name = str(entity.id).lower().replace(" ", "-").replace("_", "-")
         elif hasattr(entity, "__class__"):
             class_name = entity.__class__.__name__
-            # Convert CamelCase to kebab-case
+            # CamelCaseをkebab-caseに変換する
             base_name = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", class_name).lower()
         else:
             base_name = "entity"
 
-        # Generate full UUID for guaranteed uniqueness
+        # 保証された一意性のために完全なUUIDを生成する
         full_uuid = uuid.uuid4().hex
 
         return f"{entity_type}_{source}_{base_name}_{full_uuid}"

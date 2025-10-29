@@ -29,44 +29,46 @@ Prerequisites:
 
 
 class UpperCaseExecutor(Executor):
-    """Converts an input string to uppercase and forwards it.
+    """入力文字列を大文字に変換して転送します。
 
-    Concepts:
-    - @handler methods define invokable steps.
-    - WorkflowContext[str] indicates this step emits a string to the next node.
+    コンセプト:
+    - @handlerメソッドは呼び出し可能なステップを定義します。
+    - WorkflowContext[str]はこのステップが次のノードに文字列を出力することを示します。
+
     """
 
     @handler
     async def to_upper_case(self, text: str, ctx: WorkflowContext[str]) -> None:
-        """Transform the input to uppercase and send it downstream."""
+        """入力を大文字に変換して下流に送ります。"""
         result = text.upper()
-        # Pass the intermediate result to the next executor in the chain.
+        # 中間結果をチェーン内の次のexecutorに渡します。
         await ctx.send_message(result)
 
 
 class ReverseTextExecutor(Executor):
-    """Reverses the incoming string and yields workflow output.
+    """受け取った文字列を逆順にしてワークフロー出力を生成します。
 
-    Concepts:
-    - Use ctx.yield_output to provide workflow outputs when the terminal result is ready.
-    - The terminal node does not forward messages further.
+    コンセプト:
+    - ctx.yield_outputを使って端末結果が準備できたときにワークフロー出力を提供します。
+    - 端末ノードはメッセージをさらに転送しません。
+
     """
 
     @handler
     async def reverse_text(self, text: str, ctx: WorkflowContext[Never, str]) -> None:
-        """Reverse the input string and yield the workflow output."""
+        """入力文字列を逆順にしてワークフロー出力を生成します。"""
         result = text[::-1]
         await ctx.yield_output(result)
 
 
 async def main() -> None:
-    """Build a two step sequential workflow and run it with streaming to observe events."""
-    # Step 1: Create executor instances.
+    """2ステップのシーケンシャルなワークフローを構築し、ストリーミングで実行してイベントを観察します。"""
+    # ステップ1: executorインスタンスを作成します。
     upper_case_executor = UpperCaseExecutor(id="upper_case_executor")
     reverse_text_executor = ReverseTextExecutor(id="reverse_text_executor")
 
-    # Step 2: Build the workflow graph.
-    # Order matters. We connect upper_case_executor -> reverse_text_executor and set the start.
+    # ステップ2: ワークフローグラフを構築します。 順序が重要です。upper_case_executor ->
+    # reverse_text_executorを接続し、開始を設定します。
     workflow = (
         WorkflowBuilder()
         .add_edge(upper_case_executor, reverse_text_executor)
@@ -74,8 +76,7 @@ async def main() -> None:
         .build()
     )
 
-    # Step 3: Stream events for a single input.
-    # The stream will include executor invoke and completion events, plus workflow outputs.
+    # ステップ3: 単一の入力に対してイベントをストリーミングします。 ストリームにはexecutorの呼び出しと完了イベント、さらにワークフローの出力が含まれます。
     outputs: list[str] = []
     async for event in workflow.run_stream("hello world"):
         print(f"Event: {event}")

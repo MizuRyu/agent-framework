@@ -26,25 +26,25 @@ from agent_framework._workflows._edge import (
 from agent_framework._workflows._edge_runner import create_edge_runner
 from agent_framework.observability import EdgeGroupDeliveryStatus
 
-# Add for test
+# テスト用に追加。
 
 
 @dataclass
 class MockMessage:
-    """A mock message for testing purposes."""
+    """テスト用のモックメッセージ。"""
 
     data: Any
 
 
 @dataclass
 class MockMessageSecondary:
-    """A secondary mock message for testing purposes."""
+    """テスト用の二次モックメッセージ。"""
 
     data: Any
 
 
 class MockExecutor(Executor):
-    """A mock executor for testing purposes."""
+    """テスト用のモックexecutor。"""
 
     def __init__(self, *, id: str) -> None:
         super().__init__(id=id)
@@ -53,13 +53,13 @@ class MockExecutor(Executor):
 
     @handler
     async def mock_handler(self, message: MockMessage, ctx: WorkflowContext) -> None:
-        """A mock handler that does nothing."""
+        """何もしないモックハンドラー。"""
         self.call_count += 1
         self.last_message = message
 
 
 class MockExecutorSecondary(Executor):
-    """A secondary mock executor for testing purposes."""
+    """テスト用の二次モックexecutor。"""
 
     def __init__(self, *, id: str) -> None:
         super().__init__(id=id)
@@ -68,13 +68,13 @@ class MockExecutorSecondary(Executor):
 
     @handler
     async def mock_handler_secondary(self, message: MockMessageSecondary, ctx: WorkflowContext) -> None:
-        """A secondary mock handler that does nothing."""
+        """何もしない二次モックハンドラー。"""
         self.call_count += 1
         self.last_message = message
 
 
 class MockAggregator(Executor):
-    """A mock aggregator for testing purposes."""
+    """テスト用のモックアグリゲーター。"""
 
     def __init__(self, *, id: str) -> None:
         super().__init__(id=id)
@@ -83,7 +83,7 @@ class MockAggregator(Executor):
 
     @handler
     async def mock_aggregator_handler(self, message: list[MockMessage], ctx: WorkflowContext) -> None:
-        """A mock aggregator handler that does nothing."""
+        """何もしないモックアグリゲーターハンドラー。"""
         self.call_count += 1
         self.last_message = message
 
@@ -93,13 +93,13 @@ class MockAggregator(Executor):
         message: list[MockMessageSecondary],
         ctx: WorkflowContext,
     ) -> None:
-        """A mock aggregator handler that does nothing."""
+        """何もしないモックアグリゲーターハンドラー。"""
         self.call_count += 1
         self.last_message = message
 
 
 class MockAggregatorSecondary(Executor):
-    """A mock aggregator that has a handler for a union type for testing purposes."""
+    """テスト用にunion型のハンドラーを持つモックアグリゲーター。"""
 
     def __init__(self, *, id: str) -> None:
         super().__init__(id=id)
@@ -112,7 +112,7 @@ class MockAggregatorSecondary(Executor):
         message: list[MockMessage | MockMessageSecondary],
         ctx: WorkflowContext,
     ) -> None:
-        """A mock aggregator handler that does nothing."""
+        """何もしないモックアグリゲーターハンドラー。"""
         self.call_count += 1
         self.last_message = message
 
@@ -121,7 +121,7 @@ class MockAggregatorSecondary(Executor):
 
 
 def test_create_edge():
-    """Test creating an edge with a source and target executor."""
+    """sourceとtarget executorを持つエッジの作成をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -133,7 +133,7 @@ def test_create_edge():
 
 
 def test_edge_can_handle():
-    """Test creating an edge with a source and target executor."""
+    """sourceとtarget executorを持つエッジの作成をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -142,13 +142,11 @@ def test_edge_can_handle():
     assert edge.should_route(MockMessage(data="test"))
 
 
-# endregion Edge
-
-# region SingleEdgeGroup
+# endregion Edge region SingleEdgeGroup
 
 
 def test_single_edge_group():
-    """Test creating a single edge group."""
+    """単一エッジグループの作成をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -161,7 +159,7 @@ def test_single_edge_group():
 
 
 def test_single_edge_group_with_condition():
-    """Test creating a single edge group with a condition."""
+    """条件付きの単一エッジグループの作成をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -175,7 +173,7 @@ def test_single_edge_group_with_condition():
 
 
 async def test_single_edge_group_send_message() -> None:
-    """Test sending a message through a single edge runner."""
+    """単一エッジランナーを通じたメッセージ送信をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -194,7 +192,7 @@ async def test_single_edge_group_send_message() -> None:
 
 
 async def test_single_edge_group_send_message_with_target() -> None:
-    """Test sending a message through a single edge runner."""
+    """単一エッジランナーを通じたメッセージ送信をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -213,7 +211,7 @@ async def test_single_edge_group_send_message_with_target() -> None:
 
 
 async def test_single_edge_group_send_message_with_invalid_target() -> None:
-    """Test sending a message through a single edge runner."""
+    """単一エッジランナーを通じたメッセージ送信をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -232,7 +230,7 @@ async def test_single_edge_group_send_message_with_invalid_target() -> None:
 
 
 async def test_single_edge_group_send_message_with_invalid_data() -> None:
-    """Test sending a message through a single edge runner with invalid data."""
+    """無効なデータで単一エッジランナーを通じたメッセージ送信をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -251,12 +249,12 @@ async def test_single_edge_group_send_message_with_invalid_data() -> None:
 
 
 async def test_single_edge_group_send_message_with_condition_pass() -> None:
-    """Test sending a message through a single edge runner with a condition that passes."""
+    """条件が通る単一エッジランナーを通じたメッセージ送信をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
     executors: dict[str, Executor] = {source.id: source, target.id: target}
-    # Create edge group with condition that passes when data == "test"
+    # data == "test"のときに通る条件付きのエッジグループを作成します。
     edge_group = SingleEdgeGroup(source_id=source.id, target_id=target.id, condition=lambda x: x.data == "test")
 
     edge_runner = create_edge_runner(edge_group, executors)
@@ -273,12 +271,12 @@ async def test_single_edge_group_send_message_with_condition_pass() -> None:
 
 
 async def test_single_edge_group_send_message_with_condition_fail() -> None:
-    """Test sending a message through a single edge runner with a condition that fails."""
+    """条件が失敗する単一エッジランナーを通じたメッセージ送信をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
     executors: dict[str, Executor] = {source.id: source, target.id: target}
-    # Create edge group with condition that passes when data == "test"
+    # data == "test"のときに通る条件付きのエッジグループを作成します。
     edge_group = SingleEdgeGroup(source_id=source.id, target_id=target.id, condition=lambda x: x.data == "test")
 
     edge_runner = create_edge_runner(edge_group, executors)
@@ -289,14 +287,14 @@ async def test_single_edge_group_send_message_with_condition_fail() -> None:
     message = Message(data=data, source_id=source.id)
 
     success = await edge_runner.send_message(message, shared_state, ctx)
-    # Should return True because message was processed, but condition failed
+    # メッセージは処理されたが条件が失敗したためTrueを返すはずです。
     assert success is True
-    # Target should not be called because condition failed
+    # 条件が失敗したためtargetは呼び出されるべきではありません。
     assert target.call_count == 0
 
 
 async def test_single_edge_group_tracing_success(span_exporter) -> None:
-    """Test that single edge group processing creates proper success spans."""
+    """単一エッジグループ処理が適切な成功スパンを作成することをテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -307,14 +305,14 @@ async def test_single_edge_group_tracing_success(span_exporter) -> None:
     shared_state = SharedState()
     ctx = InProcRunnerContext()
 
-    # Create trace context and span IDs to simulate a message with tracing information
+    # トレース情報を持つメッセージをシミュレートするためにトレースコンテキストとスパンIDを作成します。
     trace_contexts = [{"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"}]
     source_span_ids = ["00f067aa0ba902b7"]
 
     data = MockMessage(data="test")
     message = Message(data=data, source_id=source.id, trace_contexts=trace_contexts, source_span_ids=source_span_ids)
 
-    # Clear any build spans
+    # ビルドスパンをクリアします。
     span_exporter.clear()
 
     success = await edge_runner.send_message(message, shared_state, ctx)
@@ -333,18 +331,18 @@ async def test_single_edge_group_tracing_success(span_exporter) -> None:
     assert span.attributes.get("edge_group.id") is not None
     assert span.attributes.get("message.source_id") == source.id
 
-    # Verify span links are created
+    # スパンリンクが作成されていることを検証します。
     assert span.links is not None
     assert len(span.links) == 1
 
     link = span.links[0]
-    # Verify the link points to the correct trace and span
+    # リンクが正しいトレースとスパンを指していることを検証します。
     assert link.context.trace_id == int("4bf92f3577b34da6a3ce929d0e0e4736", 16)
     assert link.context.span_id == int("00f067aa0ba902b7", 16)
 
 
 async def test_single_edge_group_tracing_condition_failure(span_exporter) -> None:
-    """Test that single edge group processing creates proper spans for condition failures."""
+    """単一エッジグループ処理が条件失敗に対して適切なスパンを作成することをテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -358,11 +356,11 @@ async def test_single_edge_group_tracing_condition_failure(span_exporter) -> Non
     data = MockMessage(data="fail")
     message = Message(data=data, source_id=source.id)
 
-    # Clear any build spans
+    # ビルドスパンをクリアします。
     span_exporter.clear()
 
     success = await edge_runner.send_message(message, shared_state, ctx)
-    assert success is True  # Returns True but condition failed
+    assert success is True  # Trueを返すが条件は失敗しました。
 
     spans = span_exporter.get_finished_spans()
     edge_group_spans = [s for s in spans if s.name == "edge_group.process"]
@@ -377,7 +375,7 @@ async def test_single_edge_group_tracing_condition_failure(span_exporter) -> Non
 
 
 async def test_single_edge_group_tracing_type_mismatch(span_exporter) -> None:
-    """Test that single edge group processing creates proper spans for type mismatches."""
+    """単一エッジグループ処理が型不一致に対して適切なスパンを作成することをテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -388,11 +386,11 @@ async def test_single_edge_group_tracing_type_mismatch(span_exporter) -> None:
     shared_state = SharedState()
     ctx = InProcRunnerContext()
 
-    # Send incompatible data type
+    # 互換性のないデータ型を送信します。
     data = "invalid_data"
     message = Message(data=data, source_id=source.id)
 
-    # Clear any build spans
+    # ビルドスパンをクリアします。
     span_exporter.clear()
 
     success = await edge_runner.send_message(message, shared_state, ctx)
@@ -411,7 +409,7 @@ async def test_single_edge_group_tracing_type_mismatch(span_exporter) -> None:
 
 
 async def test_single_edge_group_tracing_target_mismatch(span_exporter) -> None:
-    """Test that single edge group processing creates proper spans for target mismatches."""
+    """単一エッジグループ処理がターゲット不一致に対して適切なスパンを作成することをテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -425,7 +423,7 @@ async def test_single_edge_group_tracing_target_mismatch(span_exporter) -> None:
     data = MockMessage(data="test")
     message = Message(data=data, source_id=source.id, target_id="wrong_target")
 
-    # Clear any build spans
+    # ビルドスパンをクリアします。
     span_exporter.clear()
 
     success = await edge_runner.send_message(message, shared_state, ctx)
@@ -444,14 +442,11 @@ async def test_single_edge_group_tracing_target_mismatch(span_exporter) -> None:
     assert span.attributes.get("message.target_id") == "wrong_target"
 
 
-# endregion SingleEdgeGroup
-
-
-# region FanOutEdgeGroup
+# endregion SingleEdgeGroup region FanOutEdgeGroup
 
 
 def test_source_edge_group():
-    """Test creating a fan-out group."""
+    """ファンアウトグループの作成をテストします。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -468,7 +463,7 @@ def test_source_edge_group():
 
 
 def test_source_edge_group_invalid_number_of_targets() -> None:
-    """Test creating a fan-out group with an invalid number of targets."""
+    """無効なターゲット数でのファンアウトグループの作成をテストします。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -477,7 +472,7 @@ def test_source_edge_group_invalid_number_of_targets() -> None:
 
 
 async def test_source_edge_group_send_message() -> None:
-    """Test sending a message through a fan-out edge runner."""
+    """fan-out edge runner を通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -500,7 +495,7 @@ async def test_source_edge_group_send_message() -> None:
 
 
 async def test_source_edge_group_send_message_with_target() -> None:
-    """Test sending a message through a fan-out group with a target."""
+    """ターゲット付きの fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -519,11 +514,11 @@ async def test_source_edge_group_send_message_with_target() -> None:
 
     assert success is True
     assert target1.call_count == 1
-    assert target2.call_count == 0  # target2 should not be called since message targets target1
+    assert target2.call_count == 0  # message のターゲットが target1 のため、target2 は呼び出されるべきではない。
 
 
 async def test_source_edge_group_send_message_with_invalid_target() -> None:
-    """Test sending a message through a fan-out group with an invalid target."""
+    """無効なターゲットを持つ fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -543,7 +538,7 @@ async def test_source_edge_group_send_message_with_invalid_target() -> None:
 
 
 async def test_source_edge_group_send_message_with_invalid_data() -> None:
-    """Test sending a message through a fan-out group with invalid data."""
+    """無効なデータを持つ fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -563,7 +558,7 @@ async def test_source_edge_group_send_message_with_invalid_data() -> None:
 
 
 async def test_source_edge_group_send_message_only_one_successful_send() -> None:
-    """Test sending a message through a fan-out group where only one edge can handle the message."""
+    """メッセージを処理できるエッジが1つだけの fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutorSecondary(id="target_executor_2")
@@ -581,12 +576,12 @@ async def test_source_edge_group_send_message_only_one_successful_send() -> None
     success = await edge_runner.send_message(message, shared_state, ctx)
 
     assert success is True
-    assert target1.call_count == 1  # target1 can handle MockMessage
-    assert target2.call_count == 0  # target2 (MockExecutorSecondary) cannot handle MockMessage
+    assert target1.call_count == 1  # target1 は MockMessage を処理できる。
+    assert target2.call_count == 0  # target2 (MockExecutorSecondary) は MockMessage を処理できない。
 
 
 def test_source_edge_group_with_selection_func():
-    """Test creating a partitioning edge group."""
+    """パーティショニングエッジグループを作成するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -607,7 +602,7 @@ def test_source_edge_group_with_selection_func():
 
 
 async def test_source_edge_group_with_selection_func_send_message() -> None:
-    """Test sending a message through a fan-out group with a selection function."""
+    """選択関数を持つ fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -636,7 +631,7 @@ async def test_source_edge_group_with_selection_func_send_message() -> None:
 
 
 async def test_source_edge_group_with_selection_func_send_message_with_invalid_selection_result() -> None:
-    """Test sending a message through a fan-out group with a selection func with an invalid selection result."""
+    """無効な選択結果を持つ選択関数付き fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -660,7 +655,7 @@ async def test_source_edge_group_with_selection_func_send_message_with_invalid_s
 
 
 async def test_source_edge_group_with_selection_func_send_message_with_target() -> None:
-    """Test sending a message through a fan-out group with a selection func with a target."""
+    """ターゲット付きの選択関数を持つ fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -689,7 +684,7 @@ async def test_source_edge_group_with_selection_func_send_message_with_target() 
 
 
 async def test_source_edge_group_with_selection_func_send_message_with_target_not_in_selection() -> None:
-    """Test sending a message through a fan-out group with a selection func with a target not in the selection."""
+    """選択に含まれないターゲットを持つ選択関数付き fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -714,7 +709,7 @@ async def test_source_edge_group_with_selection_func_send_message_with_target_no
 
 
 async def test_source_edge_group_with_selection_func_send_message_with_invalid_data() -> None:
-    """Test sending a message through a fan-out group with a selection func with invalid data."""
+    """無効なデータを持つ選択関数付き fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -739,7 +734,7 @@ async def test_source_edge_group_with_selection_func_send_message_with_invalid_d
 
 
 async def test_source_edge_group_with_selection_func_send_message_with_target_invalid_data() -> None:
-    """Test sending a message through a fan-out group with a selection func with a target and invalid data."""
+    """ターゲットと無効なデータを持つ選択関数付き fan-out グループを通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -764,7 +759,7 @@ async def test_source_edge_group_with_selection_func_send_message_with_target_in
 
 
 async def test_fan_out_edge_group_tracing_success(span_exporter) -> None:
-    """Test that fan-out edge group processing creates proper success spans."""
+    """fan-out edge group の処理が適切な成功スパンを作成することをテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -776,14 +771,14 @@ async def test_fan_out_edge_group_tracing_success(span_exporter) -> None:
     shared_state = SharedState()
     ctx = InProcRunnerContext()
 
-    # Create trace context and span IDs to simulate a message with tracing information
+    # トレース情報を持つメッセージをシミュレートするためにトレースコンテキストとスパンIDを作成。
     trace_contexts = [{"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"}]
     source_span_ids = ["00f067aa0ba902b7"]
 
     data = MockMessage(data="test")
     message = Message(data=data, source_id=source.id, trace_contexts=trace_contexts, source_span_ids=source_span_ids)
 
-    # Clear any build spans
+    # ビルドスパンをクリアする。
     span_exporter.clear()
 
     success = await edge_runner.send_message(message, shared_state, ctx)
@@ -802,18 +797,18 @@ async def test_fan_out_edge_group_tracing_success(span_exporter) -> None:
     assert span.attributes.get("edge_group.id") is not None
     assert span.attributes.get("message.source_id") == source.id
 
-    # Verify span links are created
+    # スパンリンクが作成されていることを検証。
     assert span.links is not None
     assert len(span.links) == 1
 
     link = span.links[0]
-    # Verify the link points to the correct trace and span
+    # リンクが正しいトレースとスパンを指していることを検証。
     assert link.context.trace_id == int("4bf92f3577b34da6a3ce929d0e0e4736", 16)
     assert link.context.span_id == int("00f067aa0ba902b7", 16)
 
 
 async def test_fan_out_edge_group_tracing_with_target(span_exporter) -> None:
-    """Test that fan-out edge group processing creates proper spans for targeted messages."""
+    """ターゲットメッセージに対して fan-out edge group の処理が適切なスパンを作成することをテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -825,7 +820,7 @@ async def test_fan_out_edge_group_tracing_with_target(span_exporter) -> None:
     shared_state = SharedState()
     ctx = InProcRunnerContext()
 
-    # Create trace context and span IDs to simulate a message with tracing information
+    # トレース情報を持つメッセージをシミュレートするためにトレースコンテキストとスパンIDを作成。
     trace_contexts = [{"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"}]
     source_span_ids = ["00f067aa0ba902b7"]
 
@@ -838,7 +833,7 @@ async def test_fan_out_edge_group_tracing_with_target(span_exporter) -> None:
         source_span_ids=source_span_ids,
     )
 
-    # Clear any build spans
+    # ビルドスパンをクリアする。
     span_exporter.clear()
 
     success = await edge_runner.send_message(message, shared_state, ctx)
@@ -856,23 +851,21 @@ async def test_fan_out_edge_group_tracing_with_target(span_exporter) -> None:
     assert span.attributes.get("edge_group.delivery_status") == EdgeGroupDeliveryStatus.DELIVERED.value
     assert span.attributes.get("message.target_id") == target1.id
 
-    # Verify span links are created
+    # スパンリンクが作成されていることを検証。
     assert span.links is not None
     assert len(span.links) == 1
 
     link = span.links[0]
-    # Verify the link points to the correct trace and span
+    # リンクが正しいトレースとスパンを指していることを検証。
     assert link.context.trace_id == int("4bf92f3577b34da6a3ce929d0e0e4736", 16)
     assert link.context.span_id == int("00f067aa0ba902b7", 16)
 
 
-# endregion FanOutEdgeGroup
-
-# region FanInEdgeGroup
+# endregion FanOutEdgeGroup region FanInEdgeGroup
 
 
 def test_target_edge_group():
-    """Test creating a fan-in edge group."""
+    """fan-in edge group を作成するテスト。"""
     source1 = MockExecutor(id="source_executor_1")
     source2 = MockExecutor(id="source_executor_2")
     target = MockAggregator(id="target_executor")
@@ -889,7 +882,7 @@ def test_target_edge_group():
 
 
 def test_target_edge_group_invalid_number_of_sources():
-    """Test creating a fan-in edge group with an invalid number of sources."""
+    """無効な数のソースを持つ fan-in edge group を作成するテスト。"""
     source = MockExecutor(id="source_executor")
     target = MockAggregator(id="target_executor")
 
@@ -898,7 +891,7 @@ def test_target_edge_group_invalid_number_of_sources():
 
 
 async def test_target_edge_group_send_message_buffer() -> None:
-    """Test sending a message through a fan-in edge group with buffering."""
+    """バッファリング付きの fan-in edge group を通じてメッセージを送信するテスト。"""
     source1 = MockExecutor(id="source_executor_1")
     source2 = MockExecutor(id="source_executor_2")
     target = MockAggregator(id="target_executor")
@@ -921,7 +914,7 @@ async def test_target_edge_group_send_message_buffer() -> None:
         )
 
         assert success is True
-        assert mock_send.call_count == 0  # The message should be buffered and wait for the second source
+        assert mock_send.call_count == 0  # メッセージはバッファリングされ、2番目のソースを待つべき。
         assert len(edge_runner._buffer[source1.id]) == 1  # type: ignore
 
         success = await edge_runner.send_message(
@@ -930,14 +923,14 @@ async def test_target_edge_group_send_message_buffer() -> None:
             ctx,
         )
         assert success is True
-        assert mock_send.call_count == 1  # The message should be sent now that both sources have sent their messages
+        assert mock_send.call_count == 1  # 両方のソースがメッセージを送信したので、メッセージは今送信されるべき。
 
-        # Buffer should be cleared after sending
+        # 送信後にバッファはクリアされるべき。
         assert not edge_runner._buffer  # type: ignore
 
 
 async def test_target_edge_group_send_message_with_invalid_target() -> None:
-    """Test sending a message through a fan-in edge group with an invalid target."""
+    """無効なターゲットを持つ fan-in edge group を通じてメッセージを送信するテスト。"""
     source1 = MockExecutor(id="source_executor_1")
     source2 = MockExecutor(id="source_executor_2")
     target = MockAggregator(id="target_executor")
@@ -958,7 +951,7 @@ async def test_target_edge_group_send_message_with_invalid_target() -> None:
 
 
 async def test_target_edge_group_send_message_with_invalid_data() -> None:
-    """Test sending a message through a fan-in edge group with invalid data."""
+    """無効なデータを持つ fan-in edge group を通じてメッセージを送信するテスト。"""
     source1 = MockExecutor(id="source_executor_1")
     source2 = MockExecutor(id="source_executor_2")
     target = MockAggregator(id="target_executor")
@@ -979,7 +972,7 @@ async def test_target_edge_group_send_message_with_invalid_data() -> None:
 
 
 async def test_fan_in_edge_group_tracing_buffered(span_exporter) -> None:
-    """Test that fan-in edge group processing creates proper spans for buffered messages."""
+    """バッファリングされたメッセージに対して fan-in edge group の処理が適切なスパンを作成することをテスト。"""
     source1 = MockExecutor(id="source_executor_1")
     source2 = MockExecutor(id="source_executor_2")
     target = MockAggregator(id="target_executor")
@@ -993,17 +986,17 @@ async def test_fan_in_edge_group_tracing_buffered(span_exporter) -> None:
 
     data = MockMessage(data="test")
 
-    # Create trace context and span IDs to simulate a message with tracing information
+    # トレース情報を持つメッセージをシミュレートするためにトレースコンテキストとスパンIDを作成。
     trace_contexts1 = [{"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"}]
     source_span_ids1 = ["00f067aa0ba902b7"]
 
     trace_contexts2 = [{"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b8-01"}]
     source_span_ids2 = ["00f067aa0ba902b8"]
 
-    # Clear any build spans
+    # ビルドスパンをクリアする。
     span_exporter.clear()
 
-    # Send first message (should be buffered)
+    # 最初のメッセージを送信（バッファリングされるべき）。
     success = await edge_runner.send_message(
         Message(data=data, source_id=source1.id, trace_contexts=trace_contexts1, source_span_ids=source_span_ids1),
         shared_state,
@@ -1023,16 +1016,16 @@ async def test_fan_in_edge_group_tracing_buffered(span_exporter) -> None:
     assert span.attributes.get("edge_group.delivery_status") == EdgeGroupDeliveryStatus.BUFFERED.value
     assert span.attributes.get("message.source_id") == source1.id
 
-    # Verify span links are created for first message
+    # 最初のメッセージに対してスパンリンクが作成されていることを検証。
     assert span.links is not None
     assert len(span.links) == 1
 
     link = span.links[0]
-    # Verify the link points to the correct trace and span
+    # リンクが正しいトレースとスパンを指していることを検証。
     assert link.context.trace_id == int("4bf92f3577b34da6a3ce929d0e0e4736", 16)
     assert link.context.span_id == int("00f067aa0ba902b7", 16)
 
-    # Clear spans and send second message (should trigger delivery)
+    # スパンをクリアして2番目のメッセージを送信（配信をトリガーすべき）。
     span_exporter.clear()
 
     success = await edge_runner.send_message(
@@ -1054,18 +1047,18 @@ async def test_fan_in_edge_group_tracing_buffered(span_exporter) -> None:
     assert span.attributes.get("edge_group.delivery_status") == EdgeGroupDeliveryStatus.DELIVERED.value
     assert span.attributes.get("message.source_id") == source2.id
 
-    # Verify span links are created for second message
+    # 2番目のメッセージに対してスパンリンクが作成されていることを検証。
     assert span.links is not None
     assert len(span.links) == 1
 
     link = span.links[0]
-    # Verify the link points to the correct trace and span for the second message
+    # 2番目のメッセージの正しいトレースとスパンを指すリンクを検証。
     assert link.context.trace_id == int("4bf92f3577b34da6a3ce929d0e0e4736", 16)
     assert link.context.span_id == int("00f067aa0ba902b8", 16)
 
 
 async def test_fan_in_edge_group_tracing_type_mismatch(span_exporter) -> None:
-    """Test that fan-in edge group processing creates proper spans for type mismatches."""
+    """型不一致に対して fan-in edge group の処理が適切なスパンを作成することをテスト。"""
     source1 = MockExecutor(id="source_executor_1")
     source2 = MockExecutor(id="source_executor_2")
     target = MockAggregator(id="target_executor")
@@ -1077,11 +1070,11 @@ async def test_fan_in_edge_group_tracing_type_mismatch(span_exporter) -> None:
     shared_state = SharedState()
     ctx = InProcRunnerContext()
 
-    # Send incompatible data type
+    # 互換性のないデータ型を送信。
     data = "invalid_data"
     message = Message(data=data, source_id=source1.id)
 
-    # Clear any build spans
+    # ビルドスパンをクリアする。
     span_exporter.clear()
 
     success = await edge_runner.send_message(message, shared_state, ctx)
@@ -1153,11 +1146,10 @@ async def test_fan_in_edge_group_with_multiple_message_types_failed() -> None:
     assert success
 
     with pytest.raises(RuntimeError):
-        # Although `MockAggregator` can handle `list[MockMessage]` and `list[MockMessageSecondary]`
-        # separately (i.e., it has handlers for each type individually), it cannot handle
-        # `list[MockMessage | MockMessageSecondary]` (a list containing a mix of both types).
-        # With the fan-in edge group, the target executor must handle all message types from the
-        # source executors as a union.
+        # `MockAggregator` は `list[MockMessage]` と `list[MockMessageSecondary]`
+        # を個別に処理できる（つまり、それぞれの型に対してハンドラを持つ）が、`list[MockMessage |
+        # MockMessageSecondary]`（両方の型が混在するリスト）は処理できない。fan-in edge group では、ターゲットの
+        # executor はソース executor からのすべてのメッセージ型をユニオンとして処理する必要がある。
         data2 = MockMessageSecondary(data="test")
         _ = await edge_runner.send_message(
             Message(data=data2, source_id=source2.id),
@@ -1166,13 +1158,11 @@ async def test_fan_in_edge_group_with_multiple_message_types_failed() -> None:
         )
 
 
-# endregion FanInEdgeGroup
-
-# region SwitchCaseEdgeGroup
+# endregion FanInEdgeGroup region SwitchCaseEdgeGroup
 
 
 def test_switch_case_edge_group() -> None:
-    """Test creating a switch case edge group."""
+    """switch case edge group を作成するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -1199,7 +1189,7 @@ def test_switch_case_edge_group() -> None:
 
 
 def test_switch_case_edge_group_invalid_number_of_cases():
-    """Test creating a switch case edge group with an invalid number of cases."""
+    """無効な数のケースを持つ switch case edge group を作成するテスト。"""
     source = MockExecutor(id="source_executor")
     target = MockExecutor(id="target_executor")
 
@@ -1224,7 +1214,7 @@ def test_switch_case_edge_group_invalid_number_of_cases():
 
 
 def test_switch_case_edge_group_invalid_number_of_default_cases():
-    """Test creating a switch case edge group with an invalid number of conditions."""
+    """無効な数の条件を持つ switch case edge group を作成するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -1241,7 +1231,7 @@ def test_switch_case_edge_group_invalid_number_of_default_cases():
 
 
 async def test_switch_case_edge_group_send_message() -> None:
-    """Test sending a message through a switch case edge group."""
+    """switch case edge group を通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -1268,7 +1258,7 @@ async def test_switch_case_edge_group_send_message() -> None:
         assert success is True
         assert mock_send.call_count == 1
 
-    # Default condition should
+    # デフォルト条件は
     data = MockMessage(data=1)
     message = Message(data=data, source_id=source.id)
     with patch("agent_framework._workflows._edge_runner.EdgeRunner._execute_on_target") as mock_send:
@@ -1279,7 +1269,7 @@ async def test_switch_case_edge_group_send_message() -> None:
 
 
 async def test_switch_case_edge_group_send_message_with_invalid_target() -> None:
-    """Test sending a message through a switch case edge group with an invalid target."""
+    """無効なターゲットを持つ switch case edge group を通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -1306,7 +1296,7 @@ async def test_switch_case_edge_group_send_message_with_invalid_target() -> None
 
 
 async def test_switch_case_edge_group_send_message_with_valid_target() -> None:
-    """Test sending a message through a switch case edge group with a target."""
+    """ターゲットを持つ switch case edge group を通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")
@@ -1325,20 +1315,20 @@ async def test_switch_case_edge_group_send_message_with_valid_target() -> None:
     shared_state = SharedState()
     ctx = InProcRunnerContext()
 
-    data = MockMessage(data=1)  # Condition will fail
+    data = MockMessage(data=1)  # 条件は失敗する。
     message = Message(data=data, source_id=source.id, target_id=target1.id)
 
     success = await edge_runner.send_message(message, shared_state, ctx)
     assert success is False
 
-    data = MockMessage(data=-1)  # Condition will pass
+    data = MockMessage(data=-1)  # 条件は成功する。
     message = Message(data=data, source_id=source.id, target_id=target1.id)
     success = await edge_runner.send_message(message, shared_state, ctx)
     assert success is True
 
 
 async def test_switch_case_edge_group_send_message_with_invalid_data() -> None:
-    """Test sending a message through a switch case edge group with invalid data."""
+    """無効なデータを持つ switch case edge group を通じてメッセージを送信するテスト。"""
     source = MockExecutor(id="source_executor")
     target1 = MockExecutor(id="target_executor_1")
     target2 = MockExecutor(id="target_executor_2")

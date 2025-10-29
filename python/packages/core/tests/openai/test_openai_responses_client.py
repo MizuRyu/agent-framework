@@ -58,14 +58,14 @@ skip_if_openai_integration_tests_disabled = pytest.mark.skipif(
 
 
 class OutputStruct(BaseModel):
-    """A structured output for testing purposes."""
+    """テスト目的のための構造化された出力。"""
 
     location: str
     weather: str | None = None
 
 
 async def create_vector_store(client: OpenAIResponsesClient) -> tuple[str, HostedVectorStoreContent]:
-    """Create a vector store with sample documents for testing."""
+    """テスト用のサンプルドキュメントでベクターストアを作成する。"""
     file = await client.client.files.create(
         file=("todays_weather.txt", b"The weather today is sunny with a high of 75F."), purpose="user_data"
     )
@@ -85,7 +85,7 @@ async def create_vector_store(client: OpenAIResponsesClient) -> tuple[str, Hoste
 
 
 async def delete_vector_store(client: OpenAIResponsesClient, file_id: str, vector_store_id: str) -> None:
-    """Delete the vector store after tests."""
+    """テスト後にベクターストアを削除する。"""
 
     await client.client.vector_stores.delete(vector_store_id=vector_store_id)
     await client.client.files.delete(file_id=file_id)
@@ -93,13 +93,13 @@ async def delete_vector_store(client: OpenAIResponsesClient, file_id: str, vecto
 
 @ai_function
 async def get_weather(location: Annotated[str, "The location as a city name"]) -> str:
-    """Get the current weather in a given location."""
-    # Implementation of the tool to get weather
+    """指定された場所の現在の天気を取得する。"""
+    # 天気を取得するツールの実装
     return f"The current weather in {location} is sunny."
 
 
 def test_init(openai_unit_test_env: dict[str, str]) -> None:
-    # Test successful initialization
+    # 正常な初期化をテストする
     openai_responses_client = OpenAIResponsesClient()
 
     assert openai_responses_client.model_id == openai_unit_test_env["OPENAI_RESPONSES_MODEL_ID"]
@@ -107,13 +107,13 @@ def test_init(openai_unit_test_env: dict[str, str]) -> None:
 
 
 def test_init_validation_fail() -> None:
-    # Test successful initialization
+    # 正常な初期化をテストする
     with pytest.raises(ServiceInitializationError):
         OpenAIResponsesClient(api_key="34523", model_id={"test": "dict"})  # type: ignore
 
 
 def test_init_model_id_constructor(openai_unit_test_env: dict[str, str]) -> None:
-    # Test successful initialization
+    # 正常な初期化をテストする
     model_id = "test_model_id"
     openai_responses_client = OpenAIResponsesClient(model_id=model_id)
 
@@ -124,7 +124,7 @@ def test_init_model_id_constructor(openai_unit_test_env: dict[str, str]) -> None
 def test_init_with_default_header(openai_unit_test_env: dict[str, str]) -> None:
     default_headers = {"X-Unit-Test": "test-guid"}
 
-    # Test successful initialization
+    # 正常な初期化をテストする
     openai_responses_client = OpenAIResponsesClient(
         default_headers=default_headers,
     )
@@ -132,14 +132,14 @@ def test_init_with_default_header(openai_unit_test_env: dict[str, str]) -> None:
     assert openai_responses_client.model_id == openai_unit_test_env["OPENAI_RESPONSES_MODEL_ID"]
     assert isinstance(openai_responses_client, ChatClientProtocol)
 
-    # Assert that the default header we added is present in the client's default headers
+    # 追加したデフォルトヘッダーがクライアントのデフォルトヘッダーに存在することをアサートする
     for key, value in default_headers.items():
         assert key in openai_responses_client.client.default_headers
         assert openai_responses_client.client.default_headers[key] == value
 
 
 def test_openai_responses_client_instructions_sent_once(openai_unit_test_env: dict[str, str]) -> None:
-    """Ensure instructions are only included once for OpenAI Responses requests."""
+    """OpenAI Responsesリクエストに対して指示が一度だけ含まれることを保証する。"""
     client = OpenAIResponsesClient()
     instructions = "You are a helpful assistant."
     chat_options = ChatOptions(instructions=instructions)
@@ -181,11 +181,11 @@ def test_serialize(openai_unit_test_env: dict[str, str]) -> None:
     openai_responses_client = OpenAIResponsesClient.from_dict(settings)
     dumped_settings = openai_responses_client.to_dict()
     assert dumped_settings["model_id"] == openai_unit_test_env["OPENAI_RESPONSES_MODEL_ID"]
-    # Assert that the default header we added is present in the dumped_settings default headers
+    # 追加したデフォルトヘッダーがdumped_settingsのデフォルトヘッダーに存在することをアサートする
     for key, value in default_headers.items():
         assert key in dumped_settings["default_headers"]
         assert dumped_settings["default_headers"][key] == value
-    # Assert that the 'User-Agent' header is not present in the dumped_settings default headers
+    # 'User-Agent'ヘッダーがdumped_settingsのデフォルトヘッダーに存在しないことをアサートする
     assert "User-Agent" not in dumped_settings["default_headers"]
 
 
@@ -200,25 +200,25 @@ def test_serialize_with_org_id(openai_unit_test_env: dict[str, str]) -> None:
     dumped_settings = openai_responses_client.to_dict()
     assert dumped_settings["model_id"] == openai_unit_test_env["OPENAI_RESPONSES_MODEL_ID"]
     assert dumped_settings["org_id"] == openai_unit_test_env["OPENAI_ORG_ID"]
-    # Assert that the 'User-Agent' header is not present in the dumped_settings default headers
+    # 'User-Agent'ヘッダーがdumped_settingsのデフォルトヘッダーに存在しないことをアサートする
     assert "User-Agent" not in dumped_settings.get("default_headers", {})
 
 
 def test_get_response_with_invalid_input() -> None:
-    """Test get_response with invalid inputs to trigger exception handling."""
+    """例外処理をトリガーするために無効な入力でget_responseをテストする。"""
 
     client = OpenAIResponsesClient(model_id="invalid-model", api_key="test-key")
 
-    # Test with empty messages which should trigger ServiceInvalidRequestError
+    # 空のメッセージでテストし、ServiceInvalidRequestErrorをトリガーするべきである
     with pytest.raises(ServiceInvalidRequestError, match="Messages are required"):
         asyncio.run(client.get_response(messages=[]))
 
 
 def test_get_response_with_all_parameters() -> None:
-    """Test get_response with all possible parameters to cover parameter handling logic."""
+    """パラメータ処理ロジックをカバーするために可能なすべてのパラメータでget_responseをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test with comprehensive parameter set - should fail due to invalid API key
+    # 包括的なパラメータセットでテスト - 無効なAPIキーのため失敗するべきである
     with pytest.raises(ServiceResponseException):
         asyncio.run(
             client.get_response(
@@ -247,17 +247,17 @@ def test_get_response_with_all_parameters() -> None:
 
 
 def test_web_search_tool_with_location() -> None:
-    """Test HostedWebSearchTool with location parameters."""
+    """HostedWebSearchToolをロケーションパラメータでテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test web search tool with location
+    # ロケーション付きのウェブ検索ツールをテストする
     web_search_tool = HostedWebSearchTool(
         additional_properties={
             "user_location": {"country": "US", "city": "Seattle", "region": "WA", "timezone": "America/Los_Angeles"}
         }
     )
 
-    # Should raise an authentication error due to invalid API key
+    # 無効なAPIキーのため認証エラーを発生させるべきである
     with pytest.raises(ServiceResponseException):
         asyncio.run(
             client.get_response(
@@ -269,13 +269,13 @@ def test_web_search_tool_with_location() -> None:
 
 
 def test_file_search_tool_with_invalid_inputs() -> None:
-    """Test HostedFileSearchTool with invalid vector store inputs."""
+    """HostedFileSearchToolを無効なベクターストア入力でテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test with invalid inputs type (should trigger ValueError)
+    # 無効なinputsタイプでテスト（ValueErrorをトリガーすべき）
     file_search_tool = HostedFileSearchTool(inputs=[HostedFileContent(file_id="invalid")])
 
-    # Should raise an error due to invalid inputs
+    # 無効なinputsのためエラーを発生させるべきである
     with pytest.raises(ValueError, match="HostedFileSearchTool requires inputs to be of type"):
         asyncio.run(
             client.get_response(messages=[ChatMessage(role="user", text="Search files")], tools=[file_search_tool])
@@ -283,10 +283,10 @@ def test_file_search_tool_with_invalid_inputs() -> None:
 
 
 def test_code_interpreter_tool_variations() -> None:
-    """Test HostedCodeInterpreterTool with and without file inputs."""
+    """HostedCodeInterpreterToolをファイル入力の有無でテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test code interpreter without files
+    # ファイルなしでコードインタープリターをテストする
     code_tool_empty = HostedCodeInterpreterTool()
 
     with pytest.raises(ServiceResponseException):
@@ -294,7 +294,7 @@ def test_code_interpreter_tool_variations() -> None:
             client.get_response(messages=[ChatMessage(role="user", text="Run some code")], tools=[code_tool_empty])
         )
 
-    # Test code interpreter with files
+    # ファイル付きでコードインタープリターをテストする
     code_tool_with_files = HostedCodeInterpreterTool(
         inputs=[HostedFileContent(file_id="file1"), HostedFileContent(file_id="file2")]
     )
@@ -308,10 +308,10 @@ def test_code_interpreter_tool_variations() -> None:
 
 
 def test_content_filter_exception() -> None:
-    """Test that content filter errors in get_response are properly handled."""
+    """get_responseにおけるコンテンツフィルターエラーが適切に処理されることをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Mock a BadRequestError with content_filter code
+    # content_filterコードを持つBadRequestErrorをモックする
     mock_error = BadRequestError(
         message="Content filter error",
         response=MagicMock(),
@@ -327,11 +327,11 @@ def test_content_filter_exception() -> None:
 
 
 def test_hosted_file_search_tool_validation() -> None:
-    """Test get_response HostedFileSearchTool validation."""
+    """get_response HostedFileSearchToolのバリデーションをテストする。"""
 
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test HostedFileSearchTool without inputs (should raise ValueError)
+    # inputsなしのHostedFileSearchToolでテスト（ValueErrorを発生させるべき）
     empty_file_search_tool = HostedFileSearchTool()
 
     with pytest.raises((ValueError, ServiceInvalidRequestError)):
@@ -341,10 +341,10 @@ def test_hosted_file_search_tool_validation() -> None:
 
 
 def test_chat_message_parsing_with_function_calls() -> None:
-    """Test get_response message preparation with function call and result content types in conversation flow."""
+    """会話フローでfunction callとresultコンテンツタイプを持つメッセージ準備をget_responseでテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create messages with function call and result content
+    # function callとresultコンテンツを持つメッセージを作成する
     function_call = FunctionCallContent(
         call_id="test-call-id",
         name="test_function",
@@ -360,16 +360,16 @@ def test_chat_message_parsing_with_function_calls() -> None:
         ChatMessage(role="tool", contents=[function_result]),
     ]
 
-    # This should exercise the message parsing logic - will fail due to invalid API key
+    # メッセージ解析ロジックを実行するべき - 無効なAPIキーのため失敗する
     with pytest.raises(ServiceResponseException):
         asyncio.run(client.get_response(messages=messages))
 
 
 async def test_response_format_parse_path() -> None:
-    """Test get_response response_format parsing path."""
+    """get_responseのresponse_format解析パスをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Mock successful parse response
+    # 成功した解析レスポンスをモックする
     mock_parsed_response = MagicMock()
     mock_parsed_response.id = "parsed_response_123"
     mock_parsed_response.text = "Parsed response"
@@ -390,10 +390,10 @@ async def test_response_format_parse_path() -> None:
 
 
 async def test_bad_request_error_non_content_filter() -> None:
-    """Test get_response BadRequestError without content_filter."""
+    """content_filterなしのBadRequestErrorでget_responseをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Mock a BadRequestError without content_filter code
+    # content_filterコードなしのBadRequestErrorをモックする
     mock_error = BadRequestError(
         message="Invalid request",
         response=MagicMock(),
@@ -411,10 +411,10 @@ async def test_bad_request_error_non_content_filter() -> None:
 
 
 async def test_streaming_content_filter_exception_handling() -> None:
-    """Test that content filter errors in get_streaming_response are properly handled."""
+    """get_streaming_responseにおけるコンテンツフィルターエラーが適切に処理されることをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Mock the OpenAI client to raise a BadRequestError with content_filter code
+    # content_filterコードを持つBadRequestErrorを発生させるようOpenAIクライアントをモックする
     with patch.object(client.client.responses, "create") as mock_create:
         mock_create.side_effect = BadRequestError(
             message="Content filtered in stream",
@@ -432,10 +432,10 @@ async def test_streaming_content_filter_exception_handling() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_get_streaming_response_with_all_parameters() -> None:
-    """Test get_streaming_response with all possible parameters."""
+    """可能なすべてのパラメータでget_streaming_responseをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Should fail due to invalid API key
+    # 無効なAPIキーのため失敗するべきである
     with pytest.raises(ServiceResponseException):
         response = client.get_streaming_response(
             messages=[ChatMessage(role="user", text="Test streaming")],
@@ -459,16 +459,16 @@ async def test_get_streaming_response_with_all_parameters() -> None:
             timeout=15.0,
             additional_properties={"stream_custom": "stream_value"},
         )
-        # Just iterate once to trigger the logic
+        # ロジックをトリガーするために一度だけイテレートする
         async for _ in response:
             break
 
 
 def test_response_content_creation_with_annotations() -> None:
-    """Test _create_response_content with different annotation types."""
+    """異なる注釈タイプで_create_response_contentをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with annotated text content
+    # 注釈付きテキストコンテンツを持つモックレスポンスを作成する
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -477,7 +477,7 @@ def test_response_content_creation_with_annotations() -> None:
     mock_response.model = "test-model"
     mock_response.created_at = 1000000000
 
-    # Create mock annotation
+    # モック注釈を作成する
     mock_annotation = MagicMock()
     mock_annotation.type = "file_citation"
     mock_annotation.file_id = "file_123"
@@ -505,10 +505,10 @@ def test_response_content_creation_with_annotations() -> None:
 
 
 def test_response_content_creation_with_refusal() -> None:
-    """Test _create_response_content with refusal content."""
+    """拒否コンテンツで_create_response_contentをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with refusal content
+    # 拒否コンテンツを持つモックレスポンスを作成する
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -535,10 +535,10 @@ def test_response_content_creation_with_refusal() -> None:
 
 
 def test_response_content_creation_with_reasoning() -> None:
-    """Test _create_response_content with reasoning content."""
+    """推論コンテンツで_create_response_contentをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with reasoning content
+    # 推論コンテンツを持つモックレスポンスを作成する
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -565,11 +565,11 @@ def test_response_content_creation_with_reasoning() -> None:
 
 
 def test_response_content_creation_with_code_interpreter() -> None:
-    """Test _create_response_content with code interpreter outputs."""
+    """コードインタープリター出力で_create_response_contentをテストする。"""
 
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with code interpreter outputs
+    # コードインタープリター出力を持つモックレスポンスを作成する
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -604,10 +604,10 @@ def test_response_content_creation_with_code_interpreter() -> None:
 
 
 def test_response_content_creation_with_function_call() -> None:
-    """Test _create_response_content with function call content."""
+    """function callコンテンツで_create_response_contentをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with function call
+    # function callを持つモックレスポンスを作成する
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -636,7 +636,7 @@ def test_response_content_creation_with_function_call() -> None:
 
 
 def test_tools_to_response_tools_with_hosted_mcp() -> None:
-    """Test that HostedMCPTool is converted to the correct response tool dict."""
+    """HostedMCPToolが正しいレスポンスツール辞書に変換されることをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
     tool = HostedMCPTool(
@@ -656,17 +656,17 @@ def test_tools_to_response_tools_with_hosted_mcp() -> None:
     assert isinstance(mcp, dict)
     assert mcp["type"] == "mcp"
     assert mcp["server_label"] == "My_MCP"
-    # server_url may be normalized to include a trailing slash by the client
+    # server_urlはクライアントによって末尾にスラッシュが付加され正規化される場合がある
     assert str(mcp["server_url"]).rstrip("/") == "https://mcp.example"
     assert mcp["server_description"] == "An MCP server"
     assert mcp["headers"]["X-Test"] == "yes"
     assert set(mcp["allowed_tools"]) == {"tool_a", "tool_b"}
-    # approval mapping created from approval_mode dict
+    # approval_mode辞書から作成されたapprovalマッピング
     assert "require_approval" in mcp
 
 
 def test_create_response_content_with_mcp_approval_request() -> None:
-    """Test that a non-streaming mcp_approval_request is parsed into FunctionApprovalRequestContent."""
+    """非ストリーミングのmcp_approval_requestがFunctionApprovalRequestContentに解析されることをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
     mock_response = MagicMock()
@@ -697,10 +697,10 @@ def test_create_response_content_with_mcp_approval_request() -> None:
 
 
 def test_tools_to_response_tools_with_raw_image_generation() -> None:
-    """Test that raw image_generation tool dict is handled correctly with parameter mapping."""
+    """パラメータマッピングを伴う生のimage_generationツール辞書が正しく処理されることをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test with raw tool dict using user-friendly parameter names
+    # ユーザーフレンドリーなパラメータ名を使った生のツール辞書でテストする
     tool = {
         "type": "image_generation",
         "size": "1536x1024",
@@ -720,16 +720,16 @@ def test_tools_to_response_tools_with_raw_image_generation() -> None:
     assert image_tool["size"] == "1536x1024"
     assert image_tool["quality"] == "high"
     assert image_tool["background"] == "transparent"
-    # Check parameter name mapping
+    # パラメータ名のマッピングをチェックする
     assert image_tool["output_format"] == "webp"
     assert image_tool["output_compression"] == 75
 
 
 def test_tools_to_response_tools_with_raw_image_generation_openai_responses_params() -> None:
-    """Test raw image_generation tool with OpenAI-specific parameters."""
+    """OpenAI固有のパラメータを持つ生のimage_generationツールでテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test with OpenAI-specific parameters
+    # OpenAI固有のパラメータでテストする
     tool = {
         "type": "image_generation",
         "size": "1024x1024",
@@ -747,10 +747,10 @@ def test_tools_to_response_tools_with_raw_image_generation_openai_responses_para
     assert isinstance(image_tool, dict)
     assert image_tool["type"] == "image_generation"
 
-    # Cast to dict for easier access to ImageGeneration-specific fields
+    # ImageGeneration固有のフィールドにアクセスしやすくするためにdictにキャストする
     tool_dict = dict(image_tool)
     assert tool_dict["size"] == "1024x1024"
-    # Check OpenAI-specific parameters are included
+    # OpenAI固有のパラメータが含まれていることをチェックする
     assert tool_dict["model"] == "gpt-image-1"
     assert tool_dict["input_fidelity"] == "high"
     assert tool_dict["moderation"] == "strict"
@@ -758,10 +758,10 @@ def test_tools_to_response_tools_with_raw_image_generation_openai_responses_para
 
 
 def test_tools_to_response_tools_with_raw_image_generation_minimal() -> None:
-    """Test raw image_generation tool with minimal configuration."""
+    """最小構成の生のimage_generationツールでテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test with minimal parameters (just type)
+    # 最小パラメータ（typeのみ）でテストする
     tool = {"type": "image_generation"}
 
     resp_tools = client._tools_to_response_tools([tool])
@@ -771,12 +771,12 @@ def test_tools_to_response_tools_with_raw_image_generation_minimal() -> None:
     image_tool = resp_tools[0]
     assert isinstance(image_tool, dict)
     assert image_tool["type"] == "image_generation"
-    # Should only have the type parameter when created with minimal config
+    # 最小構成で作成した場合、typeパラメータのみが存在するべきである
     assert len(image_tool) == 1
 
 
 def test_create_streaming_response_content_with_mcp_approval_request() -> None:
-    """Test that a streaming mcp_approval_request event is parsed into FunctionApprovalRequestContent."""
+    """ストリーミングmcp_approval_requestイベントがFunctionApprovalRequestContentに解析されることをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -801,12 +801,12 @@ def test_create_streaming_response_content_with_mcp_approval_request() -> None:
 @pytest.mark.parametrize("enable_otel", [False], indirect=True)
 @pytest.mark.parametrize("enable_sensitive_data", [False], indirect=True)
 async def test_end_to_end_mcp_approval_flow(span_exporter) -> None:
-    """End-to-end mocked test:
-    model issues an mcp_approval_request, user approves, client sends mcp_approval_response.
+    """エンドツーエンドのモックテスト:
+    modelがmcp_approval_requestを発行し、userが承認し、clientがmcp_approval_responseを送信する。
     """
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # First mocked response: model issues an mcp_approval_request
+    # 最初のモックレスポンス: modelがmcp_approval_requestを発行する
     mock_response1 = MagicMock()
     mock_response1.output_parsed = None
     mock_response1.metadata = {}
@@ -823,7 +823,7 @@ async def test_end_to_end_mcp_approval_flow(span_exporter) -> None:
     mock_item.server_label = "My_MCP"
     mock_response1.output = [mock_item]
 
-    # Second mocked response: simple assistant acknowledgement after approval
+    # 2番目のモックレスポンス: 承認後のシンプルなassistantの承認応答
     mock_response2 = MagicMock()
     mock_response2.output_parsed = None
     mock_response2.metadata = {}
@@ -839,20 +839,20 @@ async def test_end_to_end_mcp_approval_flow(span_exporter) -> None:
     mock_text_item.content = [mock_text_content]
     mock_response2.output = [mock_text_item]
 
-    # Patch the create call to return the two mocked responses in sequence
+    # create呼び出しをパッチして、2つのモックレスポンスを順番に返すようにする
     with patch.object(client.client.responses, "create", side_effect=[mock_response1, mock_response2]) as mock_create:
-        # First call: get the approval request
+        # 最初の呼び出し: 承認リクエストを取得する
         response = await client.get_response(messages=[ChatMessage(role="user", text="Trigger approval")])
         assert isinstance(response.messages[0].contents[0], FunctionApprovalRequestContent)
         req = response.messages[0].contents[0]
         assert req.id == "approval-1"
 
-        # Build a user approval and send it (include required function_call)
+        # ユーザーの承認を構築して送信する（必要なfunction_callを含む）
         approval = FunctionApprovalResponseContent(approved=True, id=req.id, function_call=req.function_call)
         approval_message = ChatMessage(role="user", contents=[approval])
         _ = await client.get_response(messages=[approval_message])
 
-        # Ensure two calls were made and the second includes the mcp_approval_response
+        # 2回の呼び出しが行われ、2回目にmcp_approval_responseが含まれていることを確認する
         assert mock_create.call_count == 2
         _, kwargs = mock_create.call_args_list[1]
         sent_input = kwargs.get("input")
@@ -867,7 +867,7 @@ async def test_end_to_end_mcp_approval_flow(span_exporter) -> None:
 
 
 def test_usage_details_basic() -> None:
-    """Test _usage_details_from_openai without cached or reasoning tokens."""
+    """キャッシュされたトークンやreasoningトークンなしで_usage_details_from_openaiをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
     mock_usage = MagicMock()
@@ -885,7 +885,7 @@ def test_usage_details_basic() -> None:
 
 
 def test_usage_details_with_cached_tokens() -> None:
-    """Test _usage_details_from_openai with cached input tokens."""
+    """キャッシュされた入力トークンありで_usage_details_from_openaiをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
     mock_usage = MagicMock()
@@ -903,7 +903,7 @@ def test_usage_details_with_cached_tokens() -> None:
 
 
 def test_usage_details_with_reasoning_tokens() -> None:
-    """Test _usage_details_from_openai with reasoning tokens."""
+    """reasoningトークンありで_usage_details_from_openaiをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
     mock_usage = MagicMock()
@@ -921,10 +921,10 @@ def test_usage_details_with_reasoning_tokens() -> None:
 
 
 def test_get_metadata_from_response() -> None:
-    """Test the _get_metadata_from_response method."""
+    """_get_metadata_from_responseメソッドをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test with logprobs
+    # logprobsありでテストする
     mock_output_with_logprobs = MagicMock()
     mock_output_with_logprobs.logprobs = {"token": "test", "probability": 0.9}
 
@@ -932,7 +932,7 @@ def test_get_metadata_from_response() -> None:
     assert "logprobs" in metadata
     assert metadata["logprobs"]["token"] == "test"
 
-    # Test without logprobs
+    # logprobsなしでテストする
     mock_output_no_logprobs = MagicMock()
     mock_output_no_logprobs.logprobs = None
 
@@ -941,17 +941,17 @@ def test_get_metadata_from_response() -> None:
 
 
 def test_streaming_response_basic_structure() -> None:
-    """Test that _create_streaming_response_content returns proper structure."""
+    """_create_streaming_response_contentが適切な構造を返すことをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions(store=True)
     function_call_ids: dict[int, tuple[str, str]] = {}
 
-    # Test with a basic mock event to ensure the method returns proper structure
+    # 基本的なモックイベントでテストし、メソッドが適切な構造を返すことを確認する
     mock_event = MagicMock()
 
     response = client._create_streaming_response_content(mock_event, chat_options, function_call_ids)  # type: ignore
 
-    # Should get a valid ChatResponseUpdate structure
+    # 有効なChatResponseUpdate構造を取得すべきである
     assert isinstance(response, ChatResponseUpdate)
     assert response.role == Role.ASSISTANT
     assert response.model_id == "test-model"
@@ -962,7 +962,7 @@ def test_streaming_response_basic_structure() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_response() -> None:
-    """Test OpenAI chat completion responses."""
+    """OpenAI chat completionのレスポンスをテストする。"""
     openai_responses_client = OpenAIResponsesClient()
 
     assert isinstance(openai_responses_client, ChatClientProtocol)
@@ -979,7 +979,7 @@ async def test_openai_responses_client_response() -> None:
     )
     messages.append(ChatMessage(role="user", text="who are Emily and David?"))
 
-    # Test that the client can be used to get a response
+    # clientがレスポンスを取得するために使用できることをテストする
     response = await openai_responses_client.get_response(messages=messages)
 
     assert response is not None
@@ -990,7 +990,7 @@ async def test_openai_responses_client_response() -> None:
     messages.append(ChatMessage(role="user", text="The weather in Seattle is sunny"))
     messages.append(ChatMessage(role="user", text="What is the weather in Seattle?"))
 
-    # Test that the client can be used to get a response
+    # clientがレスポンスを取得するために使用できることをテストする
     response = await openai_responses_client.get_response(
         messages=messages,
         response_format=OutputStruct,
@@ -1007,7 +1007,7 @@ async def test_openai_responses_client_response() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_response_tools() -> None:
-    """Test OpenAI chat completion responses."""
+    """OpenAI chat completionのレスポンスをテストする。"""
     openai_responses_client = OpenAIResponsesClient()
 
     assert isinstance(openai_responses_client, ChatClientProtocol)
@@ -1015,7 +1015,7 @@ async def test_openai_responses_client_response_tools() -> None:
     messages: list[ChatMessage] = []
     messages.append(ChatMessage(role="user", text="What is the weather in New York?"))
 
-    # Test that the client can be used to get a response
+    # clientがレスポンスを取得するために使用できることをテストする
     response = await openai_responses_client.get_response(
         messages=messages,
         tools=[get_weather],
@@ -1029,7 +1029,7 @@ async def test_openai_responses_client_response_tools() -> None:
     messages.clear()
     messages.append(ChatMessage(role="user", text="What is the weather in Seattle?"))
 
-    # Test that the client can be used to get a response
+    # clientがレスポンスを取得するために使用できることをテストする
     response = await openai_responses_client.get_response(
         messages=messages,
         tools=[get_weather],
@@ -1047,7 +1047,7 @@ async def test_openai_responses_client_response_tools() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_streaming() -> None:
-    """Test OpenAI chat completion responses."""
+    """OpenAI chat completionのレスポンスをテストする。"""
     openai_responses_client = OpenAIResponsesClient()
 
     assert isinstance(openai_responses_client, ChatClientProtocol)
@@ -1064,7 +1064,7 @@ async def test_openai_responses_client_streaming() -> None:
     )
     messages.append(ChatMessage(role="user", text="who are Emily and David?"))
 
-    # Test that the client can be used to get a response
+    # clientがレスポンスを取得するために使用できることをテストする
     response = await ChatResponse.from_chat_response_generator(
         openai_responses_client.get_streaming_response(messages=messages)
     )
@@ -1094,14 +1094,14 @@ async def test_openai_responses_client_streaming() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_streaming_tools() -> None:
-    """Test OpenAI chat completion responses."""
+    """OpenAI chat completionのレスポンスをテストする。"""
     openai_responses_client = OpenAIResponsesClient()
 
     assert isinstance(openai_responses_client, ChatClientProtocol)
 
     messages: list[ChatMessage] = [ChatMessage(role="user", text="What is the weather in Seattle?")]
 
-    # Test that the client can be used to get a response
+    # clientがレスポンスを取得するために使用できることをテストする
     response = openai_responses_client.get_streaming_response(
         messages=messages,
         tools=[get_weather],
@@ -1146,7 +1146,7 @@ async def test_openai_responses_client_web_search() -> None:
 
     assert isinstance(openai_responses_client, ChatClientProtocol)
 
-    # Test that the client will use the web search tool
+    # clientがweb search toolを使用することをテストする
     response = await openai_responses_client.get_response(
         messages=[
             ChatMessage(
@@ -1164,7 +1164,7 @@ async def test_openai_responses_client_web_search() -> None:
     assert "Mira" in response.text
     assert "Zoey" in response.text
 
-    # Test that the client will use the web search tool with location
+    # clientがlocation付きでweb search toolを使用することをテストする
     additional_properties = {
         "user_location": {
             "country": "US",
@@ -1186,7 +1186,7 @@ async def test_openai_responses_client_web_search_streaming() -> None:
 
     assert isinstance(openai_responses_client, ChatClientProtocol)
 
-    # Test that the client will use the web search tool
+    # clientがweb search toolを使用することをテストする
     response = openai_responses_client.get_streaming_response(
         messages=[
             ChatMessage(
@@ -1210,7 +1210,7 @@ async def test_openai_responses_client_web_search_streaming() -> None:
     assert "Mira" in full_message
     assert "Zoey" in full_message
 
-    # Test that the client will use the web search tool with location
+    # clientがlocation付きでweb search toolを使用することをテストする
     additional_properties = {
         "user_location": {
             "country": "US",
@@ -1245,7 +1245,7 @@ async def test_openai_responses_client_file_search() -> None:
     assert isinstance(openai_responses_client, ChatClientProtocol)
 
     file_id, vector_store = await create_vector_store(openai_responses_client)
-    # Test that the client will use the web search tool
+    # clientがweb search toolを使用することをテストする
     response = await openai_responses_client.get_response(
         messages=[
             ChatMessage(
@@ -1274,7 +1274,7 @@ async def test_openai_responses_client_streaming_file_search() -> None:
     assert isinstance(openai_responses_client, ChatClientProtocol)
 
     file_id, vector_store = await create_vector_store(openai_responses_client)
-    # Test that the client will use the web search tool
+    # clientがweb search toolを使用することをテストする
     response = openai_responses_client.get_streaming_response(
         messages=[
             ChatMessage(
@@ -1304,12 +1304,12 @@ async def test_openai_responses_client_streaming_file_search() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_basic_run():
-    """Test OpenAI Responses Client agent basic run functionality with OpenAIResponsesClient."""
+    """OpenAIResponsesClientを使ったOpenAI Responses Client agentの基本的なrun機能をテストする。"""
     agent = OpenAIResponsesClient().create_agent(
         instructions="You are a helpful assistant.",
     )
 
-    # Test basic run
+    # 基本的なrunをテストする
     response = await agent.run("Hello! Please respond with 'Hello World' exactly.")
 
     assert isinstance(response, AgentRunResponse)
@@ -1321,11 +1321,11 @@ async def test_openai_responses_client_agent_basic_run():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_basic_run_streaming():
-    """Test OpenAI Responses Client agent basic streaming functionality with OpenAIResponsesClient."""
+    """OpenAIResponsesClientを使ったOpenAI Responses Client agentの基本的なストリーミング機能をテストする。"""
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
     ) as agent:
-        # Test streaming run
+        # ストリーミングrunをテストする
         full_text = ""
         async for chunk in agent.run_stream("Please respond with exactly: 'This is a streaming response test.'"):
             assert isinstance(chunk, AgentRunResponseUpdate)
@@ -1339,21 +1339,21 @@ async def test_openai_responses_client_agent_basic_run_streaming():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_thread_persistence():
-    """Test OpenAI Responses Client agent thread persistence across runs with OpenAIResponsesClient."""
+    """OpenAIResponsesClientを使ったOpenAI Responses Client agentのrun間のthread永続性をテストする。"""
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant with good memory.",
     ) as agent:
-        # Create a new thread that will be reused
+        # 再利用される新しいthreadを作成する
         thread = agent.get_new_thread()
 
-        # First interaction
+        # 最初のインタラクション
         first_response = await agent.run("My favorite programming language is Python. Remember this.", thread=thread)
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
 
-        # Second interaction - test memory
+        # 2回目のインタラクション - メモリをテストする
         second_response = await agent.run("What is my favorite programming language?", thread=thread)
 
         assert isinstance(second_response, AgentRunResponse)
@@ -1363,30 +1363,30 @@ async def test_openai_responses_client_agent_thread_persistence():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_thread_storage_with_store_true():
-    """Test OpenAI Responses Client agent with store=True to verify service_thread_id is returned."""
+    """store=TrueでOpenAI Responses Client agentをテストし、service_thread_idが返されることを検証する。"""
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant.",
     ) as agent:
-        # Create a new thread
+        # 新しいthreadを作成する
         thread = AgentThread()
 
-        # Initially, service_thread_id should be None
+        # 最初はservice_thread_idはNoneであるべき
         assert thread.service_thread_id is None
 
-        # Run with store=True to store messages on OpenAI side
+        # store=Trueで実行し、OpenAI側にメッセージを保存する
         response = await agent.run(
             "Hello! Please remember that my name is Alex.",
             thread=thread,
             store=True,
         )
 
-        # Validate response
+        # レスポンスを検証する
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
         assert len(response.text) > 0
 
-        # After store=True, service_thread_id should be populated
+        # store=Trueの後、service_thread_idが設定されているべき
         assert thread.service_thread_id is not None
         assert isinstance(thread.service_thread_id, str)
         assert len(thread.service_thread_id) > 0
@@ -1395,31 +1395,31 @@ async def test_openai_responses_client_agent_thread_storage_with_store_true():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_existing_thread():
-    """Test OpenAI Responses Client agent with existing thread to continue conversations across agent instances."""
-    # First conversation - capture the thread
+    """既存のthreadを使ってOpenAI Responses Client agentでagentインスタンス間の会話継続をテストする。"""
+    # 最初の会話 - threadをキャプチャする
     preserved_thread = None
 
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant with good memory.",
     ) as first_agent:
-        # Start a conversation and capture the thread
+        # 会話を開始しthreadをキャプチャする
         thread = first_agent.get_new_thread()
         first_response = await first_agent.run("My hobby is photography. Remember this.", thread=thread)
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
 
-        # Preserve the thread for reuse
+        # 再利用のためにthreadを保持する
         preserved_thread = thread
 
-    # Second conversation - reuse the thread in a new agent instance
+    # 2回目の会話 - 新しいagentインスタンスでthreadを再利用する
     if preserved_thread:
         async with ChatAgent(
             chat_client=OpenAIResponsesClient(),
             instructions="You are a helpful assistant with good memory.",
         ) as second_agent:
-            # Reuse the preserved thread
+            # 保持したthreadを再利用する
             second_response = await second_agent.run("What is my hobby?", thread=preserved_thread)
 
             assert isinstance(second_response, AgentRunResponse)
@@ -1430,19 +1430,19 @@ async def test_openai_responses_client_agent_existing_thread():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_hosted_code_interpreter_tool():
-    """Test OpenAI Responses Client agent with HostedCodeInterpreterTool through OpenAIResponsesClient."""
+    """OpenAIResponsesClientを通じてHostedCodeInterpreterToolを使ったOpenAI Responses Client agentをテストする。"""
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant that can execute Python code.",
         tools=[HostedCodeInterpreterTool()],
     ) as agent:
-        # Test code interpreter functionality
+        # コードインタプリタ機能をテストする
         response = await agent.run("Calculate the sum of numbers from 1 to 10 using Python code.")
 
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
         assert len(response.text) > 0
-        # Should contain calculation result (sum of 1-10 = 55) or code execution content
+        # 計算結果（1-10の合計=55）またはコード実行内容を含むべきである
         contains_relevant_content = any(
             term in response.text.lower() for term in ["55", "sum", "code", "python", "calculate", "10"]
         )
@@ -1452,26 +1452,25 @@ async def test_openai_responses_client_agent_hosted_code_interpreter_tool():
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_raw_image_generation_tool():
-    """Test OpenAI Responses Client agent with raw image_generation tool through OpenAIResponsesClient."""
+    """OpenAIResponsesClientを通じてraw image_generation toolを使ったOpenAI Responses Client agentをテストする。"""
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant that can generate images.",
         tools=[{"type": "image_generation", "size": "1024x1024", "quality": "low", "format": "png"}],
     ) as agent:
-        # Test image generation functionality
+        # 画像生成機能をテストする
         response = await agent.run("Generate an image of a cute red panda sitting on a tree branch in a forest.")
 
         assert isinstance(response, AgentRunResponse)
 
-        # For image generation, we expect to get some response content
-        # This could be DataContent with image data, UriContent
+        # 画像生成では、何らかのレスポンスコンテンツが得られることを期待する これはDataContentで画像データ、UriContentの可能性がある
         assert response.messages is not None and len(response.messages) > 0
 
-        # Check that we have some kind of content in the response
+        # レスポンスに何らかのコンテンツがあることを確認する
         total_contents = sum(len(message.contents) for message in response.messages)
         assert total_contents > 0, f"Expected some content in response messages, got {total_contents} contents"
 
-        # Verify we got image content - look for DataContent with URI starting with "data:image"
+        # 画像コンテンツを取得したことを検証する - "data:image"で始まるURIを持つDataContentを探す
         image_content_found = False
         for message in response.messages:
             for content in message.contents:
@@ -1482,47 +1481,47 @@ async def test_openai_responses_client_agent_raw_image_generation_tool():
             if image_content_found:
                 break
 
-        # The test passes if we got image content (which we did based on the visible base64 output)
+        # 画像コンテンツが得られた場合（可視のbase64出力に基づく）テストは合格する
         assert image_content_found, "Expected to find image content in response"
 
 
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_level_tool_persistence():
-    """Test that agent-level tools persist across multiple runs with OpenAI Responses Client."""
+    """OpenAI Responses Clientでagentレベルのツールが複数回のrunで持続することをテストする。"""
 
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant that uses available tools.",
         tools=[get_weather],  # Agent-level tool
     ) as agent:
-        # First run - agent-level tool should be available
+        # 最初のrun - agentレベルのツールが利用可能であるべき
         first_response = await agent.run("What's the weather like in Chicago?")
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
-        # Should use the agent-level weather tool
+        # agentレベルのweather toolを使用すべきである
         assert any(term in first_response.text.lower() for term in ["chicago", "sunny", "72"])
 
-        # Second run - agent-level tool should still be available (persistence test)
+        # 2回目のrun - agentレベルのツールはまだ利用可能であるべき（持続性テスト）
         second_response = await agent.run("What's the weather in Miami?")
 
         assert isinstance(second_response, AgentRunResponse)
         assert second_response.text is not None
-        # Should use the agent-level weather tool again
+        # 再度agentレベルのweather toolを使用すべきである
         assert any(term in second_response.text.lower() for term in ["miami", "sunny", "72"])
 
 
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_run_level_tool_isolation():
-    """Test that run-level tools are isolated to specific runs and don't persist with OpenAI Responses Client."""
-    # Counter to track how many times the weather tool is called
+    """OpenAI Responses Clientでrunレベルのツールが特定のrunに限定され持続しないことをテストする。"""
+    # weather toolが呼び出された回数を追跡するカウンター
     call_count = 0
 
     @ai_function
     async def get_weather_with_counter(location: Annotated[str, "The location as a city name"]) -> str:
-        """Get the current weather in a given location."""
+        """指定された場所の現在の天気を取得する。"""
         nonlocal call_count
         call_count += 1
         return f"The weather in {location} is sunny and 72°F."
@@ -1531,7 +1530,7 @@ async def test_openai_responses_client_run_level_tool_isolation():
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant.",
     ) as agent:
-        # First run - use run-level tool
+        # 最初のrun - runレベルのツールを使用する
         first_response = await agent.run(
             "What's the weather like in Chicago?",
             tools=[get_weather_with_counter],  # Run-level tool
@@ -1539,24 +1538,23 @@ async def test_openai_responses_client_run_level_tool_isolation():
 
         assert isinstance(first_response, AgentRunResponse)
         assert first_response.text is not None
-        # Should use the run-level weather tool (call count should be 1)
+        # runレベルのweather toolを使用すべき（呼び出し回数は1）
         assert call_count == 1
         assert any(term in first_response.text.lower() for term in ["chicago", "sunny", "72"])
 
-        # Second run - run-level tool should NOT persist (key isolation test)
+        # 2回目のrun - runレベルのツールは持続しないべき（キーの分離テスト）
         second_response = await agent.run("What's the weather like in Miami?")
 
         assert isinstance(second_response, AgentRunResponse)
         assert second_response.text is not None
-        # Should NOT use the weather tool since it was only run-level in previous call
-        # Call count should still be 1 (no additional calls)
+        # 前回はrunレベルだったためweather toolは使用されるべきでない 呼び出し回数は1のまま（追加呼び出しなし）
         assert call_count == 1
 
 
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_chat_options_run_level() -> None:
-    """Integration test for comprehensive ChatOptions parameter coverage with OpenAI Response Agent."""
+    """OpenAI Response AgentでChatOptionsパラメータの包括的な統合テスト。"""
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant.",
@@ -1578,7 +1576,7 @@ async def test_openai_responses_client_agent_chat_options_run_level() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_chat_options_agent_level() -> None:
-    """Integration test for comprehensive ChatOptions parameter coverage with OpenAI Response Agent."""
+    """OpenAI Response AgentでChatOptionsパラメータの包括的な統合テスト。"""
     async with ChatAgent(
         chat_client=OpenAIResponsesClient(),
         instructions="You are a helpful assistant.",
@@ -1602,7 +1600,7 @@ async def test_openai_responses_client_agent_chat_options_agent_level() -> None:
 @pytest.mark.flaky
 @skip_if_openai_integration_tests_disabled
 async def test_openai_responses_client_agent_hosted_mcp_tool() -> None:
-    """Integration test for HostedMCPTool with OpenAI Response Agent using Microsoft Learn MCP."""
+    """Microsoft Learn MCPを使ったOpenAI Response AgentでHostedMCPToolの統合テスト。"""
 
     mcp_tool = HostedMCPTool(
         name="Microsoft Learn MCP",
@@ -1624,12 +1622,12 @@ async def test_openai_responses_client_agent_hosted_mcp_tool() -> None:
         assert isinstance(response, AgentRunResponse)
         assert response.text is not None
         assert len(response.text) > 0
-        # Should contain Azure-related content since it's asking about Azure CLI
+        # Azure CLIについて尋ねているためAzure関連の内容を含むべきである
         assert any(term in response.text.lower() for term in ["azure", "storage", "account", "cli"])
 
 
 def test_service_response_exception_includes_original_error_details() -> None:
-    """Test that ServiceResponseException messages include original error details in the new format."""
+    """ServiceResponseExceptionのメッセージが新しい形式で元のエラー詳細を含むことをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     messages = [ChatMessage(role="user", text="test message")]
 
@@ -1654,11 +1652,11 @@ def test_service_response_exception_includes_original_error_details() -> None:
 
 
 def test_get_streaming_response_with_response_format() -> None:
-    """Test get_streaming_response with response_format."""
+    """response_formatを使ったget_streaming_responseをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     messages = [ChatMessage(role="user", text="Test streaming with format")]
 
-    # It will fail due to invalid API key, but exercises the code path
+    # 無効なAPIキーのため失敗するが、コードパスを実行する。
     with pytest.raises(ServiceResponseException):
 
         async def run_streaming():
@@ -1669,10 +1667,10 @@ def test_get_streaming_response_with_response_format() -> None:
 
 
 def test_openai_content_parser_image_content() -> None:
-    """Test _openai_content_parser with image content variations."""
+    """image contentのバリエーションで_openai_content_parserをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test image content with detail parameter and file_id
+    # detailパラメータとfile_id付きのimage contentをテストする
     image_content_with_detail = UriContent(
         uri="https://example.com/image.jpg",
         media_type="image/jpeg",
@@ -1684,7 +1682,7 @@ def test_openai_content_parser_image_content() -> None:
     assert result["detail"] == "high"
     assert result["file_id"] == "file_123"
 
-    # Test image content without additional properties (defaults)
+    # 追加プロパティなし（デフォルト）のimage contentをテストする
     image_content_basic = UriContent(uri="https://example.com/basic.png", media_type="image/png")
     result = client._openai_content_parser(Role.USER, image_content_basic, {})  # type: ignore
     assert result["type"] == "input_image"
@@ -1693,17 +1691,17 @@ def test_openai_content_parser_image_content() -> None:
 
 
 def test_openai_content_parser_audio_content() -> None:
-    """Test _openai_content_parser with audio content variations."""
+    """audio contentのバリエーションで_openai_content_parserをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test WAV audio content
+    # WAV audio contentをテストする
     wav_content = UriContent(uri="data:audio/wav;base64,abc123", media_type="audio/wav")
     result = client._openai_content_parser(Role.USER, wav_content, {})  # type: ignore
     assert result["type"] == "input_audio"
     assert result["input_audio"]["data"] == "data:audio/wav;base64,abc123"
     assert result["input_audio"]["format"] == "wav"
 
-    # Test MP3 audio content
+    # MP3 audio contentをテストする
     mp3_content = UriContent(uri="data:audio/mp3;base64,def456", media_type="audio/mp3")
     result = client._openai_content_parser(Role.USER, mp3_content, {})  # type: ignore
     assert result["type"] == "input_audio"
@@ -1711,22 +1709,22 @@ def test_openai_content_parser_audio_content() -> None:
 
 
 def test_openai_content_parser_unsupported_content() -> None:
-    """Test _openai_content_parser with unsupported content types."""
+    """サポートされていないcontentタイプで_openai_content_parserをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test unsupported audio format
+    # サポートされていないaudioフォーマットをテストする
     unsupported_audio = UriContent(uri="data:audio/ogg;base64,ghi789", media_type="audio/ogg")
     result = client._openai_content_parser(Role.USER, unsupported_audio, {})  # type: ignore
     assert result == {}
 
-    # Test non-media content
+    # 非メディアコンテンツをテストする
     text_uri_content = UriContent(uri="https://example.com/document.txt", media_type="text/plain")
     result = client._openai_content_parser(Role.USER, text_uri_content, {})  # type: ignore
     assert result == {}
 
 
 def test_create_streaming_response_content_code_interpreter() -> None:
-    """Test _create_streaming_response_content with code_interpreter_call."""
+    """code_interpreter_call付きで_create_streaming_response_contentをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -1750,7 +1748,7 @@ def test_create_streaming_response_content_code_interpreter() -> None:
 
 
 def test_create_streaming_response_content_reasoning() -> None:
-    """Test _create_streaming_response_content with reasoning content."""
+    """reasoning content付きで_create_streaming_response_contentをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -1774,10 +1772,10 @@ def test_create_streaming_response_content_reasoning() -> None:
 
 
 def test_openai_content_parser_text_reasoning_comprehensive() -> None:
-    """Test _openai_content_parser with TextReasoningContent all additional properties."""
+    """TextReasoningContentのすべての追加プロパティで_openai_content_parserをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test TextReasoningContent with all additional properties
+    # すべての追加プロパティ付きのTextReasoningContentをテストする
     comprehensive_reasoning = TextReasoningContent(
         text="Comprehensive reasoning summary",
         additional_properties={
@@ -1796,7 +1794,7 @@ def test_openai_content_parser_text_reasoning_comprehensive() -> None:
 
 
 def test_streaming_reasoning_text_delta_event() -> None:
-    """Test reasoning text delta event creates TextReasoningContent."""
+    """reasoning text deltaイベントがTextReasoningContentを作成することをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -1821,7 +1819,7 @@ def test_streaming_reasoning_text_delta_event() -> None:
 
 
 def test_streaming_reasoning_text_done_event() -> None:
-    """Test reasoning text done event creates TextReasoningContent with complete text."""
+    """reasoning text doneイベントが完全なテキスト付きのTextReasoningContentを作成することをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -1847,7 +1845,7 @@ def test_streaming_reasoning_text_done_event() -> None:
 
 
 def test_streaming_reasoning_summary_text_delta_event() -> None:
-    """Test reasoning summary text delta event creates TextReasoningContent."""
+    """reasoning summary text deltaイベントがTextReasoningContentを作成することをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -1872,7 +1870,7 @@ def test_streaming_reasoning_summary_text_delta_event() -> None:
 
 
 def test_streaming_reasoning_summary_text_done_event() -> None:
-    """Test reasoning summary text done event creates TextReasoningContent with complete text."""
+    """reasoning summary text doneイベントが完全なテキスト付きのTextReasoningContentを作成することをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -1898,7 +1896,7 @@ def test_streaming_reasoning_summary_text_done_event() -> None:
 
 
 def test_streaming_reasoning_events_preserve_metadata() -> None:
-    """Test that reasoning events preserve metadata like regular text events."""
+    """reasoningイベントが通常のテキストイベントのようにメタデータを保持することをテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
     chat_options = ChatOptions()
     function_call_ids: dict[int, tuple[str, str]] = {}
@@ -1926,20 +1924,20 @@ def test_streaming_reasoning_events_preserve_metadata() -> None:
         text_response = client._create_streaming_response_content(text_event, chat_options, function_call_ids)  # type: ignore
         reasoning_response = client._create_streaming_response_content(reasoning_event, chat_options, function_call_ids)  # type: ignore
 
-        # Both should preserve metadata
+        # 両方ともメタデータを保持するべきである
         assert text_response.additional_properties == {"test": "metadata"}
         assert reasoning_response.additional_properties == {"test": "metadata"}
 
-        # Content types should be different
+        # コンテンツタイプは異なるべきである
         assert isinstance(text_response.contents[0], TextContent)
         assert isinstance(reasoning_response.contents[0], TextReasoningContent)
 
 
 def test_create_response_content_image_generation_raw_base64():
-    """Test image generation response parsing with raw base64 string."""
+    """raw base64文字列での画像生成レスポンス解析をテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with raw base64 image data (PNG signature)
+    # raw base64画像データ（PNGシグネチャ）でモックレスポンスを作成する
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -1948,7 +1946,7 @@ def test_create_response_content_image_generation_raw_base64():
     mock_response.model = "test-model"
     mock_response.created_at = 1234567890
 
-    # Mock image generation output item with raw base64 (PNG format)
+    # raw base64（PNGフォーマット）で画像生成出力アイテムをモックする
     png_signature = b"\x89PNG\r\n\x1a\n"
     mock_base64 = base64.b64encode(png_signature + b"fake_png_data_here").decode()
 
@@ -1961,7 +1959,7 @@ def test_create_response_content_image_generation_raw_base64():
     with patch.object(client, "_get_metadata_from_response", return_value={}):
         response = client._create_response_content(mock_response, chat_options=ChatOptions())  # type: ignore
 
-    # Verify the response contains DataContent with proper URI and media_type
+    # レスポンスが適切なURIとmedia_typeを持つDataContentを含むことを検証する
     assert len(response.messages[0].contents) == 1
     content = response.messages[0].contents[0]
     assert isinstance(content, DataContent)
@@ -1970,10 +1968,10 @@ def test_create_response_content_image_generation_raw_base64():
 
 
 def test_create_response_content_image_generation_existing_data_uri():
-    """Test image generation response parsing with existing data URI."""
+    """既存のdata URIでの画像生成レスポンス解析をテストする。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with existing data URI
+    # 既存のdata URIでモックレスポンスを作成する
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -1982,7 +1980,7 @@ def test_create_response_content_image_generation_existing_data_uri():
     mock_response.model = "test-model"
     mock_response.created_at = 1234567890
 
-    # Mock image generation output item with existing data URI (valid WEBP header)
+    # 既存のdata URI（有効なWEBPヘッダー）で画像生成出力アイテムをモックする
     webp_signature = b"RIFF" + b"\x12\x00\x00\x00" + b"WEBP"
     valid_webp_base64 = base64.b64encode(webp_signature + b"VP8 fake_data").decode()
     mock_item = MagicMock()
@@ -1994,7 +1992,7 @@ def test_create_response_content_image_generation_existing_data_uri():
     with patch.object(client, "_get_metadata_from_response", return_value={}):
         response = client._create_response_content(mock_response, chat_options=ChatOptions())  # type: ignore
 
-    # Verify the response contains DataContent with proper media_type parsed from URI
+    # レスポンスがURIから解析された適切なmedia_typeを持つDataContentを含むことを検証する
     assert len(response.messages[0].contents) == 1
     content = response.messages[0].contents[0]
     assert isinstance(content, DataContent)
@@ -2003,10 +2001,10 @@ def test_create_response_content_image_generation_existing_data_uri():
 
 
 def test_create_response_content_image_generation_format_detection():
-    """Test different image format detection from base64 data."""
+    """base64データから異なる画像フォーマットの検出をテストします。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Test JPEG detection
+    # JPEG検出をテストします。
     jpeg_signature = b"\xff\xd8\xff"
     mock_base64_jpeg = base64.b64encode(jpeg_signature + b"fake_jpeg_data").decode()
 
@@ -2030,7 +2028,7 @@ def test_create_response_content_image_generation_format_detection():
     assert content_jpeg.media_type == "image/jpeg"
     assert "data:image/jpeg;base64," in content_jpeg.uri
 
-    # Test WEBP detection
+    # WEBP検出をテストします。
     webp_signature = b"RIFF" + b"\x00\x00\x00\x00" + b"WEBP"
     mock_base64_webp = base64.b64encode(webp_signature + b"fake_webp_data").decode()
 
@@ -2056,10 +2054,10 @@ def test_create_response_content_image_generation_format_detection():
 
 
 def test_create_response_content_image_generation_fallback():
-    """Test image generation with invalid base64 falls back to PNG."""
+    """無効なbase64での画像生成がPNGにフォールバックすることをテストします。"""
     client = OpenAIResponsesClient(model_id="test-model", api_key="test-key")
 
-    # Create a mock response with invalid base64
+    # 無効なbase64を使ったモックレスポンスを作成します。
     mock_response = MagicMock()
     mock_response.output_parsed = None
     mock_response.metadata = {}
@@ -2068,7 +2066,7 @@ def test_create_response_content_image_generation_fallback():
     mock_response.model = "test-model"
     mock_response.created_at = 1234567890
 
-    # Mock image generation output item with unrecognized format (should fall back to PNG)
+    # 認識されないフォーマットのモック画像生成出力アイテム（PNGにフォールバックするはず）
     unrecognized_data = b"UNKNOWN_FORMAT" + b"some_binary_data"
     unrecognized_base64 = base64.b64encode(unrecognized_data).decode()
     mock_item = MagicMock()
@@ -2080,7 +2078,7 @@ def test_create_response_content_image_generation_fallback():
     with patch.object(client, "_get_metadata_from_response", return_value={}):
         response = client._create_response_content(mock_response, chat_options=ChatOptions())  # type: ignore
 
-    # Verify it falls back to PNG format for unrecognized binary data
+    # 認識されないバイナリデータに対してPNGフォーマットにフォールバックすることを検証します。
     assert len(response.messages[0].contents) == 1
     content = response.messages[0].contents[0]
     assert isinstance(content, DataContent)
@@ -2114,14 +2112,14 @@ def test_prepare_options_store_parameter_handling() -> None:
 
 
 def test_openai_responses_client_with_callable_api_key() -> None:
-    """Test OpenAIResponsesClient initialization with callable API key."""
+    """呼び出し可能なAPIキーを使ったOpenAIResponsesClientの初期化をテストします。"""
 
     async def get_api_key() -> str:
         return "test-api-key-123"
 
     client = OpenAIResponsesClient(model_id="gpt-4o", api_key=get_api_key)
 
-    # Verify client was created successfully
+    # クライアントが正常に作成されたことを検証します。
     assert client.model_id == "gpt-4o"
-    # OpenAI SDK now manages callable API keys internally
+    # OpenAI SDKは現在、呼び出し可能なAPIキーを内部で管理します。
     assert client.client is not None

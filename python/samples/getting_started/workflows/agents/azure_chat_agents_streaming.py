@@ -27,11 +27,11 @@ Prerequisites:
 
 
 async def main():
-    """Build and run a simple two node agent workflow: Writer then Reviewer."""
-    # Create the Azure chat client. AzureCliCredential uses your current az login.
+    """シンプルな2ノードAgentワークフローを構築し実行します: Writer から Reviewer へ。"""
+    # Azureチャットクライアントを作成します。AzureCliCredentialは現在のaz loginを使用します。
     chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
-    # Define two domain specific chat agents.
+    # 2つのドメイン固有チャットAgentを定義します。
     writer_agent = chat_client.create_agent(
         instructions=(
             "You are an excellent content writer. You create new content and edit contents based on the feedback."
@@ -48,9 +48,8 @@ async def main():
         name="reviewer_agent",
     )
 
-    # Build the workflow using the fluent builder.
-    # Set the start node and connect an edge from writer to reviewer.
-    # Agents adapt to workflow mode: run_stream() for incremental updates, run() for complete responses.
+    # フルーエントビルダーを使ってワークフローを構築します。 開始ノードを設定し、writerからreviewerへのエッジを接続します。
+    # Agentはワークフローモードに適応します: run_stream()は増分更新用、run()は完全なレスポンス用。
     workflow = (
         WorkflowBuilder()
         .set_start_executor(writer_agent)
@@ -58,14 +57,14 @@ async def main():
         .build()
     )
 
-    # Stream events from the workflow. We aggregate partial token updates per executor for readable output.
+    # ワークフローからイベントをストリームします。各executorごとに部分的なトークン更新を集約して読みやすい出力にします。
     last_executor_id: str | None = None
 
     events = workflow.run_stream("Create a slogan for a new electric SUV that is affordable and fun to drive.")
     async for event in events:
         if isinstance(event, AgentRunUpdateEvent):
-            # AgentRunUpdateEvent contains incremental text deltas from the underlying agent.
-            # Print a prefix when the executor changes, then append updates on the same line.
+            # AgentRunUpdateEventは基盤となるAgentからの増分テキストデルタを含みます。
+            # Executorが変わるとプレフィックスを表示し、同じ行に更新を追加します。
             eid = event.executor_id
             if eid != last_executor_id:
                 if last_executor_id is not None:

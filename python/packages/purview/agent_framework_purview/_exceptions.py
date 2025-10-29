@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Purview specific exceptions (minimal error shaping)."""
+"""Purview固有の例外（最小限のエラー整形）。"""
 
 from __future__ import annotations
 
@@ -14,16 +14,16 @@ __all__ = [
 
 
 class PurviewServiceError(ServiceResponseException):
-    """Base exception for Purview errors."""
+    """Purviewエラーの基本例外クラス。"""
 
 
 class PurviewAuthenticationError(PurviewServiceError):
-    """Authentication / authorization failure (401/403)."""
+    """認証／認可失敗（401/403）。"""
 
 
 class PurviewRateLimitError(PurviewServiceError):
-    """Rate limiting or throttling (429)."""
+    """レート制限またはスロットリング（429）。"""
 
 
 class PurviewRequestError(PurviewServiceError):
-    """Other non-success HTTP errors."""
+    """その他の非成功HTTPエラー。"""

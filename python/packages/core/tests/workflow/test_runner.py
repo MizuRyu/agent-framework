@@ -24,13 +24,13 @@ from agent_framework._workflows._shared_state import SharedState
 
 @dataclass
 class MockMessage:
-    """A mock message for testing purposes."""
+    """テスト用のモックメッセージ。"""
 
     data: int
 
 
 class MockExecutor(Executor):
-    """A mock executor for testing purposes."""
+    """テスト用のモック executor。"""
 
     @handler
     async def mock_handler(self, message: MockMessage, ctx: WorkflowContext[MockMessage, int]) -> None:
@@ -42,11 +42,11 @@ class MockExecutor(Executor):
 
 
 def test_create_runner():
-    """Test creating a runner with edges and shared state."""
+    """エッジと共有状態を持つランナーの作成をテストします。"""
     executor_a = MockExecutor(id="executor_a")
     executor_b = MockExecutor(id="executor_b")
 
-    # Create a loop
+    # ループを作成。
     edge_groups = [
         SingleEdgeGroup(executor_a.id, executor_b.id),
         SingleEdgeGroup(executor_b.id, executor_a.id),
@@ -60,11 +60,11 @@ def test_create_runner():
 
 
 async def test_runner_run_until_convergence():
-    """Test running the runner with a simple workflow."""
+    """シンプルなワークフローでランナーの実行をテストします。"""
     executor_a = MockExecutor(id="executor_a")
     executor_b = MockExecutor(id="executor_b")
 
-    # Create a loop
+    # ループを作成。
     edges = [
         SingleEdgeGroup(executor_a.id, executor_b.id),
         SingleEdgeGroup(executor_b.id, executor_a.id),
@@ -92,11 +92,11 @@ async def test_runner_run_until_convergence():
 
 
 async def test_runner_run_until_convergence_not_completed():
-    """Test running the runner with a simple workflow."""
+    """シンプルなワークフローでランナーの実行をテストします。"""
     executor_a = MockExecutor(id="executor_a")
     executor_b = MockExecutor(id="executor_b")
 
-    # Create a loop
+    # ループを作成。
     edges = [
         SingleEdgeGroup(executor_a.id, executor_b.id),
         SingleEdgeGroup(executor_b.id, executor_a.id),
@@ -120,11 +120,11 @@ async def test_runner_run_until_convergence_not_completed():
 
 
 async def test_runner_already_running():
-    """Test that running the runner while it is already running raises an error."""
+    """ランナーが既に実行中の場合に実行しようとするとエラーが発生することをテストします。"""
     executor_a = MockExecutor(id="executor_a")
     executor_b = MockExecutor(id="executor_b")
 
-    # Create a loop
+    # ループを作成。
     edges = [
         SingleEdgeGroup(executor_a.id, executor_b.id),
         SingleEdgeGroup(executor_b.id, executor_a.id),
@@ -164,6 +164,6 @@ async def test_runner_emits_runner_completion_for_agent_response_without_targets
     )
 
     events: list[WorkflowEvent] = [event async for event in runner.run_until_convergence()]
-    # The runner should complete without errors when handling AgentExecutorResponse without targets
-    # No specific events are expected since there are no executors to process the message
-    assert isinstance(events, list)  # Just verify the runner completed without errors
+    # AgentExecutorResponse にターゲットがなくてもランナーはエラーなく完了するはずです。 メッセージを処理する executor
+    # がないため特定のイベントは期待されません。
+    assert isinstance(events, list)  # ランナーがエラーなく完了したことを確認するだけです。

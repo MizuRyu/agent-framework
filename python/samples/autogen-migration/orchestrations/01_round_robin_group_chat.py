@@ -1,15 +1,14 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""AutoGen RoundRobinGroupChat vs Agent Framework GroupChatBuilder/SequentialBuilder.
+"""AutoGen の RoundRobinGroupChat と Agent Framework の GroupChatBuilder/SequentialBuilder の比較。
 
-Demonstrates sequential agent orchestration where agents take turns processing
-the task in a round-robin fashion.
+エージェントが順番にタスクを処理するラウンドロビン方式の逐次エージェントオーケストレーションを示します。
 """
 
 import asyncio
 
 
 async def run_autogen() -> None:
-    """AutoGen's RoundRobinGroupChat for sequential agent orchestration."""
+    """AutoGen の RoundRobinGroupChat による逐次エージェントオーケストレーション。"""
     from autogen_agentchat.agents import AssistantAgent
     from autogen_agentchat.conditions import TextMentionTermination
     from autogen_agentchat.teams import RoundRobinGroupChat
@@ -18,7 +17,7 @@ async def run_autogen() -> None:
 
     client = OpenAIChatCompletionClient(model="gpt-4.1-mini")
 
-    # Create specialized agents
+    # 専門化されたエージェントを作成します
     researcher = AssistantAgent(
         name="researcher",
         model_client=client,
@@ -40,25 +39,25 @@ async def run_autogen() -> None:
         model_client_stream=True,
     )
 
-    # Create round-robin team
+    # ラウンドロビンチームを作成します
     team = RoundRobinGroupChat(
         participants=[researcher, writer, editor],
         termination_condition=TextMentionTermination("APPROVED"),
     )
 
-    # Run the team and display the conversation.
+    # チームを実行し、会話を表示します。
     print("[AutoGen] Round-robin conversation:")
     await Console(team.run_stream(task="Create a brief summary about electric vehicles"))
 
 
 async def run_agent_framework() -> None:
-    """Agent Framework's SequentialBuilder for sequential agent orchestration."""
+    """Agent Framework の SequentialBuilder による逐次エージェントオーケストレーション。"""
     from agent_framework import AgentRunUpdateEvent, SequentialBuilder
     from agent_framework.openai import OpenAIChatClient
 
     client = OpenAIChatClient(model_id="gpt-4.1-mini")
 
-    # Create specialized agents
+    # 専門化されたエージェントを作成します
     researcher = client.create_agent(
         name="researcher",
         instructions="You are a researcher. Provide facts and data about the topic.",
@@ -74,27 +73,27 @@ async def run_agent_framework() -> None:
         instructions="You are an editor. Review and finalize the content.",
     )
 
-    # Create sequential workflow
+    # 逐次ワークフローを作成します
     workflow = SequentialBuilder().participants([researcher, writer, editor]).build()
 
-    # Run the workflow
+    # ワークフローを実行します
     print("[Agent Framework] Sequential conversation:")
     current_executor = None
     async for event in workflow.run_stream("Create a brief summary about electric vehicles"):
         if isinstance(event, AgentRunUpdateEvent):
-            # Print executor name header when switching to a new agent
+            # 新しいエージェントに切り替わる際に executor 名のヘッダーを表示します
             if current_executor != event.executor_id:
                 if current_executor is not None:
-                    print()  # Newline after previous agent's message
+                    print()  # 前のエージェントのメッセージの後に改行を入れます
                 print(f"---------- {event.executor_id} ----------")
                 current_executor = event.executor_id
             if event.data:
                 print(event.data.text, end="", flush=True)
-    print()  # Final newline after conversation
+    print()  # 会話の最後に改行を入れます
 
 
 async def run_agent_framework_with_cycle() -> None:
-    """Agent Framework's WorkflowBuilder with cyclic edges and conditional exit."""
+    """Agent Framework の WorkflowBuilder による循環エッジと条件付き終了を持つワークフロー。"""
     from agent_framework import (
         AgentExecutorRequest,
         AgentExecutorResponse,
@@ -108,7 +107,7 @@ async def run_agent_framework_with_cycle() -> None:
 
     client = OpenAIChatClient(model_id="gpt-4.1-mini")
 
-    # Create specialized agents
+    # 専門化されたエージェントを作成します
     researcher = client.create_agent(
         name="researcher",
         instructions="You are a researcher. Provide facts and data about the topic.",
@@ -124,7 +123,7 @@ async def run_agent_framework_with_cycle() -> None:
         instructions="You are an editor. Review and finalize the content. End with APPROVED if satisfied.",
     )
 
-    # Create custom executor for checking approval
+    # 承認チェック用のカスタム executor を作成します
     @executor
     async def check_approval(
         response: AgentExecutorResponse, context: WorkflowContext[AgentExecutorRequest, str]
@@ -149,7 +148,7 @@ async def run_agent_framework_with_cycle() -> None:
         .build()
     )
 
-    # Run the workflow
+    # ワークフローを実行します
     print("[Agent Framework with Cycle] Cyclic conversation:")
     current_executor = None
     async for event in workflow.run_stream("Create a brief summary about electric vehicles"):
@@ -157,15 +156,15 @@ async def run_agent_framework_with_cycle() -> None:
             print("\n---------- Workflow Output ----------")
             print(event.data)
         elif isinstance(event, AgentRunUpdateEvent):
-            # Print executor name header when switching to a new agent
+            # 新しいエージェントに切り替わる際に executor 名のヘッダーを表示します
             if current_executor != event.executor_id:
                 if current_executor is not None:
-                    print()  # Newline after previous agent's message
+                    print()  # 前のエージェントのメッセージの後に改行を入れます
                 print(f"---------- {event.executor_id} ----------")
                 current_executor = event.executor_id
             if event.data:
                 print(event.data.text, end="", flush=True)
-    print()  # Final newline after conversation
+    print()  # 会話の最後に改行を入れます
 
 
 async def main() -> None:

@@ -1,14 +1,14 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""AutoGen vs Agent Framework: Thread management and streaming responses.
+"""AutoGen と Agent Framework: Thread 管理とストリーミングレスポンス。
 
-Demonstrates conversation state management and streaming in both frameworks.
+両フレームワークでの会話状態管理とストリーミングを示します。
 """
 
 import asyncio
 
 
 async def run_autogen() -> None:
-    """AutoGen agent with conversation history and streaming."""
+    """会話履歴とストリーミングを持つ AutoGen エージェント。"""
     from autogen_agentchat.agents import AssistantAgent
     from autogen_agentchat.ui import Console
     from autogen_ext.models.openai import OpenAIChatCompletionClient
@@ -22,21 +22,21 @@ async def run_autogen() -> None:
     )
 
     print("[AutoGen] Conversation with history:")
-    # First turn - AutoGen maintains state internally with Console for streaming
+    # 最初のターン - AutoGen は内部で状態を管理し、Console でストリーミングを行う
     result = await agent.run(task="What is 15 + 27?")
     print(f"  Q1: {result.messages[-1].to_text()}")
 
-    # Second turn - agent remembers context
+    # 2回目のターン - エージェントはコンテキストを記憶する
     result = await agent.run(task="What about that number times 2?")
     print(f"  Q2: {result.messages[-1].to_text()}")
 
     print("\n[AutoGen] Streaming response:")
-    # Stream response with Console for token streaming
+    # トークンストリーミングのために Console でレスポンスをストリームする
     await Console(agent.run_stream(task="Count from 1 to 5"))
 
 
 async def run_agent_framework() -> None:
-    """Agent Framework agent with explicit thread and streaming."""
+    """明示的なスレッドとストリーミングを持つ Agent Framework エージェント。"""
     from agent_framework.openai import OpenAIChatClient
 
     client = OpenAIChatClient(model_id="gpt-4.1-mini")
@@ -46,19 +46,19 @@ async def run_agent_framework() -> None:
     )
 
     print("[Agent Framework] Conversation with thread:")
-    # Create a thread to maintain state
+    # 状態を維持するためにスレッドを作成する
     thread = agent.get_new_thread()
 
-    # First turn - pass thread to maintain history
+    # 最初のターン - 履歴を維持するためにスレッドを渡す
     result1 = await agent.run("What is 15 + 27?", thread=thread)
     print(f"  Q1: {result1.text}")
 
-    # Second turn - agent remembers context via thread
+    # 2回目のターン - スレッドを介してエージェントはコンテキストを記憶する
     result2 = await agent.run("What about that number times 2?", thread=thread)
     print(f"  Q2: {result2.text}")
 
     print("\n[Agent Framework] Streaming response:")
-    # Stream response
+    # レスポンスをストリームする
     print("  ", end="")
     async for chunk in agent.run_stream("Count from 1 to 5"):
         if chunk.text:

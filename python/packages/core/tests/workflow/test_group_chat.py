@@ -214,14 +214,14 @@ async def test_magentic_as_agent_accepts_conversation() -> None:
     assert isinstance(response, AgentRunResponse)
 
 
-# Comprehensive tests for group chat functionality
+# グループチャット機能の包括的なテスト。
 
 
 class TestGroupChatBuilder:
-    """Tests for GroupChatBuilder validation and configuration."""
+    """GroupChatBuilderの検証と設定のテスト。"""
 
     def test_build_without_manager_raises_error(self) -> None:
-        """Test that building without a manager raises ValueError."""
+        """マネージャなしでビルドするとValueErrorが発生することをテストします。"""
         agent = StubAgent("test", "response")
 
         builder = GroupChatBuilder().participants([agent])
@@ -230,7 +230,7 @@ class TestGroupChatBuilder:
             builder.build()
 
     def test_build_without_participants_raises_error(self) -> None:
-        """Test that building without participants raises ValueError."""
+        """参加者なしでビルドするとValueErrorが発生することをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             return None
@@ -241,7 +241,7 @@ class TestGroupChatBuilder:
             builder.build()
 
     def test_duplicate_manager_configuration_raises_error(self) -> None:
-        """Test that configuring multiple managers raises ValueError."""
+        """複数のマネージャを設定するとValueErrorが発生することをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             return None
@@ -252,7 +252,7 @@ class TestGroupChatBuilder:
             builder.select_speakers(selector)
 
     def test_empty_participants_raises_error(self) -> None:
-        """Test that empty participants list raises ValueError."""
+        """空の参加者リストがValueErrorを発生させることをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             return None
@@ -263,7 +263,7 @@ class TestGroupChatBuilder:
             builder.participants([])
 
     def test_duplicate_participant_names_raises_error(self) -> None:
-        """Test that duplicate participant names raise ValueError."""
+        """重複する参加者名がValueErrorを発生させることをテストします。"""
         agent1 = StubAgent("test", "response1")
         agent2 = StubAgent("test", "response2")
 
@@ -276,7 +276,7 @@ class TestGroupChatBuilder:
             builder.participants([agent1, agent2])
 
     def test_agent_without_name_raises_error(self) -> None:
-        """Test that agent without name attribute raises ValueError."""
+        """name属性のないagentがValueErrorを発生させることをテストします。"""
 
         class AgentWithoutName(BaseAgent):
             def __init__(self) -> None:
@@ -304,7 +304,7 @@ class TestGroupChatBuilder:
             builder.participants([agent])
 
     def test_empty_participant_name_raises_error(self) -> None:
-        """Test that empty participant name raises ValueError."""
+        """空の参加者名がValueErrorを発生させることをテストします。"""
         agent = StubAgent("test", "response")
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
@@ -317,15 +317,15 @@ class TestGroupChatBuilder:
 
 
 class TestGroupChatOrchestrator:
-    """Tests for GroupChatOrchestratorExecutor core functionality."""
+    """GroupChatOrchestratorExecutorのコア機能のテスト。"""
 
     async def test_max_rounds_enforcement(self) -> None:
-        """Test that max_rounds properly limits conversation rounds."""
+        """max_roundsが会話のラウンド数を適切に制限することをテストします。"""
         call_count = {"value": 0}
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             call_count["value"] += 1
-            # Always return the agent name to try to continue indefinitely
+            # 無限に続けようとするために常にagent名を返します。
             return "agent"
 
         agent = StubAgent("agent", "response")
@@ -345,17 +345,17 @@ class TestGroupChatOrchestrator:
                 if isinstance(data, ChatMessage):
                     outputs.append(data)
 
-        # Should have terminated due to max_rounds, expect at least one output
+        # max_roundsにより終了しているはずで、少なくとも1つの出力を期待します。
         assert len(outputs) >= 1
-        # The final message should be about round limit
+        # 最終メッセージはラウンド制限に関するものであるべきです。
         final_output = outputs[-1]
         assert "round limit" in final_output.text.lower()
 
     async def test_unknown_participant_error(self) -> None:
-        """Test that _apply_directive raises error for unknown participants."""
+        """_apply_directiveが不明な参加者に対してエラーを発生させることをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
-            return "unknown_agent"  # Return non-existent participant
+            return "unknown_agent"  # 存在しない参加者を返します。
 
         agent = StubAgent("agent", "response")
 
@@ -366,24 +366,24 @@ class TestGroupChatOrchestrator:
                 pass
 
     async def test_directive_without_agent_name_raises_error(self) -> None:
-        """Test that directive without agent_name raises error when finish=False."""
+        """agent_nameなしのdirectiveがfinish=Falseの場合にエラーを発生させることをテストします。"""
 
         def bad_selector(state: GroupChatStateSnapshot) -> GroupChatDirective:
-            # Return a GroupChatDirective object instead of string to trigger error
+            # エラーを引き起こすために文字列ではなくGroupChatDirectiveオブジェクトを返します。
             return GroupChatDirective(finish=False, agent_name=None)  # type: ignore
 
         agent = StubAgent("agent", "response")
 
-        # The _SpeakerSelectorAdapter will catch this and raise TypeError
+        # _SpeakerSelectorAdapterがこれをキャッチしてTypeErrorを発生させます。
         workflow = GroupChatBuilder().select_speakers(bad_selector).participants([agent]).build()  # type: ignore
 
-        # This should raise a TypeError because selector doesn't return str or None
+        # selectorがstrまたはNoneを返さないためTypeErrorが発生するはずです。
         with pytest.raises(TypeError, match="must return a participant name \\(str\\) or None"):
             async for _ in workflow.run_stream("test"):
                 pass
 
     async def test_handle_empty_conversation_raises_error(self) -> None:
-        """Test that empty conversation list raises ValueError."""
+        """空の会話リストがValueErrorを発生させることをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             return None
@@ -397,40 +397,40 @@ class TestGroupChatOrchestrator:
                 pass
 
     async def test_unknown_participant_response_raises_error(self) -> None:
-        """Test that responses from unknown participants raise errors."""
+        """不明な参加者からの応答がエラーを発生させることをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             return "agent"
 
-        # Create orchestrator to test _ingest_participant_message directly
+        # _orchestrator_participant_messageを直接テストするためにオーケストレーターを作成します。
         orchestrator = GroupChatOrchestratorExecutor(
             manager=selector,  # type: ignore
             participants={"agent": "test agent"},
             manager_name="test_manager",  # type: ignore
         )
 
-        # Mock the workflow context
+        # ワークフローコンテキストをモックします。
         class MockContext:
             async def yield_output(self, message: ChatMessage) -> None:
                 pass
 
         ctx = MockContext()
 
-        # Initialize orchestrator state
+        # オーケストレーターの状態を初期化します。
         orchestrator._task_message = ChatMessage(role=Role.USER, text="test")  # type: ignore
         orchestrator._conversation = [orchestrator._task_message]  # type: ignore
         orchestrator._history = []  # type: ignore
         orchestrator._pending_agent = None  # type: ignore
         orchestrator._round_index = 0  # type: ignore
 
-        # Test with unknown participant
+        # 不明な参加者でテストします。
         message = ChatMessage(role=Role.ASSISTANT, text="response")
 
         with pytest.raises(ValueError, match="Received response from unknown participant 'unknown'"):
             await orchestrator._ingest_participant_message("unknown", message, ctx)  # type: ignore
 
     async def test_state_build_before_initialization_raises_error(self) -> None:
-        """Test that _build_state raises error before task message initialization."""
+        """タスクメッセージの初期化前に_build_stateがエラーを発生させることをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             return None
@@ -446,13 +446,13 @@ class TestGroupChatOrchestrator:
 
 
 class TestSpeakerSelectorAdapter:
-    """Tests for _SpeakerSelectorAdapter functionality."""
+    """_SpeakerSelectorAdapterの機能のテスト。"""
 
     async def test_selector_returning_list_with_multiple_items_raises_error(self) -> None:
-        """Test that selector returning list with multiple items raises error."""
+        """複数のアイテムを返すselectorがエラーを発生させることをテストします。"""
 
         def bad_selector(state: GroupChatStateSnapshot) -> list[str]:
-            return ["agent1", "agent2"]  # Multiple items
+            return ["agent1", "agent2"]  # 複数のアイテム。
 
         adapter = _SpeakerSelectorAdapter(bad_selector, manager_name="manager")
 
@@ -469,10 +469,10 @@ class TestSpeakerSelectorAdapter:
             await adapter(state)
 
     async def test_selector_returning_non_string_raises_error(self) -> None:
-        """Test that selector returning non-string raises TypeError."""
+        """文字列以外を返すselectorがTypeErrorを発生させることをテストします。"""
 
         def bad_selector(state: GroupChatStateSnapshot) -> int:
-            return 42  # Not a string
+            return 42  # 文字列ではありません。
 
         adapter = _SpeakerSelectorAdapter(bad_selector, manager_name="manager")
 
@@ -489,10 +489,10 @@ class TestSpeakerSelectorAdapter:
             await adapter(state)
 
     async def test_selector_returning_empty_list_finishes(self) -> None:
-        """Test that selector returning empty list finishes conversation."""
+        """空のリストを返すselectorが会話を終了させることをテストします。"""
 
         def empty_selector(state: GroupChatStateSnapshot) -> list[str]:
-            return []  # Empty list should finish
+            return []  # 空リストは会話を終了させるべきです。
 
         adapter = _SpeakerSelectorAdapter(empty_selector, manager_name="manager")
 
@@ -511,10 +511,10 @@ class TestSpeakerSelectorAdapter:
 
 
 class TestCheckpointing:
-    """Tests for checkpointing functionality."""
+    """チェックポイント機能のテスト。"""
 
     async def test_workflow_with_checkpointing(self) -> None:
-        """Test that workflow works with checkpointing enabled."""
+        """チェックポイントが有効な状態でワークフローが動作することをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             if state["round_index"] >= 1:
@@ -535,18 +535,18 @@ class TestCheckpointing:
                 if isinstance(data, ChatMessage):
                     outputs.append(data)
 
-        assert len(outputs) == 1  # Should complete normally
+        assert len(outputs) == 1  # 正常に完了するはずです。
 
 
 class TestPromptBasedManager:
-    """Tests for _PromptBasedGroupChatManager."""
+    """_PromptBasedGroupChatManagerのテスト。"""
 
     async def test_manager_with_missing_next_agent_raises_error(self) -> None:
-        """Test that manager directive without next_agent raises RuntimeError."""
+        """next_agentなしのマネージャディレクティブがRuntimeErrorを発生させることをテストします。"""
 
         class MockChatClient:
             async def get_response(self, messages: Any, response_format: Any = None) -> Any:
-                # Return response that has finish=False but no next_agent
+                # finish=Falseだがnext_agentがない応答を返します。
                 class MockResponse:
                     def __init__(self) -> None:
                         self.value = {"finish": False, "next_agent": None}
@@ -566,11 +566,11 @@ class TestPromptBasedManager:
             await manager(state)
 
     async def test_manager_with_unknown_participant_raises_error(self) -> None:
-        """Test that manager selecting unknown participant raises RuntimeError."""
+        """不明な参加者を選択するマネージャがRuntimeErrorを発生させることをテストします。"""
 
         class MockChatClient:
             async def get_response(self, messages: Any, response_format: Any = None) -> Any:
-                # Return response selecting unknown participant
+                # 不明な参加者を選択する応答を返します。
                 class MockResponse:
                     def __init__(self) -> None:
                         self.value = {"finish": False, "next_agent": "unknown"}
@@ -591,10 +591,10 @@ class TestPromptBasedManager:
 
 
 class TestFactoryFunctions:
-    """Tests for factory functions."""
+    """ファクトリ関数のテスト。"""
 
     def test_default_orchestrator_factory_without_manager_raises_error(self) -> None:
-        """Test that default factory requires manager to be set."""
+        """デフォルトファクトリが manager の設定を必要とすることをテストします。"""
         config = _GroupChatConfig(manager=None, manager_name="test", participants={})
 
         with pytest.raises(RuntimeError, match="requires a manager to be set"):
@@ -602,13 +602,13 @@ class TestFactoryFunctions:
 
 
 class TestConversationHandling:
-    """Tests for different conversation input types."""
+    """異なる会話入力タイプのテスト。"""
 
     async def test_handle_string_input(self) -> None:
-        """Test handling string input creates proper ChatMessage."""
+        """文字列入力の処理が適切な ChatMessage を作成することをテストします。"""
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
-            # Verify the task was properly converted
+            # タスクが正しく変換されたことを検証します。
             assert state["task"].role == Role.USER
             assert state["task"].text == "test string"
             return None
@@ -627,11 +627,11 @@ class TestConversationHandling:
         assert len(outputs) == 1
 
     async def test_handle_chat_message_input(self) -> None:
-        """Test handling ChatMessage input directly."""
+        """ChatMessage 入力を直接処理することをテストします。"""
         task_message = ChatMessage(role=Role.USER, text="test message")
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
-            # Verify the task message was preserved
+            # タスクメッセージが保持されていることを検証します。
             assert state["task"] == task_message
             return None
 
@@ -649,14 +649,14 @@ class TestConversationHandling:
         assert len(outputs) == 1
 
     async def test_handle_conversation_list_input(self) -> None:
-        """Test handling conversation list preserves context."""
+        """会話リストの処理がコンテキストを保持することをテストします。"""
         conversation = [
             ChatMessage(role=Role.SYSTEM, text="system message"),
             ChatMessage(role=Role.USER, text="user message"),
         ]
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
-            # Verify conversation context is preserved
+            # 会話コンテキストが保持されていることを検証します。
             assert len(state["conversation"]) == 2
             assert state["task"].text == "user message"
             return None
@@ -676,15 +676,15 @@ class TestConversationHandling:
 
 
 class TestRoundLimitEnforcement:
-    """Tests for round limit checking functionality."""
+    """ラウンド制限チェック機能のテスト。"""
 
     async def test_round_limit_in_apply_directive(self) -> None:
-        """Test round limit enforcement in _apply_directive."""
+        """_apply_directive におけるラウンド制限の適用をテストします。"""
         rounds_called = {"count": 0}
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             rounds_called["count"] += 1
-            # Keep trying to select agent to test limit enforcement
+            # 制限適用をテストするために Agent の選択を繰り返します。
             return "agent"
 
         agent = StubAgent("agent", "response")
@@ -704,21 +704,21 @@ class TestRoundLimitEnforcement:
                 if isinstance(data, ChatMessage):
                     outputs.append(data)
 
-        # Should have at least one output (the round limit message)
+        # 少なくとも1つの出力（ラウンド制限メッセージ）があるはずです。
         assert len(outputs) >= 1
-        # The last message should be about round limit
+        # 最後のメッセージはラウンド制限に関するものであるべきです。
         final_output = outputs[-1]
         assert "round limit" in final_output.text.lower()
 
     async def test_round_limit_in_ingest_participant_message(self) -> None:
-        """Test round limit enforcement after participant response."""
+        """参加者の応答後のラウンド制限適用をテストします。"""
         responses_received = {"count": 0}
 
         def selector(state: GroupChatStateSnapshot) -> str | None:
             responses_received["count"] += 1
             if responses_received["count"] == 1:
-                return "agent"  # First call selects agent
-            return "agent"  # Try to continue, but should hit limit
+                return "agent"  # 最初の呼び出しで Agent を選択します。
+            return "agent"  # 続行を試みますが、制限に達するはずです。
 
         agent = StubAgent("agent", "response from agent")
 
@@ -737,8 +737,8 @@ class TestRoundLimitEnforcement:
                 if isinstance(data, ChatMessage):
                     outputs.append(data)
 
-        # Should have at least one output (the round limit message)
+        # 少なくとも1つの出力（ラウンド制限メッセージ）があるはずです。
         assert len(outputs) >= 1
-        # The last message should be about round limit
+        # 最後のメッセージはラウンド制限に関するものであるべきです。
         final_output = outputs[-1]
         assert "round limit" in final_output.text.lower()

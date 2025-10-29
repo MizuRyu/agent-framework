@@ -22,7 +22,7 @@ for Python code execution and mathematical problem solving.
 
 
 def get_code_interpreter_chunk(chunk: AgentRunResponseUpdate) -> str | None:
-    """Helper method to access code interpreter data."""
+    """コードインタープリターのデータにアクセスするためのヘルパーメソッド。"""
     if (
         isinstance(chunk.raw_representation, ChatResponseUpdate)
         and isinstance(chunk.raw_representation.raw_representation, RunStepDeltaEvent)
@@ -41,11 +41,10 @@ def get_code_interpreter_chunk(chunk: AgentRunResponseUpdate) -> str | None:
 
 
 async def main() -> None:
-    """Example showing how to use the HostedCodeInterpreterTool with Azure OpenAI Assistants."""
+    """Azure OpenAI AssistantsでHostedCodeInterpreterToolを使う方法を示す例です。"""
     print("=== Azure OpenAI Assistants Agent with Code Interpreter Example ===")
 
-    # For authentication, run `az login` command in terminal or replace AzureCliCredential with preferred
-    # authentication option.
+    # 認証には、ターミナルで`az login`コマンドを実行するか、AzureCliCredentialを好みの認証オプションに置き換えてください。
     async with ChatAgent(
         chat_client=AzureOpenAIAssistantsClient(credential=AzureCliCredential()),
         instructions="You are a helpful assistant that can write and execute Python code to solve problems.",

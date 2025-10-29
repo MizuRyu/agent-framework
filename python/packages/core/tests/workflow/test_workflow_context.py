@@ -62,7 +62,7 @@ async def test_executor_cannot_emit_framework_lifecycle_event(caplog: "LogCaptur
 
 async def test_executor_emits_normal_event() -> None:
     async with make_context() as (ctx, runner_ctx):
-        # Create a normal event to test event emission
+        # イベント発行をテストするための通常のイベントを作成する
         await ctx.add_event(_TestEvent())
 
         events: list[WorkflowEvent] = await runner_ctx.drain_events()
@@ -75,7 +75,7 @@ class _TestEvent(WorkflowEvent):
 
 
 async def test_workflow_context_type_annotations_no_parameter() -> None:
-    # Test function-based executor
+    # 関数ベースのexecutorをテストする
     @executor(id="func1")
     async def func1(text: str, ctx: WorkflowContext) -> None:
         await ctx.add_event(_TestEvent())
@@ -85,7 +85,7 @@ async def test_workflow_context_type_annotations_no_parameter() -> None:
     test_events = [e for e in events if isinstance(e, _TestEvent)]
     assert len(test_events) == 1
 
-    # Test class-based executor
+    # クラスベースのexecutorをテストする
     class _exec1(Executor):
         @handler
         async def func1(self, text: str, ctx: WorkflowContext) -> None:
@@ -104,7 +104,7 @@ async def test_workflow_context_type_annotations_no_parameter() -> None:
 
 
 async def test_workflow_context_type_annotations_message_type_parameter() -> None:
-    # Test function-based executor
+    # 関数ベースのexecutorをテストする
     @executor(id="func1")
     async def func1(text: str, ctx: WorkflowContext[str]) -> None:
         await ctx.send_message("world")
@@ -119,7 +119,7 @@ async def test_workflow_context_type_annotations_message_type_parameter() -> Non
     assert len(test_events) == 1
     assert test_events[0].data == "world"
 
-    # Test class-based executor
+    # クラスベースのexecutorをテストする
     class _exec1(Executor):
         @handler
         async def func1(self, text: str, ctx: WorkflowContext[str]) -> None:
@@ -148,7 +148,7 @@ async def test_workflow_context_type_annotations_message_type_parameter() -> Non
 
 
 async def test_workflow_context_type_annotations_message_and_output_type_parameters() -> None:
-    # Test function-based executor
+    # 関数ベースのexecutorをテストする
     @executor(id="func1")
     async def func1(text: str, ctx: WorkflowContext[str]) -> None:
         await ctx.send_message("world")
@@ -164,7 +164,7 @@ async def test_workflow_context_type_annotations_message_and_output_type_paramet
     assert len(outputs) == 1
     assert outputs[0] == "world"
 
-    # Test class-based executor
+    # クラスベースのexecutorをテストする
     class _exec1(Executor):
         @handler
         async def func1(self, text: str, ctx: WorkflowContext[str]) -> None:
@@ -218,17 +218,17 @@ async def test_workflow_context_type_annotations_any() -> None:
 
 
 async def test_workflow_context_missing_annotation_error() -> None:
-    """Test that missing WorkflowContext annotation raises appropriate error."""
+    """WorkflowContextアノテーションがない場合に適切なエラーが発生することをテストする。"""
     import pytest
 
-    # Test function-based executor with missing ctx annotation
+    # ctxアノテーションがない関数ベースのexecutorをテストする
     with pytest.raises(ValueError, match="must have a WorkflowContext"):
 
         @executor(id="bad_func")
         async def bad_func(text: str, ctx) -> None:  # type: ignore[no-untyped-def]
             pass
 
-    # Test class-based executor with missing ctx annotation
+    # ctxアノテーションがないクラスベースのexecutorをテストする
     with pytest.raises(ValueError, match="must have a WorkflowContext"):
 
         class _BadExecutor(Executor):
@@ -238,17 +238,17 @@ async def test_workflow_context_missing_annotation_error() -> None:
 
 
 async def test_workflow_context_invalid_type_parameter_error() -> None:
-    """Test that invalid type parameters like int values raise appropriate errors."""
+    """int値のような無効な型パラメータが適切なエラーを発生させることをテストする。"""
     import pytest
 
-    # Test function-based executor with invalid type parameter (int value instead of type)
+    # 無効な型パラメータ（型ではなくint値）を持つ関数ベースのexecutorをテストする
     with pytest.raises(ValueError, match="invalid type entry"):
 
         @executor(id="bad_func")
         async def bad_func(text: str, ctx: WorkflowContext[123]) -> None:  # type: ignore[valid-type]
             pass
 
-    # Test class-based executor with invalid type parameter
+    # 無効な型パラメータを持つクラスベースのexecutorをテストする
     with pytest.raises(ValueError, match="invalid type entry"):
 
         class _BadExecutor(Executor):
@@ -256,7 +256,7 @@ async def test_workflow_context_invalid_type_parameter_error() -> None:
             async def bad_handler(self, text: str, ctx: WorkflowContext[456]) -> None:  # type: ignore[valid-type]
                 pass
 
-    # Test two-parameter WorkflowContext with invalid workflow output type
+    # 無効なworkflow出力型を持つ2パラメータWorkflowContextをテストする
     with pytest.raises(ValueError, match="invalid type entry"):
 
         @executor(id="bad_func2")

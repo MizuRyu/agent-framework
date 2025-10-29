@@ -1,20 +1,18 @@
 # Copyright (c) Microsoft. All rights reserved.
-"""Basic SK ChatCompletionAgent vs Agent Framework ChatAgent.
+"""基本的なSKのChatCompletionAgentとAgent FrameworkのChatAgentの比較。
 
-Both samples expect OpenAI-compatible environment variables (OPENAI_API_KEY or
-Azure OpenAI configuration). Update the prompts or client wiring to match your
-model of choice before running.
+両方のサンプルはOpenAI互換の環境変数（OPENAI_API_KEYまたはAzure OpenAIの設定）を期待します。実行前にプロンプトやクライアントの接続を使用するモデルに合わせて更新してください。
 """
 
 import asyncio
 
 
 async def run_semantic_kernel() -> None:
-    """Call SK's ChatCompletionAgent for a simple question."""
+    """簡単な質問に対してSKのChatCompletionAgentを呼び出します。"""
     from semantic_kernel.agents import ChatCompletionAgent
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    # SK agent holds the thread state internally via ChatCompletionAgent.
+    # SKのAgentはChatCompletionAgentを通じてスレッド状態を内部で保持します。
     agent = ChatCompletionAgent(
         service=OpenAIChatCompletion(),
         name="Support",
@@ -25,10 +23,10 @@ async def run_semantic_kernel() -> None:
 
 
 async def run_agent_framework() -> None:
-    """Call Agent Framework's ChatAgent created from OpenAIChatClient."""
+    """Agent FrameworkのOpenAIChatClientから作成されたChatAgentを呼び出します。"""
     from agent_framework.openai import OpenAIChatClient
 
-    # AF constructs a lightweight ChatAgent backed by OpenAIChatClient.
+    # AFはOpenAIChatClientをバックエンドにした軽量なChatAgentを構築します。
     chat_agent = OpenAIChatClient().create_agent(
         name="Support",
         instructions="Answer in one sentence.",

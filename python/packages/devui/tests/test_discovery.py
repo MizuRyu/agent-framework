@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-"""Focused tests for entity discovery functionality."""
+"""エンティティ発見機能に特化したテスト。"""
 
 import asyncio
 import tempfile
@@ -13,26 +13,26 @@ from agent_framework_devui._discovery import EntityDiscovery
 
 @pytest.fixture
 def test_entities_dir():
-    """Use the samples directory which has proper entity structure."""
-    # Get the samples directory from the main python samples folder
+    """適切なエンティティ構造を持つsamplesディレクトリを使用。"""
+    # メインのpython samplesフォルダからsamplesディレクトリを取得
     current_dir = Path(__file__).parent
-    # Navigate to python/samples/getting_started/devui
+    # python/samples/getting_started/devuiに移動
     samples_dir = current_dir.parent.parent.parent / "samples" / "getting_started" / "devui"
     return str(samples_dir.resolve())
 
 
 @pytest.mark.skip("Skipping while we fix discovery")
 async def test_discover_agents(test_entities_dir):
-    """Test that agent discovery works and returns valid agent entities."""
+    """agentの発見が機能し、有効なagentエンティティを返すことをテスト。"""
     discovery = EntityDiscovery(test_entities_dir)
     entities = await discovery.discover_entities()
 
     agents = [e for e in entities if e.type == "agent"]
 
-    # Test that we can discover agents (not specific count)
+    # agentを発見できることをテスト（特定の数ではない）
     assert len(agents) > 0, "Should discover at least one agent"
 
-    # Test agent structure/properties
+    # agentの構造/プロパティをテスト
     for agent in agents:
         assert agent.id, "Agent should have an ID"
         assert agent.name, "Agent should have a name"
@@ -41,16 +41,16 @@ async def test_discover_agents(test_entities_dir):
 
 
 async def test_discover_workflows(test_entities_dir):
-    """Test that workflow discovery works and returns valid workflow entities."""
+    """workflowの発見が機能し、有効なworkflowエンティティを返すことをテスト。"""
     discovery = EntityDiscovery(test_entities_dir)
     entities = await discovery.discover_entities()
 
     workflows = [e for e in entities if e.type == "workflow"]
 
-    # Test that we can discover workflows (not specific count)
+    # workflowを発見できることをテスト（特定の数ではない）
     assert len(workflows) > 0, "Should discover at least one workflow"
 
-    # Test workflow structure/properties
+    # ワークフローの構造/プロパティをテストする
     for workflow in workflows:
         assert workflow.id, "Workflow should have an ID"
         assert workflow.name, "Workflow should have a name"
@@ -59,7 +59,7 @@ async def test_discover_workflows(test_entities_dir):
 
 
 async def test_empty_directory():
-    """Test discovery with empty directory."""
+    """空のディレクトリでのディスカバリをテストする。"""
     with tempfile.TemporaryDirectory() as temp_dir:
         discovery = EntityDiscovery(temp_dir)
         entities = await discovery.discover_entities()
@@ -68,10 +68,10 @@ async def test_empty_directory():
 
 
 async def test_discovery_accepts_agents_with_only_run():
-    """Test that discovery accepts agents with only run() method.
+    """run() メソッドのみを持つAgentをディスカバリが受け入れることをテストする。
 
-    With lazy loading, entities with only __init__.py are discovered
-    but marked as "unknown" type until loaded.
+    レイジーローディングでは、__init__.py のみを持つエンティティがディスカバリされるが、
+    ロードされるまで "unknown" タイプとしてマークされる。
     """
     import tempfile
     from pathlib import Path
@@ -79,7 +79,7 @@ async def test_discovery_accepts_agents_with_only_run():
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
-        # Create agent with only run() method
+        # run() メソッドのみを持つAgentを作成する
         agent_dir = temp_path / "non_streaming_agent"
         agent_dir.mkdir()
 
@@ -114,34 +114,34 @@ agent = NonStreamingAgent()
         discovery = EntityDiscovery(str(temp_path))
         entities = await discovery.discover_entities()
 
-        # With lazy loading, entity is discovered but type is "unknown"
-        # (no agent.py or workflow.py to detect type from)
+        # レイジーローディングでは、エンティティはディスカバリされるがタイプは "unknown" である （agent.py や workflow.py
+        # がなくタイプ検出できない）
         assert len(entities) == 1
         entity = entities[0]
         assert entity.id == "non_streaming_agent"
-        assert entity.type == "unknown"  # Type not yet determined
-        assert entity.tools == []  # Sparse metadata
+        assert entity.type == "unknown"  # タイプはまだ決定されていない
+        assert entity.tools == []  # スパースなメタデータ
 
-        # Trigger lazy loading to get full metadata
+        # 完全なメタデータを得るためにレイジーローディングをトリガーする
         agent_obj = await discovery.load_entity(entity.id)
         assert agent_obj is not None
 
-        # Now check enriched metadata after loading
+        # ロード後の拡張されたメタデータを確認する
         enriched = discovery.get_entity_info(entity.id)
-        assert enriched.type == "agent"  # Now correctly identified
+        assert enriched.type == "agent"  # 正しく識別された
         assert enriched.name == "Non-Streaming Agent"
         assert not enriched.metadata.get("has_run_stream")
 
 
 async def test_lazy_loading():
-    """Test that entities are loaded on-demand, not at discovery time."""
+    """エンティティがディスカバリ時ではなくオンデマンドでロードされることをテストする。"""
     import tempfile
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
-        # Create test workflow
+        # テスト用ワークフローを作成する
         workflow_dir = temp_path / "test_workflow"
         workflow_dir.mkdir()
         (workflow_dir / "workflow.py").write_text("""
@@ -159,37 +159,37 @@ workflow = builder.build()
 
         discovery = EntityDiscovery(str(temp_path))
 
-        # Discovery should NOT import module
+        # ディスカバリはモジュールをインポートしてはならない
         entities = await discovery.discover_entities()
         assert len(entities) == 1
         assert entities[0].id == "test_workflow"
-        assert entities[0].type == "workflow"  # Type detected from filename
-        assert entities[0].tools == []  # Sparse metadata (not loaded yet)
+        assert entities[0].type == "workflow"  # ファイル名からタイプを検出する
+        assert entities[0].tools == []  # スパースなメタデータ（まだロードされていない）
 
-        # Entity should NOT be in loaded_objects yet
+        # エンティティはまだ loaded_objects に存在してはならない
         assert discovery.get_entity_object("test_workflow") is None
 
-        # Trigger lazy load
+        # レイジーロードをトリガーする
         workflow_obj = await discovery.load_entity("test_workflow")
         assert workflow_obj is not None
 
-        # Now in cache
+        # キャッシュに存在するようになった
         assert discovery.get_entity_object("test_workflow") is workflow_obj
 
-        # Second load is instant (from cache)
+        # 2回目のロードは即時（キャッシュから）
         workflow_obj2 = await discovery.load_entity("test_workflow")
-        assert workflow_obj2 is workflow_obj  # Same object
+        assert workflow_obj2 is workflow_obj  # 同じオブジェクト
 
 
 async def test_type_detection():
-    """Test that entity types are detected from filenames."""
+    """エンティティタイプがファイル名から検出されることをテストする。"""
     import tempfile
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
-        # Create workflow with workflow.py
+        # workflow.py を持つワークフローを作成する
         workflow_dir = temp_path / "my_workflow"
         workflow_dir.mkdir()
         (workflow_dir / "workflow.py").write_text("""
@@ -204,7 +204,7 @@ builder.set_start_executor(executor)
 workflow = builder.build()
 """)
 
-        # Create agent with agent.py
+        # agent.py を持つAgentを作成する
         agent_dir = temp_path / "my_agent"
         agent_dir.mkdir()
         (agent_dir / "agent.py").write_text("""
@@ -225,7 +225,7 @@ class TestAgent:
 agent = TestAgent()
 """)
 
-        # Create ambiguous entity with __init__.py only
+        # __init__.py のみを持つ曖昧なエンティティを作成する
         unknown_dir = temp_path / "my_thing"
         unknown_dir.mkdir()
         (unknown_dir / "__init__.py").write_text("# thing")
@@ -233,7 +233,7 @@ agent = TestAgent()
         discovery = EntityDiscovery(str(temp_path))
         entities = await discovery.discover_entities()
 
-        # Check types detected correctly
+        # タイプが正しく検出されていることを確認する
         by_id = {e.id: e for e in entities}
 
         assert by_id["my_workflow"].type == "workflow"
@@ -242,14 +242,14 @@ agent = TestAgent()
 
 
 async def test_hot_reload():
-    """Test that invalidate_entity() enables hot reload."""
+    """invalidate_entity() がホットリロードを有効にすることをテストする。"""
     import tempfile
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
-        # Create workflow
+        # ワークフローを作成する
         workflow_dir = temp_path / "test_workflow"
         workflow_dir.mkdir()
         workflow_file = workflow_dir / "workflow.py"
@@ -268,11 +268,11 @@ workflow = builder.build()
         discovery = EntityDiscovery(str(temp_path))
         await discovery.discover_entities()
 
-        # Load entity
+        # エンティティをロードする
         workflow1 = await discovery.load_entity("test_workflow")
         assert workflow1 is not None
 
-        # Modify file to create a different workflow
+        # ファイルを変更して異なるワークフローを作成する
         workflow_file.write_text("""
 from agent_framework import WorkflowBuilder, FunctionExecutor
 
@@ -290,27 +290,27 @@ builder.add_edge(executor1, executor2)
 workflow = builder.build()
 """)
 
-        # Without invalidation, gets cached version
+        # 無効化しなければキャッシュされたバージョンを取得する
         workflow2 = await discovery.load_entity("test_workflow")
-        assert workflow2 is workflow1  # Same object (cached)
-        # Old workflow has 1 executor
+        assert workflow2 is workflow1  # 同じオブジェクト（キャッシュ）
+        # 古いワークフローは1つのexecutorを持つ
         assert len(workflow2.get_executors_list()) == 1
 
-        # Invalidate cache
+        # キャッシュを無効化する
         discovery.invalidate_entity("test_workflow")
 
-        # Now reloads from disk
+        # 今やディスクからリロードされる
         workflow3 = await discovery.load_entity("test_workflow")
-        assert workflow3 is not workflow1  # Different object
-        # New workflow has 2 executors
+        assert workflow3 is not workflow1  # 異なるオブジェクト
+        # 新しいワークフローは2つのexecutorを持つ
         assert len(workflow3.get_executors_list()) == 2
 
 
 async def test_in_memory_entities_bypass_lazy_loading():
-    """Test that in-memory entities work as before (no lazy loading needed)."""
+    """インメモリエンティティが以前通り動作することをテストする（レイジーロード不要）。"""
     from agent_framework import FunctionExecutor, WorkflowBuilder
 
-    # Create in-memory workflow
+    # インメモリワークフローを作成する
     def test_func(input: str) -> str:
         return f"Processed: {input}"
 
@@ -321,26 +321,26 @@ async def test_in_memory_entities_bypass_lazy_loading():
 
     discovery = EntityDiscovery()
 
-    # Register in-memory entity
+    # インメモリエンティティを登録する
     entity_info = await discovery.create_entity_info_from_object(workflow, entity_type="workflow", source="in_memory")
     discovery.register_entity(entity_info.id, entity_info, workflow)
 
-    # Should be immediately available (no lazy loading)
+    # 即座に利用可能であるべき（レイジーロード不要）
     loaded = discovery.get_entity_object(entity_info.id)
     assert loaded is workflow
 
-    # load_entity() should return immediately from cache
+    # load_entity() はキャッシュから即座に返すべき
     loaded2 = await discovery.load_entity(entity_info.id)
-    assert loaded2 is workflow  # Same object (cache hit)
+    assert loaded2 is workflow  # 同じオブジェクト（キャッシュヒット）
 
 
 if __name__ == "__main__":
-    # Simple test runner
+    # シンプルなテストランナー
     async def run_tests():
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create test files
+            # テストファイルを作成する
             agent_file = temp_path / "test_agent.py"
             agent_file.write_text("""
 class WeatherAgent:
